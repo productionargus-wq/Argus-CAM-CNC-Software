@@ -5,7 +5,7 @@ import {
   Wrench, FileCode, CheckSquare, Upload, FolderOpen, Download,
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
-  Save, Clock, Disc
+  Save, Clock, Disc, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -23,6 +23,7 @@ export default function RibbonBar({
   onOpenWireframeModal,
   onOpenSurfacesModal,
   onOpenSolidsModal,
+  onOpenModelPrepModal,
   onSelectManagerTab,
   onUnblankAll,
   onInvertVisibility,
@@ -699,36 +700,137 @@ export default function RibbonBar({
         {/* ==================== 6. MODEL PREP TAB ==================== */}
         {activeTab === 'Model Prep' && (
           <>
+            {/* Direct Modeling */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onResetTransform} title="Snap Model Origin Directly to G54 (Center of Table)">
-                  <Crosshair size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Snap Origin<br />to G54</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('pushpull') : (onPushPull && onPushPull(2))}
+                  title="Direct Modeling Push / Pull Face (Offset Any Planar or Cylindrical Face)"
+                >
+                  <Maximize2 size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Push / Pull<br />Face</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onDropToTable} title="Align Bottom Face of Part to Fixture Baseplate">
-                  <Grid size={22} color="#10b981" />
-                  <span className="btn-label">Align to<br />Table</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onPushPull(2)} title="Offset Top Face (+2.0 mm)">
-                  <Maximize2 size={20} color="#f59e0b" />
-                  <span className="btn-label">Push Face<br />(+2mm)</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onPushPull(-2)} title="Offset Top Face (-2.0 mm)">
-                  <Minimize2 size={20} color="#ef4444" />
-                  <span className="btn-label">Pull Face<br />(-2mm)</span>
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onPushPull ? onPushPull(1) : (onOpenModelPrepModal && onOpenModelPrepModal('pushpull'))}
+                    title="Quick Add +1.0mm Top Face Stock Allowance"
+                  >
+                    <ArrowUp size={12} color="#4ade80" />
+                    <span>+1mm Top</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onPushPull ? onPushPull(-1) : (onOpenModelPrepModal && onOpenModelPrepModal('pushpull'))}
+                    title="Quick Pull -1.0mm Top Face Finish Skim"
+                  >
+                    <ArrowDown size={12} color="#f43f5e" />
+                    <span>-1mm Top</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onPushPull ? onPushPull(1.5) : (onOpenModelPrepModal && onOpenModelPrepModal('pushpull'))}
+                    title="Add Uniform +1.5mm Roughing Stock Skin"
+                  >
+                    <Sparkles size={12} color="#f59e0b" />
+                    <span>+1.5mm Skin</span>
+                  </button>
+                </div>
               </div>
-              <span className="ribbon-group-title">Direct Modeling &amp; Alignment</span>
+              <span className="ribbon-group-title">Direct Modeling</span>
             </div>
 
+            {/* WCS & Table Alignment */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onOpenEntityAnalyzer} title="Check Watertight Solid &amp; Manifold Integrity">
-                  <CheckCircle2 size={22} color="#10b981" />
-                  <span className="btn-label">Check<br />Manifold</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('align') : onResetTransform()}
+                  title="WCS Coordinate Alignment & Table Positioning Workbench"
+                >
+                  <Crosshair size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Align<br />WCS</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onResetTransform}
+                  title="Snap Top Face Directly to Z=0 Datum (CNC Standard Origin)"
+                >
+                  <Grid size={21} color="#60a5fa" />
+                  <span className="btn-label">Top to<br />Z0 Datum</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onDropToTable}
+                  title="Align Bottom Face of Part to Fixture Baseplate / Vise Jaws"
+                >
+                  <Layers size={21} color="#10b981" />
+                  <span className="btn-label">Drop to<br />Table</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Model Diagnostics</span>
+              <span className="ribbon-group-title">WCS &amp; Alignment</span>
+            </div>
+
+            {/* Setup Orientation & Indexing */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('orient') : onRotatePart(0, 0, Math.PI)}
+                  title="Setup 2 Flip (Rotate 180° for Backside Machining)"
+                >
+                  <RotateCcw size={22} color="#f59e0b" />
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Flip Op 2<br />(180&deg;)</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onRotatePart ? onRotatePart(0, Math.PI / 2, 0) : null}
+                  title="Index 90° Around Vertical Spindle Axis"
+                >
+                  <RefreshCw size={21} color="#a855f7" />
+                  <span className="btn-label">Rotate<br />+90&deg;</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Setup Indexing</span>
+            </div>
+
+            {/* Defeaturing & CAM Capping */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('defeature') : null}
+                  title="CAM Defeaturing & Auto-Capping Bolt Holes (Level 15)"
+                >
+                  <ShieldAlert size={22} color="#06b6d4" />
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>CAM Hole<br />Capping</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Defeaturing</span>
+            </div>
+
+            {/* Manifold Diagnostics & Healing */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('manifold') : onOpenEntityAnalyzer()}
+                  title="Inspect Watertight Manifold Topology & Check for Holes"
+                >
+                  <CheckCircle2 size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Check<br />Manifold</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenEntityAnalyzer}
+                  title="Entity Inspector (Dimensions, Volume, Center of Gravity)"
+                >
+                  <Compass size={21} color="#94a3b8" />
+                  <span className="btn-label">Entity<br />Inspector</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Diagnostics</span>
             </div>
           </>
         )}

@@ -1346,6 +1346,124 @@ export function calculatePartMetrics(object3D) {
 }
 
 /**
+ * Checks manifold solid integrity, boundary edges, and watertight status
+ */
+export function checkMeshManifoldIntegrity(object3D) {
+  let totalTriangles = 0;
+  let totalVertices = 0;
+  let nonManifoldEdges = 0;
+  let boundaryEdges = 0;
+  const edgeCountMap = new Map();
+
+  object3D.traverse((child) => {
+    if (child.isMesh && child.geometry) {
+      const geo = child.geometry;
+      const pos = geo.attributes.position;
+      if (!pos) return;
+      totalVertices += pos.count;
+
+      const getVertexKey = (i) => {
+        const x = Math.round(pos.getX(i) * 100);
+        const y = Math.round(pos.getY(i) * 100);
+        const z = Math.round(pos.getZ(i) * 100);
+        return `${x}_${y}_${z}`;
+      };
+
+      const recordEdge = (k1, k2) => {
+        const edgeKey = k1 < k2 ? `${k1}|${k2}` : `${k2}|${k1}`;
+        edgeCountMap.set(edgeKey, (edgeCountMap.get(edgeKey) || 0) + 1);
+      };
+
+      if (geo.index) {
+        const idx = geo.index;
+        const triCount = idx.count / 3;
+        totalTriangles += triCount;
+        for (let i = 0; i < idx.count; i += 3) {
+          const a = idx.getX(i);
+          const b = idx.getX(i + 1);
+          const c = idx.getX(i + 2);
+          const ka = getVertexKey(a);
+          const kb = getVertexKey(b);
+          const kc = getVertexKey(c);
+          recordEdge(ka, kb);
+          recordEdge(kb, kc);
+          recordEdge(kc, ka);
+        }
+      } else {
+        const triCount = pos.count / 3;
+        totalTriangles += triCount;
+        for (let i = 0; i < pos.count; i += 3) {
+          const ka = getVertexKey(i);
+          const kb = getVertexKey(i + 1);
+          const kc = getVertexKey(i + 2);
+          recordEdge(ka, kb);
+          recordEdge(kb, kc);
+          recordEdge(kc, ka);
+        }
+      }
+    }
+  });
+
+  edgeCountMap.forEach((count) => {
+    if (count === 1) boundaryEdges++;
+    else if (count > 2) nonManifoldEdges++;
+  });
+
+  const isWatertight = boundaryEdges === 0 && nonManifoldEdges === 0 && totalTriangles > 0;
+
+  return {
+    totalTriangles: Math.round(totalTriangles),
+    totalVertices,
+    boundaryEdges,
+    nonManifoldEdges,
+    isWatertight,
+    status: isWatertight ? 'Watertight Closed Solid (2-Manifold)' : boundaryEdges > 0 ? 'Open Surface Mesh (Holes Detected)' : 'Non-Manifold Mesh'
+  };
+}
+
+/**
+ * Recomputes smoothed vertex normals for all meshes in an object
+ */
+export function repairMeshNormals(object3D) {
+  let repairedCount = 0;
+  object3D.traverse((child) => {
+    if (child.isMesh && child.geometry) {
+      child.geometry.computeVertexNormals();
+      child.geometry.computeBoundingBox();
+      child.geometry.computeBoundingSphere();
+      if (child.material) child.material.needsUpdate = true;
+      repairedCount++;
+    }
+  });
+  return repairedCount;
+}
+
+/**
+ * Inverts triangle winding order (flips normals inside-out / outside-in)
+ */
+export function flipMeshNormals(object3D) {
+  let count = 0;
+  object3D.traverse((child) => {
+    if (child.isMesh && child.geometry) {
+      const geo = child.geometry;
+      if (geo.index) {
+        const arr = geo.index.array;
+        for (let i = 0; i < arr.length; i += 3) {
+          const temp = arr[i + 1];
+          arr[i + 1] = arr[i + 2];
+          arr[i + 2] = temp;
+        }
+        geo.index.needsUpdate = true;
+      }
+      geo.computeVertexNormals();
+      if (child.material) child.material.needsUpdate = true;
+      count++;
+    }
+  });
+  return count;
+}
+
+/**
  * Exports the active 3D CAD mesh to an STL file download in the browser (binary or ASCII)
  */
 export async function exportSceneToSTL(object3D, filename = "Argus_CAD_Model.stl", binary = true) {

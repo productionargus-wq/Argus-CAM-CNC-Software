@@ -20,6 +20,7 @@ import ExportCADModal from './components/ExportCADModal';
 import WireframeSketcherModal from './components/WireframeSketcherModal';
 import SurfacesCADModal from './components/SurfacesCADModal';
 import SolidsCADModal from './components/SolidsCADModal';
+import ModelPrepModal from './components/ModelPrepModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -107,6 +108,8 @@ export default function App() {
   const [surfacesModalTool, setSurfacesModalTool] = useState('plane');
   const [isSolidsModalOpen, setIsSolidsModalOpen] = useState(false);
   const [solidsModalTool, setSolidsModalTool] = useState('box');
+  const [isModelPrepModalOpen, setIsModelPrepModalOpen] = useState(false);
+  const [modelPrepModalTab, setModelPrepModalTab] = useState('pushpull');
 
   const [solidsList, setSolidsList] = useState([
     { id: 1, name: 'Solid 1 - Finished Workpiece', material: '6061-T6 Aluminum', volumeCm3: 184.2, isPrimary: true, visible: true, active: true, color: '#38bdf8' },
@@ -856,6 +859,12 @@ export default function App() {
     handleOpenSolidsModal(type);
   };
 
+  // Model Prep Direct Modeling & Alignment Handler
+  const handleOpenModelPrepModal = (tab = 'pushpull') => {
+    setModelPrepModalTab(tab);
+    setIsModelPrepModalOpen(true);
+  };
+
   return (
     <div id="root" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* 1. TitleBar */}
@@ -881,6 +890,7 @@ export default function App() {
         onOpenWireframeModal={handleOpenWireframeModal}
         onOpenSurfacesModal={handleOpenSurfacesModal}
         onOpenSolidsModal={handleOpenSolidsModal}
+        onOpenModelPrepModal={handleOpenModelPrepModal}
         onSelectManagerTab={setActiveManagerTab}
         onUnblankAll={handleUnblankAll}
         onInvertVisibility={handleInvertVisibility}
@@ -1035,6 +1045,19 @@ export default function App() {
         onSetPrimaryModel={handleSetPrimarySolid}
         onAddSolidBody={handleAddSolidBody}
         onRemoveSolidBody={handleRemoveSolidBody}
+      />
+
+      {/* Model Prep & Direct Modeling Modal (Tab 6) */}
+      <ModelPrepModal
+        isOpen={isModelPrepModalOpen}
+        onClose={() => setIsModelPrepModalOpen(false)}
+        initialTab={modelPrepModalTab}
+        currentModel={currentModel}
+        partMetrics={partMetrics}
+        partTransform={partTransform}
+        onUpdateTransform={setPartTransform}
+        onResetTransform={handleResetTransform}
+        onAddSurfaceEntity={handleAddSurfaceEntity}
       />
 
       {/* 6. NC2Check G-Code Post Modal */}
