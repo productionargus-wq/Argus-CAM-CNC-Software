@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { Eye, Layers, Rotate3D, UploadCloud, Box, Info } from 'lucide-react';
+import { Eye, Layers, Rotate3D, UploadCloud, Box, Info, Scissors, Camera, Sun, Sliders } from 'lucide-react';
 import { parseSTLFile, calculatePartMetrics } from '../utils/cadGeometry';
 import {
   generateFacingToolpath,
@@ -21,6 +21,10 @@ export default function Viewport3D({
   onModelImported,
   workpieceColor = '#60a5fa',
   renderMode = 'shaded',
+  cameraMode = 'perspective',
+  cameraFov = 45,
+  clippingPlane = { enabled: false, axis: 'Z', offset: 0, invert: false },
+  lightingMode = 'studio',
   layerVisibility = {
     fixture: true,
     bed: true,
@@ -36,7 +40,11 @@ export default function Viewport3D({
     rotation: { x: 0, y: 0, z: 0 },
     scale: { x: 1, y: 1, z: 1 }
   },
-  customGeometry = []
+  customGeometry = [],
+  onOpenViewStudioModal,
+  onToggleCameraMode,
+  onUpdateClippingPlane,
+  onChangeRenderMode
 }) {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
@@ -51,6 +59,11 @@ export default function Viewport3D({
   const stockWireframeRef = useRef(null);
   const customGeoGroupRef = useRef(null);
   const dimensionGroupRef = useRef(null);
+  const ambientLightRef = useRef(null);
+  const dirLight1Ref = useRef(null);
+  const dirLight2Ref = useRef(null);
+  const clipPlaneHelperRef = useRef(null);
+  const normalMaterialRef = useRef(new THREE.MeshNormalMaterial());
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [partMetrics, setPartMetrics] = useState(null);
@@ -80,21 +93,25 @@ export default function Viewport3D({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.localClippingEnabled = true;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     // Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
     scene.add(ambientLight);
+    ambientLightRef.current = ambientLight;
 
     const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.3);
     dirLight1.position.set(200, 300, 150);
     dirLight1.castShadow = true;
     scene.add(dirLight1);
+    dirLight1Ref.current = dirLight1;
 
     const dirLight2 = new THREE.DirectionalLight(0x38bdf8, 0.5);
     dirLight2.position.set(-200, 100, -150);
     scene.add(dirLight2);
+    dirLight2Ref.current = dirLight2;
 
     // Machine Bed Grid
     const gridHelper = new THREE.GridHelper(400, 40, 0x334155, 0x1e293b);
@@ -324,31 +341,130 @@ export default function Viewport3D({
     }
   }, [partTransform]);
 
-  // 5. Workpiece Color & RenderMode Updates (Shaded, Transparent, Wireframe, Edges)
+  // 5. Workpiece Color & RenderMode Updates (Shaded, Transparent, Wireframe, Edges, Normals)
   useEffect(() => {
     if (!partHolderGroupRef.current) return;
     partHolderGroupRef.current.traverse((child) => {
-      if (child.isMesh && child.material) {
-        if (workpieceColor) {
-          child.material.color.set(workpieceColor);
+      if (child.isMesh) {
+        if (!child.userData.originalMaterial && child.material) {
+          child.userData.originalMaterial = child.material;
         }
-        if (renderMode === 'wireframe') {
-          child.material.wireframe = true;
-          child.material.transparent = false;
-        } else if (renderMode === 'transparent') {
-          child.material.wireframe = false;
-          child.material.transparent = true;
-          child.material.opacity = 0.35;
-        } else {
-          // shaded or edges
-          child.material.wireframe = false;
-          child.material.transparent = false;
-          child.material.opacity = 1.0;
+
+        if (renderMode === 'normals') {
+          child.material = normalMaterialRef.current;
+        } else if (child.userData.originalMaterial) {
+          child.material = child.userData.originalMaterial;
+          if (workpieceColor && child.material.color) {
+            child.material.color.set(workpieceColor);
+          }
+          if (renderMode === 'wireframe') {
+            child.material.wireframe = true;
+            child.material.transparent = false;
+          } else if (renderMode === 'transparent') {
+            child.material.wireframe = false;
+            child.material.transparent = true;
+            child.material.opacity = 0.35;
+          } else {
+            // shaded or edges
+            child.material.wireframe = false;
+            child.material.transparent = false;
+            child.material.opacity = 1.0;
+          }
         }
-        child.material.needsUpdate = true;
+        if (child.material) {
+          child.material.needsUpdate = true;
+        }
       }
     });
   }, [workpieceColor, renderMode]);
+
+  // Dynamic 3D Cross-Section Clipping Plane
+  useEffect(() => {
+    if (!sceneRef.current || !rendererRef.current) return;
+    const scene = sceneRef.current;
+
+    if (clipPlaneHelperRef.current) {
+      scene.remove(clipPlaneHelperRef.current);
+      clipPlaneHelperRef.current = null;
+    }
+
+    if (!clippingPlane?.enabled) {
+      if (partHolderGroupRef.current) {
+        partHolderGroupRef.current.traverse((child) => {
+          if (child.isMesh && child.material) {
+            child.material.clippingPlanes = [];
+            child.material.needsUpdate = true;
+          }
+        });
+      }
+      return;
+    }
+
+    const axis = clippingPlane.axis || 'Z';
+    const offset = Number(clippingPlane.offset) || 0;
+    const invert = Boolean(clippingPlane.invert);
+
+    let normal = new THREE.Vector3(0, 0, 1);
+    if (axis === 'X') normal = new THREE.Vector3(invert ? -1 : 1, 0, 0);
+    else if (axis === 'Y') normal = new THREE.Vector3(0, invert ? -1 : 1, 0);
+    else if (axis === 'Z') normal = new THREE.Vector3(0, 0, invert ? -1 : 1);
+
+    const plane = new THREE.Plane(normal, invert ? offset : -offset);
+
+    if (partHolderGroupRef.current) {
+      partHolderGroupRef.current.traverse((child) => {
+        if (child.isMesh && child.material) {
+          child.material.clippingPlanes = [plane];
+          child.material.clipShadows = true;
+          child.material.needsUpdate = true;
+        }
+      });
+    }
+
+    const helper = new THREE.PlaneHelper(plane, 220, 0xec4899);
+    helper.name = 'clip_plane_helper';
+    scene.add(helper);
+    clipPlaneHelperRef.current = helper;
+  }, [clippingPlane]);
+
+  // Environment Lighting Updates
+  useEffect(() => {
+    if (!sceneRef.current || !ambientLightRef.current || !dirLight1Ref.current || !dirLight2Ref.current) return;
+    const scene = sceneRef.current;
+    const ambient = ambientLightRef.current;
+    const l1 = dirLight1Ref.current;
+    const l2 = dirLight2Ref.current;
+
+    if (lightingMode === 'shop') {
+      scene.background = new THREE.Color(0x0f172a);
+      ambient.intensity = 1.0;
+      l1.intensity = 1.6;
+      l2.intensity = 0.8;
+      l1.position.set(0, 400, 0);
+    } else if (lightingMode === 'inspect') {
+      scene.background = new THREE.Color(0x090d16);
+      ambient.intensity = 0.35;
+      l1.intensity = 2.2;
+      l2.intensity = 1.2;
+      l1.position.set(150, 200, 300);
+    } else {
+      scene.background = new THREE.Color(0x131722);
+      ambient.intensity = 0.75;
+      l1.intensity = 1.3;
+      l2.intensity = 0.5;
+      l1.position.set(200, 300, 150);
+    }
+  }, [lightingMode]);
+
+  // Camera Field of View Updates
+  useEffect(() => {
+    if (!cameraRef.current) return;
+    const cam = cameraRef.current;
+    if (cam.isPerspectiveCamera && cameraFov && cam.fov !== cameraFov) {
+      cam.fov = cameraFov;
+      cam.updateProjectionMatrix();
+    }
+  }, [cameraFov]);
 
   // 6. Custom Geometry (Wireframes, Rectangles, Circles, Surfaces)
   useEffect(() => {
@@ -662,10 +778,33 @@ export default function Viewport3D({
 
         <button
           className={`hud-btn ${renderMode === 'shaded' ? 'active' : ''}`}
-          title="Current Display Style"
+          onClick={onOpenViewStudioModal}
+          title="Open 3D View Studio"
         >
-          <Eye size={13} />
+          <Sliders size={13} />
           <span style={{ textTransform: 'capitalize' }}>{renderMode}</span>
+        </button>
+
+        <button
+          className="hud-btn"
+          onClick={() => onToggleCameraMode && onToggleCameraMode(cameraMode === 'orthographic' ? 'perspective' : 'orthographic')}
+          title="Toggle Perspective / Orthographic Camera"
+        >
+          <Camera size={13} color={cameraMode === 'orthographic' ? '#38bdf8' : 'inherit'} />
+          <span style={{ color: cameraMode === 'orthographic' ? '#38bdf8' : 'inherit' }}>
+            {cameraMode === 'orthographic' ? 'Ortho' : 'Persp'}
+          </span>
+        </button>
+
+        <button
+          className={`hud-btn ${clippingPlane?.enabled ? 'active' : ''}`}
+          onClick={() => onUpdateClippingPlane && onUpdateClippingPlane({ ...clippingPlane, enabled: !clippingPlane?.enabled })}
+          title="Toggle 3D Cross-Section Slicing Plane"
+        >
+          <Scissors size={13} color={clippingPlane?.enabled ? '#f472b6' : 'inherit'} />
+          <span style={{ color: clippingPlane?.enabled ? '#f472b6' : 'inherit' }}>
+            {clippingPlane?.enabled ? `Section (${clippingPlane.axis})` : 'Section'}
+          </span>
         </button>
 
         <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
@@ -683,6 +822,30 @@ export default function Viewport3D({
           <span>Right</span>
         </button>
       </div>
+
+      {/* Floating Section Cut Indicator Badge */}
+      {clippingPlane?.enabled && (
+        <div style={{
+          position: 'absolute',
+          top: '52px',
+          left: '16px',
+          background: 'rgba(236, 72, 153, 0.18)',
+          border: '1px solid rgba(236, 72, 153, 0.4)',
+          color: '#f472b6',
+          borderRadius: '6px',
+          padding: '4px 10px',
+          fontSize: '11px',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          backdropFilter: 'blur(4px)',
+          zIndex: 10
+        }}>
+          <Scissors size={13} />
+          <span>Section Slice: {clippingPlane.axis}-Axis ({clippingPlane.offset > 0 ? `+${clippingPlane.offset}` : clippingPlane.offset} mm)</span>
+        </div>
+      )}
 
       {/* Part Metrics & Stock Dimension HUD */}
       {partMetrics && (

@@ -5,7 +5,7 @@ import {
   Wrench, FileCode, CheckSquare, Upload, FolderOpen, Download,
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
-  Save, Clock, Disc, ArrowUp, ArrowDown
+  Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -28,6 +28,13 @@ export default function RibbonBar({
   onOpenDraftingModal,
   onOpenTransformModal,
   onOpenMachineConfigModal,
+  onOpenViewStudioModal,
+  cameraMode = 'perspective',
+  onToggleCameraMode,
+  clippingPlane = { enabled: false, axis: 'Z', offset: 0, invert: false },
+  onUpdateClippingPlane,
+  lightingMode = 'studio',
+  onChangeLightingMode,
   onSelectManagerTab,
   onUnblankAll,
   onInvertVisibility,
@@ -1277,6 +1284,31 @@ export default function RibbonBar({
         {/* ==================== 11. VIEW TAB ==================== */}
         {activeTab === 'View' && (
           <>
+            {/* View Studio & Camera Projection */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenViewStudioModal}
+                  title="Open Mastercam 3D View Studio (Ortho/Persp, Clipping, Shading, Lighting)"
+                >
+                  <Sliders size={20} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>View<br />Studio</span>
+                </button>
+
+                <button
+                  className={`ribbon-btn-large ${cameraMode === 'orthographic' ? 'active' : ''}`}
+                  onClick={() => onToggleCameraMode && onToggleCameraMode(cameraMode === 'orthographic' ? 'perspective' : 'orthographic')}
+                  title="Toggle Perspective vs Orthographic Parallel CAD Projection"
+                >
+                  <Camera size={20} color={cameraMode === 'orthographic' ? '#38bdf8' : '#cbd5e1'} />
+                  <span className="btn-label">{cameraMode === 'orthographic' ? 'Ortho<br />CAD' : 'Persp<br />3D'}</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Camera Mode</span>
+            </div>
+
+            {/* Standard Views */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button className="ribbon-btn-large" onClick={() => onSnapCamera('iso')} title="Isometric Camera (WCS G54)">
@@ -1295,6 +1327,14 @@ export default function RibbonBar({
                   <Eye size={20} color="#a855f7" />
                   <span className="btn-label">Right (G19)</span>
                 </button>
+                <button className="ribbon-btn-large" onClick={() => onSnapCamera('bottom')} title="Bottom View (-Z Plane)">
+                  <Eye size={20} color="#94a3b8" />
+                  <span className="btn-label">Bottom</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onSnapCamera('left')} title="Left View (-X Plane)">
+                  <Eye size={20} color="#94a3b8" />
+                  <span className="btn-label">Left</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={() => onSnapCamera('fit')} title="Fit Part to Viewport">
                   <Maximize2 size={20} color="#e2e8f0" />
                   <span className="btn-label">Fit Screen</span>
@@ -1303,6 +1343,65 @@ export default function RibbonBar({
               <span className="ribbon-group-title">Standard Views</span>
             </div>
 
+            {/* Dynamic 3D Cross-Section Cut */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className={`ribbon-btn-large ${clippingPlane?.enabled ? 'active' : ''}`}
+                  onClick={() => onUpdateClippingPlane && onUpdateClippingPlane({ ...clippingPlane, enabled: !clippingPlane?.enabled })}
+                  title="Toggle Real-time 3D Cross-Section Slicing Plane"
+                >
+                  <Scissors size={20} color={clippingPlane?.enabled ? '#f472b6' : '#ec4899'} />
+                  <span className="btn-label" style={{ color: clippingPlane?.enabled ? '#f472b6' : 'inherit' }}>
+                    Section Cut<br />{clippingPlane?.enabled ? 'Active' : 'Off'}
+                  </span>
+                </button>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', gap: '3px' }}>
+                    {['X', 'Y', 'Z'].map(axis => (
+                      <button
+                        key={axis}
+                        onClick={() => onUpdateClippingPlane && onUpdateClippingPlane({ ...clippingPlane, enabled: true, axis })}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          borderRadius: '3px',
+                          background: clippingPlane?.axis === axis && clippingPlane?.enabled ? 'rgba(236,72,153,0.3)' : '#1e293b',
+                          border: clippingPlane?.axis === axis && clippingPlane?.enabled ? '1px solid #ec4899' : '1px solid #334155',
+                          color: clippingPlane?.axis === axis && clippingPlane?.enabled ? '#f472b6' : '#94a3b8',
+                          cursor: 'pointer'
+                        }}
+                        title={`Cut normal along ${axis}-axis`}
+                      >
+                        {axis}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => onUpdateClippingPlane && onUpdateClippingPlane({ ...clippingPlane, invert: !clippingPlane?.invert })}
+                    disabled={!clippingPlane?.enabled}
+                    style={{
+                      padding: '2px 6px',
+                      fontSize: '9px',
+                      borderRadius: '3px',
+                      background: '#161b29',
+                      border: '1px solid #283347',
+                      color: '#94a3b8',
+                      cursor: clippingPlane?.enabled ? 'pointer' : 'default',
+                      opacity: clippingPlane?.enabled ? 1 : 0.5
+                    }}
+                    title="Flip Section Normal Vector"
+                  >
+                    Flip Cut
+                  </button>
+                </div>
+              </div>
+              <span className="ribbon-group-title">3D Section Cut</span>
+            </div>
+
+            {/* Display & Shading Modes */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button className={`ribbon-btn-large ${renderMode === 'shaded' ? 'active' : ''}`} onClick={() => onChangeRenderMode('shaded')} title="PBR Metallic Shading">
@@ -1321,10 +1420,46 @@ export default function RibbonBar({
                   <Crosshair size={20} color="#10b981" />
                   <span className="btn-label">Wireframe</span>
                 </button>
+                <button className={`ribbon-btn-large ${renderMode === 'normals' ? 'active' : ''}`} onClick={() => onChangeRenderMode('normals')} title="Inspect Surface Normals & Draft Angles">
+                  <Sparkles size={20} color="#ec4899" />
+                  <span className="btn-label">Normals</span>
+                </button>
               </div>
               <span className="ribbon-group-title">Display Modes</span>
             </div>
 
+            {/* Lighting Studio */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className={`ribbon-btn-large ${lightingMode === 'studio' ? 'active' : ''}`}
+                  onClick={() => onChangeLightingMode && onChangeLightingMode('studio')}
+                  title="CAD Dark Studio Lighting"
+                >
+                  <Sun size={20} color="#38bdf8" />
+                  <span className="btn-label">Studio<br />Dark</span>
+                </button>
+                <button
+                  className={`ribbon-btn-large ${lightingMode === 'shop' ? 'active' : ''}`}
+                  onClick={() => onChangeLightingMode && onChangeLightingMode('shop')}
+                  title="Bright CNC Machine Enclosure Flood Lighting"
+                >
+                  <Sun size={20} color="#f59e0b" />
+                  <span className="btn-label">Machine<br />Shop</span>
+                </button>
+                <button
+                  className={`ribbon-btn-large ${lightingMode === 'inspect' ? 'active' : ''}`}
+                  onClick={() => onChangeLightingMode && onChangeLightingMode('inspect')}
+                  title="High-Contrast Scallop & Surface Quality Raking Light"
+                >
+                  <Sun size={20} color="#ec4899" />
+                  <span className="btn-label">Inspect<br />Rake</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Lighting</span>
+            </div>
+
+            {/* Layer Toggles */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button className={`ribbon-btn-large ${layerVisibility.fixture ? 'active' : ''}`} onClick={() => onToggleLayer('fixture')} title="Toggle Vise & Baseplate">
@@ -1341,6 +1476,9 @@ export default function RibbonBar({
                 </button>
                 <button className={`ribbon-btn-large ${layerVisibility.rapids ? 'active' : ''}`} onClick={() => onToggleLayer('rapids')} title="Toggle Rapid Moves">
                   <span className="btn-label">Toggle<br />Rapids</span>
+                </button>
+                <button className={`ribbon-btn-large ${layerVisibility.dimensions ? 'active' : ''}`} onClick={() => onToggleLayer('dimensions')} title="Toggle 3D Drafting Dimensions (Level 100)">
+                  <span className="btn-label">Toggle<br />Dims</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Layer Toggles</span>

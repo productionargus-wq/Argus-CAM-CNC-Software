@@ -25,6 +25,7 @@ import MeshWorkbenchModal from './components/MeshWorkbenchModal';
 import DraftingCADModal from './components/DraftingCADModal';
 import TransformCADModal from './components/TransformCADModal';
 import MachineConfigModal from './components/MachineConfigModal';
+import ViewStudioModal from './components/ViewStudioModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -121,6 +122,11 @@ export default function App() {
   const [isTransformModalOpen, setIsTransformModalOpen] = useState(false);
   const [transformModalTab, setTransformModalTab] = useState('translate');
   const [isMachineConfigModalOpen, setIsMachineConfigModalOpen] = useState(false);
+  const [isViewStudioModalOpen, setIsViewStudioModalOpen] = useState(false);
+  const [cameraMode, setCameraMode] = useState('perspective');
+  const [cameraFov, setCameraFov] = useState(45);
+  const [clippingPlane, setClippingPlane] = useState({ enabled: false, axis: 'Z', offset: 0, invert: false });
+  const [lightingMode, setLightingMode] = useState('studio');
 
   const [solidsList, setSolidsList] = useState([
     { id: 1, name: 'Solid 1 - Finished Workpiece', material: '6061-T6 Aluminum', volumeCm3: 184.2, isPrimary: true, visible: true, active: true, color: '#38bdf8' },
@@ -928,6 +934,13 @@ export default function App() {
         onOpenDraftingModal={handleOpenDraftingModal}
         onOpenTransformModal={handleOpenTransformModal}
         onOpenMachineConfigModal={() => setIsMachineConfigModalOpen(true)}
+        onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
+        cameraMode={cameraMode}
+        onToggleCameraMode={setCameraMode}
+        clippingPlane={clippingPlane}
+        onUpdateClippingPlane={setClippingPlane}
+        lightingMode={lightingMode}
+        onChangeLightingMode={setLightingMode}
         onSelectManagerTab={setActiveManagerTab}
         onUnblankAll={handleUnblankAll}
         onInvertVisibility={handleInvertVisibility}
@@ -1008,10 +1021,18 @@ export default function App() {
           onModelImported={handleModelImported}
           workpieceColor={workpieceColor}
           renderMode={renderMode}
+          cameraMode={cameraMode}
+          cameraFov={cameraFov}
+          clippingPlane={clippingPlane}
+          lightingMode={lightingMode}
           layerVisibility={layerVisibility}
           cameraCommand={cameraCommand}
           partTransform={partTransform}
           customGeometry={customGeometry}
+          onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
+          onToggleCameraMode={setCameraMode}
+          onUpdateClippingPlane={setClippingPlane}
+          onChangeRenderMode={setRenderMode}
         />
       </div>
 
@@ -1142,6 +1163,28 @@ export default function App() {
         machines={machines}
         activeMachine={activeMachine}
         onSelectMachine={setActiveMachineId}
+      />
+
+      {/* 3D View & Section Analysis Studio Modal (Tab 11) */}
+      <ViewStudioModal
+        isOpen={isViewStudioModalOpen}
+        onClose={() => setIsViewStudioModalOpen(false)}
+        cameraMode={cameraMode}
+        onToggleCameraMode={setCameraMode}
+        cameraFov={cameraFov}
+        onChangeCameraFov={setCameraFov}
+        onSnapCamera={handleSnapCamera}
+        renderMode={renderMode}
+        onChangeRenderMode={setRenderMode}
+        workpieceColor={workpieceColor}
+        onChangeWorkpieceColor={setWorkpieceColor}
+        clippingPlane={clippingPlane}
+        onUpdateClippingPlane={setClippingPlane}
+        lightingMode={lightingMode}
+        onChangeLightingMode={setLightingMode}
+        layerVisibility={layerVisibility}
+        onToggleLayer={handleToggleLayer}
+        partMetrics={partMetrics}
       />
 
       {/* 6. NC2Check G-Code Post Modal */}
