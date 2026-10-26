@@ -284,82 +284,340 @@ export function createCylinderSurface(radius = 35, height = 45) {
 /**
  * Creates a 3D wireframe bounding box cage
  */
-export function createBoundingWireframe(bounds) {
+export function createBoundingWireframe(bounds, offset = { x: 0, y: 0, z: 0 }) {
   const min = bounds.min;
   const max = bounds.max;
-  const w = max.x - min.x;
-  const h = max.y - min.y;
-  const d = max.z - min.z;
+  const ox = offset.x || 0;
+  const oy = offset.y || 0;
+  const oz = offset.z || 0;
+
+  const w = (max.x - min.x) + ox * 2;
+  const h = (max.y - min.y) + oy * 2;
+  const d = (max.z - min.z) + oz * 2;
 
   const boxGeo = new THREE.BoxGeometry(w, h, d);
   const edges = new THREE.EdgesGeometry(boxGeo);
   const mat = new THREE.LineBasicMaterial({ color: 0xfacc15, linewidth: 2 });
   const line = new THREE.LineSegments(edges, mat);
   line.position.set((min.x + max.x) / 2, (min.y + max.y) / 2, (min.z + max.z) / 2);
-  line.name = "Wireframe_Bounding_Cage";
+  line.name = `Wireframe_Bounding_Cage_${Math.round(w)}x${Math.round(h)}x${Math.round(d)}`;
+  line.userData = { type: 'bounding_cage', width: w, height: h, depth: d };
   return line;
 }
 
 /**
- * Creates a 3D wireframe guide circle
+ * Creates a 3D wireframe circle or arc on G17 (XZ), G18 (XY), or G19 (YZ)
  */
-export function createWireframeCircle(radius = 35, y = 30) {
+export function createWireframeCircle(
+  radius = 35,
+  y = 30,
+  center = [0, 0],
+  startAngleDeg = 0,
+  sweepAngleDeg = 360,
+  plane = 'G17',
+  options = {}
+) {
   const points = [];
-  const segments = 64;
+  const segments = Math.max(16, Math.min(128, Math.round((sweepAngleDeg / 360) * 64)));
+  const startRad = (startAngleDeg * Math.PI) / 180;
+  const sweepRad = (sweepAngleDeg * Math.PI) / 180;
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
   for (let i = 0; i <= segments; i++) {
-    const theta = (i / segments) * Math.PI * 2;
-    points.push(new THREE.Vector3(Math.cos(theta) * radius, y, Math.sin(theta) * radius));
+    const theta = startRad + (i / segments) * sweepRad;
+    const cosVal = Math.cos(theta) * radius;
+    const sinVal = Math.sin(theta) * radius;
+
+    if (plane === 'G18') {
+      // XY plane, Z elevation
+      points.push(new THREE.Vector3(cx + cosVal, y + sinVal, cz));
+    } else if (plane === 'G19') {
+      // YZ plane, X elevation
+      points.push(new THREE.Vector3(cx, y + cosVal, cz + sinVal));
+    } else {
+      // G17 Top plane (XZ, Y elevation)
+      points.push(new THREE.Vector3(cx + cosVal, y, cz + sinVal));
+    }
   }
+
   const geo = new THREE.BufferGeometry().setFromPoints(points);
-  const mat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+  const color = options.color || (sweepAngleDeg < 360 ? 0xf59e0b : 0x38bdf8);
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
   const line = new THREE.Line(geo, mat);
-  line.name = "Wireframe_Circle";
+  const arcType = sweepAngleDeg >= 360 ? 'Circle' : 'Arc';
+  line.name = options.name || `Wireframe_${arcType}_R${radius.toFixed(1)}`;
+  line.userData = { type: arcType.toLowerCase(), radius, plane, center: [cx, y, cz] };
   return line;
 }
 
 /**
- * Creates a 3D wireframe boundary rectangle
+ * Creates a Bolt Hole Circle (PCD) with pitch circle and hole drill locations
  */
-export function createWireframeRect(w = 80, d = 60, y = 35) {
-  const points = [
-    new THREE.Vector3(-w / 2, y, -d / 2),
-    new THREE.Vector3(w / 2, y, -d / 2),
-    new THREE.Vector3(w / 2, y, d / 2),
-    new THREE.Vector3(-w / 2, y, d / 2),
-    new THREE.Vector3(-w / 2, y, -d / 2),
-  ];
+export function createBoltHoleCircle(
+  pcd = 60,
+  numHoles = 6,
+  y = 35,
+  center = [0, 0],
+  startAngleDeg = 0,
+  holeRadius = 3.5,
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+  const pitchRadius = pcd / 2;
+
+  // 1. Pitch Centerline Circle (Dashed Amber)
+  const pitchPoints = [];
+  for (let i = 0; i <= 64; i++) {
+    const theta = (i / 64) * Math.PI * 2;
+    pitchPoints.push(new THREE.Vector3(cx + Math.cos(theta) * pitchRadius, y, cz + Math.sin(theta) * pitchRadius));
+  }
+  const pitchGeo = new THREE.BufferGeometry().setFromPoints(pitchPoints);
+  const pitchMat = new THREE.LineDashedMaterial({ color: 0xf59e0b, dashSize: 3, gapSize: 2 });
+  const pitchLine = new THREE.Line(pitchGeo, pitchMat);
+  pitchLine.computeLineDistances();
+  group.add(pitchLine);
+
+  // 2. Individual Holes & Center Markers
+  const holePositions = [];
+  const dotGeo = new THREE.SphereGeometry(1.2, 12, 12);
+  const dotMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+
+  for (let i = 0; i < numHoles; i++) {
+    const angleDeg = startAngleDeg + i * (360 / numHoles);
+    const theta = (angleDeg * Math.PI) / 180;
+    const hx = cx + Math.cos(theta) * pitchRadius;
+    const hz = cz + Math.sin(theta) * pitchRadius;
+    holePositions.push({ index: i + 1, x: hx, y, z: hz, angleDeg });
+
+    // Hole outline circle
+    if (holeRadius > 0) {
+      const holeCircle = createWireframeCircle(holeRadius, y, [hx, hz], 0, 360, 'G17', {
+        color: 0x38bdf8,
+        name: `Hole_Dia${(holeRadius * 2).toFixed(1)}_${i + 1}`
+      });
+      group.add(holeCircle);
+    }
+
+    // Hole center dot marker
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.set(hx, y, hz);
+    group.add(dot);
+  }
+
+  group.name = options.name || `Wireframe_PCD${pcd}_${numHoles}Holes`;
+  group.userData = { type: 'bolt_hole_circle', pcd, numHoles, holeRadius, holePositions };
+  return group;
+}
+
+/**
+ * Creates a 3D wireframe boundary rectangle with optional corner fillet radius
+ */
+export function createWireframeRect(
+  w = 80,
+  d = 60,
+  y = 35,
+  filletRadius = 0,
+  center = [0, 0],
+  options = {}
+) {
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+  const halfW = w / 2;
+  const halfD = d / 2;
+  const maxR = Math.min(halfW, halfD) * 0.95;
+  const r = Math.max(0, Math.min(maxR, filletRadius));
+
+  const points = [];
+
+  if (r <= 0.01) {
+    // Sharp Corner Rectangle
+    points.push(new THREE.Vector3(cx - halfW, y, cz - halfD));
+    points.push(new THREE.Vector3(cx + halfW, y, cz - halfD));
+    points.push(new THREE.Vector3(cx + halfW, y, cz + halfD));
+    points.push(new THREE.Vector3(cx - halfW, y, cz + halfD));
+    points.push(new THREE.Vector3(cx - halfW, y, cz - halfD));
+  } else {
+    // Rounded Corner Rectangle with 4 tangent fillet arcs
+    const arcSegs = 8;
+    const corners = [
+      { center: [cx + halfW - r, cz + halfD - r], start: 0, end: Math.PI / 2 },
+      { center: [cx - halfW + r, cz + halfD - r], start: Math.PI / 2, end: Math.PI },
+      { center: [cx - halfW + r, cz - halfD + r], start: Math.PI, end: (3 * Math.PI) / 2 },
+      { center: [cx + halfW - r, cz - halfD + r], start: (3 * Math.PI) / 2, end: 2 * Math.PI }
+    ];
+
+    corners.forEach((c) => {
+      for (let i = 0; i <= arcSegs; i++) {
+        const theta = c.start + (i / arcSegs) * (c.end - c.start);
+        points.push(new THREE.Vector3(c.center[0] + Math.cos(theta) * r, y, c.center[1] + Math.sin(theta) * r));
+      }
+    });
+    // Close contour
+    points.push(points[0].clone());
+  }
+
   const geo = new THREE.BufferGeometry().setFromPoints(points);
-  const mat = new THREE.LineBasicMaterial({ color: 0x4ade80, linewidth: 2 });
+  const color = options.color || 0x4ade80;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
   const line = new THREE.Line(geo, mat);
-  line.name = "Wireframe_Rectangle";
+  line.name = options.name || `Wireframe_Rect_${Math.round(w)}x${Math.round(d)}${r > 0 ? `_R${r}` : ''}`;
+  line.userData = { type: 'rectangle', width: w, depth: d, filletRadius: r, center: [cx, y, cz] };
   return line;
 }
 
 /**
- * Creates a 3D line between two endpoints
+ * Creates a regular polygon wireframe (Hexagon, Octagon, etc.)
  */
-export function createWireframeLine(p1 = [-40, 35, 0], p2 = [40, 35, 0]) {
+export function createWireframePolygon(
+  sides = 6,
+  radius = 25,
+  y = 35,
+  rotationDeg = 0,
+  center = [0, 0],
+  options = {}
+) {
+  const n = Math.max(3, Math.min(24, Math.round(sides)));
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+  const rotRad = (rotationDeg * Math.PI) / 180;
+  const points = [];
+
+  for (let i = 0; i <= n; i++) {
+    const theta = rotRad + (i / n) * Math.PI * 2;
+    points.push(new THREE.Vector3(cx + Math.cos(theta) * radius, y, cz + Math.sin(theta) * radius));
+  }
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0xa855f7;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  line.name = options.name || `Wireframe_Polygon_${n}S_R${radius}`;
+  line.userData = { type: 'polygon', sides: n, radius, rotationDeg, center: [cx, y, cz] };
+  return line;
+}
+
+/**
+ * Creates a 3D wireframe line between two endpoints
+ */
+export function createWireframeLine(
+  p1 = [-40, 35, 0],
+  p2 = [40, 35, 0],
+  options = {}
+) {
   const points = [
     new THREE.Vector3(...p1),
     new THREE.Vector3(...p2)
   ];
   const geo = new THREE.BufferGeometry().setFromPoints(points);
-  const mat = new THREE.LineBasicMaterial({ color: 0xf43f5e, linewidth: 2 });
+  const color = options.color || 0xf43f5e;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
   const line = new THREE.Line(geo, mat);
-  line.name = "Wireframe_Line";
+  const length = points[0].distanceTo(points[1]).toFixed(1);
+  line.name = options.name || `Wireframe_Line_L${length}`;
+  line.userData = { type: 'line', p1, p2, length: Number(length) };
   return line;
+}
+
+/**
+ * Creates a parallel offset wireframe line
+ */
+export function createParallelLine(p1, p2, offsetDist = 10, plane = 'G17', options = {}) {
+  const v1 = new THREE.Vector3(...p1);
+  const v2 = new THREE.Vector3(...p2);
+  const dir = new THREE.Vector3().subVectors(v2, v1).normalize();
+
+  // Compute normal perpendicular in specified plane
+  let norm = new THREE.Vector3();
+  if (plane === 'G17') {
+    norm.set(-dir.z, 0, dir.x); // perpendicular on XZ
+  } else {
+    norm.set(-dir.y, dir.x, 0); // perpendicular on XY
+  }
+  norm.multiplyScalar(offsetDist);
+
+  const np1 = [v1.x + norm.x, v1.y + norm.y, v1.z + norm.z];
+  const np2 = [v2.x + norm.x, v2.y + norm.y, v2.z + norm.z];
+
+  return createWireframeLine(np1, np2, {
+    color: options.color || 0xf59e0b,
+    name: options.name || `Wireframe_Parallel_Offset${offsetDist}`
+  });
+}
+
+/**
+ * Extracts 3D feature edge curves from an active 3D workpiece model
+ */
+export function extractEdgesFromModel(modelGroup, thresholdAngleDeg = 25) {
+  const group = new THREE.Group();
+  group.name = `Wireframe_Edges_Group_${Math.round(thresholdAngleDeg)}deg`;
+
+  let totalSegments = 0;
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+
+  modelGroup.traverse((child) => {
+    if (child.isMesh && child.geometry) {
+      try {
+        const edgesGeo = new THREE.EdgesGeometry(child.geometry, thresholdAngleDeg);
+        if (edgesGeo.attributes.position && edgesGeo.attributes.position.count > 0) {
+          const lineSegments = new THREE.LineSegments(edgesGeo, edgeMat);
+          lineSegments.position.copy(child.position);
+          lineSegments.rotation.copy(child.rotation);
+          lineSegments.scale.copy(child.scale);
+          group.add(lineSegments);
+          totalSegments += edgesGeo.attributes.position.count / 2;
+        }
+      } catch (err) {
+        console.warn("Edge extraction failed for mesh child:", err);
+      }
+    }
+  });
+
+  group.userData = { type: 'extracted_edges', thresholdAngleDeg, totalSegments };
+  return { group, totalSegments };
+}
+
+/**
+ * Creates a 3D datum point marker with coordinate crosshair ticks
+ */
+export function createPointMarker(coords = [0, 35, 0], name = "Wireframe_Datum_Point", color = 0xef4444) {
+  const group = new THREE.Group();
+  group.name = name;
+
+  // Center point sphere
+  const sphereGeo = new THREE.SphereGeometry(1.5, 16, 16);
+  const sphereMat = new THREE.MeshBasicMaterial({ color });
+  const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+  group.add(sphere);
+
+  // Crosshair ticks
+  const tickLength = 5;
+  const tickPoints = [
+    new THREE.Vector3(-tickLength, 0, 0), new THREE.Vector3(tickLength, 0, 0),
+    new THREE.Vector3(0, -tickLength, 0), new THREE.Vector3(0, tickLength, 0),
+    new THREE.Vector3(0, 0, -tickLength), new THREE.Vector3(0, 0, tickLength),
+  ];
+  const tickGeo = new THREE.BufferGeometry().setFromPoints(tickPoints);
+  const tickMat = new THREE.LineBasicMaterial({ color, linewidth: 1.5 });
+  const ticks = new THREE.LineSegments(tickGeo, tickMat);
+  group.add(ticks);
+
+  group.position.set(...coords);
+  group.userData = { type: 'datum_point', coords };
+  return group;
 }
 
 /**
  * Creates a 4-point drill coordinate grid
  */
-export function createDrillPointsGrid(bounds) {
+export function createDrillPointsGrid(bounds, cornerOffset = 8) {
   const min = bounds.min;
   const max = bounds.max;
   const group = new THREE.Group();
   group.name = "Drill_Points_Group";
 
-  const cornerOffset = 8;
   const pts = [
     [min.x + cornerOffset, max.y, min.z + cornerOffset],
     [max.x - cornerOffset, max.y, min.z + cornerOffset],
@@ -367,15 +625,12 @@ export function createDrillPointsGrid(bounds) {
     [min.x + cornerOffset, max.y, max.z - cornerOffset],
   ];
 
-  const dotGeo = new THREE.SphereGeometry(1.5, 16, 16);
-  const dotMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-
-  pts.forEach(([x, y, z]) => {
-    const dot = new THREE.Mesh(dotGeo, dotMat);
-    dot.position.set(x, y, z);
-    group.add(dot);
+  pts.forEach(([x, y, z], idx) => {
+    const marker = createPointMarker([x, y, z], `Drill_Corner_${idx + 1}`, 0xef4444);
+    group.add(marker);
   });
 
+  group.userData = { type: 'drill_grid', points: pts };
   return group;
 }
 

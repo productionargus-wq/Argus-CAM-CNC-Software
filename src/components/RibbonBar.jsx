@@ -5,7 +5,7 @@ import {
   Wrench, FileCode, CheckSquare, Upload, FolderOpen, Download,
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
-  Save, Clock
+  Save, Clock, Disc
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -20,6 +20,7 @@ export default function RibbonBar({
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
   onOpenDistanceCaliper,
+  onOpenWireframeModal,
   onSelectManagerTab,
   onUnblankAll,
   onInvertVisibility,
@@ -370,40 +371,130 @@ export default function RibbonBar({
         {/* ==================== 3. WIREFRAME TAB ==================== */}
         {activeTab === 'Wireframe' && (
           <>
+            {/* Lines */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onAddWireframe('line')} title="Create 3D Line Between Endpoints">
-                  <div style={{ width: '24px', height: '2px', background: '#f43f5e', transform: 'rotate(-30deg)', margin: '10px 0' }} />
-                  <span className="btn-label">Line<br />2 Points</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('line') : onAddWireframe('line')}
+                  title="3D Line 2 Points (Endpoints or Angle + Length)"
+                >
+                  <div style={{ width: '22px', height: '2px', background: '#f43f5e', transform: 'rotate(-30deg)', margin: '10px 0' }} />
+                  <span className="btn-label" style={{ color: '#f43f5e', fontWeight: 600 }}>Line<br />2 Points</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onAddWireframe('circle')} title="Create 3D Wireframe Circle / Arc">
-                  <div style={{ width: '20px', height: '20px', border: '2px solid #38bdf8', borderRadius: '50%' }} />
-                  <span className="btn-label">Circle<br />Radius</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onAddWireframe('rect')} title="Create 3D Rectangular Pocket Boundary">
-                  <div style={{ width: '22px', height: '16px', border: '2px solid #4ade80', borderRadius: '2px' }} />
-                  <span className="btn-label">Rectangle<br />Boundary</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onAddWireframe('bounding')} title="Generate 3D Wireframe Cage Enclosing Part">
-                  <Box size={22} color="#facc15" />
-                  <span className="btn-label" style={{ color: '#facc15', fontWeight: 600 }}>Bounding<br />Cage</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('parallel') : onAddWireframe('parallel')}
+                  title="Parallel Offset Wireframe Line"
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '8px 0' }}>
+                    <div style={{ width: '22px', height: '2px', background: '#f59e0b' }} />
+                    <div style={{ width: '22px', height: '2px', background: '#38bdf8' }} />
+                  </div>
+                  <span className="btn-label">Parallel<br />Line</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Curves &amp; 2D Boundaries</span>
+              <span className="ribbon-group-title">Lines</span>
             </div>
 
+            {/* Arcs & Circles */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onAddWireframe('drillpoints')} title="Generate 4-Corner WCS Drill Reference Points">
-                  <Crosshair size={22} color="#ef4444" />
-                  <span className="btn-label">Drill<br />Points</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('circle') : onAddWireframe('circle')}
+                  title="Parametric 3D Circle / Arc (Radius, Diameter, Plane G17/G18/G19)"
+                >
+                  <div style={{ width: '20px', height: '20px', border: '2px solid #38bdf8', borderRadius: '50%' }} />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Circle<br />Radius</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onClearWireframes} title="Clear Added Wireframe Geometry">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('pcd') : onAddWireframe('pcd')}
+                  title="Bolt Hole Circle Pattern (PCD & Drill Centers)"
+                >
+                  <Disc size={22} color="#f59e0b" />
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Bolt Circle<br />(PCD)</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Arcs &amp; Circles</span>
+            </div>
+
+            {/* Shapes */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('rect') : onAddWireframe('rect')}
+                  title="3D Rectangular Pocket Boundary (Corner Fillet R)"
+                >
+                  <div style={{ width: '22px', height: '16px', border: '2px solid #4ade80', borderRadius: '3px' }} />
+                  <span className="btn-label" style={{ color: '#4ade80', fontWeight: 600 }}>Rectangle<br />Pocket</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('polygon') : onAddWireframe('polygon')}
+                  title="Regular Polygon (Hexagon, Octagon, Prismatic Flange)"
+                >
+                  <Grid size={21} color="#a855f7" />
+                  <span className="btn-label">Polygon<br />Hexagon</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Shapes</span>
+            </div>
+
+            {/* Curves from Solid CAD Model */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('edges') : onAddWireframe('edges')}
+                  title="Extract Sharp Feature Edges from 3D Workpiece Model into Level 10 Wireframe Curves"
+                >
+                  <Box size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Curve on<br />All Edges</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('datum') : onAddWireframe('bounding')}
+                  title="Generate 3D Wireframe Cage Enclosing Part"
+                >
+                  <Box size={22} color="#facc15" />
+                  <span className="btn-label">Bounding<br />Cage</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Solid Edges</span>
+            </div>
+
+            {/* Datum & Management */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('datum') : onAddWireframe('drillpoints')}
+                  title="WCS Coordinate Datum Reference Points"
+                >
+                  <Crosshair size={22} color="#ef4444" />
+                  <span className="btn-label">Datum<br />Points</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('list') : null}
+                  title="Inspect Level 10 Wireframe Entities Manager"
+                >
+                  <Layers size={21} color="#60a5fa" />
+                  <span className="btn-label">Wireframe<br />Manager</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onClearWireframes}
+                  title="Clear All Level 10 Wireframe Geometry"
+                >
                   <Trash2 size={20} color="#94a3b8" />
                   <span className="btn-label">Clear<br />Wireframes</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Datum &amp; Cleanup</span>
+              <span className="ribbon-group-title">Datum &amp; Manage</span>
             </div>
           </>
         )}

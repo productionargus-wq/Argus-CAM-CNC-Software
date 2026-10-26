@@ -17,6 +17,7 @@ import FileNewModal from './components/FileNewModal';
 import SaveAsModal from './components/SaveAsModal';
 import RecentProjectsModal from './components/RecentProjectsModal';
 import ExportCADModal from './components/ExportCADModal';
+import WireframeSketcherModal from './components/WireframeSketcherModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -96,6 +97,8 @@ export default function App() {
   const [isSaveAsModalOpen, setIsSaveAsModalOpen] = useState(false);
   const [isRecentProjectsModalOpen, setIsRecentProjectsModalOpen] = useState(false);
   const [isExportCADModalOpen, setIsExportCADModalOpen] = useState(false);
+  const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
+  const [wireframeModalTool, setWireframeModalTool] = useState('line');
 
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isSimModalOpen, setIsSimModalOpen] = useState(false);
@@ -713,28 +716,33 @@ export default function App() {
     }));
   };
 
-  // Wireframe Creation Handlers
+  // Wireframe Creation & Sketcher Handlers
+  const handleOpenWireframeModal = (tool = 'line') => {
+    setWireframeModalTool(tool);
+    setIsWireframeModalOpen(true);
+  };
+
+  const handleAddCustomEntity = (entity) => {
+    setCustomGeometry((prev) => [...prev, entity]);
+  };
+
+  const handleRemoveCustomEntity = (target) => {
+    setCustomGeometry((prev) => prev.filter((item) => item !== target));
+  };
+
   const handleAddWireframe = (type) => {
-    if (type === 'line') {
-      const line = createWireframeLine([-40, 35, 0], [40, 35, 0]);
-      setCustomGeometry((prev) => [...prev, line]);
-    } else if (type === 'circle') {
-      const circle = createWireframeCircle(35, 35);
-      setCustomGeometry((prev) => [...prev, circle]);
-    } else if (type === 'rect') {
-      const rect = createWireframeRect(80, 60, 35);
-      setCustomGeometry((prev) => [...prev, rect]);
-    } else if (type === 'bounding' && partMetrics?.box) {
-      const cage = createBoundingWireframe(partMetrics.box);
-      setCustomGeometry((prev) => [...prev, cage]);
-    } else if (type === 'drillpoints' && partMetrics?.box) {
-      const grid = createDrillPointsGrid(partMetrics.box);
-      setCustomGeometry((prev) => [...prev, grid]);
-    }
+    handleOpenWireframeModal(type);
   };
 
   const handleClearWireframes = () => {
-    setCustomGeometry((prev) => prev.filter((item) => !item.name?.startsWith('Wireframe_') && !item.name?.startsWith('Drill_')));
+    setCustomGeometry((prev) =>
+      prev.filter(
+        (item) =>
+          !item.name?.startsWith('Wireframe_') &&
+          !item.name?.startsWith('Drill_') &&
+          !item.name?.startsWith('Hole_')
+      )
+    );
   };
 
   // Surface Creation Handlers
@@ -789,6 +797,7 @@ export default function App() {
         onOpenGCodeViewer={() => setIsGCodeViewerOpen(true)}
         onOpenEntityAnalyzer={() => setIsEntityAnalyzerOpen(true)}
         onOpenDistanceCaliper={() => setIsDistanceCaliperOpen(true)}
+        onOpenWireframeModal={handleOpenWireframeModal}
         onSelectManagerTab={setActiveManagerTab}
         onUnblankAll={handleUnblankAll}
         onInvertVisibility={handleInvertVisibility}
@@ -901,6 +910,19 @@ export default function App() {
         onClose={() => setIsExportCADModalOpen(false)}
         currentModel={currentModel}
         currentProjectName={currentProjectName}
+      />
+
+      {/* Wireframe CAD Sketcher Modal (Tab 3) */}
+      <WireframeSketcherModal
+        isOpen={isWireframeModalOpen}
+        onClose={() => setIsWireframeModalOpen(false)}
+        initialTool={wireframeModalTool}
+        partMetrics={partMetrics}
+        activeModel={currentModel}
+        customGeometry={customGeometry}
+        onAddEntity={handleAddCustomEntity}
+        onRemoveEntity={handleRemoveCustomEntity}
+        onClearEntities={handleClearWireframes}
       />
 
       {/* 6. NC2Check G-Code Post Modal */}
