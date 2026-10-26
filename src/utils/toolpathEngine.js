@@ -322,3 +322,228 @@ export function buildToolpathMeshes(toolpathData) {
 
   return { cutGeo, rapidGeo };
 }
+
+/**
+ * Generates 3D High-Speed Adaptive Roughing Toolpath (Constant Tool Engagement Trochoidal Arcs)
+ */
+export function generateAdaptiveRoughingToolpath(bounds, tool, params = {}) {
+  const {
+    stepoverPct = 25,
+    stepdown = 8.0,
+    totalDepth = 24.0,
+    rapidHeight = 15.0
+  } = params;
+
+  const toolRadius = (tool.diameter || 10) / 2;
+  const stepover = (tool.diameter * stepoverPct) / 100;
+  const topY = bounds.max.y;
+
+  const cuttingLines = [];
+  const rapidLines = [];
+
+  const minX = bounds.min.x - toolRadius;
+  const maxX = bounds.max.x + toolRadius;
+  const minZ = bounds.min.z - toolRadius;
+  const maxZ = bounds.max.z + toolRadius;
+
+  for (let curDepth = stepdown; curDepth <= totalDepth; curDepth += stepdown) {
+    const cutY = topY - curDepth;
+
+    // Helical center lead-in
+    rapidLines.push([
+      new THREE.Vector3(minX, topY + rapidHeight, minZ),
+      new THREE.Vector3(minX, cutY + 2, minZ)
+    ]);
+
+    // Trochoidal clearing motion (small circular loops advancing along the cut vector)
+    let direction = 1;
+    for (let z = minZ; z <= maxZ; z += stepover * 2) {
+      const startX = direction === 1 ? minX : maxX;
+      const endX = direction === 1 ? maxX : minX;
+      const dist = Math.abs(endX - startX);
+      const steps = Math.max(10, Math.floor(dist / 4));
+
+      let prevPt = new THREE.Vector3(startX, cutY, z);
+      for (let s = 1; s <= steps; s++) {
+        const t = s / steps;
+        const baseX = startX + (endX - startX) * t;
+        // Superimpose trochoidal circular loop
+        const loopAngle = (s % 6) * (Math.PI / 3);
+        const trochoidX = baseX + Math.cos(loopAngle) * (stepover * 0.7);
+        const trochoidZ = z + Math.sin(loopAngle) * (stepover * 0.7);
+
+        const currPt = new THREE.Vector3(trochoidX, cutY, trochoidZ);
+        cuttingLines.push([prevPt, currPt]);
+        prevPt = currPt;
+      }
+
+      direction *= -1;
+    }
+
+    // Retract
+    rapidLines.push([
+      new THREE.Vector3(maxX, cutY, maxZ),
+      new THREE.Vector3(maxX, topY + rapidHeight, maxZ)
+    ]);
+  }
+
+  return { cuttingLines, rapidLines };
+}
+
+/**
+ * Generates Perimeter Chamfer / Deburring Toolpath (45-degree Edge Break)
+ */
+export function generateChamferToolpath(bounds, tool, params = {}) {
+  const {
+    chamferWidth = 1.0,
+    rapidHeight = 15.0
+  } = params;
+
+  const toolRadius = (tool.diameter || 8) / 2;
+  const topY = bounds.max.y;
+  const chamferDepth = topY - chamferWidth;
+
+  const cuttingLines = [];
+  const rapidLines = [];
+
+  const halfX = (bounds.max.x - bounds.min.x) / 2 + toolRadius - (chamferWidth * 0.5);
+  const halfZ = (bounds.max.z - bounds.min.z) / 2 + toolRadius - (chamferWidth * 0.5);
+
+  const corners = [
+    new THREE.Vector3(-halfX, chamferDepth, -halfZ),
+    new THREE.Vector3(halfX, chamferDepth, -halfZ),
+    new THREE.Vector3(halfX, chamferDepth, halfZ),
+    new THREE.Vector3(-halfX, chamferDepth, halfZ)
+  ];
+
+  // Lead-in
+  const leadStart = new THREE.Vector3(-halfX - 6, chamferDepth + 2, -halfZ);
+  rapidLines.push([
+    new THREE.Vector3(leadStart.x, topY + rapidHeight, leadStart.z),
+    leadStart
+  ]);
+  cuttingLines.push([leadStart, corners[0]]);
+
+  // Chamfer boundary loops (2 finish spring passes)
+  for (let p = 0; p < 2; p++) {
+    cuttingLines.push([corners[0], corners[1]]);
+    cuttingLines.push([corners[1], corners[2]]);
+    cuttingLines.push([corners[2], corners[3]]);
+    cuttingLines.push([corners[3], corners[0]]);
+  }
+
+  // Lead-out
+  const leadEnd = new THREE.Vector3(-halfX - 6, chamferDepth + 2, -halfZ);
+  cuttingLines.push([corners[0], leadEnd]);
+  rapidLines.push([
+    leadEnd,
+    new THREE.Vector3(leadEnd.x, topY + rapidHeight, leadEnd.z)
+  ]);
+
+  return { cuttingLines, rapidLines };
+}
+
+/**
+ * Calculates Toolpath Distance, Machining Cycle Time, and Material Removal Rate (MRR)
+ */
+export function calculateToolpathMetrics(toolpathData, feedRate = 1200, rapidFeed = 18000, toolDiameter = 10, depthOfCut = 2.0, stepover = 5.0) {
+  let cutDistanceMm = 0;
+  let rapidDistanceMm = 0;
+
+  if (toolpathData?.cuttingLines) {
+    toolpathData.cuttingLines.forEach(([p1, p2]) => {
+      cutDistanceMm += p1.distanceTo(p2);
+    });
+  }
+
+  if (toolpathData?.rapidLines) {
+    toolpathData.rapidLines.forEach(([p1, p2]) => {
+      rapidDistanceMm += p1.distanceTo(p2);
+    });
+  }
+
+  const cutTimeMin = feedRate > 0 ? cutDistanceMm / feedRate : 0;
+  const rapidTimeMin = rapidFeed > 0 ? rapidDistanceMm / rapidFeed : 0;
+  const totalTimeMin = cutTimeMin + rapidTimeMin;
+
+  const minutes = Math.floor(totalTimeMin);
+  const seconds = Math.round((totalTimeMin - minutes) * 60);
+  const formattedTime = `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+
+  // Material Removal Rate MRR = (ap * ae * Vf) / 1000  (cm3/min)
+  const mrrCm3Min = ((depthOfCut * stepover * feedRate) / 1000).toFixed(2);
+
+  return {
+    cutDistanceMm: Math.round(cutDistanceMm),
+    rapidDistanceMm: Math.round(rapidDistanceMm),
+    totalDistanceMm: Math.round(cutDistanceMm + rapidDistanceMm),
+    totalTimeMin,
+    formattedTime,
+    mrrCm3Min: Number(mrrCm3Min)
+  };
+}
+
+/**
+ * Safety & Gouge Detection Checker across all active operations and tools
+ */
+export function checkToolpathCollisions(operations = [], tools = []) {
+  const issues = [];
+
+  operations.forEach((op) => {
+    const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { fluteLength: 25, overallLength: 75 };
+    const requiredDepth = Number(op.totalDepth || op.stepdown || 10);
+    const fluteLength = Number(assignedTool.fluteLength || 25);
+    const overallLength = Number(assignedTool.overallLength || 75);
+
+    // 1. Tool Flute Length Insufficient (Shank rub)
+    if (requiredDepth > fluteLength) {
+      issues.push({
+        opId: op.id,
+        opName: op.name,
+        type: 'warning',
+        severity: 'Medium',
+        title: 'Shank Contact Warning',
+        message: `Cut depth (${requiredDepth}mm) exceeds tool flute length (${fluteLength}mm). Non-cutting shank will rub workpiece wall.`
+      });
+    }
+
+    // 2. Tool Holder Collision
+    if (requiredDepth > overallLength - 10) {
+      issues.push({
+        opId: op.id,
+        opName: op.name,
+        type: 'danger',
+        severity: 'Critical Collision',
+        title: 'Tool Holder Gouge Detected',
+        message: `Cut depth (${requiredDepth}mm) exceeds tool holder clearance stickout (${overallLength - 10}mm). Spindle collet collision imminent!`
+      });
+    }
+
+    // 3. Stepover Too High (> 85% of tool diameter)
+    if (op.stepoverPct > 85) {
+      issues.push({
+        opId: op.id,
+        opName: op.name,
+        type: 'warning',
+        severity: 'Low',
+        title: 'High Radial Engagement',
+        message: `Stepover (${op.stepoverPct}%) exceeds 85%. Excessive tool deflection or chatter may occur during high feed.`
+      });
+    }
+
+    // 4. Zero or negative rapid clearance
+    if (op.rapidHeight <= 1.0) {
+      issues.push({
+        opId: op.id,
+        opName: op.name,
+        type: 'danger',
+        severity: 'High',
+        title: 'Insufficient Rapid Clearance',
+        message: `Rapid Z height (${op.rapidHeight}mm) is critically low. Rapid moves may strike workpiece clamps or burrs.`
+      });
+    }
+  });
+
+  return issues;
+}
+

@@ -8,6 +8,8 @@ import {
   generateWaterlineToolpath,
   generateSwarfToolpath,
   generateDrillingToolpath,
+  generateAdaptiveRoughingToolpath,
+  generateChamferToolpath,
   buildToolpathMeshes
 } from '../utils/toolpathEngine';
 
@@ -618,13 +620,15 @@ export default function Viewport3D({
 
     const bounds = partMetrics.box;
 
-    const opColors = {
-      face: 0x3b82f6,
-      pocket: 0x10b981,
-      contour: 0xf59e0b,
-      swarf: 0x8b5cf6,
-      drill: 0xef4444
-    };
+      const opColors = {
+        face: 0x3b82f6,
+        pocket: 0x10b981,
+        contour: 0xf59e0b,
+        swarf: 0x8b5cf6,
+        drill: 0xef4444,
+        adaptive: 0x06b6d4,
+        chamfer: 0xec4899
+      };
 
     operations.forEach((op) => {
       const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10 };
@@ -659,6 +663,18 @@ export default function Viewport3D({
           drillDepth: op.totalDepth || 25.0,
           peckDepth: op.stepdown || 5.0,
           rapidHeight: op.rapidHeight || 10.0
+        });
+      } else if (op.badgeClass === 'adaptive') {
+        toolpathData = generateAdaptiveRoughingToolpath(bounds, assignedTool, {
+          stepoverPct: op.stepoverPct || 25,
+          stepdown: op.stepdown || 6.0,
+          totalDepth: op.totalDepth || 18.0,
+          rapidHeight: op.rapidHeight || 15.0
+        });
+      } else if (op.badgeClass === 'chamfer') {
+        toolpathData = generateChamferToolpath(bounds, assignedTool, {
+          chamferWidth: op.stepdown || 1.0,
+          rapidHeight: op.rapidHeight || 15.0
         });
       }
 

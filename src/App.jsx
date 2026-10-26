@@ -26,6 +26,7 @@ import DraftingCADModal from './components/DraftingCADModal';
 import TransformCADModal from './components/TransformCADModal';
 import MachineConfigModal from './components/MachineConfigModal';
 import ViewStudioModal from './components/ViewStudioModal';
+import CAMOperationsWizardModal from './components/CAMOperationsWizardModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -127,6 +128,8 @@ export default function App() {
   const [cameraFov, setCameraFov] = useState(45);
   const [clippingPlane, setClippingPlane] = useState({ enabled: false, axis: 'Z', offset: 0, invert: false });
   const [lightingMode, setLightingMode] = useState('studio');
+  const [isOperationsWizardOpen, setIsOperationsWizardOpen] = useState(false);
+  const [operationsWizardTab, setOperationsWizardTab] = useState('create');
 
   const [solidsList, setSolidsList] = useState([
     { id: 1, name: 'Solid 1 - Finished Workpiece', material: '6061-T6 Aluminum', volumeCm3: 184.2, isPrimary: true, visible: true, active: true, color: '#38bdf8' },
@@ -380,13 +383,20 @@ export default function App() {
     alert("All toolpaths regenerated successfully.");
   };
 
-  const handleDeleteActiveOp = () => {
+  const handleDeleteOpById = (id) => {
     if (operations.length <= 1) {
       alert("At least one operation must remain in the operations tree.");
       return;
     }
-    setOperations((prev) => prev.filter((op) => op.id !== activeOpId));
-    setActiveOpId(operations[0].id);
+    setOperations((prev) => prev.filter((op) => op.id !== id));
+    if (activeOpId === id) {
+      const remaining = operations.filter((op) => op.id !== id);
+      if (remaining.length > 0) setActiveOpId(remaining[0].id);
+    }
+  };
+
+  const handleDeleteActiveOp = () => {
+    handleDeleteOpById(activeOpId);
   };
 
   const handleEditOp = (op) => {
@@ -492,6 +502,38 @@ export default function App() {
         stockToLeaveXY: 0.0,
         stockToLeaveZ: 0.0,
         rapidHeight: 10.0
+      };
+    } else if (strategy === 'adaptive') {
+      newOp = {
+        id: nextId,
+        name: `Adaptive Roughing Pass ${nextId}`,
+        toolId: 1,
+        toolName: 'T1 - 10mm Endmill',
+        badgeClass: 'adaptive',
+        badgeText: 'AD',
+        visible: true,
+        stepoverPct: 25,
+        stepdown: 6.0,
+        totalDepth: 20.0,
+        stockToLeaveXY: 0.25,
+        stockToLeaveZ: 0.1,
+        rapidHeight: 15.0
+      };
+    } else if (strategy === 'chamfer') {
+      newOp = {
+        id: nextId,
+        name: `45-Deg Chamfer Deburr ${nextId}`,
+        toolId: 4,
+        toolName: 'T4 - Chamfer Mill',
+        badgeClass: 'chamfer',
+        badgeText: 'CH',
+        visible: true,
+        stepoverPct: 15,
+        stepdown: 1.0,
+        totalDepth: 1.0,
+        stockToLeaveXY: 0.0,
+        stockToLeaveZ: 0.0,
+        rapidHeight: 15.0
       };
     }
 
@@ -935,6 +977,8 @@ export default function App() {
         onOpenTransformModal={handleOpenTransformModal}
         onOpenMachineConfigModal={() => setIsMachineConfigModalOpen(true)}
         onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
+        onOpenOperationsWizard={() => { setOperationsWizardTab('create'); setIsOperationsWizardOpen(true); }}
+        onOpenCollisionCheck={() => { setOperationsWizardTab('safety'); setIsOperationsWizardOpen(true); }}
         cameraMode={cameraMode}
         onToggleCameraMode={setCameraMode}
         clippingPlane={clippingPlane}
@@ -1184,6 +1228,27 @@ export default function App() {
         onChangeLightingMode={setLightingMode}
         layerVisibility={layerVisibility}
         onToggleLayer={handleToggleLayer}
+        partMetrics={partMetrics}
+      />
+
+      {/* CAM Operations Manager & Collision Safety Wizard (Tab 12) */}
+      <CAMOperationsWizardModal
+        isOpen={isOperationsWizardOpen}
+        onClose={() => setIsOperationsWizardOpen(false)}
+        initialTab={operationsWizardTab}
+        operations={operations}
+        tools={tools}
+        activeOpId={activeOpId}
+        onSelectOp={setActiveOpId}
+        onAddOperation={(newOp) => {
+          setOperations((prev) => [...prev, newOp]);
+          setActiveOpId(newOp.id);
+        }}
+        onUpdateOperation={handleSaveOperation}
+        onDeleteOperation={handleDeleteOpById}
+        onRegenerateAll={handleRegenerateAll}
+        onLaunchSimulation={() => setIsSimModalOpen(true)}
+        onOpenGCodeViewer={() => setIsGCodeViewerOpen(true)}
         partMetrics={partMetrics}
       />
 

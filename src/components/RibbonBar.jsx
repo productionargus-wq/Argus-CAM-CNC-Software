@@ -29,6 +29,8 @@ export default function RibbonBar({
   onOpenTransformModal,
   onOpenMachineConfigModal,
   onOpenViewStudioModal,
+  onOpenOperationsWizard,
+  onOpenCollisionCheck,
   cameraMode = 'perspective',
   onToggleCameraMode,
   clippingPlane = { enabled: false, axis: 'Z', offset: 0, invert: false },
@@ -1489,38 +1491,82 @@ export default function RibbonBar({
         {/* ==================== 12. TOOLPATHS TAB ==================== */}
         {activeTab === 'Toolpaths' && (
           <>
+            {/* Operations Wizard & Setup */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenOperationsWizard}
+                  title="Open Mastercam CAM Operations Manager Wizard"
+                >
+                  <Layers size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Operations<br />Wizard</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenCollisionCheck}
+                  title="Run Tool Collision & Gouge Detection Audit"
+                >
+                  <ShieldAlert size={22} color="#f59e0b" />
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Collision<br />Check</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">CAM Manager</span>
+            </div>
+
+            {/* CAM Strategies */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('facing')} title="Add Face Milling Operation">
-                  <div style={{ width: '14px', height: '14px', background: '#3b82f6', borderRadius: '2px', color: 'white', fontWeight: 800, fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>FM</div>
+                  <div style={{ width: '16px', height: '16px', background: '#3b82f6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>FM</div>
                   <span className="btn-label">Face<br />Milling</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pocket')} title="Add 2D Dynamic Pocketing">
-                  <div style={{ width: '14px', height: '14px', background: '#10b981', borderRadius: '2px', color: 'white', fontWeight: 800, fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PK</div>
+                  <div style={{ width: '16px', height: '16px', background: '#10b981', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PK</div>
                   <span className="btn-label">Dynamic<br />Pocket</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('waterline')} title="Add 3D Waterline Finishing">
-                  <div style={{ width: '14px', height: '14px', background: '#f59e0b', borderRadius: '2px', color: 'black', fontWeight: 800, fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>WL</div>
+                  <div style={{ width: '16px', height: '16px', background: '#f59e0b', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>WL</div>
                   <span className="btn-label">Waterline<br />3D</span>
                 </button>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('adaptive')} title="Add 3D High-Speed Adaptive Roughing">
+                  <div style={{ width: '16px', height: '16px', background: '#06b6d4', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>AD</div>
+                  <span className="btn-label">Adaptive<br />Roughing</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('swarf')} title="Add 5-Axis Swarf Machining">
-                  <div style={{ width: '14px', height: '14px', background: '#8b5cf6', borderRadius: '2px', color: 'white', fontWeight: 800, fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>5X</div>
+                  <div style={{ width: '16px', height: '16px', background: '#8b5cf6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>5X</div>
                   <span className="btn-label">5-Axis<br />Swarf</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('drilling')} title="Add Peck Drilling Cycle">
-                  <div style={{ width: '14px', height: '14px', background: '#ef4444', borderRadius: '2px', color: 'white', fontWeight: 800, fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>DR</div>
+                  <div style={{ width: '16px', height: '16px', background: '#ef4444', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>DR</div>
                   <span className="btn-label">Peck<br />Drill</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('chamfer')} title="Add 45-degree Chamfer & Deburr">
+                  <div style={{ width: '16px', height: '16px', background: '#ec4899', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CH</div>
+                  <span className="btn-label">Chamfer<br />Deburr</span>
                 </button>
               </div>
               <span className="ribbon-group-title">CAM Strategies</span>
             </div>
 
+            {/* Regeneration & Editing */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button className="ribbon-btn-large" onClick={onRegenerateAll} title="Regenerate All Operations">
                   <RefreshCw size={20} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Regenerate<br />All</span>
                 </button>
+                <button className="ribbon-btn-large" onClick={onDeleteActiveOp} title="Delete Selected Operation">
+                  <Trash2 size={20} color="#ef4444" />
+                  <span className="btn-label">Delete<br />Active Op</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Operation Controls</span>
+            </div>
+
+            {/* Verify & Post */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
                 <button className="ribbon-btn-large" onClick={onOpenSimModal} title="Toolpath Wireframe Backplot">
                   <Play size={20} color="#06b6d4" />
                   <span className="btn-label">Backplot</span>
