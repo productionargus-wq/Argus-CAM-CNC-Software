@@ -26,6 +26,7 @@ export default function RibbonBar({
   onOpenModelPrepModal,
   onOpenMeshModal,
   onOpenDraftingModal,
+  onOpenTransformModal,
   onSelectManagerTab,
   onUnblankAll,
   onInvertVisibility,
@@ -1013,60 +1014,119 @@ export default function RibbonBar({
         {/* ==================== 9. TRANSFORM TAB ==================== */}
         {activeTab === 'Transform' && (
           <>
+            {/* Translation & Step Move */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onTranslatePart(10, 0, 0)} title="Translate +10 mm on X">
-                  <Move size={18} color="#38bdf8" />
-                  <span className="btn-label">X +10mm</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenTransformModal ? onOpenTransformModal('translate') : null}
+                  title="3D Translation Workbench (Exact Delta X/Y/Z, Move Original or Multi-Copy)"
+                >
+                  <Move size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>3D Move<br />/ Copy</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onTranslatePart(-10, 0, 0)} title="Translate -10 mm on X">
-                  <Move size={18} color="#38bdf8" />
-                  <span className="btn-label">X -10mm</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onTranslatePart(0, 10, 0)} title="Translate +10 mm on Y (Height)">
-                  <Move size={18} color="#10b981" />
-                  <span className="btn-label">Y +10mm</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onTranslatePart(0, -10, 0)} title="Translate -10 mm on Y (Height)">
-                  <Move size={18} color="#10b981" />
-                  <span className="btn-label">Y -10mm</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onTranslatePart(0, 0, 10)} title="Translate +10 mm on Z">
-                  <Move size={18} color="#f59e0b" />
-                  <span className="btn-label">Z +10mm</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onTranslatePart(0, 0, -10)} title="Translate -10 mm on Z">
-                  <Move size={18} color="#f59e0b" />
-                  <span className="btn-label">Z -10mm</span>
-                </button>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px' }}>
+                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(10, 0, 0)} title="Translate +10 mm on X">
+                    <span style={{ color: '#38bdf8' }}>X+10</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(0, 10, 0)} title="Translate +10 mm on Y">
+                    <span style={{ color: '#10b981' }}>Y+10</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(0, 0, 10)} title="Translate +10 mm on Z">
+                    <span style={{ color: '#f59e0b' }}>Z+10</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(-10, 0, 0)} title="Translate -10 mm on X">
+                    <span style={{ color: '#38bdf8' }}>X-10</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(0, -10, 0)} title="Translate -10 mm on Y">
+                    <span style={{ color: '#10b981' }}>Y-10</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(0, 0, -10)} title="Translate -10 mm on Z">
+                    <span style={{ color: '#f59e0b' }}>Z-10</span>
+                  </button>
+                </div>
               </div>
-              <span className="ribbon-group-title">Translation (Move)</span>
+              <span className="ribbon-group-title">Translation</span>
             </div>
 
+            {/* Rotation & Indexing */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onRotatePart(0, 0, Math.PI / 2)} title="Rotate 90 deg around Spindle (Z)">
-                  <RotateCcw size={20} color="#a855f7" />
-                  <span className="btn-label">Rotate 90°<br />Z-Axis</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenTransformModal ? onOpenTransformModal('rotate') : null}
+                  title="Rotary Indexer &amp; Spindle Alignment (X, Y, Z Axis Angles)"
+                >
+                  <RotateCcw size={22} color="#a855f7" />
+                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>3D Rotate<br />&amp; Index</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onRotatePart(Math.PI / 2, 0, 0)} title="Tilt 90 deg around Table (X)">
-                  <RotateCcw size={20} color="#a855f7" />
-                  <span className="btn-label">Tilt 90°<br />X-Axis</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <button className="ribbon-btn-small" onClick={() => onRotatePart(0, 0, Math.PI / 2)} title="Rotate 90° around Spindle (Z)">
+                    <span>Rot 90&deg; Z</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={() => onRotatePart(Math.PI / 2, 0, 0)} title="Tilt 90° around Trunnion (X)">
+                    <span>Tilt 90&deg; X</span>
+                  </button>
+                </div>
+              </div>
+              <span className="ribbon-group-title">Rotation</span>
+            </div>
+
+            {/* Scale & Shrinkage */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenTransformModal ? onOpenTransformModal('scale') : null}
+                  title="Scale Factor &amp; Casting Shrinkage Compensation (+2.5%, Unit Conversion)"
+                >
+                  <Maximize2 size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Scale &amp;<br />Shrinkage</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onScalePart(1.25)} title="Scale Up 1.25x">
-                  <Maximize2 size={20} color="#38bdf8" />
-                  <span className="btn-label">Scale<br />1.25&times;</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <button className="ribbon-btn-small" onClick={() => onScalePart(1.25)} title="Scale Up 1.25x">
+                    <span>1.25&times;</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={() => onScalePart(0.8)} title="Scale Down 0.8x">
+                    <span>0.8&times;</span>
+                  </button>
+                </div>
+              </div>
+              <span className="ribbon-group-title">Scale</span>
+            </div>
+
+            {/* Mirror & Multi-Part Pattern */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenTransformModal ? onOpenTransformModal('mirror') : null}
+                  title="Mirror Left/Right Hand Symmetrical Pairs across YZ/XZ/XY Planes"
+                >
+                  <Copy size={21} color="#f59e0b" />
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Mirror<br />(LH / RH)</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onScalePart(0.8)} title="Scale Down 0.8x">
-                  <Minimize2 size={20} color="#f59e0b" />
-                  <span className="btn-label">Scale<br />0.8&times;</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onResetTransform} title="Reset All Transforms to Origin">
-                  <RefreshCw size={20} color="#ef4444" />
-                  <span className="btn-label">Reset<br />Transforms</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenTransformModal ? onOpenTransformModal('pattern') : null}
+                  title="Multi-Part Matrix Pattern &amp; Circular PCD Array (Multi-Fixture Setup)"
+                >
+                  <Grid size={21} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Matrix<br />Pattern</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Rotate &amp; Scale</span>
+              <span className="ribbon-group-title">Mirror &amp; Array</span>
+            </div>
+
+            {/* Reset */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={onResetTransform} title="Reset All Position, Rotation &amp; Scale to WCS G54 Origin">
+                  <RefreshCw size={20} color="#ef4444" />
+                  <span className="btn-label" style={{ color: '#ef4444', fontWeight: 600 }}>Reset All<br />Transforms</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Reset</span>
             </div>
           </>
         )}

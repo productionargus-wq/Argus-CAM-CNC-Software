@@ -1952,6 +1952,57 @@ export function create3DDatumLeaderNote(point, noteText, datumTag = 'G54', optio
 }
 
 /**
+ * Clones a 3D model and applies position, rotation, and scale transforms
+ */
+export function cloneAndTransformModel(object3D, options = {}) {
+  const clone = object3D.clone(true);
+  clone.name = options.name || `CAD_Model_Copy_${Date.now()}`;
+
+  const pos = options.position || { x: 0, y: 0, z: 0 };
+  const rot = options.rotation || { x: 0, y: 0, z: 0 };
+  const scl = options.scale || { x: 1, y: 1, z: 1 };
+
+  clone.position.set(pos.x, pos.y, pos.z);
+  clone.rotation.set(rot.x, rot.y, rot.z);
+  clone.scale.set(scl.x, scl.y, scl.z);
+
+  clone.userData = {
+    ...object3D.userData,
+    isCopy: true,
+    transform: { position: pos, rotation: rot, scale: scl }
+  };
+
+  return clone;
+}
+
+/**
+ * Creates a mirrored copy of the model across a principal plane (XY, XZ, or YZ)
+ */
+export function mirrorModelAcrossPlane(object3D, plane = 'YZ') {
+  const clone = object3D.clone(true);
+  clone.name = `CAD_Mirrored_${plane}_${Date.now()}`;
+
+  if (plane === 'YZ') {
+    clone.scale.x = -1;
+  } else if (plane === 'XZ') {
+    clone.scale.y = -1;
+  } else {
+    clone.scale.z = -1;
+  }
+
+  // Flip inverted faces so lighting and shading are accurate
+  flipMeshNormals(clone);
+
+  clone.userData = {
+    ...object3D.userData,
+    isMirrored: true,
+    mirrorPlane: plane
+  };
+
+  return clone;
+}
+
+/**
  * Exports the active 3D CAD mesh to an STL file download in the browser (binary or ASCII)
  */
 export async function exportSceneToSTL(object3D, filename = "Argus_CAD_Model.stl", binary = true) {

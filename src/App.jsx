@@ -23,6 +23,7 @@ import SolidsCADModal from './components/SolidsCADModal';
 import ModelPrepModal from './components/ModelPrepModal';
 import MeshWorkbenchModal from './components/MeshWorkbenchModal';
 import DraftingCADModal from './components/DraftingCADModal';
+import TransformCADModal from './components/TransformCADModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -116,6 +117,8 @@ export default function App() {
   const [meshModalTab, setMeshModalTab] = useState('decimate');
   const [isDraftingModalOpen, setIsDraftingModalOpen] = useState(false);
   const [draftingModalTab, setDraftingModalTab] = useState('linear');
+  const [isTransformModalOpen, setIsTransformModalOpen] = useState(false);
+  const [transformModalTab, setTransformModalTab] = useState('translate');
 
   const [solidsList, setSolidsList] = useState([
     { id: 1, name: 'Solid 1 - Finished Workpiece', material: '6061-T6 Aluminum', volumeCm3: 184.2, isPrimary: true, visible: true, active: true, color: '#38bdf8' },
@@ -887,6 +890,12 @@ export default function App() {
     setCustomGeometry((prev) => prev.filter((item) => !item.name?.startsWith('Drafting_')));
   };
 
+  // 3D Transform Workbench Handler (Translate, Rotate, Scale, Mirror, Pattern)
+  const handleOpenTransformModal = (tab = 'translate') => {
+    setTransformModalTab(tab);
+    setIsTransformModalOpen(true);
+  };
+
   return (
     <div id="root" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* 1. TitleBar */}
@@ -915,6 +924,7 @@ export default function App() {
         onOpenModelPrepModal={handleOpenModelPrepModal}
         onOpenMeshModal={handleOpenMeshModal}
         onOpenDraftingModal={handleOpenDraftingModal}
+        onOpenTransformModal={handleOpenTransformModal}
         onSelectManagerTab={setActiveManagerTab}
         onUnblankAll={handleUnblankAll}
         onInvertVisibility={handleInvertVisibility}
@@ -1108,6 +1118,18 @@ export default function App() {
         onAddCustomEntity={handleAddCustomEntity}
         onRemoveCustomEntity={handleRemoveCustomEntity}
         onClearDimensions={handleClearDraftingDimensions}
+      />
+
+      {/* 3D Transform Workbench Modal (Tab 9) */}
+      <TransformCADModal
+        isOpen={isTransformModalOpen}
+        onClose={() => setIsTransformModalOpen(false)}
+        initialTab={transformModalTab}
+        currentModel={currentModel}
+        partTransform={partTransform}
+        onUpdateTransform={setPartTransform}
+        onResetTransform={handleResetTransform}
+        onAddCustomEntity={handleAddCustomEntity}
       />
 
       {/* 6. NC2Check G-Code Post Modal */}
