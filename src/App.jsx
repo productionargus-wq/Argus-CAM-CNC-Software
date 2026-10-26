@@ -22,6 +22,7 @@ import SurfacesCADModal from './components/SurfacesCADModal';
 import SolidsCADModal from './components/SolidsCADModal';
 import ModelPrepModal from './components/ModelPrepModal';
 import MeshWorkbenchModal from './components/MeshWorkbenchModal';
+import DraftingCADModal from './components/DraftingCADModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -113,6 +114,8 @@ export default function App() {
   const [modelPrepModalTab, setModelPrepModalTab] = useState('pushpull');
   const [isMeshModalOpen, setIsMeshModalOpen] = useState(false);
   const [meshModalTab, setMeshModalTab] = useState('decimate');
+  const [isDraftingModalOpen, setIsDraftingModalOpen] = useState(false);
+  const [draftingModalTab, setDraftingModalTab] = useState('linear');
 
   const [solidsList, setSolidsList] = useState([
     { id: 1, name: 'Solid 1 - Finished Workpiece', material: '6061-T6 Aluminum', volumeCm3: 184.2, isPrimary: true, visible: true, active: true, color: '#38bdf8' },
@@ -874,6 +877,16 @@ export default function App() {
     setIsMeshModalOpen(true);
   };
 
+  // 3D Drafting & Annotations Handler (Level 100)
+  const handleOpenDraftingModal = (tab = 'linear') => {
+    setDraftingModalTab(tab);
+    setIsDraftingModalOpen(true);
+  };
+
+  const handleClearDraftingDimensions = () => {
+    setCustomGeometry((prev) => prev.filter((item) => !item.name?.startsWith('Drafting_')));
+  };
+
   return (
     <div id="root" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* 1. TitleBar */}
@@ -901,6 +914,7 @@ export default function App() {
         onOpenSolidsModal={handleOpenSolidsModal}
         onOpenModelPrepModal={handleOpenModelPrepModal}
         onOpenMeshModal={handleOpenMeshModal}
+        onOpenDraftingModal={handleOpenDraftingModal}
         onSelectManagerTab={setActiveManagerTab}
         onUnblankAll={handleUnblankAll}
         onInvertVisibility={handleInvertVisibility}
@@ -1080,6 +1094,20 @@ export default function App() {
         partMetrics={partMetrics}
         onAddCustomEntity={handleAddCustomEntity}
         onExportSTL={handleExportSTL}
+      />
+
+      {/* Drafting & 3D Annotations Modal (Tab 8) */}
+      <DraftingCADModal
+        isOpen={isDraftingModalOpen}
+        onClose={() => setIsDraftingModalOpen(false)}
+        initialTab={draftingModalTab}
+        partMetrics={partMetrics}
+        customGeometry={customGeometry}
+        layerVisibility={layerVisibility}
+        onToggleLayer={handleToggleLayer}
+        onAddCustomEntity={handleAddCustomEntity}
+        onRemoveCustomEntity={handleRemoveCustomEntity}
+        onClearDimensions={handleClearDraftingDimensions}
       />
 
       {/* 6. NC2Check G-Code Post Modal */}

@@ -25,6 +25,7 @@ export default function RibbonBar({
   onOpenSolidsModal,
   onOpenModelPrepModal,
   onOpenMeshModal,
+  onOpenDraftingModal,
   onSelectManagerTab,
   onUnblankAll,
   onInvertVisibility,
@@ -928,28 +929,83 @@ export default function RibbonBar({
         {/* ==================== 8. DRAFTING TAB ==================== */}
         {activeTab === 'Drafting' && (
           <>
+            {/* Dimensions */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('linear') : null}
+                  title="3D Linear Dimensions with Dual Arrowheads &amp; Tolerances (Level 100)"
+                >
+                  <Scissors size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Linear<br />Dimension</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('radial') : null}
+                  title="3D Radial (R) &amp; Diametral (Ø) Leader Callouts"
+                >
+                  <Disc size={22} color="#f59e0b" />
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Radial / &Oslash;<br />Callout</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Dimensions</span>
+            </div>
+
+            {/* Datums & Leaders */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('datum') : null}
+                  title="WCS Coordinate Datum Tags (G54 / G55 / Datum -A-)"
+                >
+                  <Crosshair size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>WCS Datum<br />Tag</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('leader') : null}
+                  title="Machining Operator Leader Note (Taps, Reams, Surface Finishes)"
+                >
+                  <FileText size={22} color="#a855f7" />
+                  <span className="btn-label">Leader<br />Note</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Annotations</span>
+            </div>
+
+            {/* Level 100 Management & Caliper */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className={`ribbon-btn-large ${layerVisibility.dimensions ? 'active' : ''}`}
                   onClick={() => onToggleLayer('dimensions')}
-                  title="Toggle 3D Dimensional Arrows (X Length, Y Height, Z Depth)"
+                  title="Toggle Level 100 Drafting Dimensions Visibility"
                 >
-                  <Scissors size={22} color="#38bdf8" />
+                  <Eye size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>
-                    {layerVisibility.dimensions ? 'Hide' : 'Show'}<br />Dimensions
+                    {layerVisibility.dimensions ? 'Hide' : 'Show'}<br />Level 100
                   </span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onToggleLayer('wcs')} title="Toggle G54 WCS Coordinate Triad">
-                  <Crosshair size={20} color="#f59e0b" />
-                  <span className="btn-label">G54 Datum<br />Note</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('manager') : null}
+                  title="Drafting Entity Manager Tree (Inspect &amp; Delete Annotations)"
+                >
+                  <Layers size={21} color="#60a5fa" />
+                  <span className="btn-label">Drafting<br />Manager</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenEntityAnalyzer} title="Smart Caliper Dimension Inspector">
-                  <FileText size={20} color="#10b981" />
-                  <span className="btn-label">Smart<br />Inspector</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenDistanceCaliper}
+                  title="Interactive Digital Vernier Caliper Measure"
+                >
+                  <Sliders size={20} color="#10b981" />
+                  <span className="btn-label">Digital<br />Caliper</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">3D Dimensions &amp; Notes</span>
+              <span className="ribbon-group-title">Management</span>
             </div>
           </>
         )}

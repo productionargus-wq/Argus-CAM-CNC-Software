@@ -1771,6 +1771,187 @@ export function fillMeshHoles(object3D) {
 }
 
 /**
+ * Creates high-resolution 3D billboard text sprite using HTML5 Canvas
+ */
+export function createTextCanvasSprite(text, options = {}) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  
+  ctx.fillStyle = options.bgColor || 'rgba(15, 23, 42, 0.9)';
+  ctx.strokeStyle = options.borderColor || '#38bdf8';
+  ctx.lineWidth = 3;
+  if (ctx.roundRect) {
+    ctx.roundRect(4, 4, 248, 56, 8);
+  } else {
+    ctx.rect(4, 4, 248, 56);
+  }
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = options.textColor || '#f8fafc';
+  ctx.font = 'bold 20px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, 32);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(options.scaleX || 24, options.scaleY || 6, 1);
+  return sprite;
+}
+
+/**
+ * Creates a parametric 3D linear dimension entity with dual arrowheads and text
+ */
+export function create3DLinearDimension(p1, p2, text, options = {}) {
+  const group = new THREE.Group();
+  group.name = options.name || `Drafting_Dimension_${Date.now()}`;
+
+  const v1 = new THREE.Vector3(...p1);
+  const v2 = new THREE.Vector3(...p2);
+  const mid = new THREE.Vector3().addVectors(v1, v2).multiplyScalar(0.5);
+
+  const color = options.color || 0x38bdf8;
+  const lineMat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const lineGeo = new THREE.BufferGeometry().setFromPoints([v1, v2]);
+  const dimLine = new THREE.Line(lineGeo, lineMat);
+  group.add(dimLine);
+
+  // Arrowheads at endpoints
+  const arrowLen = options.arrowLength || 4;
+  const arrowRadius = options.arrowRadius || 1.2;
+  const coneGeo = new THREE.ConeGeometry(arrowRadius, arrowLen, 8);
+  const coneMat = new THREE.MeshBasicMaterial({ color });
+
+  const arrow1 = new THREE.Mesh(coneGeo, coneMat);
+  arrow1.position.copy(v1);
+  const dir1 = new THREE.Vector3().subVectors(v2, v1).normalize();
+  arrow1.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir1);
+  group.add(arrow1);
+
+  const arrow2 = new THREE.Mesh(coneGeo, coneMat);
+  arrow2.position.copy(v2);
+  const dir2 = new THREE.Vector3().subVectors(v1, v2).normalize();
+  arrow2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir2);
+  group.add(arrow2);
+
+  // 3D Canvas Text Label
+  const labelSprite = createTextCanvasSprite(text, {
+    borderColor: '#38bdf8',
+    scaleX: 20,
+    scaleY: 5.5
+  });
+  labelSprite.position.set(mid.x, mid.y + 4, mid.z);
+  group.add(labelSprite);
+
+  group.userData = {
+    type: 'drafting_linear',
+    level: 100,
+    p1,
+    p2,
+    text,
+    length: Number(v1.distanceTo(v2).toFixed(2))
+  };
+
+  return group;
+}
+
+/**
+ * Creates a parametric 3D radial / diametral callout on Level 100
+ */
+export function create3DRadialDimension(center, radius, text, options = {}) {
+  const group = new THREE.Group();
+  group.name = options.name || `Drafting_Radial_${Date.now()}`;
+
+  const c = new THREE.Vector3(...center);
+  const angle = options.angle !== undefined ? options.angle : Math.PI / 4;
+  const rim = new THREE.Vector3(c.x + Math.cos(angle) * radius, c.y, c.z + Math.sin(angle) * radius);
+  const tip = new THREE.Vector3(c.x + Math.cos(angle) * (radius + 14), c.y + 6, c.z + Math.sin(angle) * (radius + 14));
+
+  const color = options.color || 0xf59e0b;
+  const lineMat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const lineGeo = new THREE.BufferGeometry().setFromPoints([c, rim, tip]);
+  const leaderLine = new THREE.Line(lineGeo, lineMat);
+  group.add(leaderLine);
+
+  // Arrow at rim
+  const coneGeo = new THREE.ConeGeometry(1.2, 4, 8);
+  const coneMat = new THREE.MeshBasicMaterial({ color });
+  const arrow = new THREE.Mesh(coneGeo, coneMat);
+  arrow.position.copy(rim);
+  const dir = new THREE.Vector3().subVectors(c, rim).normalize();
+  arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+  group.add(arrow);
+
+  // Text label
+  const labelSprite = createTextCanvasSprite(text, {
+    borderColor: '#f59e0b',
+    scaleX: 18,
+    scaleY: 5.5
+  });
+  labelSprite.position.set(tip.x + 3, tip.y + 3, tip.z);
+  group.add(labelSprite);
+
+  group.userData = {
+    type: 'drafting_radial',
+    level: 100,
+    center,
+    radius,
+    text
+  };
+
+  return group;
+}
+
+/**
+ * Creates a 3D WCS datum note or machining operator leader tag
+ */
+export function create3DDatumLeaderNote(point, noteText, datumTag = 'G54', options = {}) {
+  const group = new THREE.Group();
+  group.name = options.name || `Drafting_Datum_${Date.now()}`;
+
+  const p = new THREE.Vector3(...point);
+  const elbow = new THREE.Vector3(p.x + 12, p.y + 12, p.z + 6);
+  const end = new THREE.Vector3(elbow.x + 14, elbow.y, elbow.z);
+
+  const color = options.color || 0x10b981;
+  const lineMat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const lineGeo = new THREE.BufferGeometry().setFromPoints([p, elbow, end]);
+  const leaderLine = new THREE.Line(lineGeo, lineMat);
+  group.add(leaderLine);
+
+  // Datum spherical point marker
+  const sphereGeo = new THREE.SphereGeometry(1.2, 12, 12);
+  const sphereMat = new THREE.MeshBasicMaterial({ color });
+  const marker = new THREE.Mesh(sphereGeo, sphereMat);
+  marker.position.copy(p);
+  group.add(marker);
+
+  // Text billboard
+  const fullText = `[${datumTag}] ${noteText}`;
+  const labelSprite = createTextCanvasSprite(fullText, {
+    borderColor: '#10b981',
+    scaleX: 28,
+    scaleY: 6
+  });
+  labelSprite.position.set(end.x + 8, end.y + 2, end.z);
+  group.add(labelSprite);
+
+  group.userData = {
+    type: 'drafting_datum',
+    level: 100,
+    point,
+    datumTag,
+    noteText
+  };
+
+  return group;
+}
+
+/**
  * Exports the active 3D CAD mesh to an STL file download in the browser (binary or ASCII)
  */
 export async function exportSceneToSTL(object3D, filename = "Argus_CAD_Model.stl", binary = true) {
