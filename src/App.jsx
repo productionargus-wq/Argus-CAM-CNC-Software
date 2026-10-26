@@ -24,6 +24,7 @@ import ModelPrepModal from './components/ModelPrepModal';
 import MeshWorkbenchModal from './components/MeshWorkbenchModal';
 import DraftingCADModal from './components/DraftingCADModal';
 import TransformCADModal from './components/TransformCADModal';
+import MachineConfigModal from './components/MachineConfigModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -119,6 +120,7 @@ export default function App() {
   const [draftingModalTab, setDraftingModalTab] = useState('linear');
   const [isTransformModalOpen, setIsTransformModalOpen] = useState(false);
   const [transformModalTab, setTransformModalTab] = useState('translate');
+  const [isMachineConfigModalOpen, setIsMachineConfigModalOpen] = useState(false);
 
   const [solidsList, setSolidsList] = useState([
     { id: 1, name: 'Solid 1 - Finished Workpiece', material: '6061-T6 Aluminum', volumeCm3: 184.2, isPrimary: true, visible: true, active: true, color: '#38bdf8' },
@@ -925,6 +927,7 @@ export default function App() {
         onOpenMeshModal={handleOpenMeshModal}
         onOpenDraftingModal={handleOpenDraftingModal}
         onOpenTransformModal={handleOpenTransformModal}
+        onOpenMachineConfigModal={() => setIsMachineConfigModalOpen(true)}
         onSelectManagerTab={setActiveManagerTab}
         onUnblankAll={handleUnblankAll}
         onInvertVisibility={handleInvertVisibility}
@@ -1130,6 +1133,15 @@ export default function App() {
         onUpdateTransform={setPartTransform}
         onResetTransform={handleResetTransform}
         onAddCustomEntity={handleAddCustomEntity}
+      />
+
+      {/* CNC Machine Definition & Kinematic Envelope Modal (Tab 10) */}
+      <MachineConfigModal
+        isOpen={isMachineConfigModalOpen}
+        onClose={() => setIsMachineConfigModalOpen(false)}
+        machines={machines}
+        activeMachine={activeMachine}
+        onSelectMachine={setActiveMachineId}
       />
 
       {/* 6. NC2Check G-Code Post Modal */}

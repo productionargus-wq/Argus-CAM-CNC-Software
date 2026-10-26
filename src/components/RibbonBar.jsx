@@ -27,6 +27,7 @@ export default function RibbonBar({
   onOpenMeshModal,
   onOpenDraftingModal,
   onOpenTransformModal,
+  onOpenMachineConfigModal,
   onSelectManagerTab,
   onUnblankAll,
   onInvertVisibility,
@@ -1136,47 +1137,58 @@ export default function RibbonBar({
           <>
             {/* Machine Definition Selector */}
             <div className="ribbon-group">
-              <div className="ribbon-group-items" style={{ flexDirection: 'column', gap: '4px', justifyContent: 'center' }}>
-                <select
-                  value={activeMachine?.id || 'dmu50'}
-                  onChange={(e) => onSelectMachine(e.target.value)}
-                  style={{
-                    background: '#141822',
-                    border: '1px solid #333d4e',
-                    color: '#38bdf8',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    width: '160px'
-                  }}
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenMachineConfigModal}
+                  title="Configure CNC Machine Definition &amp; Kinematic Limits (Axes, Controller, ATC)"
                 >
-                  <option value="dmu50">DMG MORI DMU 50 (5X)</option>
-                  <option value="haas_vf2">Haas VF-2 (3X VMC)</option>
-                  <option value="robodrill">Fanuc Robodrill D21</option>
-                  <option value="integrex">Mazak Integrex i-200</option>
-                </select>
+                  <Cpu size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Machine<br />Definition</span>
+                </button>
 
-                <div style={{ display: 'flex', gap: '4px', width: '160px' }}>
-                  {['G54', 'G55', 'G56'].map((wcs) => (
-                    <button
-                      key={wcs}
-                      onClick={() => onSelectWcs(wcs)}
-                      style={{
-                        flex: 1,
-                        background: activeWcs === wcs ? '#2563eb' : '#1e2430',
-                        border: '1px solid #333d4e',
-                        color: 'white',
-                        padding: '2px 4px',
-                        borderRadius: '3px',
-                        fontSize: '10px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {wcs}
-                    </button>
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center' }}>
+                  <select
+                    value={activeMachine?.id || 'dmu50'}
+                    onChange={(e) => onSelectMachine(e.target.value)}
+                    style={{
+                      background: '#141822',
+                      border: '1px solid #333d4e',
+                      color: '#38bdf8',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      width: '160px'
+                    }}
+                  >
+                    <option value="dmu50">DMG MORI DMU 50 (5X)</option>
+                    <option value="haas_vf2">Haas VF-2 (3X VMC)</option>
+                    <option value="robodrill">Fanuc Robodrill D21</option>
+                    <option value="integrex">Mazak Integrex i-200</option>
+                  </select>
+
+                  <div style={{ display: 'flex', gap: '4px', width: '160px' }}>
+                    {['G54', 'G55', 'G56'].map((wcs) => (
+                      <button
+                        key={wcs}
+                        onClick={() => onSelectWcs(wcs)}
+                        style={{
+                          flex: 1,
+                          background: activeWcs === wcs ? '#2563eb' : '#1e2430',
+                          border: '1px solid #333d4e',
+                          color: 'white',
+                          padding: '2px 4px',
+                          borderRadius: '3px',
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {wcs}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
               <span className="ribbon-group-title">Machine &amp; WCS</span>
