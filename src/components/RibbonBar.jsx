@@ -22,6 +22,7 @@ export default function RibbonBar({
   onOpenDistanceCaliper,
   onOpenWireframeModal,
   onOpenSurfacesModal,
+  onOpenSolidsModal,
   onSelectManagerTab,
   onUnblankAll,
   onInvertVisibility,
@@ -608,36 +609,89 @@ export default function RibbonBar({
         {/* ==================== 5. SOLIDS TAB ==================== */}
         {activeTab === 'Solids' && (
           <>
+            {/* Primitives */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onAddSolid('box')} title="Generate Parametric 3D Rectangular Billet Block">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('box') : onAddSolid('box')}
+                  title="Generate Parametric 3D Rectangular Billet Block"
+                >
                   <Box size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Block<br />Billet</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onAddSolid('cylinder')} title="Generate Parametric 3D Cylindrical Blank">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('cylinder') : onAddSolid('cylinder')}
+                  title="Generate Parametric 3D Cylindrical Blank (Solid or Hollow Bore)"
+                >
                   <Orbit size={22} color="#60a5fa" />
-                  <span className="btn-label">Cylinder<br />Blank</span>
+                  <span className="btn-label" style={{ color: '#60a5fa', fontWeight: 600 }}>Cylinder<br />Blank</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onAddSolid('sphere')} title="Generate Parametric 3D Spherical Solid">
-                  <Compass size={22} color="#a855f7" />
-                  <span className="btn-label">Sphere<br />Solid</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('cone') : onAddSolid('cone')}
+                  title="Generate Parametric 3D Conical Frustum Solid"
+                >
+                  <Compass size={22} color="#f59e0b" />
+                  <span className="btn-label">Cone<br />Frustum</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('torus') : onAddSolid('torus')}
+                  title="Generate Parametric 3D Torus Solid Ring"
+                >
+                  <Disc size={22} color="#a855f7" />
+                  <span className="btn-label">Torus<br />Ring</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Parametric Solid Primitives</span>
+              <span className="ribbon-group-title">Solid Primitives</span>
             </div>
 
+            {/* Extrusion & Cavities */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onAddSolid('box')} title="Create Solid Bounding Stock Block">
-                  <Box size={20} color="#f59e0b" />
-                  <span className="btn-label">Extrude<br />Solid</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('extrude') : onAddSolid('extrude')}
+                  title="Extrude 2D Contour to 3D Solid with Draft Angle"
+                >
+                  <Sliders size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Extrude<br />Solid</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenStockModal} title="Configure Stock Bounding Box">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('pocket') : null}
+                  title="Generate CNC Milled Pocket Workpiece (Cavity + Fillets)"
+                >
+                  <Sparkles size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Pocket<br />Cavity</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Features &amp; Cavities</span>
+            </div>
+
+            {/* Manager & Stock Operations */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('manager') : null}
+                  title="Inspect Solids Manager Tree & Material Densities"
+                >
+                  <Layers size={22} color="#60a5fa" />
+                  <span className="btn-label" style={{ color: '#60a5fa', fontWeight: 600 }}>Solids<br />Manager</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenStockModal}
+                  title="Configure Raw Stock Bounding Box Dimensions"
+                >
                   <Settings size={20} color="#10b981" />
                   <span className="btn-label">Solid<br />Stock</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Solid Operations</span>
+              <span className="ribbon-group-title">Solids Management</span>
             </div>
           </>
         )}

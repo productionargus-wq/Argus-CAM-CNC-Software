@@ -22,7 +22,12 @@ export default function OperationsTree({
   onSetActiveLevel,
   onAddLevel,
   activePlane = 'Top (G17)',
-  onSelectPlane
+  onSelectPlane,
+  solids = [],
+  activeSolidId,
+  onSelectSolid,
+  onToggleSolidVisibility,
+  onOpenSolidsModal
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
   const [groupExpanded, setGroupExpanded] = useState(true);
@@ -284,33 +289,78 @@ export default function OperationsTree({
       {/* ================= 3. SOLIDS MANAGER TAB ================= */}
       {currentTab === 'Solids' && (
         <div className="ops-tree-content">
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8', marginBottom: '8px' }}>
-            ACTIVE SOLID BODIES
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8' }}>ACTIVE SOLID BODIES</span>
+            <button
+              onClick={() => onOpenSolidsModal && onOpenSolidsModal('box')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 7px',
+                backgroundColor: '#1e293b',
+                border: '1px solid #334155',
+                borderRadius: '3px',
+                color: '#38bdf8',
+                fontSize: '10px',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              <Plus size={12} />
+              <span>New Solid</span>
+            </button>
           </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div style={{ background: '#171b24', border: '1px solid #283344', padding: '6px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Box size={14} color="#60a5fa" />
-              <div>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Solid 1 - Finished Workpiece</div>
-                <div style={{ fontSize: '9.5px', color: '#94a3b8' }}>Tessellated Manifold B-Rep</div>
-              </div>
-            </div>
+            {solids.map((s, idx) => (
+              <div
+                key={s.id || idx}
+                onClick={() => onSelectSolid && onSelectSolid(s.id || idx)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 8px',
+                  background: s.active ? '#1e293b' : '#141822',
+                  border: `1px solid ${s.active ? '#3b82f6' : '#232c3d'}`,
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onToggleSolidVisibility) onToggleSolidVisibility(s.id || idx);
+                    }}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+                  >
+                    {s.visible !== false ? <CheckSquare size={13} color="#38bdf8" /> : <Square size={13} color="#64748b" />}
+                  </button>
+                  <Box size={14} color={s.color || '#38bdf8'} />
+                  <div style={{ overflow: 'hidden' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      {s.name}
+                    </div>
+                    <div style={{ fontSize: '9.5px', color: '#94a3b8' }}>
+                      {s.material || 'Solid Body'} {s.volumeCm3 ? `| ${s.volumeCm3} cm³` : ''}
+                    </div>
+                  </div>
+                </div>
 
-            <div style={{ background: '#171b24', border: '1px solid #283344', padding: '6px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Box size={14} color="#f59e0b" />
-              <div>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Solid 2 - Raw Stock Billet</div>
-                <div style={{ fontSize: '9.5px', color: '#94a3b8' }}>Bounding Allowance Block</div>
+                {s.isPrimary && (
+                  <span style={{ fontSize: '8.5px', padding: '1px 4px', borderRadius: '2px', backgroundColor: '#2563eb33', color: '#38bdf8', flexShrink: 0 }}>
+                    WORKPIECE
+                  </span>
+                )}
               </div>
-            </div>
+            ))}
+          </div>
 
-            <div style={{ background: '#171b24', border: '1px solid #283344', padding: '6px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Box size={14} color="#94a3b8" />
-              <div>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Solid 3 - ZeroClamp Fixture Vise</div>
-                <div style={{ fontSize: '9.5px', color: '#94a3b8' }}>Centric Vise + Baseplate</div>
-              </div>
-            </div>
+          <div style={{ marginTop: '12px', padding: '8px', background: '#0e1218', borderRadius: '4px', border: '1px solid #1f2737', fontSize: '10px', color: '#94a3b8' }}>
+            <div>Active Solid: <strong style={{ color: '#38bdf8' }}>{solids.find(s => s.active)?.name || solids[0]?.name || 'Finished Workpiece'}</strong></div>
+            <div style={{ marginTop: '2px' }}>Solids are chained as machining stock or finished geometry.</div>
           </div>
         </div>
       )}

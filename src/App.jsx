@@ -19,6 +19,7 @@ import RecentProjectsModal from './components/RecentProjectsModal';
 import ExportCADModal from './components/ExportCADModal';
 import WireframeSketcherModal from './components/WireframeSketcherModal';
 import SurfacesCADModal from './components/SurfacesCADModal';
+import SolidsCADModal from './components/SolidsCADModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -104,6 +105,14 @@ export default function App() {
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
   const [surfacesModalTool, setSurfacesModalTool] = useState('plane');
+  const [isSolidsModalOpen, setIsSolidsModalOpen] = useState(false);
+  const [solidsModalTool, setSolidsModalTool] = useState('box');
+
+  const [solidsList, setSolidsList] = useState([
+    { id: 1, name: 'Solid 1 - Finished Workpiece', material: '6061-T6 Aluminum', volumeCm3: 184.2, isPrimary: true, visible: true, active: true, color: '#38bdf8' },
+    { id: 2, name: 'Solid 2 - Raw Stock Billet', material: 'Alu Billet (Allowance)', volumeCm3: 245.0, isPrimary: false, visible: true, active: false, color: '#f59e0b' },
+    { id: 3, name: 'Solid 3 - ZeroClamp Fixture Vise', material: 'Hardened Tool Steel', volumeCm3: 520.0, isPrimary: false, visible: true, active: false, color: '#94a3b8' }
+  ]);
 
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isSimModalOpen, setIsSimModalOpen] = useState(false);
@@ -789,19 +798,62 @@ export default function App() {
     );
   };
 
-  // Solid Primitives Handlers
-  const handleAddSolid = (type) => {
-    if (type === 'box') {
-      setCurrentModel(createBoxGeometry(80, 35, 60, "Rectangular_Billet"));
-      setCurrentProjectName("Parametric_Billet.mcam");
-    } else if (type === 'cylinder') {
-      setCurrentModel(createCylinderGeometry(35, 45, "Cylindrical_Blank"));
-      setCurrentProjectName("Cylindrical_Blank.mcam");
-    } else if (type === 'sphere') {
-      setCurrentModel(createSphereGeometry(30, "Spherical_Solid"));
-      setCurrentProjectName("Spherical_Solid.mcam");
-    }
+  // Solid Primitives & Modeling Handlers
+  const handleOpenSolidsModal = (tool = 'box') => {
+    setSolidsModalTool(tool);
+    setIsSolidsModalOpen(true);
+  };
+
+  const handleSetPrimarySolid = (modelGroup, filename) => {
+    setCurrentModel(modelGroup);
+    setCurrentProjectName(filename);
+    setSolidsList((prev) => [
+      {
+        id: 1,
+        name: `Solid 1 - ${filename.replace(/\.[^/.]+$/, '')}`,
+        material: modelGroup.userData?.material || '6061-T6 Aluminum',
+        volumeCm3: modelGroup.userData?.volumeCm3 || 180,
+        isPrimary: true,
+        visible: true,
+        active: true,
+        color: '#38bdf8'
+      },
+      ...prev.slice(1)
+    ]);
     handleResetTransform();
+  };
+
+  const handleAddSolidBody = (solidGroup, name) => {
+    setCustomGeometry((prev) => [...prev, solidGroup]);
+    const nextId = solidsList.length + 1;
+    setSolidsList((prev) => [
+      ...prev,
+      {
+        id: nextId,
+        name: name || `Solid ${nextId}`,
+        material: solidGroup.userData?.material || 'Alloy Solid',
+        volumeCm3: solidGroup.userData?.volumeCm3 || 50,
+        isPrimary: false,
+        visible: true,
+        active: false,
+        color: '#10b981'
+      }
+    ]);
+  };
+
+  const handleRemoveSolidBody = (target) => {
+    setSolidsList((prev) => prev.filter((s) => s !== target && s.id !== target.id));
+    setCustomGeometry((prev) => prev.filter((item) => item.name !== target.name));
+  };
+
+  const handleToggleSolidVisibility = (id) => {
+    setSolidsList((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, visible: !s.visible } : s))
+    );
+  };
+
+  const handleAddSolid = (type) => {
+    handleOpenSolidsModal(type);
   };
 
   return (
@@ -828,6 +880,7 @@ export default function App() {
         onOpenDistanceCaliper={() => setIsDistanceCaliperOpen(true)}
         onOpenWireframeModal={handleOpenWireframeModal}
         onOpenSurfacesModal={handleOpenSurfacesModal}
+        onOpenSolidsModal={handleOpenSolidsModal}
         onSelectManagerTab={setActiveManagerTab}
         onUnblankAll={handleUnblankAll}
         onInvertVisibility={handleInvertVisibility}
@@ -890,6 +943,11 @@ export default function App() {
           onAddLevel={handleAddLevel}
           activePlane={activePlane}
           onSelectPlane={handleSelectPlane}
+          solids={solidsList}
+          activeSolidId={solidsList.find((s) => s.active)?.id || 1}
+          onSelectSolid={(id) => setSolidsList((prev) => prev.map((s) => ({ ...s, active: s.id === id })))}
+          onToggleSolidVisibility={handleToggleSolidVisibility}
+          onOpenSolidsModal={handleOpenSolidsModal}
         />
 
         {/* 3D Viewport */}
@@ -965,6 +1023,18 @@ export default function App() {
         onAddSurfaceEntity={handleAddSurfaceEntity}
         onRemoveSurfaceEntity={handleRemoveSurfaceEntity}
         onClearSurfaces={handleClearSurfaces}
+      />
+
+      {/* Solids CAD Suite Modal (Tab 5) */}
+      <SolidsCADModal
+        isOpen={isSolidsModalOpen}
+        onClose={() => setIsSolidsModalOpen(false)}
+        initialTool={solidsModalTool}
+        currentModel={currentModel}
+        solidsList={solidsList}
+        onSetPrimaryModel={handleSetPrimarySolid}
+        onAddSolidBody={handleAddSolidBody}
+        onRemoveSolidBody={handleRemoveSolidBody}
       />
 
       {/* 6. NC2Check G-Code Post Modal */}

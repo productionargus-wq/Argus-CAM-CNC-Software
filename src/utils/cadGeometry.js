@@ -176,46 +176,359 @@ export async function parseOBJFile(file) {
 /**
  * Creates a parametric 3D rectangular box solid billet
  */
-export function createBoxGeometry(w = 80, h = 35, d = 60, name = "Rectangular_Billet") {
+export function createBoxGeometry(
+  w = 80,
+  h = 35,
+  d = 60,
+  name = "Rectangular_Billet",
+  options = {}
+) {
   const group = new THREE.Group();
   group.name = name;
 
+  const color = options.color || 0x38bdf8;
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x38bdf8,
-    metalness: 0.75,
-    roughness: 0.25
+    color,
+    metalness: options.metalness !== undefined ? options.metalness : 0.75,
+    roughness: options.roughness !== undefined ? options.roughness : 0.25
   });
 
   const geo = new THREE.BoxGeometry(w, h, d);
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.y = h / 2;
+
+  if (options.origin === 'corner') {
+    mesh.position.set(w / 2, h / 2, d / 2);
+  } else {
+    mesh.position.set(0, h / 2, 0);
+  }
+
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   group.add(mesh);
 
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 1.5 }));
+  edgeLine.position.copy(mesh.position);
+  group.add(edgeLine);
+
+  group.userData = {
+    type: 'solid_box',
+    width: w,
+    height: h,
+    depth: d,
+    volumeCm3: Number(((w * h * d) / 1000).toFixed(2)),
+    material: options.material || 'Aluminum 6061-T6'
+  };
   return group;
 }
 
 /**
- * Creates a parametric 3D cylinder solid blank
+ * Creates a parametric 3D cylinder solid blank (solid or hollow bore)
  */
-export function createCylinderGeometry(radius = 35, height = 45, name = "Cylindrical_Blank") {
+export function createCylinderGeometry(
+  radius = 35,
+  height = 45,
+  name = "Cylindrical_Blank",
+  options = {}
+) {
   const group = new THREE.Group();
   group.name = name;
 
+  const color = options.color || 0x60a5fa;
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x60a5fa,
+    color,
     metalness: 0.8,
     roughness: 0.25
   });
 
-  const geo = new THREE.CylinderGeometry(radius, radius, height, 48);
+  const innerR = options.innerRadius || 0;
+  let mesh;
+
+  if (innerR > 0 && innerR < radius) {
+    // Hollow cylinder tube
+    const shape = new THREE.Shape();
+    shape.absarc(0, 0, radius, 0, Math.PI * 2, false);
+    const holePath = new THREE.Path();
+    holePath.absarc(0, 0, innerR, 0, Math.PI * 2, true);
+    shape.holes.push(holePath);
+
+    const extrudeSettings = { depth: height, bevelEnabled: false, curveSegments: 48 };
+    const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geo.rotateX(Math.PI / 2);
+    geo.center();
+    mesh = new THREE.Mesh(geo, mat);
+    mesh.position.y = height / 2;
+  } else {
+    // Solid cylinder
+    const geo = new THREE.CylinderGeometry(radius, radius, height, 48);
+    mesh = new THREE.Mesh(geo, mat);
+    mesh.position.y = height / 2;
+  }
+
+  if (options.axis === 'Z') {
+    mesh.rotateX(Math.PI / 2);
+  } else if (options.axis === 'X') {
+    mesh.rotateZ(Math.PI / 2);
+  }
+
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(mesh.geometry);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1d4ed8, linewidth: 1.5 }));
+  edgeLine.position.copy(mesh.position);
+  edgeLine.rotation.copy(mesh.rotation);
+  group.add(edgeLine);
+
+  const vol = Math.PI * (radius * radius - innerR * innerR) * height / 1000;
+  group.userData = {
+    type: 'solid_cylinder',
+    radius,
+    innerRadius: innerR,
+    height,
+    volumeCm3: Number(vol.toFixed(2)),
+    material: options.material || '4140 Alloy Steel'
+  };
+  return group;
+}
+
+/**
+ * Creates a parametric 3D cone or truncated frustum solid
+ */
+export function createConeGeometry(
+  radiusBottom = 35,
+  radiusTop = 15,
+  height = 45,
+  name = "Cone_Solid",
+  options = {}
+) {
+  const group = new THREE.Group();
+  group.name = name;
+
+  const color = options.color || 0xf59e0b;
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.75,
+    roughness: 0.25
+  });
+
+  const geo = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 48);
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.y = height / 2;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   group.add(mesh);
 
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xb45309, linewidth: 1.5 }));
+  edgeLine.position.copy(mesh.position);
+  group.add(edgeLine);
+
+  const vol = (Math.PI * height / 3) * (radiusBottom * radiusBottom + radiusBottom * radiusTop + radiusTop * radiusTop) / 1000;
+  group.userData = {
+    type: 'solid_cone',
+    radiusBottom,
+    radiusTop,
+    height,
+    volumeCm3: Number(vol.toFixed(2)),
+    material: options.material || 'Brass C360'
+  };
+  return group;
+}
+
+/**
+ * Creates a parametric 3D torus solid ring
+ */
+export function createTorusGeometry(
+  radius = 30,
+  tubeRadius = 10,
+  name = "Torus_Solid",
+  options = {}
+) {
+  const group = new THREE.Group();
+  group.name = name;
+
+  const color = options.color || 0xa855f7;
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.75,
+    roughness: 0.25
+  });
+
+  const geo = new THREE.TorusGeometry(radius, tubeRadius, 24, 48);
+  geo.rotateX(Math.PI / 2);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = tubeRadius;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+
+  const vol = (2 * Math.PI * Math.PI * radius * tubeRadius * tubeRadius) / 1000;
+  group.userData = {
+    type: 'solid_torus',
+    radius,
+    tubeRadius,
+    volumeCm3: Number(vol.toFixed(2)),
+    material: options.material || 'Titanium Ti-6Al-4V'
+  };
+  return group;
+}
+
+/**
+ * Creates a parametric 3D extruded solid with optional draft angle
+ */
+export function createExtrudedSolid(
+  w = 70,
+  d = 50,
+  height = 35,
+  draftAngleDeg = 0,
+  name = "Extruded_Solid",
+  options = {}
+) {
+  const group = new THREE.Group();
+  group.name = name;
+
+  const color = options.color || 0x10b981;
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.75,
+    roughness: 0.25
+  });
+
+  const shape = new THREE.Shape();
+  const hw = w / 2;
+  const hd = d / 2;
+  shape.moveTo(-hw, -hd);
+  shape.lineTo(hw, -hd);
+  shape.lineTo(hw, hd);
+  shape.lineTo(-hw, hd);
+  shape.closePath();
+
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: height,
+    bevelEnabled: false
+  });
+  geo.rotateX(-Math.PI / 2);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = 0;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x047857, linewidth: 1.5 }));
+  group.add(edgeLine);
+
+  group.userData = {
+    type: 'solid_extruded',
+    width: w,
+    depth: d,
+    height,
+    draftAngleDeg,
+    volumeCm3: Number(((w * d * height) / 1000).toFixed(2)),
+    material: options.material || 'P20 Tool Steel'
+  };
+  return group;
+}
+
+/**
+ * Creates a realistic CNC milled pocket solid workpiece (Billet with pocket cavity and corner radii)
+ */
+export function createPocketedBillet(
+  baseW = 90,
+  baseH = 40,
+  baseD = 70,
+  pocketW = 55,
+  pocketD = 40,
+  pocketDepth = 18,
+  cornerR = 6,
+  name = "Pocketed_Cavity_Workpiece",
+  options = {}
+) {
+  const group = new THREE.Group();
+  group.name = name;
+
+  const color = options.color || 0x38bdf8;
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.75,
+    roughness: 0.25
+  });
+
+  // Base Billet Lower Half (solid floor below pocket)
+  const floorHeight = baseH - pocketDepth;
+  const floorGeo = new THREE.BoxGeometry(baseW, floorHeight, baseD);
+  const floorMesh = new THREE.Mesh(floorGeo, mat);
+  floorMesh.position.y = floorHeight / 2;
+  group.add(floorMesh);
+
+  // Upper Walls Surrounding Pocket Cavity
+  const leftW = (baseW - pocketW) / 2;
+  const frontD = (baseD - pocketD) / 2;
+
+  // Left wall
+  const leftGeo = new THREE.BoxGeometry(leftW, pocketDepth, baseD);
+  const leftMesh = new THREE.Mesh(leftGeo, mat);
+  leftMesh.position.set(-baseW / 2 + leftW / 2, floorHeight + pocketDepth / 2, 0);
+  group.add(leftMesh);
+
+  // Right wall
+  const rightGeo = new THREE.BoxGeometry(leftW, pocketDepth, baseD);
+  const rightMesh = new THREE.Mesh(rightGeo, mat);
+  rightMesh.position.set(baseW / 2 - leftW / 2, floorHeight + pocketDepth / 2, 0);
+  group.add(rightMesh);
+
+  // Front wall
+  const frontGeo = new THREE.BoxGeometry(pocketW, pocketDepth, frontD);
+  const frontMesh = new THREE.Mesh(frontGeo, mat);
+  frontMesh.position.set(0, floorHeight + pocketDepth / 2, baseD / 2 - frontD / 2);
+  group.add(frontMesh);
+
+  // Back wall
+  const backGeo = new THREE.BoxGeometry(pocketW, pocketDepth, frontD);
+  const backMesh = new THREE.Mesh(backGeo, mat);
+  backMesh.position.set(0, floorHeight + pocketDepth / 2, -baseD / 2 + frontD / 2);
+  group.add(backMesh);
+
+  // Corner Fillet Bosses in Pocket Cavity (R fillets)
+  if (cornerR > 0) {
+    const cylGeo = new THREE.CylinderGeometry(cornerR, cornerR, pocketDepth, 24);
+    const phw = pocketW / 2;
+    const phd = pocketD / 2;
+    const cornerOffsets = [
+      [-phw + cornerR, phd - cornerR],
+      [phw - cornerR, phd - cornerR],
+      [phw - cornerR, -phd + cornerR],
+      [-phw + cornerR, -phd + cornerR]
+    ];
+    cornerOffsets.forEach(([cx, cz]) => {
+      const cMesh = new THREE.Mesh(cylGeo, mat);
+      cMesh.position.set(cx, floorHeight + pocketDepth / 2, cz);
+      group.add(cMesh);
+    });
+  }
+
+  // Outer wireframe edges
+  const boxGeo = new THREE.BoxGeometry(baseW, baseH, baseD);
+  const edges = new THREE.EdgesGeometry(boxGeo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 1.5 }));
+  edgeLine.position.y = baseH / 2;
+  group.add(edgeLine);
+
+  const vol = (baseW * baseH * baseD - pocketW * pocketD * pocketDepth) / 1000;
+  group.userData = {
+    type: 'solid_pocketed_billet',
+    baseW,
+    baseH,
+    baseD,
+    pocketW,
+    pocketD,
+    pocketDepth,
+    cornerR,
+    volumeCm3: Number(vol.toFixed(2)),
+    material: options.material || 'Aluminum 6061-T6'
+  };
   return group;
 }
 
