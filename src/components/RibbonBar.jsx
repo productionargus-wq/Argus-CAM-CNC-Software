@@ -24,6 +24,7 @@ export default function RibbonBar({
   onOpenSurfacesModal,
   onOpenSolidsModal,
   onOpenModelPrepModal,
+  onOpenMeshModal,
   onSelectManagerTab,
   onUnblankAll,
   onInvertVisibility,
@@ -838,22 +839,88 @@ export default function RibbonBar({
         {/* ==================== 7. MESH TAB ==================== */}
         {activeTab === 'Mesh' && (
           <>
+            {/* Decimation & Subdivision */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onSelectSampleModel('impeller')} title="High-Density Mesh Tessellation">
-                  <Layers size={22} color="#38bdf8" />
-                  <span className="btn-label">Tessellate<br />Mesh</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenMeshModal ? onOpenMeshModal('decimate') : null}
+                  title="Mesh Decimation (Intelligent Triangle Reduction for CAM)"
+                >
+                  <Scissors size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Decimate<br />Mesh</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenEntityAnalyzer} title="Inspect Triangle Count &amp; Edge Normals">
-                  <Crosshair size={20} color="#a855f7" />
-                  <span className="btn-label">Mesh<br />Diagnostics</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onExportSTL} title="Export Active Mesh as Binary STL">
-                  <Download size={22} color="#10b981" />
-                  <span className="btn-label">Export<br />STL Mesh</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenMeshModal ? onOpenMeshModal('subdivide') : null}
+                  title="Subdivide &amp; Refine Mesh (4x Density for Fine Finishing)"
+                >
+                  <Layers size={22} color="#60a5fa" />
+                  <span className="btn-label" style={{ color: '#60a5fa', fontWeight: 600 }}>Subdivide<br />(4x Refine)</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Mesh Utilities</span>
+              <span className="ribbon-group-title">Refinement</span>
+            </div>
+
+            {/* Smoothing & Healing */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenMeshModal ? onOpenMeshModal('smooth') : null}
+                  title="Laplacian Mesh Smoothing (Filter Scanning Artifacts &amp; Facet Noise)"
+                >
+                  <Sparkles size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Laplacian<br />Smooth</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenMeshModal ? onOpenMeshModal('repair') : null}
+                  title="Hole Filling &amp; Non-Manifold Healing (Make Watertight)"
+                >
+                  <CheckCircle2 size={22} color="#f59e0b" />
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Fill Holes<br />&amp; Heal</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Conditioning</span>
+            </div>
+
+            {/* Reverse Engineering & Wireframes */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenMeshModal ? onOpenMeshModal('repair') : null}
+                  title="Extract Sharp Crease Boundaries to Level 10 Wireframe"
+                >
+                  <Grid size={21} color="#a855f7" />
+                  <span className="btn-label">Extract<br />Curves</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenEntityAnalyzer}
+                  title="Inspect Triangle Budget &amp; Vertex Normal Vectors"
+                >
+                  <Compass size={21} color="#94a3b8" />
+                  <span className="btn-label">Mesh<br />Diagnostics</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Reverse Eng</span>
+            </div>
+
+            {/* Export */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenMeshModal ? onOpenMeshModal('export') : onExportSTL()}
+                  title="Export Mesh Formats (Binary STL, ASCII STL, Wavefront OBJ)"
+                >
+                  <Download size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Export<br />Mesh</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Export</span>
             </div>
           </>
         )}

@@ -21,6 +21,7 @@ import WireframeSketcherModal from './components/WireframeSketcherModal';
 import SurfacesCADModal from './components/SurfacesCADModal';
 import SolidsCADModal from './components/SolidsCADModal';
 import ModelPrepModal from './components/ModelPrepModal';
+import MeshWorkbenchModal from './components/MeshWorkbenchModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -110,6 +111,8 @@ export default function App() {
   const [solidsModalTool, setSolidsModalTool] = useState('box');
   const [isModelPrepModalOpen, setIsModelPrepModalOpen] = useState(false);
   const [modelPrepModalTab, setModelPrepModalTab] = useState('pushpull');
+  const [isMeshModalOpen, setIsMeshModalOpen] = useState(false);
+  const [meshModalTab, setMeshModalTab] = useState('decimate');
 
   const [solidsList, setSolidsList] = useState([
     { id: 1, name: 'Solid 1 - Finished Workpiece', material: '6061-T6 Aluminum', volumeCm3: 184.2, isPrimary: true, visible: true, active: true, color: '#38bdf8' },
@@ -865,6 +868,12 @@ export default function App() {
     setIsModelPrepModalOpen(true);
   };
 
+  // Mesh Polygonal Modeling & Reverse Engineering Handler
+  const handleOpenMeshModal = (tab = 'decimate') => {
+    setMeshModalTab(tab);
+    setIsMeshModalOpen(true);
+  };
+
   return (
     <div id="root" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* 1. TitleBar */}
@@ -891,6 +900,7 @@ export default function App() {
         onOpenSurfacesModal={handleOpenSurfacesModal}
         onOpenSolidsModal={handleOpenSolidsModal}
         onOpenModelPrepModal={handleOpenModelPrepModal}
+        onOpenMeshModal={handleOpenMeshModal}
         onSelectManagerTab={setActiveManagerTab}
         onUnblankAll={handleUnblankAll}
         onInvertVisibility={handleInvertVisibility}
@@ -1058,6 +1068,18 @@ export default function App() {
         onUpdateTransform={setPartTransform}
         onResetTransform={handleResetTransform}
         onAddSurfaceEntity={handleAddSurfaceEntity}
+      />
+
+      {/* Mesh Workbench & Reverse Engineering Modal (Tab 7) */}
+      <MeshWorkbenchModal
+        isOpen={isMeshModalOpen}
+        onClose={() => setIsMeshModalOpen(false)}
+        initialTab={meshModalTab}
+        currentModel={currentModel}
+        currentProjectName={currentProjectName}
+        partMetrics={partMetrics}
+        onAddCustomEntity={handleAddCustomEntity}
+        onExportSTL={handleExportSTL}
       />
 
       {/* 6. NC2Check G-Code Post Modal */}

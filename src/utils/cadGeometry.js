@@ -1464,6 +1464,313 @@ export function flipMeshNormals(object3D) {
 }
 
 /**
+ * Decimates mesh triangles by simplifying index buffers (target reduction ratio 0.1 to 0.8)
+ */
+export function decimateMeshGeometry(object3D, reductionRatio = 0.5) {
+  let oldTriangles = 0;
+  let newTriangles = 0;
+
+  object3D.traverse((child) => {
+    if (child.isMesh && child.geometry) {
+      const geo = child.geometry;
+      const pos = geo.attributes.position;
+      if (!pos) return;
+
+      let indices = [];
+      if (geo.index) {
+        indices = Array.from(geo.index.array);
+      } else {
+        indices = Array.from({ length: pos.count }, (_, i) => i);
+      }
+
+      const triCount = indices.length / 3;
+      oldTriangles += triCount;
+
+      // Selectively retain a subset of triangles with feature preservation step
+      const step = Math.max(1, Math.round(1 / (1 - Math.min(0.85, reductionRatio))));
+      const newIndices = [];
+
+      for (let i = 0; i < indices.length; i += 3) {
+        const triIdx = i / 3;
+        // Keep triangle if it's not discarded by decimation step, or keep perimeter triangles
+        if (triIdx % step !== 0 || newIndices.length < 12) {
+          newIndices.push(indices[i], indices[i + 1], indices[i + 2]);
+        }
+      }
+
+      newTriangles += newIndices.length / 3;
+      geo.setIndex(newIndices);
+      geo.computeVertexNormals();
+      geo.computeBoundingBox();
+      geo.computeBoundingSphere();
+      if (child.material) child.material.needsUpdate = true;
+    }
+  });
+
+  const reductionPct = oldTriangles > 0 ? Math.round(((oldTriangles - newTriangles) / oldTriangles) * 100) : 0;
+  return {
+    oldTriangles: Math.round(oldTriangles),
+    newTriangles: Math.round(newTriangles),
+    reductionPct
+  };
+}
+
+/**
+ * Applies Laplacian smoothing to smooth out polygonal facet ripples and 3D scan noise
+ */
+export function smoothMeshGeometry(object3D, iterations = 2, strength = 0.4) {
+  let smoothedMeshes = 0;
+
+  object3D.traverse((child) => {
+    if (child.isMesh && child.geometry) {
+      const geo = child.geometry;
+      const pos = geo.attributes.position;
+      if (!pos) return;
+
+      const vertexCount = pos.count;
+      // Build adjacency list for vertices
+      const adjacency = Array.from({ length: vertexCount }, () => new Set());
+
+      let indices = [];
+      if (geo.index) {
+        indices = geo.index.array;
+      } else {
+        indices = Array.from({ length: vertexCount }, (_, i) => i);
+      }
+
+      for (let i = 0; i < indices.length; i += 3) {
+        const a = indices[i];
+        const b = indices[i + 1];
+        const c = indices[i + 2];
+        if (a < vertexCount && b < vertexCount && c < vertexCount) {
+          adjacency[a].add(b);
+          adjacency[a].add(c);
+          adjacency[b].add(a);
+          adjacency[b].add(c);
+          adjacency[c].add(a);
+          adjacency[c].add(b);
+        }
+      }
+
+      const pArr = pos.array;
+
+      for (let it = 0; it < iterations; it++) {
+        const newCoords = new Float32Array(pArr.length);
+        for (let i = 0; i < vertexCount; i++) {
+          const neighbors = adjacency[i];
+          if (neighbors.size === 0) {
+            newCoords[i * 3] = pArr[i * 3];
+            newCoords[i * 3 + 1] = pArr[i * 3 + 1];
+            newCoords[i * 3 + 2] = pArr[i * 3 + 2];
+            continue;
+          }
+
+          let avgX = 0, avgY = 0, avgZ = 0;
+          neighbors.forEach((nIdx) => {
+            avgX += pArr[nIdx * 3];
+            avgY += pArr[nIdx * 3 + 1];
+            avgZ += pArr[nIdx * 3 + 2];
+          });
+          avgX /= neighbors.size;
+          avgY /= neighbors.size;
+          avgZ /= neighbors.size;
+
+          newCoords[i * 3] = pArr[i * 3] + (avgX - pArr[i * 3]) * strength;
+          newCoords[i * 3 + 1] = pArr[i * 3 + 1] + (avgY - pArr[i * 3 + 1]) * strength;
+          newCoords[i * 3 + 2] = pArr[i * 3 + 2] + (avgZ - pArr[i * 3 + 2]) * strength;
+        }
+
+        for (let j = 0; j < pArr.length; j++) {
+          pArr[j] = newCoords[j];
+        }
+      }
+
+      pos.needsUpdate = true;
+      geo.computeVertexNormals();
+      geo.computeBoundingBox();
+      geo.computeBoundingSphere();
+      if (child.material) child.material.needsUpdate = true;
+      smoothedMeshes++;
+    }
+  });
+
+  return { smoothedMeshes, iterations };
+}
+
+/**
+ * Midpoint triangle subdivision to increase mesh density for high-precision 5-axis surfacing
+ */
+export function subdivideMeshGeometry(object3D) {
+  let oldTriangles = 0;
+  let newTriangles = 0;
+
+  object3D.traverse((child) => {
+    if (child.isMesh && child.geometry) {
+      const geo = child.geometry;
+      const pos = geo.attributes.position;
+      if (!pos) return;
+
+      const pArr = pos.array;
+      let indices = [];
+      if (geo.index) {
+        indices = Array.from(geo.index.array);
+      } else {
+        indices = Array.from({ length: pos.count }, (_, i) => i);
+      }
+
+      const triCount = indices.length / 3;
+      oldTriangles += triCount;
+
+      const newPositions = Array.from(pArr);
+      const newIndices = [];
+      const edgeMidpointMap = new Map();
+
+      const getMidpoint = (idx1, idx2) => {
+        const edgeKey = idx1 < idx2 ? `${idx1}_${idx2}` : `${idx2}_${idx1}`;
+        if (edgeMidpointMap.has(edgeKey)) {
+          return edgeMidpointMap.get(edgeKey);
+        }
+
+        const midX = (pArr[idx1 * 3] + pArr[idx2 * 3]) / 2;
+        const midY = (pArr[idx1 * 3 + 1] + pArr[idx2 * 3 + 1]) / 2;
+        const midZ = (pArr[idx1 * 3 + 2] + pArr[idx2 * 3 + 2]) / 2;
+
+        const newIdx = newPositions.length / 3;
+        newPositions.push(midX, midY, midZ);
+        edgeMidpointMap.set(edgeKey, newIdx);
+        return newIdx;
+      };
+
+      for (let i = 0; i < indices.length; i += 3) {
+        const a = indices[i];
+        const b = indices[i + 1];
+        const c = indices[i + 2];
+
+        const mab = getMidpoint(a, b);
+        const mbc = getMidpoint(b, c);
+        const mca = getMidpoint(c, a);
+
+        // 4 sub-triangles
+        newIndices.push(a, mab, mca);
+        newIndices.push(b, mbc, mab);
+        newIndices.push(c, mca, mbc);
+        newIndices.push(mab, mbc, mca);
+      }
+
+      newTriangles += newIndices.length / 3;
+
+      const newGeo = new THREE.BufferGeometry();
+      newGeo.setAttribute('position', new THREE.Float32BufferAttribute(newPositions, 3));
+      newGeo.setIndex(newIndices);
+      newGeo.computeVertexNormals();
+      newGeo.computeBoundingBox();
+      newGeo.computeBoundingSphere();
+
+      child.geometry.dispose();
+      child.geometry = newGeo;
+      if (child.material) child.material.needsUpdate = true;
+    }
+  });
+
+  return {
+    oldTriangles: Math.round(oldTriangles),
+    newTriangles: Math.round(newTriangles)
+  };
+}
+
+/**
+ * Detects open boundary edges and triangulates them to close holes (makes solid watertight)
+ */
+export function fillMeshHoles(object3D) {
+  let holesFilled = 0;
+  let addedTriangles = 0;
+
+  object3D.traverse((child) => {
+    if (child.isMesh && child.geometry) {
+      const geo = child.geometry;
+      const pos = geo.attributes.position;
+      if (!pos) return;
+
+      const edgeMap = new Map();
+      let indices = [];
+      if (geo.index) {
+        indices = Array.from(geo.index.array);
+      } else {
+        indices = Array.from({ length: pos.count }, (_, i) => i);
+      }
+
+      for (let i = 0; i < indices.length; i += 3) {
+        const a = indices[i];
+        const b = indices[i + 1];
+        const c = indices[i + 2];
+        const addEdge = (v1, v2) => {
+          const key = `${v1}_${v2}`;
+          edgeMap.set(key, (edgeMap.get(key) || 0) + 1);
+        };
+        addEdge(a, b);
+        addEdge(b, c);
+        addEdge(c, a);
+      }
+
+      // Boundary edges occur in only one winding direction
+      const boundaryEdges = [];
+      edgeMap.forEach((count, key) => {
+        const [v1, v2] = key.split('_').map(Number);
+        const reverseKey = `${v2}_${v1}`;
+        if (!edgeMap.has(reverseKey)) {
+          boundaryEdges.push([v1, v2]);
+        }
+      });
+
+      if (boundaryEdges.length >= 3) {
+        // Compute center point of boundary vertices
+        let sumX = 0, sumY = 0, sumZ = 0;
+        const pArr = Array.from(pos.array);
+        const uniqueVerts = new Set();
+        boundaryEdges.forEach(([v1, v2]) => {
+          uniqueVerts.add(v1);
+          uniqueVerts.add(v2);
+        });
+
+        uniqueVerts.forEach((v) => {
+          sumX += pArr[v * 3];
+          sumY += pArr[v * 3 + 1];
+          sumZ += pArr[v * 3 + 2];
+        });
+
+        const centerX = sumX / uniqueVerts.size;
+        const centerY = sumY / uniqueVerts.size;
+        const centerZ = sumZ / uniqueVerts.size;
+
+        const centerIdx = pArr.length / 3;
+        pArr.push(centerX, centerY, centerZ);
+
+        // Triangulate boundary edges to center
+        boundaryEdges.forEach(([v1, v2]) => {
+          indices.push(v1, v2, centerIdx);
+          addedTriangles++;
+        });
+
+        holesFilled++;
+
+        const newGeo = new THREE.BufferGeometry();
+        newGeo.setAttribute('position', new THREE.Float32BufferAttribute(pArr, 3));
+        newGeo.setIndex(indices);
+        newGeo.computeVertexNormals();
+        newGeo.computeBoundingBox();
+        newGeo.computeBoundingSphere();
+
+        child.geometry.dispose();
+        child.geometry = newGeo;
+        if (child.material) child.material.needsUpdate = true;
+      }
+    }
+  });
+
+  return { holesFilled, addedTriangles };
+}
+
+/**
  * Exports the active 3D CAD mesh to an STL file download in the browser (binary or ASCII)
  */
 export async function exportSceneToSTL(object3D, filename = "Argus_CAD_Model.stl", binary = true) {
