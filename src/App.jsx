@@ -18,6 +18,7 @@ import SaveAsModal from './components/SaveAsModal';
 import RecentProjectsModal from './components/RecentProjectsModal';
 import ExportCADModal from './components/ExportCADModal';
 import WireframeSketcherModal from './components/WireframeSketcherModal';
+import SurfacesCADModal from './components/SurfacesCADModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -51,6 +52,7 @@ export default function App() {
   const [layerVisibility, setLayerVisibility] = useState({
     part: true,
     wireframe: true,
+    surfaces: true,
     fixture: true,
     bed: true,
     stock: true,
@@ -85,6 +87,7 @@ export default function App() {
   const [levels, setLevels] = useState([
     { id: 1, number: 1, name: 'Part Solid', entities: 1, visible: true, active: true, color: '#60a5fa' },
     { id: 10, number: 10, name: 'Wireframe Curves', entities: 0, visible: true, active: false, color: '#38bdf8' },
+    { id: 15, number: 15, name: 'Surface Sheets', entities: 0, visible: true, active: false, color: '#06b6d4' },
     { id: 20, number: 20, name: 'Stock Bounding Box', entities: 1, visible: true, active: false, color: '#f59e0b' },
     { id: 30, number: 30, name: 'Fixture & Vise', entities: 3, visible: true, active: false, color: '#94a3b8' },
     { id: 50, number: 50, name: 'Toolpath Cuts', entities: 5, visible: true, active: false, color: '#10b981' },
@@ -99,6 +102,8 @@ export default function App() {
   const [isExportCADModalOpen, setIsExportCADModalOpen] = useState(false);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
+  const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
+  const [surfacesModalTool, setSurfacesModalTool] = useState('plane');
 
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isSimModalOpen, setIsSimModalOpen] = useState(false);
@@ -299,9 +304,17 @@ export default function App() {
 
   // Sync entity counts with Levels
   useEffect(() => {
+    const wireframeCount = customGeometry.filter(
+      (g) => g.name?.startsWith('Wireframe_') || g.name?.startsWith('Drill_') || g.name?.startsWith('Hole_')
+    ).length;
+    const surfaceCount = customGeometry.filter(
+      (g) => g.name?.startsWith('Surface_') || g.name?.startsWith('CAD_')
+    ).length;
+
     setLevels((prev) =>
       prev.map((lvl) => {
-        if (lvl.id === 10) return { ...lvl, entities: customGeometry.length };
+        if (lvl.id === 10) return { ...lvl, entities: wireframeCount };
+        if (lvl.id === 15) return { ...lvl, entities: surfaceCount };
         if (lvl.id === 50) return { ...lvl, entities: operations.length };
         if (lvl.id === 60) return { ...lvl, entities: operations.length };
         return lvl;
@@ -577,6 +590,7 @@ export default function App() {
           const nextVis = !lvl.visible;
           if (id === 1) setLayerVisibility((v) => ({ ...v, part: nextVis }));
           else if (id === 10) setLayerVisibility((v) => ({ ...v, wireframe: nextVis }));
+          else if (id === 15) setLayerVisibility((v) => ({ ...v, surfaces: nextVis }));
           else if (id === 20) setLayerVisibility((v) => ({ ...v, stock: nextVis }));
           else if (id === 30) setLayerVisibility((v) => ({ ...v, fixture: nextVis }));
           else if (id === 50) setLayerVisibility((v) => ({ ...v, toolpaths: nextVis }));
@@ -616,6 +630,7 @@ export default function App() {
     setLayerVisibility({
       part: true,
       wireframe: true,
+      surfaces: true,
       fixture: true,
       bed: true,
       stock: true,
@@ -633,6 +648,7 @@ export default function App() {
         const nextVis = !lvl.visible;
         if (lvl.id === 1) setLayerVisibility((v) => ({ ...v, part: nextVis }));
         else if (lvl.id === 10) setLayerVisibility((v) => ({ ...v, wireframe: nextVis }));
+        else if (lvl.id === 15) setLayerVisibility((v) => ({ ...v, surfaces: nextVis }));
         else if (lvl.id === 20) setLayerVisibility((v) => ({ ...v, stock: nextVis }));
         else if (lvl.id === 30) setLayerVisibility((v) => ({ ...v, fixture: nextVis }));
         else if (lvl.id === 50) setLayerVisibility((v) => ({ ...v, toolpaths: nextVis }));
@@ -745,19 +761,32 @@ export default function App() {
     );
   };
 
-  // Surface Creation Handlers
+  // Surface Creation & CAM Suite Handlers
+  const handleOpenSurfacesModal = (tool = 'plane') => {
+    setSurfacesModalTool(tool);
+    setIsSurfacesModalOpen(true);
+  };
+
+  const handleAddSurfaceEntity = (entity) => {
+    setCustomGeometry((prev) => [...prev, entity]);
+  };
+
+  const handleRemoveSurfaceEntity = (target) => {
+    setCustomGeometry((prev) => prev.filter((item) => item !== target));
+  };
+
   const handleAddSurface = (type) => {
-    if (type === 'plane') {
-      const plane = createPlanarSurface(80, 60);
-      setCustomGeometry((prev) => [...prev, plane]);
-    } else if (type === 'cylinder') {
-      const cyl = createCylinderSurface(35, 45);
-      setCustomGeometry((prev) => [...prev, cyl]);
-    }
+    handleOpenSurfacesModal(type);
   };
 
   const handleClearSurfaces = () => {
-    setCustomGeometry((prev) => prev.filter((item) => !item.name?.startsWith('CAD_')));
+    setCustomGeometry((prev) =>
+      prev.filter(
+        (item) =>
+          !item.name?.startsWith('Surface_') &&
+          !item.name?.startsWith('CAD_')
+      )
+    );
   };
 
   // Solid Primitives Handlers
@@ -798,6 +827,7 @@ export default function App() {
         onOpenEntityAnalyzer={() => setIsEntityAnalyzerOpen(true)}
         onOpenDistanceCaliper={() => setIsDistanceCaliperOpen(true)}
         onOpenWireframeModal={handleOpenWireframeModal}
+        onOpenSurfacesModal={handleOpenSurfacesModal}
         onSelectManagerTab={setActiveManagerTab}
         onUnblankAll={handleUnblankAll}
         onInvertVisibility={handleInvertVisibility}
@@ -923,6 +953,18 @@ export default function App() {
         onAddEntity={handleAddCustomEntity}
         onRemoveEntity={handleRemoveCustomEntity}
         onClearEntities={handleClearWireframes}
+      />
+
+      {/* Surfaces CAD Suite Modal (Tab 4) */}
+      <SurfacesCADModal
+        isOpen={isSurfacesModalOpen}
+        onClose={() => setIsSurfacesModalOpen(false)}
+        initialTool={surfacesModalTool}
+        partMetrics={partMetrics}
+        customGeometry={customGeometry}
+        onAddSurfaceEntity={handleAddSurfaceEntity}
+        onRemoveSurfaceEntity={handleRemoveSurfaceEntity}
+        onClearSurfaces={handleClearSurfaces}
       />
 
       {/* 6. NC2Check G-Code Post Modal */}

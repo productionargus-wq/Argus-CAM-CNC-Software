@@ -370,7 +370,16 @@ export default function Viewport3D({
       partHolderGroupRef.current.visible = layerVisibility.part !== false;
     }
     if (customGeoGroupRef.current) {
-      customGeoGroupRef.current.visible = layerVisibility.wireframe !== false;
+      const showWireframe = layerVisibility.wireframe !== false;
+      const showSurfaces = layerVisibility.surfaces !== false;
+      customGeoGroupRef.current.children.forEach((child) => {
+        if (child.name?.startsWith('Surface_') || child.name?.startsWith('CAD_')) {
+          child.visible = showSurfaces;
+        } else {
+          child.visible = showWireframe;
+        }
+      });
+      customGeoGroupRef.current.visible = true;
     }
     if (fixtureGroupRef.current) {
       fixtureGroupRef.current.visible = layerVisibility.fixture !== false;

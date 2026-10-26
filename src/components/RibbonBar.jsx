@@ -21,6 +21,7 @@ export default function RibbonBar({
   onOpenEntityAnalyzer,
   onOpenDistanceCaliper,
   onOpenWireframeModal,
+  onOpenSurfacesModal,
   onSelectManagerTab,
   onUnblankAll,
   onInvertVisibility,
@@ -502,22 +503,104 @@ export default function RibbonBar({
         {/* ==================== 4. SURFACES TAB ==================== */}
         {activeTab === 'Surfaces' && (
           <>
+            {/* Primitives */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onAddSurface('plane')} title="Create 3D Planar Surface Sheet">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('plane') : onAddSurface('plane')}
+                  title="Create 3D Planar Surface Sheet (G17/G18/G19, Drive or Check)"
+                >
                   <Layers size={22} color="#06b6d4" />
                   <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Planar<br />Surface</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onAddSurface('cylinder')} title="Create 3D Cylindrical Surface Wrapper">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('cylinder') : onAddSurface('cylinder')}
+                  title="Create 3D Cylindrical Surface Sleeve Wrapper"
+                >
                   <Orbit size={22} color="#10b981" />
-                  <span className="btn-label">Cylinder<br />Surface</span>
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Cylinder<br />Surface</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onClearSurfaces} title="Clear Added Surface Entities">
+              </div>
+              <span className="ribbon-group-title">Primitives</span>
+            </div>
+
+            {/* Loft & Extrusions */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('extrude') : null}
+                  title="Extrude 2D Boundary into Vertical Surface Walls"
+                >
+                  <Box size={22} color="#8b5cf6" />
+                  <span className="btn-label">Extrude<br />Wall</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('revolve') : null}
+                  title="Revolve Profile Around Spindle Axis (Turned & Conical Surfaces)"
+                >
+                  <Disc size={22} color="#ec4899" />
+                  <span className="btn-label">Revolve<br />Surface</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('loft') : null}
+                  title="Ruled Loft Surface Blending Between Two Profiles"
+                >
+                  <Sliders size={22} color="#3b82f6" />
+                  <span className="btn-label">Ruled<br />Loft</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Lofts &amp; Extrude</span>
+            </div>
+
+            {/* CAM Hole Capping & Blends */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('cap') : null}
+                  title="Cap Holes / Patch Surface Openings (Prevents Cutter Plunge)"
+                >
+                  <Sparkles size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Cap<br />Holes</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('fillet') : null}
+                  title="Curved Fillet Blend Transition Sheet"
+                >
+                  <Maximize2 size={21} color="#14b8a6" />
+                  <span className="btn-label">Fillet<br />Blend</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">CAM Patches</span>
+            </div>
+
+            {/* Drive & Check Management */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('list') : null}
+                  title="Inspect Drive & Check Surfaces Manager on Level 15"
+                >
+                  <ShieldAlert size={22} color="#f59e0b" />
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Drive &amp; Check<br />Manager</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onClearSurfaces}
+                  title="Clear All Added Surface Sheets on Level 15"
+                >
                   <Trash2 size={20} color="#94a3b8" />
                   <span className="btn-label">Clear<br />Surfaces</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">3D Surface Creation</span>
+              <span className="ribbon-group-title">Drive / Check</span>
             </div>
           </>
         )}

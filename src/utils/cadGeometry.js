@@ -243,42 +243,390 @@ export function createSphereGeometry(radius = 30, name = "Spherical_Blank") {
 }
 
 /**
- * Creates a 3D planar surface sheet
+ * Creates a 3D planar surface sheet on G17, G18, or G19
  */
-export function createPlanarSurface(w = 80, d = 60) {
+export function createPlanarSurface(
+  w = 80,
+  d = 60,
+  y = 35,
+  center = [0, 0],
+  plane = 'G17',
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
   const geo = new THREE.PlaneGeometry(w, d, 8, 8);
-  geo.rotateX(-Math.PI / 2);
+  if (plane === 'G17') {
+    geo.rotateX(-Math.PI / 2);
+    group.position.set(cx, y, cz);
+  } else if (plane === 'G18') {
+    group.position.set(cx, cz, y);
+  } else {
+    geo.rotateY(Math.PI / 2);
+    group.position.set(y, cx, cz);
+  }
+
+  const isCheck = options.role === 'check';
+  const color = options.color || (isCheck ? 0xf59e0b : 0x06b6d4);
+  const opacity = options.opacity !== undefined ? options.opacity : 0.75;
+
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x06b6d4,
-    metalness: 0.4,
-    roughness: 0.3,
+    color,
+    metalness: 0.2,
+    roughness: 0.35,
     side: THREE.DoubleSide,
     transparent: true,
-    opacity: 0.85
+    opacity
   });
+
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.y = 25;
-  mesh.name = "CAD_Planar_Surface";
-  return mesh;
+  group.add(mesh);
+
+  // High-contrast surface edge boundary line
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeMat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const edgeLine = new THREE.LineSegments(edges, edgeMat);
+  group.add(edgeLine);
+
+  group.name = options.name || `Surface_Plane_${Math.round(w)}x${Math.round(d)}_${isCheck ? 'Check' : 'Drive'}`;
+  group.userData = {
+    type: 'surface_plane',
+    width: w,
+    depth: d,
+    elevation: y,
+    plane,
+    role: isCheck ? 'check' : 'drive',
+    color
+  };
+  return group;
 }
 
 /**
- * Creates a 3D cylindrical surface sleeve
+ * Creates a 3D cylindrical surface sleeve (open-ended)
  */
-export function createCylinderSurface(radius = 35, height = 45) {
-  const geo = new THREE.CylinderGeometry(radius, radius, height, 32, 4, true);
+export function createCylinderSurface(
+  radius = 35,
+  height = 45,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
+  const geo = new THREE.CylinderGeometry(radius, radius, height, 36, 4, true);
+  const isCheck = options.role === 'check';
+  const color = options.color || (isCheck ? 0xf59e0b : 0x10b981);
+  const opacity = options.opacity !== undefined ? options.opacity : 0.75;
+
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x10b981,
-    metalness: 0.5,
+    color,
+    metalness: 0.3,
     roughness: 0.3,
     side: THREE.DoubleSide,
     transparent: true,
-    opacity: 0.85
+    opacity
   });
+
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.y = height / 2;
-  mesh.name = "CAD_Cylinder_Surface";
-  return mesh;
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeMat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const edgeLine = new THREE.LineSegments(edges, edgeMat);
+  group.add(edgeLine);
+
+  group.position.set(cx, y + height / 2, cz);
+  group.name = options.name || `Surface_Cylinder_R${Math.round(radius)}_H${Math.round(height)}`;
+  group.userData = {
+    type: 'surface_cylinder',
+    radius,
+    height,
+    role: isCheck ? 'check' : 'drive'
+  };
+  return group;
+}
+
+/**
+ * Creates a 3D extruded boundary surface shell
+ */
+export function createExtrudedSurface(
+  w = 60,
+  d = 40,
+  height = 30,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
+  // Build 4 side quad faces
+  const hw = w / 2;
+  const hd = d / 2;
+  const points = [];
+
+  // Front (+Z), Right (+X), Back (-Z), Left (-X)
+  const corners = [
+    [-hw, 0, hd], [hw, 0, hd],
+    [hw, 0, hd], [hw, 0, -hd],
+    [hw, 0, -hd], [-hw, 0, -hd],
+    [-hw, 0, -hd], [-hw, 0, hd]
+  ];
+
+  const vertices = [];
+  const indices = [];
+
+  for (let i = 0; i < 4; i++) {
+    const p1 = corners[i * 2];
+    const p2 = corners[i * 2 + 1];
+    const baseIdx = i * 4;
+
+    vertices.push(
+      p1[0], 0, p1[2],
+      p2[0], 0, p2[2],
+      p2[0], height, p2[2],
+      p1[0], height, p1[2]
+    );
+
+    indices.push(
+      baseIdx, baseIdx + 1, baseIdx + 2,
+      baseIdx, baseIdx + 2, baseIdx + 3
+    );
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+
+  const isCheck = options.role === 'check';
+  const color = options.color || (isCheck ? 0xf59e0b : 0x8b5cf6);
+
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: options.opacity || 0.75,
+    roughness: 0.35
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+  group.add(edgeLine);
+
+  group.position.set(cx, y, cz);
+  group.name = options.name || `Surface_Extrude_${Math.round(w)}x${Math.round(d)}_H${Math.round(height)}`;
+  group.userData = { type: 'surface_extrusion', width: w, depth: d, height, role: isCheck ? 'check' : 'drive' };
+  return group;
+}
+
+/**
+ * Creates a 3D revolved/conical surface sheet
+ */
+export function createRevolvedSurface(
+  radiusBottom = 30,
+  radiusTop = 15,
+  height = 40,
+  sweepAngleDeg = 360,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+  const sweepRad = (sweepAngleDeg * Math.PI) / 180;
+
+  const geo = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 36, 8, true, 0, sweepRad);
+  const isCheck = options.role === 'check';
+  const color = options.color || (isCheck ? 0xf59e0b : 0xec4899);
+
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: options.opacity || 0.75,
+    roughness: 0.35
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+  group.add(edgeLine);
+
+  group.position.set(cx, y + height / 2, cz);
+  group.name = options.name || `Surface_Revolved_R${Math.round(radiusBottom)}-${Math.round(radiusTop)}`;
+  group.userData = { type: 'surface_revolved', radiusBottom, radiusTop, height, sweepAngleDeg, role: isCheck ? 'check' : 'drive' };
+  return group;
+}
+
+/**
+ * Creates a 3D ruled loft surface blending between lower and upper profile frames
+ */
+export function createRuledLoftSurface(
+  botW = 80,
+  botD = 60,
+  topW = 50,
+  topD = 40,
+  height = 35,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
+  const bhw = botW / 2;
+  const bhd = botD / 2;
+  const thw = topW / 2;
+  const thd = topD / 2;
+
+  const botCorners = [
+    [-bhw, 0, bhd], [bhw, 0, bhd],
+    [bhw, 0, -bhd], [-bhw, 0, -bhd]
+  ];
+  const topCorners = [
+    [-thw, height, thd], [thw, height, thd],
+    [thw, height, -thd], [-thw, height, -thd]
+  ];
+
+  const vertices = [];
+  const indices = [];
+
+  for (let i = 0; i < 4; i++) {
+    const next = (i + 1) % 4;
+    const baseIdx = i * 4;
+
+    vertices.push(
+      botCorners[i][0], botCorners[i][1], botCorners[i][2],
+      botCorners[next][0], botCorners[next][1], botCorners[next][2],
+      topCorners[next][0], topCorners[next][1], topCorners[next][2],
+      topCorners[i][0], topCorners[i][1], topCorners[i][2]
+    );
+
+    indices.push(
+      baseIdx, baseIdx + 1, baseIdx + 2,
+      baseIdx, baseIdx + 2, baseIdx + 3
+    );
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+
+  const isCheck = options.role === 'check';
+  const color = options.color || (isCheck ? 0xf59e0b : 0x3b82f6);
+
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: options.opacity || 0.75,
+    roughness: 0.35
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+  group.add(edgeLine);
+
+  group.position.set(cx, y, cz);
+  group.name = options.name || `Surface_RuledLoft_${Math.round(botW)}to${Math.round(topW)}`;
+  group.userData = { type: 'surface_ruled_loft', botW, botD, topW, topD, height, role: isCheck ? 'check' : 'drive' };
+  return group;
+}
+
+/**
+ * Creates a circular hole cap surface patch (prevents finishing tools from dipping into holes)
+ */
+export function createHoleCapSurface(
+  radius = 8,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
+  const geo = new THREE.CircleGeometry(radius, 32);
+  geo.rotateX(-Math.PI / 2);
+
+  const color = options.color || 0x38bdf8;
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.85,
+    roughness: 0.2
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 }));
+  group.add(edgeLine);
+
+  group.position.set(cx, y, cz);
+  group.name = options.name || `Surface_HoleCap_Dia${(radius * 2).toFixed(1)}`;
+  group.userData = { type: 'surface_hole_cap', radius, diameter: radius * 2 };
+  return group;
+}
+
+/**
+ * Creates a curved fillet blend sheet transition
+ */
+export function createFilletBlendSurface(
+  radius = 10,
+  length = 60,
+  angleDeg = 90,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+  const angleRad = (angleDeg * Math.PI) / 180;
+
+  const geo = new THREE.CylinderGeometry(radius, radius, length, 24, 2, true, 0, angleRad);
+  geo.rotateZ(Math.PI / 2);
+
+  const color = options.color || 0x14b8a6;
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.8,
+    roughness: 0.3
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+  group.add(edgeLine);
+
+  group.position.set(cx, y + radius, cz);
+  group.name = options.name || `Surface_FilletBlend_R${radius}_L${length}`;
+  group.userData = { type: 'surface_fillet_blend', radius, length, angleDeg };
+  return group;
 }
 
 /**
