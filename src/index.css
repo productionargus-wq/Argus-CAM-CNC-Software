@@ -485,6 +485,8 @@ body {
 .op-type-adaptive { background: #06b6d4; color: black; }
 .op-type-chamfer { background: #ec4899; color: white; }
 .op-type-parallel { background: #d946ef; color: white; }
+.op-type-rest { background: #14b8a6; color: white; }
+.op-type-pencil { background: #f97316; color: white; }
 
 .op-badge {
   font-size: 9px;

@@ -1607,6 +1607,14 @@ export default function RibbonBar({
                   <div style={{ width: '16px', height: '16px', background: '#ec4899', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CH</div>
                   <span className="btn-label">Chamfer<br />Deburr</span>
                 </button>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('rest_milling')} title="Add Rest Machining & Corner Cleanout">
+                  <div style={{ width: '16px', height: '16px', background: '#14b8a6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>RM</div>
+                  <span className="btn-label">Rest<br />Milling</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pencil')} title="Add 3D Pencil Fillet Valley Tracing">
+                  <div style={{ width: '16px', height: '16px', background: '#f97316', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PC</div>
+                  <span className="btn-label">3D<br />Pencil</span>
+                </button>
               </div>
               <span className="ribbon-group-title">CAM Strategies</span>
             </div>

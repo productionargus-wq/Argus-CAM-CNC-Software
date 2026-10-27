@@ -726,6 +726,40 @@ export default function App() {
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
+    } else if (strategy === 'rest' || strategy === 'rest_milling') {
+      newOp = {
+        id: nextId,
+        name: `Rest Corner Pick ${nextId}`,
+        toolId: 3,
+        toolName: 'T3 - 6mm Ballnose',
+        badgeClass: 'rest',
+        badgeText: 'RM',
+        visible: true,
+        stepoverPct: 30,
+        stepdown: 2.5,
+        totalDepth: 15.0,
+        refToolDiameter: 12.0,
+        stockToLeaveXY: 0.1,
+        stockToLeaveZ: 0.0,
+        rapidHeight: 15.0
+      };
+    } else if (strategy === 'pencil') {
+      newOp = {
+        id: nextId,
+        name: `3D Pencil Trace ${nextId}`,
+        toolId: 3,
+        toolName: 'T3 - 6mm Ballnose',
+        badgeClass: 'pencil',
+        badgeText: 'PC',
+        visible: true,
+        stepoverPct: 15,
+        stepdown: 1.0,
+        totalDepth: 15.0,
+        biTangencyRadius: 3.0,
+        stockToLeaveXY: 0.0,
+        stockToLeaveZ: 0.0,
+        rapidHeight: 15.0
+      };
     }
 
     if (newOp) {
@@ -1488,11 +1522,13 @@ export default function App() {
           setActiveOpId(newOp.id);
         }}
         onUpdateOperation={handleSaveOperation}
+        onUpdateTools={setTools}
         onDeleteOperation={handleDeleteOpById}
         onRegenerateAll={handleRegenerateAll}
         onLaunchSimulation={() => setIsSimModalOpen(true)}
         onOpenGCodeViewer={() => setIsGCodeViewerOpen(true)}
         partMetrics={partMetrics}
+        stockConfig={stockConfig}
       />
 
       {/* 6. NC2Check G-Code Post Modal */}

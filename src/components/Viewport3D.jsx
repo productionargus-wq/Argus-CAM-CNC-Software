@@ -14,6 +14,8 @@ import {
   generateAdaptiveRoughingToolpath,
   generateChamferToolpath,
   generateSurfaceParallelToolpath,
+  generateRestMillingToolpath,
+  generatePencilTracingToolpath,
   buildToolpathMeshes,
   createToolAssembly3D,
   compileBackplotTrajectory,
@@ -666,7 +668,10 @@ export default function Viewport3D({
         adaptive: 0x06b6d4,
         chamfer: 0xec4899,
         parallel: 0xd946ef,
-        surface: 0xd946ef
+        surface: 0xd946ef,
+        rest: 0x14b8a6,
+        rest_milling: 0x14b8a6,
+        pencil: 0xf97316
       };
 
     operations.forEach((op) => {
@@ -718,6 +723,21 @@ export default function Viewport3D({
       } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
         toolpathData = generateSurfaceParallelToolpath(bounds, assignedTool, {
           stepoverPct: op.stepoverPct || 20,
+          rapidHeight: op.rapidHeight || 15.0
+        }, currentModel);
+      } else if (op.badgeClass === 'rest' || op.badgeClass === 'rest_milling') {
+        toolpathData = generateRestMillingToolpath(bounds, assignedTool, {
+          refToolDiameter: op.refToolDiameter || 12.0,
+          stepdown: op.stepdown || 2.5,
+          totalDepth: op.totalDepth || 15.0,
+          stepoverPct: op.stepoverPct || 30,
+          rapidHeight: op.rapidHeight || 15.0
+        }, currentModel);
+      } else if (op.badgeClass === 'pencil') {
+        toolpathData = generatePencilTracingToolpath(bounds, assignedTool, {
+          totalDepth: op.totalDepth || 15.0,
+          stepdown: op.stepdown || 1.0,
+          biTangencyRadius: op.biTangencyRadius || 3.0,
           rapidHeight: op.rapidHeight || 15.0
         }, currentModel);
       }

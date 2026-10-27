@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import {
   calculateToolpathMetrics,
-  checkToolpathCollisions
+  checkToolpathCollisions,
+  detectToolpathCollisions3D
 } from '../utils/toolpathEngine';
 
 export default function CAMOperationsWizardModal({
@@ -19,11 +20,13 @@ export default function CAMOperationsWizardModal({
   onSelectOp,
   onAddOperation,
   onUpdateOperation,
+  onUpdateTools,
   onDeleteOperation,
   onRegenerateAll,
   onLaunchSimulation,
   onOpenGCodeViewer,
-  partMetrics
+  partMetrics,
+  stockConfig
 }) {
   const dialogRef = useRef(null);
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -159,6 +162,28 @@ export default function CAMOperationsWizardModal({
       defaultStepdown: 0.5,
       defaultDepth: 25.0,
       badgeClass: 'parallel'
+    },
+    {
+      id: 'rest_milling',
+      name: 'Rest Machining (Corner Pick)',
+      badge: 'RM',
+      color: '#14b8a6',
+      desc: 'Targeted corner picking & cleanout of unmachined material left by prior roughing tools',
+      defaultStepover: 30,
+      defaultStepdown: 2.5,
+      defaultDepth: 15.0,
+      badgeClass: 'rest'
+    },
+    {
+      id: 'pencil',
+      name: '3D Pencil Tracing',
+      badge: 'PC',
+      color: '#f97316',
+      desc: 'Bi-tangency fillet cleanout along floor/wall junctions and internal concave corner valleys',
+      defaultStepover: 15,
+      defaultStepdown: 1.0,
+      defaultDepth: 15.0,
+      badgeClass: 'pencil'
     }
   ];
 
@@ -200,8 +225,57 @@ export default function CAMOperationsWizardModal({
     setActiveTab('manager');
   };
 
-  // Run collision check
-  const collisionIssues = checkToolpathCollisions(operations, tools);
+  // Run 3D Kinematic Collision & Gouge Verification Engine
+  const collisionReport = detectToolpathCollisions3D(operations, tools, partMetrics?.box, stockConfig);
+  const collisionIssues = collisionReport.issues;
+
+  const handleApplySingleFix = (issue) => {
+    if (!issue.autoFixAction) return;
+    const { type } = issue.autoFixAction;
+
+    if (type === 'extend_tool' || type === 'increase_flute') {
+      if (onUpdateTools) {
+        onUpdateTools((prevTools) =>
+          prevTools.map((t) => {
+            if (t.id === issue.autoFixAction.toolId) {
+              return {
+                ...t,
+                ...(type === 'extend_tool' ? { overallLength: issue.autoFixAction.newOverallLength } : {}),
+                ...(type === 'increase_flute' ? { fluteLength: issue.autoFixAction.newFluteLength } : {})
+              };
+            }
+            return t;
+          })
+        );
+      }
+    } else if (type === 'raise_rapid' || type === 'reduce_stepover' || type === 'limit_depth') {
+      const targetOp = operations.find((o) => o.id === issue.autoFixAction.opId);
+      if (targetOp && onUpdateOperation) {
+        onUpdateOperation({
+          ...targetOp,
+          ...(type === 'raise_rapid' ? { rapidHeight: issue.autoFixAction.newRapidHeight } : {}),
+          ...(type === 'reduce_stepover' ? { stepoverPct: issue.autoFixAction.newStepoverPct } : {}),
+          ...(type === 'limit_depth' ? { totalDepth: issue.autoFixAction.newTotalDepth } : {})
+        });
+      }
+    }
+    notify(`Applied clearance fix: ${issue.autoFixLabel}`);
+  };
+
+  const handleAutoFixAll = () => {
+    let fixedCount = 0;
+    collisionIssues.forEach((issue) => {
+      if (issue.autoFixAction) {
+        handleApplySingleFix(issue);
+        fixedCount++;
+      }
+    });
+    if (fixedCount > 0) {
+      notify(`Auto-resolved all ${fixedCount} clearance & safety warnings!`);
+    } else {
+      notify('No unresolved clearance issues detected.');
+    }
+  };
 
   // Compute total cycle time and metrics
   const totalCuttingTimeMinutes = operations.reduce((acc, op) => {
@@ -757,66 +831,141 @@ export default function CAMOperationsWizardModal({
         {activeTab === 'safety' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{
-              background: collisionIssues.length > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+              background: collisionIssues.length > 0 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
               border: collisionIssues.length > 0 ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
               borderRadius: '8px',
               padding: '14px 18px',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'space-between',
               gap: '12px'
             }}>
-              {collisionIssues.length > 0 ? (
-                <AlertTriangle size={24} color="#ef4444" />
-              ) : (
-                <CheckCircle2 size={24} color="#10b981" />
-              )}
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '13px', color: collisionIssues.length > 0 ? '#ef4444' : '#10b981' }}>
-                  {collisionIssues.length > 0
-                    ? `${collisionIssues.length} Potential Safety &amp; Gouge Warnings Detected`
-                    : 'All Operations Passed Tool &amp; Holder Clearance Inspection'}
-                </div>
-                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-                  Verifies tool flute stickout, spindle collet collision envelope, excessive radial engagement chatter, and rapid Z plunge clearance.
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {collisionIssues.length > 0 ? (
+                  <AlertTriangle size={24} color="#ef4444" />
+                ) : (
+                  <CheckCircle2 size={24} color="#10b981" />
+                )}
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '13px', color: collisionIssues.length > 0 ? '#ef4444' : '#10b981' }}>
+                    {collisionIssues.length > 0
+                      ? `${collisionIssues.length} Potential Safety & Gouge Warnings Detected`
+                      : 'All Operations Passed Tool & Holder Clearance Inspection'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                    3D Spatial kinematic verification: Spindle collet chuck stickout, unfluted shank rub, rapid traverse (G00) clearance, and nominal CAD gouges.
+                  </div>
                 </div>
               </div>
+
+              {collisionIssues.length > 0 && (
+                <button
+                  onClick={handleAutoFixAll}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    color: '#000',
+                    border: 'none',
+                    padding: '8px 14px',
+                    borderRadius: '5px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                  title="Automatically extend tool stickout and raise rapid clearance"
+                >
+                  <Sparkles size={14} /> Auto-Fix All Issues
+                </button>
+              )}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {collisionIssues.map((issue, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    background: '#161b29',
-                    border: issue.type === 'danger' ? '1px solid #ef4444' : '1px solid #f59e0b',
-                    borderRadius: '6px',
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px'
-                  }}
-                >
-                  <div style={{
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    background: issue.type === 'danger' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)',
-                    color: issue.type === 'danger' ? '#f87171' : '#fbbf24',
-                    fontSize: '10px',
-                    fontWeight: 800,
-                    textTransform: 'uppercase'
-                  }}>
-                    {issue.severity}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: '12px', color: '#f8fafc' }}>
-                      {issue.title} &bull; <span style={{ color: '#94a3b8' }}>{issue.opName}</span>
+              {collisionIssues.map((issue, idx) => {
+                const isCritical = issue.severity === 'CRITICAL' || issue.severity === 'Critical Collision' || issue.type === 'danger';
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      background: '#161b29',
+                      border: isCritical ? '1px solid #ef4444' : '1px solid #f59e0b',
+                      borderRadius: '6px',
+                      padding: '12px 16px',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: '14px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '12px', flex: 1 }}>
+                      <div style={{
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        background: isCritical ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)',
+                        color: isCritical ? '#f87171' : '#fbbf24',
+                        fontSize: '9.5px',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        height: 'fit-content',
+                        marginTop: '2px'
+                      }}>
+                        {issue.severity}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, fontSize: '12px', color: '#f8fafc' }}>
+                            {issue.title}
+                          </span>
+                          <span style={{ color: '#94a3b8', fontSize: '11px' }}>&bull; {issue.opName}</span>
+                          {issue.toolName && (
+                            <span style={{ color: '#38bdf8', fontSize: '10px', background: '#0f172a', padding: '1px 6px', borderRadius: '3px', border: '1px solid #1e293b' }}>
+                              {issue.toolName}
+                            </span>
+                          )}
+                          {issue.coord && (
+                            <span style={{ color: '#a855f7', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
+                              [X:{issue.coord.x} Y:{issue.coord.y} Z:{issue.coord.z}]
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#cbd5e1', marginTop: '4px', lineHeight: 1.4 }}>
+                          {issue.message}
+                        </div>
+                        {issue.penetrationMm > 0 && (
+                          <div style={{ fontSize: '10px', color: '#f87171', fontWeight: 600, marginTop: '3px' }}>
+                            Penetration / Deficit: +{issue.penetrationMm} mm
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#cbd5e1', marginTop: '4px' }}>
-                      {issue.message}
-                    </div>
+
+                    {issue.autoFixAction && (
+                      <button
+                        onClick={() => handleApplySingleFix(issue)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          background: '#1e293b',
+                          border: '1px solid #38bdf8',
+                          color: '#38bdf8',
+                          padding: '6px 10px',
+                          borderRadius: '4px',
+                          fontSize: '10.5px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                        title={`Apply recommended fix: ${issue.autoFixLabel}`}
+                      >
+                        <Wrench size={12} /> {issue.autoFixLabel}
+                      </button>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
