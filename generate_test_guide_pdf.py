@@ -604,3 +604,4 @@ def build_pdf(filename="Argus_Master_CAM_Client_Testing_Guide.pdf"):
 if __name__ == "__main__":
     out_name = sys.argv[1] if len(sys.argv) > 1 else "Argus_Master_CAM_Client_Testing_Guide.pdf"
     build_pdf(out_name)
+
