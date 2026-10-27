@@ -31,6 +31,8 @@ export default function RibbonBar({
   onOpenViewStudioModal,
   onOpenOperationsWizard,
   onOpenCollisionCheck,
+  onStartBackplot,
+  onStartVerify,
   cameraMode = 'perspective',
   onToggleCameraMode,
   clippingPlane = { enabled: false, axis: 'Z', offset: 0, invert: false },
@@ -1567,13 +1569,17 @@ export default function RibbonBar({
             {/* Verify & Post */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onOpenSimModal} title="Toolpath Wireframe Backplot">
+                <button className="ribbon-btn-large" onClick={onStartBackplot} title="Toolpath Wireframe Backplot (In-Viewport 3D Tool Tracing)">
                   <Play size={20} color="#06b6d4" />
-                  <span className="btn-label">Backplot</span>
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Backplot</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenSimModal} title="Full Machine Kinematic Simulation">
+                <button className="ribbon-btn-large" onClick={onStartVerify} title="Solid Stock Material Removal Verification">
+                  <Box size={20} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Verify<br />Solid</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenSimModal} title="Full 5-Axis Machine Kinematic Digital Twin Simulation">
                   <Eye size={20} color="#38bdf8" />
-                  <span className="btn-label">Simulate</span>
+                  <span className="btn-label">Kinematic<br />Twin</span>
                 </button>
                 <button className="ribbon-btn-large ribbon-btn-highlight" onClick={onOpenPostModal} title="Generate G-Code &amp; NC2Check">
                   <div className="post-badge">G1</div>

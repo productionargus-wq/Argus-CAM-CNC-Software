@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   FolderTree, CheckSquare, Square, Eye, RefreshCw, 
   Trash2, Lock, FileCode, PlusCircle, ChevronDown, ChevronRight, Sliders,
-  Layers, Box, Compass, Check, Plus
+  Layers, Box, Compass, Check, Plus, Play
 } from 'lucide-react';
 
 export default function OperationsTree({
@@ -14,6 +14,8 @@ export default function OperationsTree({
   onAddOp,
   onRegenerate,
   onOpenStockModal,
+  onStartBackplot,
+  onStartVerify,
   activeManagerTab = 'Toolpaths',
   onSelectManagerTab,
   levels = [],
@@ -106,11 +108,14 @@ export default function OperationsTree({
             <button className="ops-tool-btn" title="Regenerate All Dirty Operations" onClick={onRegenerate}>
               <RefreshCw size={13} color="#f59e0b" />
             </button>
+            <button className="ops-tool-btn" title="Backplot Selected Operation (3D Wireframe Tool Tracing)" onClick={() => onStartBackplot?.(activeOpId)}>
+              <Play size={13} color="#06b6d4" />
+            </button>
+            <button className="ops-tool-btn" title="Verify Solid Stock Material Removal" onClick={() => onStartVerify?.(activeOpId)}>
+              <Box size={13} color="#10b981" />
+            </button>
             <button className="ops-tool-btn" title="Toggle Toolpath Display" onClick={onRegenerate}>
               <Eye size={13} color="#38bdf8" />
-            </button>
-            <button className="ops-tool-btn" title="Lock/Unlock Operations">
-              <Lock size={13} color="#94a3b8" />
             </button>
             <button className="ops-tool-btn" title="Configure Stock" onClick={onOpenStockModal}>
               <Sliders size={13} color="#a855f7" />
@@ -178,6 +183,16 @@ export default function OperationsTree({
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span className="op-badge">{op.toolName || op.tool}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStartBackplot?.(op.id);
+                          }}
+                          style={{ background: 'transparent', border: 'none', color: '#06b6d4', cursor: 'pointer', display: 'flex', padding: '1px' }}
+                          title="Backplot this Operation"
+                        >
+                          <Play size={11} />
+                        </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

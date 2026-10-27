@@ -149,6 +149,24 @@ export default function App() {
   const [isHelpGuideOpen, setIsHelpGuideOpen] = useState(false);
   const [editingOperation, setEditingOperation] = useState(null);
 
+  // In-Viewport Backplot & Solid Verify Simulation State
+  const [isBackplotActive, setIsBackplotActive] = useState(false);
+  const [backplotMode, setBackplotMode] = useState('backplot'); // 'backplot' | 'verify'
+
+  const handleStartBackplot = (opId = null) => {
+    if (opId) setActiveOpId(opId);
+    setBackplotMode('backplot');
+    setIsBackplotActive(true);
+    showToast("Backplot: In-Viewport 3D tool tracing initialized", "info");
+  };
+
+  const handleStartVerify = (opId = null) => {
+    if (opId) setActiveOpId(opId);
+    setBackplotMode('verify');
+    setIsBackplotActive(true);
+    showToast("Solid Verify: Material removal simulation initialized", "info");
+  };
+
   const [activeOpId, setActiveOpId] = useState(1);
   const [coords, setCoords] = useState({ x: '-390.6200', y: '-233.6562', z: '100.0000' });
   const [partMetrics, setPartMetrics] = useState(null);
@@ -1086,6 +1104,8 @@ export default function App() {
         onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
         onOpenOperationsWizard={() => { setOperationsWizardTab('create'); setIsOperationsWizardOpen(true); }}
         onOpenCollisionCheck={() => { setOperationsWizardTab('safety'); setIsOperationsWizardOpen(true); }}
+        onStartBackplot={handleStartBackplot}
+        onStartVerify={handleStartVerify}
         cameraMode={cameraMode}
         onToggleCameraMode={setCameraMode}
         clippingPlane={clippingPlane}
@@ -1159,14 +1179,20 @@ export default function App() {
           onSelectSolid={(id) => setSolidsList((prev) => prev.map((s) => ({ ...s, active: s.id === id })))}
           onToggleSolidVisibility={handleToggleSolidVisibility}
           onOpenSolidsModal={handleOpenSolidsModal}
+          onStartBackplot={handleStartBackplot}
+          onStartVerify={handleStartVerify}
         />
 
-        {/* 3D Viewport */}
+        {/* 3D Viewport with Integrated Backplot & Solid Verify */}
         <Viewport3D
           currentModel={currentModel}
           stockConfig={stockConfig}
           operations={operations}
           tools={tools}
+          activeOpId={activeOpId}
+          isBackplotActive={isBackplotActive}
+          backplotMode={backplotMode}
+          onCloseBackplot={() => setIsBackplotActive(false)}
           onCoordinateUpdate={setCoords}
           onMetricsCalculated={setPartMetrics}
           onModelImported={handleModelImported}

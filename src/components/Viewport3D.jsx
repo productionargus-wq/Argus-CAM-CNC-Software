@@ -1,6 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
-import { Eye, Layers, Rotate3D, UploadCloud, Box, Info, Scissors, Camera, Sun, Sliders } from 'lucide-react';
+import {
+  Eye, Layers, Rotate3D, UploadCloud, Box, Info, Scissors, Camera, Sun, Sliders,
+  Play, Pause, SkipForward, SkipBack, RotateCcw, X, AlertTriangle, CheckCircle2
+} from 'lucide-react';
 import { parseSTLFile, calculatePartMetrics } from '../utils/cadGeometry';
 import {
   generateFacingToolpath,
@@ -11,7 +14,10 @@ import {
   generateAdaptiveRoughingToolpath,
   generateChamferToolpath,
   generateSurfaceParallelToolpath,
-  buildToolpathMeshes
+  buildToolpathMeshes,
+  createToolAssembly3D,
+  compileBackplotTrajectory,
+  sampleTrajectoryAtT
 } from '../utils/toolpathEngine';
 
 export default function Viewport3D({
@@ -19,6 +25,10 @@ export default function Viewport3D({
   stockConfig,
   operations,
   tools,
+  activeOpId = null,
+  isBackplotActive = false,
+  backplotMode = 'backplot',
+  onCloseBackplot = null,
   onCoordinateUpdate,
   onMetricsCalculated,
   onModelImported,
@@ -67,6 +77,25 @@ export default function Viewport3D({
   const dirLight2Ref = useRef(null);
   const clipPlaneHelperRef = useRef(null);
   const normalMaterialRef = useRef(new THREE.MeshNormalMaterial());
+
+  // Backplot & Solid Verify Simulation State & Refs
+  const [isBackplotPlaying, setIsBackplotPlaying] = useState(false);
+  const [backplotProgress, setBackplotProgress] = useState(0.0);
+  const [backplotSpeed, setBackplotSpeed] = useState(1);
+  const [backplotLoop, setBackplotLoop] = useState(true);
+  const [backplotInternalMode, setBackplotInternalMode] = useState(backplotMode || 'backplot');
+  const [holderCollisionAlert, setHolderCollisionAlert] = useState(false);
+
+  const backplotToolRef = useRef(null);
+  const backplotTrailRef = useRef(null);
+  const backplotVerifyGroupRef = useRef(null);
+  const backplotAnimRef = useRef(null);
+  const lastAnimTimeRef = useRef(performance.now());
+  const waypointsRef = useRef([]);
+
+  useEffect(() => {
+    setBackplotInternalMode(backplotMode || 'backplot');
+  }, [backplotMode]);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [partMetrics, setPartMetrics] = useState(null);
@@ -742,6 +771,223 @@ export default function Viewport3D({
     });
   }, [customGeometry, layerVisibility.wireframe, layerVisibility.surfaces]);
 
+  // 12. Backplot Trajectory Compilation & Scene Object Setup
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    const scene = sceneRef.current;
+
+    // Clean up previous backplot objects if any
+    if (backplotToolRef.current) {
+      scene.remove(backplotToolRef.current);
+      backplotToolRef.current = null;
+    }
+    if (backplotTrailRef.current) {
+      scene.remove(backplotTrailRef.current);
+      backplotTrailRef.current = null;
+    }
+    if (backplotVerifyGroupRef.current) {
+      scene.remove(backplotVerifyGroupRef.current);
+      backplotVerifyGroupRef.current = null;
+    }
+
+    if (!isBackplotActive || !partMetrics) return;
+
+    // Compile trajectory
+    const bounds = partMetrics.box;
+    const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, activeOpId);
+    waypointsRef.current = trajectory.waypoints;
+
+    if (trajectory.waypoints.length === 0) return;
+
+    // Determine tool for active op or first waypoint
+    const firstWp = trajectory.waypoints[0];
+    const assignedTool = firstWp.tool || tools[0] || { diameter: 10, fluteLength: 25, length: 65 };
+
+    // 1. Create 3D Tool Assembly
+    const toolAssembly = createToolAssembly3D(assignedTool);
+    toolAssembly.position.copy(firstWp.pos);
+    scene.add(toolAssembly);
+    backplotToolRef.current = toolAssembly;
+
+    // 2. Create Glowing Cut Trail Line
+    const trailGeo = new THREE.BufferGeometry();
+    trailGeo.setAttribute('position', new THREE.Float32BufferAttribute([firstWp.pos.x, firstWp.pos.y, firstWp.pos.z], 3));
+    const trailMat = new THREE.LineBasicMaterial({
+      color: 0xfacc15,
+      linewidth: 3
+    });
+    const trailLine = new THREE.Line(trailGeo, trailMat);
+    scene.add(trailLine);
+    backplotTrailRef.current = trailLine;
+
+    // 3. Create Solid Verify Material Removal Envelope (in verify mode)
+    if (backplotInternalMode === 'verify') {
+      const verifyGroup = new THREE.Group();
+      verifyGroup.name = "Solid_Verify_Carved_Stock";
+
+      const dim = partMetrics.dimensions;
+      const sw = dim.x + (stockConfig?.allowanceSides || 4) * 2;
+      const sh = dim.y + (stockConfig?.allowanceTop || 2);
+      const sd = dim.z + (stockConfig?.allowanceSides || 4) * 2;
+
+      const rawStockGeo = new THREE.BoxGeometry(sw, sh, sd);
+      const rawStockMat = new THREE.MeshPhysicalMaterial({
+        color: 0x94a3b8,
+        transparent: true,
+        opacity: 0.35,
+        roughness: 0.25,
+        metalness: 0.85,
+        transmission: 0.3
+      });
+      const stockMesh = new THREE.Mesh(rawStockGeo, rawStockMat);
+      stockMesh.position.set(
+        (bounds.min.x + bounds.max.x) / 2,
+        bounds.min.y + sh / 2,
+        (bounds.min.z + bounds.max.z) / 2
+      );
+      verifyGroup.add(stockMesh);
+
+      scene.add(verifyGroup);
+      backplotVerifyGroupRef.current = verifyGroup;
+    }
+
+    setBackplotProgress(0.0);
+    setIsBackplotPlaying(true);
+    lastAnimTimeRef.current = performance.now();
+
+    return () => {
+      if (backplotToolRef.current) scene.remove(backplotToolRef.current);
+      if (backplotTrailRef.current) scene.remove(backplotTrailRef.current);
+      if (backplotVerifyGroupRef.current) scene.remove(backplotVerifyGroupRef.current);
+    };
+  }, [isBackplotActive, activeOpId, operations, tools, partMetrics, currentModel, backplotInternalMode]);
+
+  // 13. Backplot Animation & Sampling Frame Loop
+  useEffect(() => {
+    if (!isBackplotActive) {
+      if (backplotAnimRef.current) cancelAnimationFrame(backplotAnimRef.current);
+      return;
+    }
+
+    const animateLoop = (time) => {
+      const delta = Math.min(0.1, (time - lastAnimTimeRef.current) / 1000);
+      lastAnimTimeRef.current = time;
+
+      if (isBackplotPlaying && waypointsRef.current.length > 0) {
+        const totalDist = waypointsRef.current[waypointsRef.current.length - 1].cumulativeDist;
+        const currentSpeedMmPerSec = 75 * backplotSpeed;
+        const progressDelta = totalDist > 0 ? (currentSpeedMmPerSec * delta) / totalDist : 0.005;
+
+        setBackplotProgress((prev) => {
+          let next = prev + progressDelta;
+          if (next >= 1.0) {
+            if (backplotLoop) {
+              next = 0.0;
+            } else {
+              next = 1.0;
+              setIsBackplotPlaying(false);
+            }
+          }
+          return next;
+        });
+      }
+
+      // Update 3D tool position, spin, and trail
+      if (backplotToolRef.current && waypointsRef.current.length > 0) {
+        const sample = sampleTrajectoryAtT(waypointsRef.current, backplotProgress);
+        backplotToolRef.current.position.copy(sample.currentPos);
+
+        // Spin tool spindle
+        backplotToolRef.current.rotation.y += 0.35 * backplotSpeed;
+
+        // Check for collet gouge
+        const activeTool = sample.activeWaypoint?.tool || tools[0];
+        const cutLen = activeTool?.fluteLength || 25;
+        const topY = partMetrics?.box?.max?.y || 45;
+        const currentDepth = topY - sample.currentPos.y;
+        const isGouge = currentDepth > cutLen + 2.0;
+        setHolderCollisionAlert(isGouge);
+
+        const collet = backplotToolRef.current.getObjectByName("tool_collet_mesh");
+        if (collet && collet.material) {
+          collet.material.color.setHex(isGouge ? 0xef4444 : 0x1e293b);
+        }
+
+        // Update trail points
+        if (backplotTrailRef.current && sample.traversedPoints.length >= 2) {
+          const trailPts = [];
+          sample.traversedPoints.forEach((p) => trailPts.push(p.x, p.y, p.z));
+          backplotTrailRef.current.geometry.setAttribute(
+            'position',
+            new THREE.Float32BufferAttribute(trailPts, 3)
+          );
+          backplotTrailRef.current.geometry.attributes.position.needsUpdate = true;
+        }
+      }
+
+      backplotAnimRef.current = requestAnimationFrame(animateLoop);
+    };
+
+    backplotAnimRef.current = requestAnimationFrame(animateLoop);
+    return () => {
+      if (backplotAnimRef.current) cancelAnimationFrame(backplotAnimRef.current);
+    };
+  }, [isBackplotActive, isBackplotPlaying, backplotProgress, backplotSpeed, backplotLoop, partMetrics]);
+
+  // 14. Backplot Keyboard Shortcuts
+  useEffect(() => {
+    if (!isBackplotActive) return;
+
+    const handleBackplotKey = (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setIsBackplotPlaying((prev) => !prev);
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        setIsBackplotPlaying(false);
+        setBackplotProgress((prev) => Math.max(0, prev - 0.02));
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        setIsBackplotPlaying(false);
+        setBackplotProgress((prev) => Math.min(1, prev + 0.02));
+      } else if (e.code === 'Escape') {
+        e.preventDefault();
+        if (onCloseBackplot) onCloseBackplot();
+      } else if (e.code === 'Home') {
+        e.preventDefault();
+        setBackplotProgress(0);
+      }
+    };
+
+    window.addEventListener('keydown', handleBackplotKey);
+    return () => window.removeEventListener('keydown', handleBackplotKey);
+  }, [isBackplotActive, onCloseBackplot]);
+
+  // Active Tool Telemetry Sample for HUD
+  const currentSample = useMemo(() => {
+    if (!isBackplotActive || waypointsRef.current.length === 0) {
+      return {
+        pos: new THREE.Vector3(0, 0, 0),
+        isRapid: false,
+        opName: 'Operation',
+        feedRate: 1500,
+        spindleRpm: 8000,
+        tool: tools[0] || { number: 1, name: '10mm Endmill', diameter: 10 }
+      };
+    }
+    const sample = sampleTrajectoryAtT(waypointsRef.current, backplotProgress);
+    return {
+      pos: sample.currentPos,
+      isRapid: sample.activeWaypoint?.isRapid || false,
+      opName: sample.activeWaypoint?.opName || 'Milling Pass',
+      feedRate: sample.activeWaypoint?.feedRate || 1500,
+      spindleRpm: sample.activeWaypoint?.spindleRpm || 8000,
+      tool: sample.activeWaypoint?.tool || tools[0] || { number: 1, name: '10mm Endmill', diameter: 10 }
+    };
+  }, [isBackplotActive, backplotProgress, tools]);
+
   // Drag and drop handlers
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -942,6 +1188,237 @@ export default function Viewport3D({
         <div className="scale-bar" />
         <span style={{ fontSize: '8.5px', color: '#64748b' }}>Metric G21</span>
       </div>
+
+      {/* ================= Mastercam Floating Backplot & Solid Verify HUD Controller ================= */}
+      {isBackplotActive && (
+        <div className="backplot-hud-container" style={{
+          position: 'absolute',
+          bottom: '22px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(15, 23, 42, 0.95)',
+          border: '1px solid rgba(56, 189, 248, 0.4)',
+          boxShadow: '0 20px 45px rgba(0,0,0,0.7)',
+          borderRadius: '10px',
+          padding: '12px 18px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          zIndex: 1000,
+          width: '720px',
+          backdropFilter: 'blur(14px)',
+          userSelect: 'none'
+        }}>
+          {/* Header Row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Play size={15} color="#38bdf8" />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.5px' }}>
+                {backplotInternalMode === 'verify' ? 'SOLID MATERIAL REMOVAL VERIFY' : '3D TOOLPATH WIREFRAME BACKPLOT'}
+              </span>
+              <span style={{
+                fontSize: '9.5px',
+                padding: '2px 7px',
+                borderRadius: '4px',
+                background: holderCollisionAlert ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.2)',
+                border: `1px solid ${holderCollisionAlert ? '#ef4444' : '#10b981'}`,
+                color: holderCollisionAlert ? '#ef4444' : '#10b981',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                {holderCollisionAlert ? (
+                  <>
+                    <AlertTriangle size={11} />
+                    <span>HOLDER GOUGE WARNING</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={11} />
+                    <span>CLEARANCE OK</span>
+                  </>
+                )}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {/* Mode Switcher */}
+              <div style={{ display: 'flex', background: '#0a0d14', padding: '2px', borderRadius: '4px', border: '1px solid #1e293b' }}>
+                <button
+                  onClick={() => setBackplotInternalMode('backplot')}
+                  style={{
+                    background: backplotInternalMode === 'backplot' ? '#0284c7' : 'transparent',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '2px 9px',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Backplot
+                </button>
+                <button
+                  onClick={() => setBackplotInternalMode('verify')}
+                  style={{
+                    background: backplotInternalMode === 'verify' ? '#10b981' : 'transparent',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '2px 9px',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Solid Verify
+                </button>
+              </div>
+
+              <button
+                onClick={onCloseBackplot}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }}
+                title="Exit Backplot (Esc)"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Scrub Progress Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <input
+              type="range"
+              min="0"
+              max="1000"
+              value={Math.round(backplotProgress * 1000)}
+              onChange={(e) => {
+                setIsBackplotPlaying(false);
+                setBackplotProgress(Number(e.target.value) / 1000);
+              }}
+              style={{ flex: 1, cursor: 'pointer', accentColor: '#38bdf8' }}
+            />
+            <span style={{ fontSize: '11px', color: '#38bdf8', fontFamily: 'monospace', minWidth: '45px', textAlign: 'right' }}>
+              {(backplotProgress * 100).toFixed(1)}%
+            </span>
+          </div>
+
+          {/* Controls & Telemetry Row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Playback Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setIsBackplotPlaying(false);
+                  setBackplotProgress(0);
+                }}
+                title="Rewind to Start (Home)"
+                style={{ padding: '5px 8px' }}
+              >
+                <RotateCcw size={13} />
+              </button>
+
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setIsBackplotPlaying(false);
+                  setBackplotProgress((prev) => Math.max(0, prev - 0.02));
+                }}
+                title="Step Backward (Left Arrow)"
+                style={{ padding: '5px 8px' }}
+              >
+                <SkipBack size={13} />
+              </button>
+
+              <button
+                className="btn-primary"
+                onClick={() => setIsBackplotPlaying(!isBackplotPlaying)}
+                style={{
+                  padding: '5px 14px',
+                  background: isBackplotPlaying ? '#e11d48' : '#0284c7',
+                  borderColor: isBackplotPlaying ? '#f43f5e' : '#38bdf8',
+                  fontWeight: 700
+                }}
+                title="Play / Pause (Spacebar)"
+              >
+                {isBackplotPlaying ? <Pause size={13} /> : <Play size={13} />}
+                <span style={{ marginLeft: '4px' }}>{isBackplotPlaying ? 'Pause' : 'Play'}</span>
+              </button>
+
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setIsBackplotPlaying(false);
+                  setBackplotProgress((prev) => Math.min(1, prev + 0.02));
+                }}
+                title="Step Forward (Right Arrow)"
+                style={{ padding: '5px 8px' }}
+              >
+                <SkipForward size={13} />
+              </button>
+
+              <button
+                className="btn-secondary"
+                onClick={() => setBackplotLoop(!backplotLoop)}
+                title="Toggle Repeat Loop"
+                style={{
+                  padding: '5px 8px',
+                  color: backplotLoop ? '#38bdf8' : '#94a3b8',
+                  borderColor: backplotLoop ? '#38bdf8' : 'rgba(255,255,255,0.1)'
+                }}
+              >
+                Loop
+              </button>
+            </div>
+
+            {/* Speed Multipliers */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {[0.5, 1, 2, 5, 10].map((spd) => (
+                <button
+                  key={spd}
+                  onClick={() => setBackplotSpeed(spd)}
+                  style={{
+                    padding: '3px 7px',
+                    fontSize: '10px',
+                    borderRadius: '3px',
+                    border: backplotSpeed === spd ? '1px solid #38bdf8' : '1px solid #334155',
+                    background: backplotSpeed === spd ? 'rgba(56,189,248,0.2)' : '#0f172a',
+                    color: backplotSpeed === spd ? '#38bdf8' : '#94a3b8',
+                    cursor: 'pointer',
+                    fontWeight: backplotSpeed === spd ? 700 : 500
+                  }}
+                >
+                  {spd}x
+                </button>
+              ))}
+            </div>
+
+            {/* Live Tool Telemetry Readout */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontFamily: 'monospace',
+              fontSize: '10.5px',
+              color: '#f8fafc',
+              background: '#090d14',
+              padding: '4px 10px',
+              borderRadius: '4px',
+              border: '1px solid #1e293b'
+            }}>
+              <span>X: <strong style={{ color: '#38bdf8' }}>{currentSample.pos.x.toFixed(2)}</strong></span>
+              <span>Y: <strong style={{ color: '#10b981' }}>{currentSample.pos.y.toFixed(2)}</strong></span>
+              <span>Z: <strong style={{ color: '#f59e0b' }}>{currentSample.pos.z.toFixed(2)}</strong></span>
+              <span style={{ color: currentSample.isRapid ? '#06b6d4' : '#10b981', fontWeight: 600 }}>
+                {currentSample.isRapid ? 'G0 RAPID' : 'G1 CUT'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

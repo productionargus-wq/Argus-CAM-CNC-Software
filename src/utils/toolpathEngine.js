@@ -890,3 +890,265 @@ export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model
 }
 
 
+
+/**
+ * Creates a detailed 3D Three.js assembly of a CNC Spindle Tool Holder & Cutter.
+ * (CAT40/BT30 Spindle Arbor + ER Collet Nut + Ground Steel Shank + TiN Flutes + Glowing Apex Tip)
+ */
+export function createToolAssembly3D(tool = {}) {
+  const group = new THREE.Group();
+  group.name = "Backplot_Tool_Assembly";
+
+  const diameter = Number(tool.diameter || 10);
+  const radius = Math.max(1, diameter / 2);
+  const cutLength = Number(tool.fluteLength || 25);
+  const overallLength = Number(tool.length || 65);
+
+  // 1. Tool Flutes (Bottom Cutting Portion)
+  const fluteGeo = new THREE.CylinderGeometry(radius, radius, cutLength, 24);
+  fluteGeo.translate(0, cutLength / 2, 0); // apex at Y = 0
+  const isBallnose = tool.type?.toLowerCase().includes('ball');
+  const fluteMat = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b, // TiN Gold
+    metalness: 0.85,
+    roughness: 0.25
+  });
+  const fluteMesh = new THREE.Mesh(fluteGeo, fluteMat);
+  fluteMesh.castShadow = true;
+  group.add(fluteMesh);
+
+  // Ballnose tip hemisphere if ball endmill
+  if (isBallnose) {
+    const tipGeo = new THREE.SphereGeometry(radius, 20, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+    tipGeo.translate(0, 0, 0);
+    const tipSphere = new THREE.Mesh(tipGeo, fluteMat);
+    group.add(tipSphere);
+  }
+
+  // 2. Tool Shank
+  const shankLength = Math.max(15, overallLength - cutLength);
+  const shankGeo = new THREE.CylinderGeometry(radius, radius, shankLength, 24);
+  shankGeo.translate(0, cutLength + shankLength / 2, 0);
+  const shankMat = new THREE.MeshStandardMaterial({
+    color: 0x94a3b8, // Ground bright tool steel
+    metalness: 0.9,
+    roughness: 0.2
+  });
+  const shankMesh = new THREE.Mesh(shankGeo, shankMat);
+  group.add(shankMesh);
+
+  // 3. ER Collet Chuck Nut (Dark anodized)
+  const colletH = 22;
+  const colletR = Math.max(13, radius + 7);
+  const colletGeo = new THREE.CylinderGeometry(colletR - 2, colletR, colletH, 18);
+  colletGeo.translate(0, overallLength + colletH / 2, 0);
+  const colletMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    metalness: 0.75,
+    roughness: 0.35
+  });
+  const colletMesh = new THREE.Mesh(colletGeo, colletMat);
+  colletMesh.name = "tool_collet_mesh";
+  group.add(colletMesh);
+
+  // 4. Spindle Taper Cone (CAT40 taper arbor)
+  const taperH = 36;
+  const taperGeo = new THREE.CylinderGeometry(25, 16, taperH, 24);
+  taperGeo.translate(0, overallLength + colletH + taperH / 2, 0);
+  const taperMat = new THREE.MeshStandardMaterial({
+    color: 0xcbd5e1, // Precision ground silver
+    metalness: 0.95,
+    roughness: 0.15
+  });
+  const taperMesh = new THREE.Mesh(taperGeo, taperMat);
+  group.add(taperMesh);
+
+  // 5. Spindle Flange V-Groove Ring
+  const flangeH = 10;
+  const flangeGeo = new THREE.CylinderGeometry(32, 32, flangeH, 24);
+  flangeGeo.translate(0, overallLength + colletH + taperH + flangeH / 2, 0);
+  const flangeMesh = new THREE.Mesh(flangeGeo, taperMat);
+  group.add(flangeMesh);
+
+  // 6. Glowing Tool Tip Point Indicator
+  const tipGeo = new THREE.SphereGeometry(Math.min(1.2, radius * 0.4), 12, 12);
+  const tipMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+  const tipMesh = new THREE.Mesh(tipGeo, tipMat);
+  tipMesh.position.set(0, 0, 0);
+  group.add(tipMesh);
+
+  return group;
+}
+
+/**
+ * Compiles toolpath operations into an ordered sequence of continuous 3D waypoints for smooth backplot animation.
+ */
+export function compileBackplotTrajectory(operations = [], tools = [], bounds, model = null, targetOpId = null) {
+  const waypoints = [];
+  const activeOps = targetOpId
+    ? operations.filter((op) => op.id === targetOpId)
+    : operations.filter((op) => op.visible !== false);
+
+  if (activeOps.length === 0 || !bounds) {
+    return { waypoints: [], totalDistance: 0, totalDurationSec: 0 };
+  }
+
+  let totalDist = 0;
+  let lastPos = new THREE.Vector3(0, bounds.max.y + 20, 0);
+
+  activeOps.forEach((op) => {
+    const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10, rpm: 8000, feedRate: 1500 };
+    let data = null;
+
+    if (op.badgeClass === 'face') {
+      data = generateFacingToolpath(bounds, assignedTool, {
+        stepoverPct: op.stepoverPct || 65,
+        faceAllowance: 2.0,
+        depthOfCut: op.stepdown || 1.0,
+        rapidHeight: op.rapidHeight || 15.0
+      });
+    } else if (op.badgeClass === 'pocket') {
+      data = generatePocketToolpath(bounds, assignedTool, {
+        stepoverPct: op.stepoverPct || 50,
+        totalDepth: op.totalDepth || 15.0,
+        stepdown: op.stepdown || 5.0,
+        rapidHeight: op.rapidHeight || 15.0
+      }, model);
+    } else if (op.badgeClass === 'contour') {
+      data = generateWaterlineToolpath(bounds, assignedTool, {
+        stepdown: op.stepdown || 3.0,
+        rapidHeight: op.rapidHeight || 15.0
+      }, model);
+    } else if (op.badgeClass === 'swarf') {
+      data = generateSwarfToolpath(bounds, assignedTool, {
+        tiltAngleDeg: 15.0,
+        passes: 3
+      }, model);
+    } else if (op.badgeClass === 'drill') {
+      data = generateDrillingToolpath(bounds, assignedTool, {
+        drillDepth: op.totalDepth || 25.0,
+        peckDepth: op.stepdown || 5.0,
+        rapidHeight: op.rapidHeight || 10.0
+      }, model);
+    } else if (op.badgeClass === 'adaptive') {
+      data = generateAdaptiveRoughingToolpath(bounds, assignedTool, {
+        stepoverPct: op.stepoverPct || 25,
+        stepdown: op.stepdown || 6.0,
+        totalDepth: op.totalDepth || 18.0,
+        rapidHeight: op.rapidHeight || 15.0
+      });
+    } else if (op.badgeClass === 'chamfer') {
+      data = generateChamferToolpath(bounds, assignedTool, {
+        chamferWidth: op.stepdown || 1.0,
+        rapidHeight: op.rapidHeight || 15.0
+      });
+    } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
+      data = generateSurfaceParallelToolpath(bounds, assignedTool, {
+        stepoverPct: op.stepoverPct || 20,
+        rapidHeight: op.rapidHeight || 15.0
+      }, model);
+    }
+
+    if (!data) return;
+
+    // Ordered continuous sequence
+    const segments = [];
+    if (data.rapidLines && data.rapidLines.length > 0) {
+      data.rapidLines.forEach((seg) => segments.push({ seg, isRapid: true }));
+    }
+    if (data.cuttingLines && data.cuttingLines.length > 0) {
+      data.cuttingLines.forEach((seg) => segments.push({ seg, isRapid: false }));
+    }
+
+    segments.forEach(({ seg, isRapid }) => {
+      const p1 = seg[0];
+      const p2 = seg[1];
+
+      const distToP1 = lastPos.distanceTo(p1);
+      if (distToP1 > 0.05) {
+        totalDist += distToP1;
+        waypoints.push({
+          pos: p1.clone(),
+          isRapid: true,
+          opId: op.id,
+          opName: op.name,
+          tool: assignedTool,
+          feedRate: 5000,
+          spindleRpm: op.spindleRpm || assignedTool.rpm || 8000,
+          cumulativeDist: totalDist
+        });
+      }
+
+      const segDist = p1.distanceTo(p2);
+      totalDist += segDist;
+      waypoints.push({
+        pos: p2.clone(),
+        isRapid,
+        opId: op.id,
+        opName: op.name,
+        tool: assignedTool,
+        feedRate: isRapid ? 5000 : (op.feedRate || assignedTool.feedRate || 1500),
+        spindleRpm: op.spindleRpm || assignedTool.rpm || 8000,
+        cumulativeDist: totalDist
+      });
+
+      lastPos.copy(p2);
+    });
+  });
+
+  return {
+    waypoints,
+    totalDistance: totalDist,
+    totalDurationSec: totalDist > 0 ? (totalDist / 1500) * 60 : 60
+  };
+}
+
+/**
+ * Samples position, active block, heading, and traversed cut points at fraction t in [0, 1].
+ */
+export function sampleTrajectoryAtT(waypoints, t) {
+  if (!waypoints || waypoints.length === 0) {
+    return {
+      currentPos: new THREE.Vector3(0, 50, 0),
+      activeWaypoint: null,
+      heading: new THREE.Vector3(1, 0, 0),
+      traversedPoints: [],
+      waypointIdx: 0
+    };
+  }
+
+  const clampedT = Math.max(0, Math.min(1, t));
+  const totalDist = waypoints[waypoints.length - 1].cumulativeDist;
+  const targetDist = clampedT * totalDist;
+
+  let idx = 0;
+  while (idx < waypoints.length - 1 && waypoints[idx + 1].cumulativeDist < targetDist) {
+    idx++;
+  }
+
+  const wpA = waypoints[idx];
+  const wpB = waypoints[Math.min(waypoints.length - 1, idx + 1)];
+
+  const distA = wpA.cumulativeDist;
+  const distB = wpB.cumulativeDist;
+  const segLen = Math.max(0.0001, distB - distA);
+  const u = Math.max(0, Math.min(1, (targetDist - distA) / segLen));
+
+  const currentPos = new THREE.Vector3().lerpVectors(wpA.pos, wpB.pos, u);
+  const heading = new THREE.Vector3().subVectors(wpB.pos, wpA.pos).normalize();
+  if (heading.lengthSq() < 0.001) heading.set(1, 0, 0);
+
+  const traversedPoints = [];
+  for (let i = 0; i <= idx; i++) {
+    traversedPoints.push(waypoints[i].pos);
+  }
+  traversedPoints.push(currentPos);
+
+  return {
+    currentPos,
+    activeWaypoint: wpB,
+    heading,
+    traversedPoints,
+    waypointIdx: idx
+  };
+}
