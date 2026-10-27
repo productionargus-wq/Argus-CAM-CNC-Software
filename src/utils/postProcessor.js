@@ -6,7 +6,7 @@ import {
   generateSwarfToolpath,
   generateDrillingToolpath,
   generateSurfaceParallelToolpath
-} from './toolpathEngine';
+} from './toolpathEngine.js';
 
 /**
  * Industrial G-Code Post-Processor Engine
