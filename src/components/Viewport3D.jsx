@@ -10,6 +10,7 @@ import {
   generateDrillingToolpath,
   generateAdaptiveRoughingToolpath,
   generateChamferToolpath,
+  generateSurfaceParallelToolpath,
   buildToolpathMeshes
 } from '../utils/toolpathEngine';
 
@@ -627,7 +628,9 @@ export default function Viewport3D({
         swarf: 0x8b5cf6,
         drill: 0xef4444,
         adaptive: 0x06b6d4,
-        chamfer: 0xec4899
+        chamfer: 0xec4899,
+        parallel: 0xd946ef,
+        surface: 0xd946ef
       };
 
     operations.forEach((op) => {
@@ -647,23 +650,23 @@ export default function Viewport3D({
           totalDepth: op.totalDepth || 15.0,
           stepdown: op.stepdown || 5.0,
           rapidHeight: op.rapidHeight || 15.0
-        });
+        }, currentModel);
       } else if (op.badgeClass === 'contour') {
         toolpathData = generateWaterlineToolpath(bounds, assignedTool, {
           stepdown: op.stepdown || 3.0,
           rapidHeight: op.rapidHeight || 15.0
-        });
+        }, currentModel);
       } else if (op.badgeClass === 'swarf') {
         toolpathData = generateSwarfToolpath(bounds, assignedTool, {
           tiltAngleDeg: 15.0,
           passes: 3
-        });
+        }, currentModel);
       } else if (op.badgeClass === 'drill') {
         toolpathData = generateDrillingToolpath(bounds, assignedTool, {
           drillDepth: op.totalDepth || 25.0,
           peckDepth: op.stepdown || 5.0,
           rapidHeight: op.rapidHeight || 10.0
-        });
+        }, currentModel);
       } else if (op.badgeClass === 'adaptive') {
         toolpathData = generateAdaptiveRoughingToolpath(bounds, assignedTool, {
           stepoverPct: op.stepoverPct || 25,
@@ -676,6 +679,11 @@ export default function Viewport3D({
           chamferWidth: op.stepdown || 1.0,
           rapidHeight: op.rapidHeight || 15.0
         });
+      } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
+        toolpathData = generateSurfaceParallelToolpath(bounds, assignedTool, {
+          stepoverPct: op.stepoverPct || 20,
+          rapidHeight: op.rapidHeight || 15.0
+        }, currentModel);
       }
 
       if (toolpathData) {
@@ -709,7 +717,30 @@ export default function Viewport3D({
         }
       }
     });
-  }, [operations, tools, partMetrics, stockConfig, layerVisibility.toolpaths, layerVisibility.rapids]);
+  }, [operations, tools, partMetrics, stockConfig, currentModel, layerVisibility.toolpaths, layerVisibility.rapids]);
+
+  // 11. Dynamically Render Custom CAD Sketcher & Surface Entities on Level 10 & 15
+  useEffect(() => {
+    if (!customGeoGroupRef.current) return;
+    const group = customGeoGroupRef.current;
+
+    while (group.children.length > 0) {
+      group.remove(group.children[0]);
+    }
+
+    customGeometry.forEach((entity) => {
+      if (!entity) return;
+      const isWire = entity.isLine || entity.name?.startsWith('Wireframe_') || entity.name?.startsWith('Drill_') || entity.name?.startsWith('Hole_');
+      const isSurf = entity.name?.startsWith('Surface_') || entity.name?.startsWith('CAD_');
+
+      let visible = true;
+      if (isWire && layerVisibility.wireframe === false) visible = false;
+      if (isSurf && layerVisibility.surfaces === false) visible = false;
+
+      entity.visible = visible;
+      group.add(entity);
+    });
+  }, [customGeometry, layerVisibility.wireframe, layerVisibility.surfaces]);
 
   // Drag and drop handlers
   const handleDragOver = (e) => {

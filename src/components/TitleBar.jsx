@@ -6,13 +6,48 @@ export default function TitleBar({
   activeMachine = { name: "DMG MORI DMU 50", type: "5-Axis Mill-Turn" },
   onSaveProject,
   onOpenSetupSheet,
-  onOpenHelpGuide
+  onOpenHelpGuide,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
+  onNotify
 }) {
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     } else {
       document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  const handleMinimize = async () => {
+    if (window.__TAURI__?.window) {
+      try {
+        const { getCurrentWindow } = window.__TAURI__.window;
+        await getCurrentWindow().minimize();
+        return;
+      } catch {
+        // fallback
+      }
+    }
+    if (onNotify) {
+      onNotify("Desktop app running in browser container mode. Use browser minimize.", "info");
+    }
+  };
+
+  const handleClose = async () => {
+    if (window.confirm("Close Argus Master CAM project? Any unsaved toolpath or CAD edits will be lost.")) {
+      if (window.__TAURI__?.window) {
+        try {
+          const { getCurrentWindow } = window.__TAURI__.window;
+          await getCurrentWindow().close();
+          return;
+        } catch {
+          // fallback
+        }
+      }
+      window.location.reload();
     }
   };
 
@@ -28,10 +63,22 @@ export default function TitleBar({
           <button className="quick-btn" onClick={onSaveProject} title="Save Project (.mcam JSON Package)">
             <Save size={13} />
           </button>
-          <button className="quick-btn" onClick={() => alert("Undo: Previous operation state restored.")} title="Undo (Ctrl+Z)">
+          <button
+            className={`quick-btn ${!canUndo ? 'disabled' : ''}`}
+            onClick={onUndo}
+            disabled={!canUndo}
+            title="Undo (Ctrl+Z)"
+            style={{ opacity: canUndo ? 1 : 0.45 }}
+          >
             <RotateCcw size={13} />
           </button>
-          <button className="quick-btn" onClick={() => alert("Redo: Operation state re-applied.")} title="Redo (Ctrl+Y)">
+          <button
+            className={`quick-btn ${!canRedo ? 'disabled' : ''}`}
+            onClick={onRedo}
+            disabled={!canRedo}
+            title="Redo (Ctrl+Y)"
+            style={{ opacity: canRedo ? 1 : 0.45 }}
+          >
             <RotateCw size={13} />
           </button>
           <button className="quick-btn" onClick={onOpenSetupSheet} title="Print CNC Setup Sheet">
@@ -50,13 +97,13 @@ export default function TitleBar({
       </div>
 
       <div className="titlebar-right">
-        <button className="win-control-btn" onClick={() => alert("Application minimized to taskbar")} title="Minimize">
+        <button className="win-control-btn" onClick={handleMinimize} title="Minimize Window">
           <Minus size={12} />
         </button>
         <button className="win-control-btn" onClick={toggleFullscreen} title="Toggle Fullscreen Maximize">
           <Square size={11} />
         </button>
-        <button className="win-control-btn close" onClick={() => { if (window.confirm("Close Argus Mastercam project? Any unsaved changes will be lost.")) window.location.reload(); }} title="Close">
+        <button className="win-control-btn close" onClick={handleClose} title="Close Application">
           <X size={13} />
         </button>
       </div>

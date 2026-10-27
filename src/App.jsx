@@ -371,6 +371,106 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [currentProjectName, stockConfig, tools, operations, activeMachine, activeWcs, workpieceColor, partTransform]);
 
+  // ================= Toast Notification System =================
+  const [toasts, setToasts] = useState([]);
+
+  const showToast = (message, type = 'info', duration = 3000) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, duration);
+  };
+
+  // ================= Undo / Redo History Stack =================
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  // Initialize first snapshot on mount
+  useEffect(() => {
+    if (history.length === 0 && operations.length > 0) {
+      setHistory([{
+        operations: JSON.parse(JSON.stringify(operations)),
+        partTransform: { ...partTransform },
+        solidsList: [...solidsList],
+        customGeometry: [...customGeometry]
+      }]);
+      setHistoryIndex(0);
+    }
+  }, []);
+
+  const pushSnapshot = (overrideState = {}) => {
+    const snapshot = {
+      operations: JSON.parse(JSON.stringify(overrideState.operations || operations)),
+      partTransform: { ...(overrideState.partTransform || partTransform) },
+      solidsList: [...(overrideState.solidsList || solidsList)],
+      customGeometry: [...(overrideState.customGeometry || customGeometry)]
+    };
+    setHistory((prev) => {
+      const upToCurrent = prev.slice(0, historyIndex + 1);
+      return [...upToCurrent, snapshot];
+    });
+    setHistoryIndex((prev) => prev + 1);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const newIdx = historyIndex - 1;
+      const snap = history[newIdx];
+      if (snap) {
+        if (snap.operations) setOperations(snap.operations);
+        if (snap.partTransform) setPartTransform(snap.partTransform);
+        if (snap.solidsList) setSolidsList(snap.solidsList);
+        if (snap.customGeometry) setCustomGeometry(snap.customGeometry);
+        setHistoryIndex(newIdx);
+        showToast("Undo: Previous CAD/CAM state restored", "info");
+      }
+    } else {
+      showToast("No further undo actions in history", "warning");
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const newIdx = historyIndex + 1;
+      const snap = history[newIdx];
+      if (snap) {
+        if (snap.operations) setOperations(snap.operations);
+        if (snap.partTransform) setPartTransform(snap.partTransform);
+        if (snap.solidsList) setSolidsList(snap.solidsList);
+        if (snap.customGeometry) setCustomGeometry(snap.customGeometry);
+        setHistoryIndex(newIdx);
+        showToast("Redo: Re-applied CAD/CAM state", "info");
+      }
+    } else {
+      showToast("No further redo actions in history", "warning");
+    }
+  };
+
+  // Keyboard shortcut listener for Ctrl+Z and Ctrl+Y
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignore if user is currently typing in an input or textarea
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [history, historyIndex]);
+
   // ================= Handlers =================
   const handleToggleOp = (id) => {
     setOperations((prev) =>
@@ -380,19 +480,21 @@ export default function App() {
 
   const handleRegenerateAll = () => {
     setOperations((prev) => prev.map((op) => ({ ...op, visible: true })));
-    alert("All toolpaths regenerated successfully.");
+    showToast("All toolpaths regenerated with real 3D mesh slicing", "success");
   };
 
   const handleDeleteOpById = (id) => {
     if (operations.length <= 1) {
-      alert("At least one operation must remain in the operations tree.");
+      showToast("At least one operation must remain in the operations tree.", "warning");
       return;
     }
-    setOperations((prev) => prev.filter((op) => op.id !== id));
+    const updated = operations.filter((op) => op.id !== id);
+    setOperations(updated);
+    pushSnapshot({ operations: updated });
     if (activeOpId === id) {
-      const remaining = operations.filter((op) => op.id !== id);
-      if (remaining.length > 0) setActiveOpId(remaining[0].id);
+      if (updated.length > 0) setActiveOpId(updated[0].id);
     }
+    showToast("Operation deleted from tree", "info");
   };
 
   const handleDeleteActiveOp = () => {
@@ -631,7 +733,7 @@ export default function App() {
     if (data.activeWcs) setActiveWcs(data.activeWcs);
     if (data.workpieceColor) setWorkpieceColor(data.workpieceColor);
     if (data.partTransform) setPartTransform(data.partTransform);
-    alert(`Project ${data.projectName || data.filename || 'MCAM'} loaded successfully.`);
+    showToast(`Project ${data.projectName || data.filename || 'MCAM'} loaded successfully.`, 'success');
   };
 
   // Restore from Auto-Save
@@ -693,7 +795,7 @@ export default function App() {
       color: '#38bdf8'
     };
     setLevels((prev) => [...prev.map((l) => ({ ...l, active: false })), newLvl]);
-    alert(`Level ${num} (${name}) created and activated.`);
+    showToast(`Level ${num} (${name}) created and activated.`, 'success');
   };
 
   const handleUnblankAll = () => {
@@ -710,7 +812,7 @@ export default function App() {
       wcs: true,
       dimensions: true
     });
-    alert("All Levels and 3D layers unblanked.");
+    showToast("All Levels and 3D layers unblanked.", 'info');
   };
 
   const handleInvertVisibility = () => {
@@ -955,6 +1057,11 @@ export default function App() {
         onSaveProject={handleSaveProject}
         onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
         onOpenHelpGuide={() => setIsHelpGuideOpen(true)}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
+        onNotify={showToast}
       />
 
       {/* 2. Ribbon Bar with Dynamic Context-Aware Toolbars */}
@@ -1258,12 +1365,26 @@ export default function App() {
         onClose={() => setIsPostModalOpen(false)}
         onLaunchSimulation={() => setIsSimModalOpen(true)}
         onOpenGCodeViewer={() => setIsGCodeViewerOpen(true)}
+        operations={operations}
+        tools={tools}
+        stockConfig={stockConfig}
+        partMetrics={partMetrics}
+        currentModel={currentModel}
+        activeMachine={activeMachine}
+        activeWcs={activeWcs}
+        onNotify={showToast}
       />
 
       {/* 7. Machine Kinematics Simulator Modal */}
       <MachineSimModal
         isOpen={isSimModalOpen}
         onClose={() => setIsSimModalOpen(false)}
+        operations={operations}
+        tools={tools}
+        stockConfig={stockConfig}
+        partMetrics={partMetrics}
+        currentModel={currentModel}
+        activeMachine={activeMachine}
       />
 
       {/* 8. Stock Setup Modal */}
@@ -1300,6 +1421,7 @@ export default function App() {
         tools={tools}
         stockConfig={stockConfig}
         partMetrics={partMetrics}
+        currentModel={currentModel}
       />
 
       {/* 12. Entity Analyzer CAD Inspector Modal */}
@@ -1335,6 +1457,45 @@ export default function App() {
         isOpen={isHelpGuideOpen}
         onClose={() => setIsHelpGuideOpen(false)}
       />
+
+      {/* Floating Modern Toast Notification Stack */}
+      <div style={{
+        position: 'fixed',
+        bottom: '32px',
+        right: '16px',
+        zIndex: 99999,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        pointerEvents: 'none'
+      }}>
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            style={{
+              pointerEvents: 'auto',
+              background: toast.type === 'danger' ? 'rgba(239, 68, 68, 0.95)' :
+                          toast.type === 'warning' ? 'rgba(245, 158, 11, 0.95)' :
+                          toast.type === 'success' ? 'rgba(16, 185, 129, 0.95)' :
+                          'rgba(30, 41, 59, 0.95)',
+              color: '#ffffff',
+              padding: '9px 16px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: '500',
+              fontFamily: 'Inter, system-ui, sans-serif',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+              border: '1px solid rgba(255,255,255,0.18)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.25s ease'
+            }}
+          >
+            <span>{toast.message}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

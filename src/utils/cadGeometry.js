@@ -1464,7 +1464,8 @@ export function flipMeshNormals(object3D) {
 }
 
 /**
- * Decimates mesh triangles by simplifying index buffers (target reduction ratio 0.1 to 0.8)
+ * Decimates mesh triangles using 3D spatial vertex clustering, preserving watertight topology
+ * without punching holes in the mesh.
  */
 export function decimateMeshGeometry(object3D, reductionRatio = 0.5) {
   let oldTriangles = 0;
@@ -1476,33 +1477,102 @@ export function decimateMeshGeometry(object3D, reductionRatio = 0.5) {
       const pos = geo.attributes.position;
       if (!pos) return;
 
+      const pArr = pos.array;
+      const vertexCount = pos.count;
+
       let indices = [];
       if (geo.index) {
         indices = Array.from(geo.index.array);
       } else {
-        indices = Array.from({ length: pos.count }, (_, i) => i);
+        indices = Array.from({ length: vertexCount }, (_, i) => i);
       }
 
       const triCount = indices.length / 3;
       oldTriangles += triCount;
 
-      // Selectively retain a subset of triangles with feature preservation step
-      const step = Math.max(1, Math.round(1 / (1 - Math.min(0.85, reductionRatio))));
-      const newIndices = [];
+      // Compute bounding box
+      geo.computeBoundingBox();
+      const bbox = geo.boundingBox || new THREE.Box3().setFromBufferAttribute(pos);
+      const size = new THREE.Vector3();
+      bbox.getSize(size);
+      const maxDim = Math.max(size.x, size.y, size.z, 1.0);
 
-      for (let i = 0; i < indices.length; i += 3) {
-        const triIdx = i / 3;
-        // Keep triangle if it's not discarded by decimation step, or keep perimeter triangles
-        if (triIdx % step !== 0 || newIndices.length < 12) {
-          newIndices.push(indices[i], indices[i + 1], indices[i + 2]);
+      // Grid cell size proportional to reduction ratio (0.1 to 0.8)
+      const cellSize = maxDim * (0.015 + reductionRatio * 0.045);
+
+      // Voxel clustering: map 3D voxel key -> representative vertex
+      const voxelMap = new Map();
+      const vertexRemap = new Int32Array(vertexCount);
+      const newPositions = [];
+
+      for (let i = 0; i < vertexCount; i++) {
+        const vx = pArr[i * 3];
+        const vy = pArr[i * 3 + 1];
+        const vz = pArr[i * 3 + 2];
+
+        const gx = Math.floor((vx - bbox.min.x) / cellSize);
+        const gy = Math.floor((vy - bbox.min.y) / cellSize);
+        const gz = Math.floor((vz - bbox.min.z) / cellSize);
+        const voxelKey = `${gx},${gy},${gz}`;
+
+        if (!voxelMap.has(voxelKey)) {
+          const newIdx = newPositions.length / 3;
+          voxelMap.set(voxelKey, {
+            newIdx,
+            sumX: vx,
+            sumY: vy,
+            sumZ: vz,
+            count: 1
+          });
+          newPositions.push(vx, vy, vz);
+          vertexRemap[i] = newIdx;
+        } else {
+          const cell = voxelMap.get(voxelKey);
+          cell.sumX += vx;
+          cell.sumY += vy;
+          cell.sumZ += vz;
+          cell.count += 1;
+          vertexRemap[i] = cell.newIdx;
         }
       }
 
-      newTriangles += newIndices.length / 3;
-      geo.setIndex(newIndices);
-      geo.computeVertexNormals();
-      geo.computeBoundingBox();
-      geo.computeBoundingSphere();
+      // Average positions in each cluster cell
+      voxelMap.forEach((cell) => {
+        const base = cell.newIdx * 3;
+        newPositions[base] = cell.sumX / cell.count;
+        newPositions[base + 1] = cell.sumY / cell.count;
+        newPositions[base + 2] = cell.sumZ / cell.count;
+      });
+
+      // Filter degenerate triangles
+      const newIndices = [];
+      for (let t = 0; t < indices.length; t += 3) {
+        const r1 = vertexRemap[indices[t]];
+        const r2 = vertexRemap[indices[t + 1]];
+        const r3 = vertexRemap[indices[t + 2]];
+
+        // Triangle is only kept if all 3 clustered vertices are distinct
+        if (r1 !== r2 && r2 !== r3 && r3 !== r1) {
+          newIndices.push(r1, r2, r3);
+        }
+      }
+
+      // If extreme decimation eliminated too many faces, keep original or minimum fallback
+      if (newIndices.length >= 12 && newIndices.length < indices.length) {
+        const decimatedGeo = new THREE.BufferGeometry();
+        decimatedGeo.setAttribute('position', new THREE.Float32BufferAttribute(newPositions, 3));
+        decimatedGeo.setIndex(newIndices);
+        decimatedGeo.computeVertexNormals();
+        decimatedGeo.computeBoundingBox();
+        decimatedGeo.computeBoundingSphere();
+
+        child.geometry.dispose();
+        child.geometry = decimatedGeo;
+        newTriangles += newIndices.length / 3;
+      } else {
+        newTriangles += triCount;
+      }
+
       if (child.material) child.material.needsUpdate = true;
     }
   });

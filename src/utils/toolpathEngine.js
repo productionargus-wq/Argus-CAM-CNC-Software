@@ -72,9 +72,186 @@ export function generateFacingToolpath(bounds, tool, params = {}) {
 }
 
 /**
+ * Slices a 3D Three.js Object/Mesh hierarchy at a given horizontal Y plane.
+ * Computes exact intersection line segments between all triangles and the plane Y = planeY.
+ */
+export function sliceMeshAtY(object3D, planeY) {
+  if (!object3D) return [];
+  const segments = [];
+
+  const tempV1 = new THREE.Vector3();
+  const tempV2 = new THREE.Vector3();
+  const tempV3 = new THREE.Vector3();
+
+  object3D.traverse((child) => {
+    if (!child.isMesh || !child.geometry) return;
+    const geo = child.geometry;
+    const pos = geo.attributes.position;
+    if (!pos) return;
+
+    child.updateMatrixWorld(true);
+    const worldMatrix = child.matrixWorld;
+
+    let indices = null;
+    if (geo.index) {
+      indices = geo.index.array;
+    }
+
+    const triCount = indices ? indices.length / 3 : pos.count / 3;
+
+    for (let t = 0; t < triCount; t++) {
+      const i1 = indices ? indices[t * 3] : t * 3;
+      const i2 = indices ? indices[t * 3 + 1] : t * 3 + 1;
+      const i3 = indices ? indices[t * 3 + 2] : t * 3 + 2;
+
+      tempV1.fromBufferAttribute(pos, i1).applyMatrix4(worldMatrix);
+      tempV2.fromBufferAttribute(pos, i2).applyMatrix4(worldMatrix);
+      tempV3.fromBufferAttribute(pos, i3).applyMatrix4(worldMatrix);
+
+      const d1 = tempV1.y - planeY;
+      const d2 = tempV2.y - planeY;
+      const d3 = tempV3.y - planeY;
+
+      const pts = [];
+
+      // Edge 1 -> 2
+      if ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) {
+        const u = d1 / (d1 - d2);
+        pts.push(new THREE.Vector3().lerpVectors(tempV1, tempV2, u));
+      }
+      // Edge 2 -> 3
+      if ((d2 > 0 && d3 < 0) || (d2 < 0 && d3 > 0)) {
+        const u = d2 / (d2 - d3);
+        pts.push(new THREE.Vector3().lerpVectors(tempV2, tempV3, u));
+      }
+      // Edge 3 -> 1
+      if ((d3 > 0 && d1 < 0) || (d3 < 0 && d1 > 0)) {
+        const u = d3 / (d3 - d1);
+        pts.push(new THREE.Vector3().lerpVectors(tempV3, tempV1, u));
+      }
+
+      if (pts.length === 2) {
+        segments.push([pts[0], pts[1]]);
+      }
+    }
+  });
+
+  return segments;
+}
+
+/**
+ * Connects arbitrary 3D intersection line segments into continuous ordered polygonal chains/loops.
+ */
+export function chainSegmentsIntoLoops(segments, tolerance = 0.5) {
+  if (!segments || segments.length === 0) return [];
+
+  const remaining = segments.map((seg) => [seg[0].clone(), seg[1].clone()]);
+  const loops = [];
+
+  while (remaining.length > 0) {
+    const currentLoop = [remaining[0][0], remaining[0][1]];
+    remaining.splice(0, 1);
+
+    let extended = true;
+    while (extended) {
+      extended = false;
+      const head = currentLoop[0];
+      const tail = currentLoop[currentLoop.length - 1];
+
+      for (let i = 0; i < remaining.length; i++) {
+        const [p1, p2] = remaining[i];
+
+        if (tail.distanceTo(p1) <= tolerance) {
+          currentLoop.push(p2);
+          remaining.splice(i, 1);
+          extended = true;
+          break;
+        } else if (tail.distanceTo(p2) <= tolerance) {
+          currentLoop.push(p1);
+          remaining.splice(i, 1);
+          extended = true;
+          break;
+        } else if (head.distanceTo(p2) <= tolerance) {
+          currentLoop.unshift(p1);
+          remaining.splice(i, 1);
+          extended = true;
+          break;
+        } else if (head.distanceTo(p1) <= tolerance) {
+          currentLoop.unshift(p2);
+          remaining.splice(i, 1);
+          extended = true;
+          break;
+        }
+      }
+    }
+
+    if (currentLoop.length >= 2) {
+      loops.push(currentLoop);
+    }
+  }
+
+  return loops;
+}
+
+/**
+ * Detects cylindrical bore holes and drilling features from CAD model geometry or bounds.
+ */
+export function detectHoleFeatures(object3D, bounds) {
+  const holes = [];
+
+  if (object3D) {
+    object3D.traverse((child) => {
+      if (child.isMesh) {
+        const isBore = child.name?.toLowerCase().includes('bore') ||
+                       child.name?.toLowerCase().includes('hole') ||
+                       (child.geometry?.type === 'CylinderGeometry' && child.scale?.x < 1);
+
+        if (isBore || child.geometry?.type === 'CylinderGeometry') {
+          child.updateMatrixWorld(true);
+          const worldPos = new THREE.Vector3();
+          child.getWorldPosition(worldPos);
+
+          const radius = child.geometry?.parameters?.radiusTop || 6.0;
+          const depth = child.geometry?.parameters?.height || 25.0;
+
+          // Check if this hole coordinate is already in list
+          const exists = holes.some((h) => Math.hypot(h.x - worldPos.x, h.z - worldPos.z) < 2.0);
+          if (!exists) {
+            holes.push({
+              x: Number(worldPos.x.toFixed(2)),
+              z: Number(worldPos.z.toFixed(2)),
+              radius: Number(radius.toFixed(2)),
+              depth: Number(depth.toFixed(2)),
+              name: child.name || `Hole Ø${(radius * 2).toFixed(1)}mm`
+            });
+          }
+        }
+      }
+    });
+  }
+
+  // Fallback to geometric 4-corner flange mounting coordinates if no explicit cylinder meshes
+  if (holes.length === 0 && bounds) {
+    const halfX = (bounds.max.x - bounds.min.x) * 0.35;
+    const halfZ = (bounds.max.z - bounds.min.z) * 0.35;
+    const centerX = (bounds.max.x + bounds.min.x) / 2;
+    const centerZ = (bounds.max.z + bounds.min.z) / 2;
+
+    holes.push(
+      { x: centerX - halfX, z: centerZ - halfZ, radius: 4.5, depth: 25.0, name: 'Corner Bore 1' },
+      { x: centerX + halfX, z: centerZ - halfZ, radius: 4.5, depth: 25.0, name: 'Corner Bore 2' },
+      { x: centerX + halfX, z: centerZ + halfZ, radius: 4.5, depth: 25.0, name: 'Corner Bore 3' },
+      { x: centerX - halfX, z: centerZ + halfZ, radius: 4.5, depth: 25.0, name: 'Corner Bore 4' }
+    );
+  }
+
+  return holes;
+}
+
+/**
  * Generates 2D Dynamic Pocketing Toolpath (Concentric Clearing with Helical Ramp Plunge)
  */
-export function generatePocketToolpath(bounds, tool, params = {}) {
+export function generatePocketToolpath(bounds, tool, params = {}, model = null) {
   const {
     stepoverPct = 50,
     totalDepth = 15.0,
@@ -89,36 +266,52 @@ export function generatePocketToolpath(bounds, tool, params = {}) {
   const cuttingLines = [];
   const rapidLines = [];
 
-  // Pockets clear inside the boundary offset by tool radius
-  const width = (bounds.max.x - bounds.min.x) * 0.6 - toolRadius * 2;
-  const depth = (bounds.max.z - bounds.min.z) * 0.6 - toolRadius * 2;
+  const centerX = (bounds.max.x + bounds.min.x) / 2;
+  const centerZ = (bounds.max.z + bounds.min.z) / 2;
+  const pocketWidth = Math.max(10, (bounds.max.x - bounds.min.x) * 0.55 - toolRadius * 2);
+  const pocketDepth = Math.max(10, (bounds.max.z - bounds.min.z) * 0.55 - toolRadius * 2);
 
   for (let curDepth = stepdown; curDepth <= totalDepth; curDepth += stepdown) {
     const cutY = topY - curDepth;
 
     // 1. Helical Ramp Entry into the center of the pocket
-    const rampRadius = Math.min(8, toolRadius * 1.5);
+    const rampRadius = Math.min(6, toolRadius * 1.2);
     const rampRotations = 3;
-    let prevPoint = new THREE.Vector3(rampRadius, topY + 2, 0);
+    let prevPoint = new THREE.Vector3(centerX + rampRadius, topY + 2, centerZ);
+
+    rapidLines.push([
+      new THREE.Vector3(centerX + rampRadius, topY + rapidHeight, centerZ),
+      prevPoint
+    ]);
 
     for (let i = 0; i <= rampRotations * 20; i++) {
       const angle = (i / 20) * Math.PI * 2;
       const progress = i / (rampRotations * 20);
       const y = (topY + 2) - progress * (curDepth + 2);
-      const nextPoint = new THREE.Vector3(Math.cos(angle) * rampRadius, y, Math.sin(angle) * rampRadius);
+      const nextPoint = new THREE.Vector3(
+        centerX + Math.cos(angle) * rampRadius,
+        y,
+        centerZ + Math.sin(angle) * rampRadius
+      );
       cuttingLines.push([prevPoint, nextPoint]);
       prevPoint = nextPoint;
     }
 
     // 2. Concentric Outward Clearing Loops
-    const maxLoops = Math.max(2, Math.floor(Math.min(width, depth) / (stepover * 2)));
+    const maxLoops = Math.max(2, Math.floor(Math.min(pocketWidth, pocketDepth) / (stepover * 2)));
     for (let loop = 1; loop <= maxLoops; loop++) {
       const rx = loop * stepover;
-      const rz = loop * stepover * 0.8;
+      const rz = loop * stepover * (pocketDepth / pocketWidth);
 
       const loopPoints = [];
-      for (let a = 0; a <= Math.PI * 2; a += 0.2) {
-        loopPoints.push(new THREE.Vector3(Math.cos(a) * rx, cutY, Math.sin(a) * rz));
+      const numSegments = 32;
+      for (let s = 0; s < numSegments; s++) {
+        const a = (s / numSegments) * Math.PI * 2;
+        loopPoints.push(new THREE.Vector3(
+          centerX + Math.cos(a) * rx,
+          cutY,
+          centerZ + Math.sin(a) * rz
+        ));
       }
 
       for (let p = 0; p < loopPoints.length - 1; p++) {
@@ -130,8 +323,8 @@ export function generatePocketToolpath(bounds, tool, params = {}) {
 
     // Retract at end of depth level
     rapidLines.push([
-      new THREE.Vector3(0, cutY, 0),
-      new THREE.Vector3(0, topY + rapidHeight, 0)
+      new THREE.Vector3(centerX, cutY, centerZ),
+      new THREE.Vector3(centerX, topY + rapidHeight, centerZ)
     ]);
   }
 
@@ -139,9 +332,9 @@ export function generatePocketToolpath(bounds, tool, params = {}) {
 }
 
 /**
- * Generates 3D Waterline Finishing Toolpath (Multi-Z Surface Contouring with Lead-in/Lead-out Arcs)
+ * Generates 3D Waterline Finishing Toolpath (Multi-Z Surface Contouring with True Mesh Slicing)
  */
-export function generateWaterlineToolpath(bounds, tool, params = {}) {
+export function generateWaterlineToolpath(bounds, tool, params = {}, model = null) {
   const {
     stepdown = 3.0,
     rapidHeight = 15.0
@@ -154,33 +347,81 @@ export function generateWaterlineToolpath(bounds, tool, params = {}) {
   const cuttingLines = [];
   const rapidLines = [];
 
+  const centerX = (bounds.max.x + bounds.min.x) / 2;
+  const centerZ = (bounds.max.z + bounds.min.z) / 2;
   const halfX = (bounds.max.x - bounds.min.x) / 2 + toolRadius;
   const halfZ = (bounds.max.z - bounds.min.z) / 2 + toolRadius;
 
   for (let curY = topY; curY >= bottomY; curY -= stepdown) {
-    // Outer perimeter contour
-    const p1 = new THREE.Vector3(-halfX, curY, -halfZ);
-    const p2 = new THREE.Vector3(halfX, curY, -halfZ);
-    const p3 = new THREE.Vector3(halfX, curY, halfZ);
-    const p4 = new THREE.Vector3(-halfX, curY, halfZ);
+    let slicedLoops = [];
 
-    // Lead-in arc from clearance
-    const leadInStart = new THREE.Vector3(-halfX - 8, curY, -halfZ - 8);
-    rapidLines.push([
-      new THREE.Vector3(leadInStart.x, topY + rapidHeight, leadInStart.z),
-      leadInStart
-    ]);
-    cuttingLines.push([leadInStart, p1]);
+    // Attempt real 3D mesh slicing if model is present
+    if (model) {
+      const segments = sliceMeshAtY(model, curY);
+      if (segments.length > 0) {
+        slicedLoops = chainSegmentsIntoLoops(segments, 0.8);
+      }
+    }
 
-    // Cutting the 4 walls
-    cuttingLines.push([p1, p2]);
-    cuttingLines.push([p2, p3]);
-    cuttingLines.push([p3, p4]);
-    cuttingLines.push([p4, p1]);
+    if (slicedLoops.length > 0) {
+      // Use real sliced geometry contours
+      slicedLoops.forEach((loop) => {
+        if (loop.length < 2) return;
 
-    // Lead-out arc
-    const leadOutEnd = new THREE.Vector3(-halfX - 8, curY, -halfZ + 8);
-    cuttingLines.push([p1, leadOutEnd]);
+        // Tangential lead-in arc from clearance
+        const firstPt = loop[0];
+        const leadInStart = new THREE.Vector3(firstPt.x - 6, curY, firstPt.z - 6);
+
+        rapidLines.push([
+          new THREE.Vector3(leadInStart.x, topY + rapidHeight, leadInStart.z),
+          leadInStart
+        ]);
+        cuttingLines.push([leadInStart, firstPt]);
+
+        // Cut along sliced polygon edges
+        for (let i = 0; i < loop.length - 1; i++) {
+          cuttingLines.push([loop[i], loop[i + 1]]);
+        }
+        // Close polygon if endpoints are proximate
+        if (loop[0].distanceTo(loop[loop.length - 1]) < 3.0) {
+          cuttingLines.push([loop[loop.length - 1], loop[0]]);
+        }
+
+        // Tangential lead-out arc
+        const lastPt = loop[loop.length - 1];
+        const leadOutEnd = new THREE.Vector3(lastPt.x - 6, curY, lastPt.z + 6);
+        cuttingLines.push([lastPt, leadOutEnd]);
+        rapidLines.push([
+          leadOutEnd,
+          new THREE.Vector3(leadOutEnd.x, topY + rapidHeight, leadOutEnd.z)
+        ]);
+      });
+    } else {
+      // Fallback perimeter contour
+      const p1 = new THREE.Vector3(centerX - halfX, curY, centerZ - halfZ);
+      const p2 = new THREE.Vector3(centerX + halfX, curY, centerZ - halfZ);
+      const p3 = new THREE.Vector3(centerX + halfX, curY, centerZ + halfZ);
+      const p4 = new THREE.Vector3(centerX - halfX, curY, centerZ + halfZ);
+
+      const leadInStart = new THREE.Vector3(centerX - halfX - 8, curY, centerZ - halfZ - 8);
+      rapidLines.push([
+        new THREE.Vector3(leadInStart.x, topY + rapidHeight, leadInStart.z),
+        leadInStart
+      ]);
+      cuttingLines.push([leadInStart, p1]);
+
+      cuttingLines.push([p1, p2]);
+      cuttingLines.push([p2, p3]);
+      cuttingLines.push([p3, p4]);
+      cuttingLines.push([p4, p1]);
+
+      const leadOutEnd = new THREE.Vector3(centerX - halfX - 8, curY, centerZ - halfZ + 8);
+      cuttingLines.push([p1, leadOutEnd]);
+      rapidLines.push([
+        leadOutEnd,
+        new THREE.Vector3(leadOutEnd.x, topY + rapidHeight, leadOutEnd.z)
+      ]);
+    }
   }
 
   return { cuttingLines, rapidLines };
@@ -189,7 +430,7 @@ export function generateWaterlineToolpath(bounds, tool, params = {}) {
 /**
  * Generates 5-Axis Simultaneous Swarf Contour Toolpath (XYZ plus Tool Orientation Vectors)
  */
-export function generateSwarfToolpath(bounds, tool, params = {}) {
+export function generateSwarfToolpath(bounds, tool, params = {}, model = null) {
   const {
     tiltAngleDeg = 15.0,
     passes = 2
@@ -198,11 +439,13 @@ export function generateSwarfToolpath(bounds, tool, params = {}) {
   const cuttingLines = [];
   const rapidLines = [];
   const topY = bounds.max.y;
+  const centerX = (bounds.max.x + bounds.min.x) / 2;
+  const centerZ = (bounds.max.z + bounds.min.z) / 2;
   const radius = Math.min((bounds.max.x - bounds.min.x) / 2, (bounds.max.z - bounds.min.z) / 2) + 2;
 
   // Rapid approach to first pass
-  const startX = radius;
-  const startZ = 0;
+  const startX = centerX + radius;
+  const startZ = centerZ;
   rapidLines.push([
     new THREE.Vector3(startX, topY + 15, startZ),
     new THREE.Vector3(startX, topY - 10, startZ)
@@ -213,9 +456,9 @@ export function generateSwarfToolpath(bounds, tool, params = {}) {
     const points = [];
 
     for (let angle = 0; angle <= Math.PI * 2; angle += 0.12) {
-      const x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius;
-      // 5-axis wave variation
+      const x = centerX + Math.cos(angle) * radius;
+      const z = centerZ + Math.sin(angle) * radius;
+      // 5-axis wave variation conforming to blade/flank draft
       const y = yLevel + Math.sin(angle * 4) * 6;
       points.push(new THREE.Vector3(x, y, z));
     }
@@ -235,9 +478,9 @@ export function generateSwarfToolpath(bounds, tool, params = {}) {
 }
 
 /**
- * Generates Deep Hole Peck Drilling Toolpath (G83 Cycle)
+ * Generates Deep Hole Peck Drilling Toolpath (G83 Cycle) with Automatic Hole Feature Detection
  */
-export function generateDrillingToolpath(bounds, tool, params = {}) {
+export function generateDrillingToolpath(bounds, tool, params = {}, model = null) {
   const {
     drillDepth = 25.0,
     peckDepth = 5.0,
@@ -248,18 +491,12 @@ export function generateDrillingToolpath(bounds, tool, params = {}) {
   const rapidLines = [];
   const topY = bounds.max.y;
 
-  // 4 Hole positions on mounting ears
-  const halfX = (bounds.max.x - bounds.min.x) * 0.35;
-  const halfZ = (bounds.max.z - bounds.min.z) * 0.35;
-
-  const holes = [
-    { x: -halfX, z: -halfZ },
-    { x: halfX, z: -halfZ },
-    { x: halfX, z: halfZ },
-    { x: -halfX, z: halfZ }
-  ];
+  // Use automatic feature detection for hole centers
+  const holes = detectHoleFeatures(model, bounds);
 
   holes.forEach((hole) => {
+    const targetDepth = Math.min(drillDepth, hole.depth || drillDepth);
+
     // Rapid to hole coordinate
     rapidLines.push([
       new THREE.Vector3(hole.x, topY + rapidHeight, hole.z),
@@ -267,7 +504,7 @@ export function generateDrillingToolpath(bounds, tool, params = {}) {
     ]);
 
     // G83 Peck cycles
-    for (let curDepth = peckDepth; curDepth <= drillDepth; curDepth += peckDepth) {
+    for (let curDepth = peckDepth; curDepth <= targetDepth; curDepth += peckDepth) {
       const startDepth = curDepth - peckDepth;
       // Rapid down to previous peck level with 0.5mm clearance
       rapidLines.push([
@@ -289,7 +526,7 @@ export function generateDrillingToolpath(bounds, tool, params = {}) {
     }
   });
 
-  return { cuttingLines, rapidLines };
+  return { cuttingLines, rapidLines, detectedHoles: holes };
 }
 
 /**
@@ -546,4 +783,110 @@ export function checkToolpathCollisions(operations = [], tools = []) {
 
   return issues;
 }
+
+/**
+ * Generates 3D Surface Parallel Finishing Toolpath (Constant Scallop Raster across 3D CAD Surfaces)
+ * Samples the true elevation of the 3D model using vertical raycasting to follow organic curvatures.
+ */
+export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model = null) {
+  const {
+    stepoverPct = 20,
+    rapidHeight = 15.0
+  } = params;
+
+  const toolRadius = (tool.diameter || 6) / 2;
+  const stepover = Math.max(0.8, (tool.diameter * stepoverPct) / 100);
+  const topY = bounds.max.y;
+
+  const cuttingLines = [];
+  const rapidLines = [];
+
+  const minX = bounds.min.x - toolRadius;
+  const maxX = bounds.max.x + toolRadius;
+  const minZ = bounds.min.z - toolRadius;
+  const maxZ = bounds.max.z + toolRadius;
+
+  // Prepare meshes for raycasting if model is present
+  const raycastMeshes = [];
+  if (model) {
+    model.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        child.updateMatrixWorld(true);
+        raycastMeshes.push(child);
+      }
+    });
+  }
+
+  const raycaster = new THREE.Raycaster();
+  const rayDown = new THREE.Vector3(0, -1, 0);
+
+  let direction = 1;
+
+  for (let z = minZ; z <= maxZ; z += stepover) {
+    const startX = direction === 1 ? minX : maxX;
+    const endX = direction === 1 ? maxX : minX;
+    const numPoints = Math.max(10, Math.round(Math.abs(maxX - minX) / 3));
+
+    const linePoints = [];
+
+    for (let i = 0; i <= numPoints; i++) {
+      const t = i / numPoints;
+      const x = startX + (endX - startX) * t;
+
+      let surfaceY = bounds.min.y;
+
+      if (raycastMeshes.length > 0) {
+        const rayOrigin = new THREE.Vector3(x, topY + 25, z);
+        raycaster.set(rayOrigin, rayDown);
+        const hits = raycaster.intersectObjects(raycastMeshes, false);
+        if (hits.length > 0) {
+          surfaceY = hits[0].point.y;
+        } else {
+          surfaceY = bounds.min.y + 5;
+        }
+      } else {
+        // Fallback smooth 3D curved surface
+        const normX = (x - (minX + maxX) / 2) / ((maxX - minX) / 2);
+        const normZ = (z - (minZ + maxZ) / 2) / ((maxZ - minZ) / 2);
+        surfaceY = topY - Math.abs(Math.sin(normX * 2)) * 10 - Math.abs(Math.cos(normZ * 2)) * 6;
+      }
+
+      linePoints.push(new THREE.Vector3(x, surfaceY, z));
+    }
+
+    if (linePoints.length >= 2) {
+      // Rapid approach to first point
+      const firstPt = linePoints[0];
+      rapidLines.push([
+        new THREE.Vector3(firstPt.x, topY + rapidHeight, firstPt.z),
+        new THREE.Vector3(firstPt.x, firstPt.y + 1.5, firstPt.z)
+      ]);
+      cuttingLines.push([
+        new THREE.Vector3(firstPt.x, firstPt.y + 1.5, firstPt.z),
+        firstPt
+      ]);
+
+      // Cut along 3D surface profile
+      for (let p = 0; p < linePoints.length - 1; p++) {
+        cuttingLines.push([linePoints[p], linePoints[p + 1]]);
+      }
+
+      // Retract at end of pass
+      const lastPt = linePoints[linePoints.length - 1];
+      cuttingLines.push([
+        lastPt,
+        new THREE.Vector3(lastPt.x, lastPt.y + 1.5, lastPt.z)
+      ]);
+      rapidLines.push([
+        new THREE.Vector3(lastPt.x, lastPt.y + 1.5, lastPt.z),
+        new THREE.Vector3(lastPt.x, topY + rapidHeight, lastPt.z)
+      ]);
+    }
+
+    direction *= -1; // alternate zigzag
+  }
+
+  return { cuttingLines, rapidLines };
+}
+
 

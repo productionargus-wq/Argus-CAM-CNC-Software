@@ -30,6 +30,12 @@ export default function WireframeSketcherModal({
 }) {
   const [activeTool, setActiveTool] = useState(initialTool);
 
+  const [feedback, setFeedback] = useState(null);
+  const notify = (msg, type = 'success') => {
+    setFeedback({ msg, type });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
   useEffect(() => {
     if (initialTool) {
       setActiveTool(initialTool);
@@ -137,7 +143,7 @@ export default function WireframeSketcherModal({
       { color: parseInt(lineColor.replace('#', '0x')) }
     );
     if (onAddEntity) onAddEntity(line);
-    alert(`3D Line (Length: ${lineLength} mm) added to Level 10.`);
+    notify(`3D Line (Length: ${lineLength} mm) added to Level 10.`);
   };
 
   const handleAddParallelLine = () => {
@@ -148,7 +154,7 @@ export default function WireframeSketcherModal({
       parallelPlane
     );
     if (onAddEntity) onAddEntity(line);
-    alert(`Parallel Line offset by ${parallelOffset} mm added to Level 10.`);
+    notify(`Parallel Line offset by ${parallelOffset} mm added to Level 10.`);
   };
 
   const handleAddCircle = () => {
@@ -165,7 +171,7 @@ export default function WireframeSketcherModal({
       { color: parseInt(circleColor.replace('#', '0x')) }
     );
     if (onAddEntity) onAddEntity(circle);
-    alert(`${isArcMode ? 'Arc' : 'Circle'} (Radius ${r} mm) added to Level 10.`);
+    notify(`${isArcMode ? 'Arc' : 'Circle'} (Radius ${r} mm) added to Level 10.`);
   };
 
   const handleAddPCD = () => {
@@ -178,7 +184,7 @@ export default function WireframeSketcherModal({
       Number(pcdHoleRadius)
     );
     if (onAddEntity) onAddEntity(group);
-    alert(`PCD Bolt Pattern (${pcdHoles} holes on Ø${pcdDiameter}mm) added to Level 10.`);
+    notify(`PCD Bolt Pattern (${pcdHoles} holes on Ø${pcdDiameter}mm) added to Level 10.`);
   };
 
   const handleAddRect = () => {
@@ -191,7 +197,7 @@ export default function WireframeSketcherModal({
       { color: parseInt(rectColor.replace('#', '0x')) }
     );
     if (onAddEntity) onAddEntity(rect);
-    alert(`Rectangle Pocket Boundary (${rectWidth}x${rectDepth} mm${rectFillet > 0 ? `, R${rectFillet}` : ''}) added to Level 10.`);
+    notify(`Rectangle Pocket Boundary (${rectWidth}x${rectDepth} mm${rectFillet > 0 ? `, R${rectFillet}` : ''}) added to Level 10.`);
   };
 
   const handleAddPolygon = () => {
@@ -203,33 +209,33 @@ export default function WireframeSketcherModal({
       [Number(polyCenter.x), Number(polyCenter.z)]
     );
     if (onAddEntity) onAddEntity(poly);
-    alert(`${polySides}-Sided Regular Polygon (Radius ${polyRadius} mm) added to Level 10.`);
+    notify(`${polySides}-Sided Regular Polygon (Radius ${polyRadius} mm) added to Level 10.`);
   };
 
   const handleExtractEdges = () => {
     if (!activeModel) {
-      alert("No active 3D model loaded to extract edges from.");
+      notify("No active 3D model loaded to extract edges from.", "warning");
       return;
     }
     const { group, totalSegments } = extractEdgesFromModel(activeModel, Number(edgeThreshold));
     if (totalSegments === 0) {
-      alert("No sharp edges found with current threshold. Try lowering the threshold angle.");
+      notify("No sharp edges found with current threshold. Try lowering the threshold angle.", "warning");
       return;
     }
     if (onAddEntity) onAddEntity(group);
     setExtractedStatus(`Extracted ${totalSegments} feature curve segments at ${edgeThreshold}°!`);
-    alert(`Extracted ${totalSegments} wireframe curve segments from 3D model onto Level 10.`);
+    notify(`Extracted ${totalSegments} wireframe curve segments from 3D model onto Level 10.`);
   };
 
   const handleAddBoundingCage = () => {
     if (!partMetrics?.box) {
-      alert("No 3D part metrics available for bounding cage.");
+      notify("No 3D part metrics available for bounding cage.", "warning");
       return;
     }
     const m = Number(cageMargin);
     const cage = createBoundingWireframe(partMetrics.box, { x: m, y: m, z: m });
     if (onAddEntity) onAddEntity(cage);
-    alert(`Bounding Wireframe Cage (+${m}mm margin) added to Level 10.`);
+    notify(`Bounding Wireframe Cage (+${m}mm margin) added to Level 10.`);
   };
 
   const handleAddDatumPoint = () => {
@@ -238,17 +244,17 @@ export default function WireframeSketcherModal({
       `Wireframe_Point_X${datumPoint.x}_Y${datumPoint.y}_Z${datumPoint.z}`
     );
     if (onAddEntity) onAddEntity(pt);
-    alert(`Datum Point [${datumPoint.x}, ${datumPoint.y}, ${datumPoint.z}] added to Level 10.`);
+    notify(`Datum Point [${datumPoint.x}, ${datumPoint.y}, ${datumPoint.z}] added to Level 10.`);
   };
 
   const handleAddDrillGrid = () => {
     if (!partMetrics?.box) {
-      alert("No 3D part metrics available for 4-corner drill grid.");
+      notify("No 3D part metrics available for 4-corner drill grid.", "warning");
       return;
     }
     const grid = createDrillPointsGrid(partMetrics.box, Number(drillCornerOffset));
     if (onAddEntity) onAddEntity(grid);
-    alert(`4-Corner Drill Coordinate Grid (Offset: ${drillCornerOffset}mm) added to Level 10.`);
+    notify(`4-Corner Drill Coordinate Grid (Offset: ${drillCornerOffset}mm) added to Level 10.`);
   };
 
   const navTools = [
@@ -336,6 +342,25 @@ export default function WireframeSketcherModal({
             <X size={20} />
           </button>
         </div>
+
+        {/* Inline Feedback Banner */}
+        {feedback && (
+          <div style={{
+            margin: '8px 16px',
+            padding: '8px 14px',
+            background: feedback.type === 'warning' ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)',
+            border: `1px solid ${feedback.type === 'warning' ? '#f59e0b' : '#10b981'}`,
+            borderRadius: '4px',
+            color: '#fff',
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <CheckCircle2 size={15} color={feedback.type === 'warning' ? '#f59e0b' : '#10b981'} />
+            <span>{feedback.msg}</span>
+          </div>
+        )}
 
         {/* Modal Layout: Sidebar Tool Navigator + Content Body */}
         <div style={{ display: 'flex', flex: 1, minHeight: '480px', overflow: 'hidden' }}>

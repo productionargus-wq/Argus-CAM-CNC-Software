@@ -482,6 +482,9 @@ body {
 .op-type-contour { background: #f59e0b; color: black; }
 .op-type-swarf { background: #8b5cf6; color: white; }
 .op-type-drill { background: #ef4444; color: white; }
+.op-type-adaptive { background: #06b6d4; color: black; }
+.op-type-chamfer { background: #ec4899; color: white; }
+.op-type-parallel { background: #d946ef; color: white; }
 
 .op-badge {
   font-size: 9px;

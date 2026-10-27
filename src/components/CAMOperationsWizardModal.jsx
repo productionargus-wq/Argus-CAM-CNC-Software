@@ -148,6 +148,17 @@ export default function CAMOperationsWizardModal({
       defaultStepdown: 1.0,
       defaultDepth: 1.0,
       badgeClass: 'chamfer'
+    },
+    {
+      id: 'parallel',
+      name: '3D Surface Parallel',
+      badge: 'SP',
+      color: '#d946ef',
+      desc: 'Constant scallop raster finishing with 3D CAD surface elevation raycasting',
+      defaultStepover: 15,
+      defaultStepdown: 0.5,
+      defaultDepth: 25.0,
+      badgeClass: 'parallel'
     }
   ];
 

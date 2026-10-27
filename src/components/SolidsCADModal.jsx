@@ -34,6 +34,11 @@ export default function SolidsCADModal({
   onRemoveSolidBody
 }) {
   const [activeTool, setActiveTool] = useState(initialTool);
+  const [feedback, setFeedback] = useState(null);
+  const notify = (msg, type = 'success') => {
+    setFeedback({ msg, type });
+    setTimeout(() => setFeedback(null), 3500);
+  };
 
   useEffect(() => {
     if (initialTool) {
@@ -115,7 +120,7 @@ export default function SolidsCADModal({
     } else if (onAddSolidBody) {
       onAddSolidBody(box, `Solid_Block_${boxW}x${boxD}`);
     }
-    alert(`Rectangular Solid Billet (${boxW}x${boxH}x${boxD} mm, Mass: ${calcMassKg(boxVol)} kg) created.`);
+    notify(`Rectangular Solid Billet (${boxW}x${boxH}x${boxD} mm, Mass: ${calcMassKg(boxVol)} kg) created.`);
   };
 
   const handleCreateCylinder = (asPrimary = true) => {
@@ -135,7 +140,7 @@ export default function SolidsCADModal({
     } else if (onAddSolidBody) {
       onAddSolidBody(cyl, `Solid_Cylinder_Dia${cylRadius * 2}`);
     }
-    alert(`Cylindrical Solid Blank (Ø${cylRadius * 2}mm x ${cylHeight}mm, Mass: ${calcMassKg(cylVol)} kg) created.`);
+    notify(`Cylindrical Solid Blank (Ø${cylRadius * 2}mm x ${cylHeight}mm, Mass: ${calcMassKg(cylVol)} kg) created.`);
   };
 
   const handleCreateCone = (asPrimary = true) => {
@@ -154,7 +159,7 @@ export default function SolidsCADModal({
     } else if (onAddSolidBody) {
       onAddSolidBody(cone, `Solid_Cone_Frustum`);
     }
-    alert(`Conical Frustum Solid (R${coneRBot} to R${coneRTop}, Height: ${coneHeight}mm) created.`);
+    notify(`Conical Frustum Solid (R${coneRBot} to R${coneRTop}, Height: ${coneHeight}mm) created.`);
   };
 
   const handleCreateTorus = (asPrimary = true) => {
@@ -172,7 +177,7 @@ export default function SolidsCADModal({
     } else if (onAddSolidBody) {
       onAddSolidBody(torus, `Solid_Torus_Ring`);
     }
-    alert(`Torus Solid Ring (Major R${torusRadius}, Tube r${torusTube}) created.`);
+    notify(`Torus Solid Ring (Major R${torusRadius}, Tube r${torusTube}) created.`);
   };
 
   const handleCreateExtrude = (asPrimary = true) => {
@@ -192,7 +197,7 @@ export default function SolidsCADModal({
     } else if (onAddSolidBody) {
       onAddSolidBody(ext, `Solid_Extrusion_${extW}x${extD}`);
     }
-    alert(`Extruded Solid (${extW}x${extD}x${extH} mm, Draft: ${extDraft}°) created.`);
+    notify(`Extruded Solid (${extW}x${extD}x${extH} mm, Draft: ${extDraft}°) created.`);
   };
 
   const handleCreatePocketedBillet = (asPrimary = true) => {
@@ -215,7 +220,7 @@ export default function SolidsCADModal({
     } else if (onAddSolidBody) {
       onAddSolidBody(pocketSolid, `Solid_Pocketed_Billet`);
     }
-    alert(`CNC Pocketed Workpiece (${pBaseW}x${pBaseD}mm with ${pockW}x${pockD}x${pockDepth}mm Pocket, R${pockFillet}) created.`);
+    notify(`CNC Pocketed Workpiece (${pBaseW}x${pBaseD}mm with ${pockW}x${pockD}x${pockDepth}mm Pocket, R${pockFillet}) created.`);
   };
 
   const navTools = [
@@ -299,6 +304,25 @@ export default function SolidsCADModal({
             <X size={20} />
           </button>
         </div>
+
+        {/* Inline Feedback Banner */}
+        {feedback && (
+          <div style={{
+            margin: '8px 16px',
+            padding: '8px 14px',
+            background: feedback.type === 'warning' ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)',
+            border: `1px solid ${feedback.type === 'warning' ? '#f59e0b' : '#10b981'}`,
+            borderRadius: '4px',
+            color: '#fff',
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <CheckCircle2 size={15} color={feedback.type === 'warning' ? '#f59e0b' : '#10b981'} />
+            <span>{feedback.msg}</span>
+          </div>
+        )}
 
         {/* Modal Layout: Sidebar Tool Navigator + Content Body */}
         <div style={{ display: 'flex', flex: 1, minHeight: '490px', overflow: 'hidden' }}>

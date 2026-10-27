@@ -4,7 +4,8 @@ import {
   generatePocketToolpath,
   generateWaterlineToolpath,
   generateSwarfToolpath,
-  generateDrillingToolpath
+  generateDrillingToolpath,
+  generateSurfaceParallelToolpath
 } from './toolpathEngine';
 
 /**
@@ -30,7 +31,8 @@ export function generateNCProgram({
   stockConfig,
   partMetrics,
   controller = CONTROLLER_DIALECTS.HEIDENHAIN,
-  programName = 'DMU50_ZeroClamp_Job'
+  programName = 'DMU50_ZeroClamp_Job',
+  model = null
 }) {
   const bounds = partMetrics?.box || new THREE.Box3(
     new THREE.Vector3(-40, 49, -35),
@@ -58,7 +60,7 @@ export function generateNCProgram({
     lines.push(`; DATE: ${dateStr} | TIME STAMP`);
     lines.push(`; MACHINE: DMU 50 EVO 5-AXIS MILL-TURN`);
     lines.push(`; BLK FORM 0.1 Z X${bounds.min.x.toFixed(2)} Y${bounds.min.z.toFixed(2)} Z${bounds.min.y.toFixed(2)}`);
-    lines.push(`; BLK FORM 0.2 X${bounds.max.x.toFixed(2)} Y${bounds.max.z.toFixed(2)} Z${(bounds.max.y + (stockConfig.allowanceTop || 2)).toFixed(2)}`);
+    lines.push(`; BLK FORM 0.2 X${bounds.max.x.toFixed(2)} Y${bounds.max.z.toFixed(2)} Z${(bounds.max.y + (stockConfig?.allowanceTop || 2)).toFixed(2)}`);
     lines.push(`; ------------------------------------------------`);
   } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
     lines.push(`; %_N_${programName.toUpperCase()}_MPF`);
@@ -73,7 +75,7 @@ export function generateNCProgram({
     lines.push(`(--- ARGUS CAM POST-PROCESSOR ---)`);
     lines.push(`(CONTROLLER: ${controller})`);
     lines.push(`(DATE: ${dateStr})`);
-    lines.push(`(MATERIAL: ${stockConfig.material})`);
+    lines.push(`(MATERIAL: ${stockConfig?.material || '6061 Aluminum'})`);
     lines.push(`${nextN()} G90 G21 G17 G54 G94`);
     lines.push(`${nextN()} G28 G91 Z0.`);
     lines.push(`${nextN()} G90`);
@@ -94,7 +96,7 @@ export function generateNCProgram({
     if (op.badgeClass === 'face') {
       toolpathData = generateFacingToolpath(bounds, tool, {
         stepoverPct: op.stepoverPct || 65,
-        faceAllowance: stockConfig.allowanceTop || 2.0,
+        faceAllowance: stockConfig?.allowanceTop || 2.0,
         depthOfCut: op.stepdown || 1.0,
         rapidHeight: op.rapidHeight || 15.0
       });
@@ -104,23 +106,28 @@ export function generateNCProgram({
         totalDepth: op.totalDepth || 15.0,
         stepdown: op.stepdown || 5.0,
         rapidHeight: op.rapidHeight || 15.0
-      });
+      }, model);
     } else if (op.badgeClass === 'contour') {
       toolpathData = generateWaterlineToolpath(bounds, tool, {
         stepdown: op.stepdown || 3.0,
         rapidHeight: op.rapidHeight || 15.0
-      });
+      }, model);
     } else if (op.badgeClass === 'swarf') {
       toolpathData = generateSwarfToolpath(bounds, tool, {
         tiltAngleDeg: 15.0,
         passes: 2
-      });
+      }, model);
     } else if (op.badgeClass === 'drill') {
       toolpathData = generateDrillingToolpath(bounds, tool, {
         drillDepth: op.totalDepth || 25.0,
         peckDepth: op.stepdown || 5.0,
         rapidHeight: op.rapidHeight || 10.0
-      });
+      }, model);
+    } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
+      toolpathData = generateSurfaceParallelToolpath(bounds, tool, {
+        stepoverPct: op.stepoverPct || 20,
+        rapidHeight: op.rapidHeight || 15.0
+      }, model);
     }
 
     if (!toolpathData) return;
@@ -152,6 +159,9 @@ export function generateNCProgram({
       lines.push(`${nextN()} T${tool.number} M06 (${tool.name})`);
       lines.push(`${nextN()} S${tool.rpm} M03`);
       lines.push(`${nextN()} G43 H${tool.number} M08`);
+      if (op.badgeClass === 'contour' || op.badgeClass === 'chamfer') {
+        lines.push(`${nextN()} G41 D${tool.number} ; CUTTER RADIUS COMPENSATION LEFT`);
+      }
     }
 
     let lastPos = new THREE.Vector3(0, bounds.max.y + 50, 0);

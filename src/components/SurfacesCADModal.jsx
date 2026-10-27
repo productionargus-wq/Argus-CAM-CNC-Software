@@ -26,6 +26,12 @@ export default function SurfacesCADModal({
 }) {
   const [activeTool, setActiveTool] = useState(initialTool);
 
+  const [feedback, setFeedback] = useState(null);
+  const notify = (msg, type = 'success') => {
+    setFeedback({ msg, type });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
   useEffect(() => {
     if (initialTool) {
       setActiveTool(initialTool);
@@ -113,7 +119,7 @@ export default function SurfacesCADModal({
       { role: planeRole, opacity: Number(planeOpacity) }
     );
     if (onAddSurfaceEntity) onAddSurfaceEntity(plane);
-    alert(`Planar Surface (${planeW}x${planeD} mm - ${planeRole.toUpperCase()}) added to Level 15.`);
+    notify(`Planar Surface (${planeW}x${planeD} mm - ${planeRole.toUpperCase()}) added to Level 15.`);
   };
 
   const handleAddCylinder = () => {
@@ -125,7 +131,7 @@ export default function SurfacesCADModal({
       { role: cylRole }
     );
     if (onAddSurfaceEntity) onAddSurfaceEntity(cyl);
-    alert(`Cylindrical Surface (Radius: ${cylRadius}mm, Height: ${cylHeight}mm) added to Level 15.`);
+    notify(`Cylindrical Surface (Radius: ${cylRadius}mm, Height: ${cylHeight}mm) added to Level 15.`);
   };
 
   const handleAddExtrude = () => {
@@ -138,7 +144,7 @@ export default function SurfacesCADModal({
       { role: extRole }
     );
     if (onAddSurfaceEntity) onAddSurfaceEntity(ext);
-    alert(`Extruded Surface Shell (${extW}x${extD}x${extHeight}mm) added to Level 15.`);
+    notify(`Extruded Surface Shell (${extW}x${extD}x${extHeight}mm) added to Level 15.`);
   };
 
   const handleAddRevolved = () => {
@@ -152,7 +158,7 @@ export default function SurfacesCADModal({
       { role: revRole }
     );
     if (onAddSurfaceEntity) onAddSurfaceEntity(rev);
-    alert(`Revolved Surface (R${revRBot} to R${revRTop}, ${revSweep}°) added to Level 15.`);
+    notify(`Revolved Surface (R${revRBot} to R${revRTop}, ${revSweep}°) added to Level 15.`);
   };
 
   const handleAddLoft = () => {
@@ -167,7 +173,7 @@ export default function SurfacesCADModal({
       { role: loftRole }
     );
     if (onAddSurfaceEntity) onAddSurfaceEntity(loft);
-    alert(`Ruled Loft Surface (${loftBotW}x${loftBotD} to ${loftTopW}x${loftTopD}) added to Level 15.`);
+    notify(`Ruled Loft Surface (${loftBotW}x${loftBotD} to ${loftTopW}x${loftTopD}) added to Level 15.`);
   };
 
   const handleAddHoleCap = () => {
@@ -177,7 +183,7 @@ export default function SurfacesCADModal({
       [Number(capCenter.x), Number(capCenter.z)]
     );
     if (onAddSurfaceEntity) onAddSurfaceEntity(cap);
-    alert(`Hole Cap Surface Patch (Ø${(capRadius * 2).toFixed(1)}mm) added to Level 15.`);
+    notify(`Hole Cap Surface Patch (Ø${(capRadius * 2).toFixed(1)}mm) added to Level 15.`);
   };
 
   const handleAddFilletBlend = () => {
@@ -189,7 +195,7 @@ export default function SurfacesCADModal({
       [Number(filletCenter.x), Number(filletCenter.z)]
     );
     if (onAddSurfaceEntity) onAddSurfaceEntity(fillet);
-    alert(`Fillet Blend Sheet (R${filletRad}mm, Length: ${filletLen}mm) added to Level 15.`);
+    notify(`Fillet Blend Sheet (R${filletRad}mm, Length: ${filletLen}mm) added to Level 15.`);
   };
 
   const navTools = [
@@ -276,6 +282,25 @@ export default function SurfacesCADModal({
             <X size={20} />
           </button>
         </div>
+
+        {/* Inline Feedback Banner */}
+        {feedback && (
+          <div style={{
+            margin: '8px 16px',
+            padding: '8px 14px',
+            background: feedback.type === 'warning' ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)',
+            border: `1px solid ${feedback.type === 'warning' ? '#f59e0b' : '#10b981'}`,
+            borderRadius: '4px',
+            color: '#fff',
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <CheckCircle2 size={15} color={feedback.type === 'warning' ? '#f59e0b' : '#10b981'} />
+            <span>{feedback.msg}</span>
+          </div>
+        )}
 
         {/* Modal Layout: Sidebar Tool Navigator + Content Body */}
         <div style={{ display: 'flex', flex: 1, minHeight: '490px', overflow: 'hidden' }}>
