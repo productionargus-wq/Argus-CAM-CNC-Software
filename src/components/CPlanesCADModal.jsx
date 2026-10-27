@@ -154,13 +154,13 @@ export default function CPlanesCADModal({
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '14px' }}>
           
           {/* Method Selector Tabs */}
-          <div style={{ display: 'flex', gap: '6px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
             <button
               className={`btn-secondary ${activeTab === 'angled' ? 'active' : ''}`}
               onClick={() => setActiveTab('angled')}
               style={{
-                background: activeTab === 'angled' ? '#0284c7' : '#141822',
-                color: activeTab === 'angled' ? '#fff' : '#94a3b8',
+                background: activeTab === 'angled' ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
+                color: activeTab === 'angled' ? '#fff' : 'var(--text-secondary)',
                 fontWeight: 600,
                 fontSize: '11px'
               }}
@@ -171,8 +171,8 @@ export default function CPlanesCADModal({
               className={`btn-secondary ${activeTab === '3pt' ? 'active' : ''}`}
               onClick={() => setActiveTab('3pt')}
               style={{
-                background: activeTab === '3pt' ? '#0284c7' : '#141822',
-                color: activeTab === '3pt' ? '#fff' : '#94a3b8',
+                background: activeTab === '3pt' ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
+                color: activeTab === '3pt' ? '#fff' : 'var(--text-secondary)',
                 fontWeight: 600,
                 fontSize: '11px'
               }}
@@ -183,8 +183,8 @@ export default function CPlanesCADModal({
               className={`btn-secondary ${activeTab === 'offset' ? 'active' : ''}`}
               onClick={() => setActiveTab('offset')}
               style={{
-                background: activeTab === 'offset' ? '#0284c7' : '#141822',
-                color: activeTab === 'offset' ? '#fff' : '#94a3b8',
+                background: activeTab === 'offset' ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
+                color: activeTab === 'offset' ? '#fff' : 'var(--text-secondary)',
                 fontWeight: 600,
                 fontSize: '11px'
               }}
@@ -436,19 +436,19 @@ export default function CPlanesCADModal({
             <div style={{
               maxHeight: '190px',
               overflowY: 'auto',
-              border: '1px solid #1e293b',
+              border: '1px solid var(--border-subtle)',
               borderRadius: '4px',
-              background: '#090d14'
+              background: 'var(--bg-primary)'
             }}>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1.5fr 70px 60px 1.2fr 1fr 80px',
                 padding: '6px 10px',
-                background: '#0f172a',
+                background: 'var(--bg-tertiary)',
                 fontSize: '10.5px',
                 fontWeight: 700,
-                color: '#94a3b8',
-                borderBottom: '1px solid #1e293b'
+                color: 'var(--text-secondary)',
+                borderBottom: '1px solid var(--border-subtle)'
               }}>
                 <div>Plane Name</div>
                 <div>Code</div>
@@ -470,8 +470,8 @@ export default function CPlanesCADModal({
                       padding: '7px 10px',
                       fontSize: '11px',
                       alignItems: 'center',
-                      background: isActive ? 'rgba(56,189,248,0.12)' : 'transparent',
-                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      background: isActive ? 'var(--bg-active)' : 'transparent',
+                      borderBottom: '1px solid var(--border-subtle)',
                       cursor: 'pointer'
                     }}
                   >

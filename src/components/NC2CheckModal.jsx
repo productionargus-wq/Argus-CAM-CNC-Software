@@ -178,9 +178,9 @@ export default function NC2CheckModal({
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px', alignItems: 'center' }}>
               <div className="form-group">
                 <label>Target Machine Digital Twin:</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#0a0d12', padding: '6px 10px', borderRadius: '4px', border: '1px solid #1e293b' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
                   <Cpu size={14} color="#38bdf8" />
-                  <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#f8fafc' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
                     {activeMachine?.name || 'DMG MORI DMU 50'}
                   </span>
                   <span style={{ fontSize: '9px', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '2px 5px', borderRadius: '3px', marginLeft: 'auto' }}>
@@ -245,8 +245,8 @@ export default function NC2CheckModal({
             {/* Zero Point Table Drawer */}
             {showWcsTable && (
               <div style={{
-                background: '#090d14',
-                border: '1px solid #1e293b',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: '4px',
                 padding: '8px',
                 fontSize: '11px',
@@ -255,11 +255,11 @@ export default function NC2CheckModal({
                 gap: '6px',
                 textAlign: 'center'
               }}>
-                <div style={{ color: '#64748b' }}>WCS Datum</div>
-                <div style={{ color: '#64748b' }}>X Offset</div>
-                <div style={{ color: '#64748b' }}>Y Offset</div>
-                <div style={{ color: '#64748b' }}>Z Offset</div>
-                <div style={{ color: '#64748b' }}>B/C Rotary</div>
+                <div style={{ color: 'var(--text-muted)' }}>WCS Datum</div>
+                <div style={{ color: 'var(--text-muted)' }}>X Offset</div>
+                <div style={{ color: 'var(--text-muted)' }}>Y Offset</div>
+                <div style={{ color: 'var(--text-muted)' }}>Z Offset</div>
+                <div style={{ color: 'var(--text-muted)' }}>B/C Rotary</div>
 
                 <div style={{ color: '#38bdf8', fontWeight: 700 }}>G54 (Primary)</div>
                 <div>0.000 mm</div>
@@ -440,23 +440,23 @@ export default function NC2CheckModal({
             {/* Generated Stats or Excerpt */}
             {isGenerated && ncResult && (
               <div style={{
-                background: '#090d14',
-                border: '1px solid #1e293b',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: '6px',
                 padding: '10px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '8px'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <CheckCircle2 size={14} color="#10b981" />
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)' }}>
                       DMU50_ZeroClamp_Job{ncResult.fileExtension} &bull; Generated Successfully
                     </span>
                   </div>
-                  <div style={{ display: 'flex', gap: '10px', fontSize: '10.5px', color: '#94a3b8' }}>
-                    <span>Blocks: <strong style={{ color: '#38bdf8' }}>{ncResult.lineCount}</strong></span>
+                  <div style={{ display: 'flex', gap: '10px', fontSize: '10.5px', color: 'var(--text-secondary)' }}>
+                    <span>Blocks: <strong style={{ color: 'var(--accent-blue)' }}>{ncResult.lineCount}</strong></span>
                     <span>Distance: <strong style={{ color: '#10b981' }}>{ncResult.cuttingDistanceM}m</strong></span>
                     <span>Est. Time: <strong style={{ color: '#f59e0b' }}>~{ncResult.estimatedTimeMin} min</strong></span>
                   </div>
@@ -466,8 +466,8 @@ export default function NC2CheckModal({
                 <div style={{
                   fontFamily: 'monospace',
                   fontSize: '10.5px',
-                  color: '#94a3b8',
-                  background: '#05070a',
+                  color: 'var(--text-secondary)',
+                  background: 'var(--bg-tertiary)',
                   padding: '6px 10px',
                   borderRadius: '4px',
                   lineHeight: '1.45',
@@ -475,7 +475,7 @@ export default function NC2CheckModal({
                   overflowY: 'auto'
                 }}>
                   {previewLines.map((line, idx) => (
-                    <div key={idx} style={{ color: line.startsWith(';') || line.startsWith('(') ? '#64748b' : line.startsWith('0') || line.startsWith('N') ? '#38bdf8' : '#e2e8f0' }}>
+                    <div key={idx} style={{ color: line.startsWith(';') || line.startsWith('(') ? 'var(--text-muted)' : line.startsWith('0') || line.startsWith('N') ? 'var(--accent-blue)' : 'var(--text-primary)' }}>
                       {line}
                     </div>
                   ))}

@@ -5,7 +5,7 @@ import {
   Wrench, FileCode, CheckSquare, Upload, FolderOpen, Download,
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
-  Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Gauge
+  Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -13,6 +13,8 @@ import { parseProjectMCAM } from '../utils/projectStorage';
 export default function RibbonBar({
   activeTab,
   onSelectTab,
+  theme = 'light',
+  onToggleTheme,
   onOpenPostModal,
   onOpenSimModal,
   onOpenStockModal,
@@ -1357,8 +1359,17 @@ export default function RibbonBar({
                   onClick={() => onToggleCameraMode && onToggleCameraMode(cameraMode === 'orthographic' ? 'perspective' : 'orthographic')}
                   title="Toggle Perspective vs Orthographic Parallel CAD Projection"
                 >
-                  <Camera size={20} color={cameraMode === 'orthographic' ? '#38bdf8' : '#cbd5e1'} />
+                  <Camera size={20} color={cameraMode === 'orthographic' ? '#38bdf8' : '#64748b'} />
                   <span className="btn-label">{cameraMode === 'orthographic' ? 'Ortho<br />CAD' : 'Persp<br />3D'}</span>
+                </button>
+
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onToggleTheme}
+                  title={`Toggle UI Theme (Current: ${theme === 'light' ? 'Light CAD Day' : 'Dark CAD Night'})`}
+                >
+                  {theme === 'light' ? <Sun size={20} color="#d97706" /> : <Moon size={20} color="#38bdf8" />}
+                  <span className="btn-label">{theme === 'light' ? 'Light<br />Theme' : 'Dark<br />Theme'}</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Camera Mode</span>

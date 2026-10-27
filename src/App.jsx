@@ -54,6 +54,7 @@ import {
 } from './utils/projectStorage';
 
 export default function App() {
+  const [theme, setTheme] = useState(() => localStorage.getItem('argus_theme') || 'light');
   const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
   const [currentModel, setCurrentModel] = useState(() => createImpellerGeometry());
   const [currentProjectName, setCurrentProjectName] = useState('DMU50_5Axis_Impeller.mcam');
@@ -469,6 +470,20 @@ export default function App() {
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, duration);
+  };
+
+  // Synchronize dynamic Theme attribute to root DOM element
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('argus_theme', theme);
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => {
+      const nextTheme = prev === 'light' ? 'dark' : 'light';
+      showToast(`Switched to ${nextTheme === 'light' ? 'Light Theme (Day CAD)' : 'Dark Theme (Night CAD)'}`);
+      return nextTheme;
+    });
   };
 
   // ================= Undo / Redo History Stack =================
@@ -1208,6 +1223,8 @@ export default function App() {
       <TitleBar
         currentProject={currentProjectName}
         activeMachine={activeMachine}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
         onSaveProject={handleSaveProject}
         onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
         onOpenHelpGuide={() => setIsHelpGuideOpen(true)}
@@ -1222,6 +1239,8 @@ export default function App() {
       <RibbonBar
         activeTab={activeRibbonTab}
         onSelectTab={setActiveRibbonTab}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
         onOpenPostModal={() => setIsPostModalOpen(true)}
         onOpenSimModal={() => setIsSimModalOpen(true)}
         onOpenStockModal={() => setIsStockModalOpen(true)}
@@ -1334,6 +1353,7 @@ export default function App() {
           activeOpId={activeOpId}
           activePlane={activePlane}
           planes={planesList}
+          theme={theme}
           isBackplotActive={isBackplotActive}
           backplotMode={backplotMode}
           onCloseBackplot={() => setIsBackplotActive(false)}
@@ -1358,7 +1378,7 @@ export default function App() {
       </div>
 
       {/* 4. Bottom Status Bar */}
-      <StatusBar coords={coords} activeWcs={activeWcs} activeMachine={activeMachine} />
+      <StatusBar coords={coords} activeWcs={activeWcs} activeMachine={activeMachine} theme={theme} />
 
       {/* 5. File System Modal Dialogs (Tab 1) */}
       <FileNewModal

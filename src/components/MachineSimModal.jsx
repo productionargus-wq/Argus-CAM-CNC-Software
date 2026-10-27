@@ -479,7 +479,7 @@ export default function MachineSimModal({
                 <select
                   value={speedMultiplier}
                   onChange={(e) => setSpeedMultiplier(Number(e.target.value))}
-                  style={{ background: '#1e293b', border: '1px solid #475569', color: '#f8fafc', padding: '4px', borderRadius: '4px', fontSize: '10.5px' }}
+                  style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', padding: '4px', borderRadius: '4px', fontSize: '10.5px' }}
                 >
                   <option value={0.5}>0.5x</option>
                   <option value={1}>1.0x</option>

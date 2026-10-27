@@ -185,8 +185,8 @@ export default function FeedsSpeedsModal({
 
               {/* Material Quick Specs */}
               <div style={{
-                background: '#090d14',
-                border: '1px solid #1e293b',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: '6px',
                 padding: '6px 10px',
                 fontSize: '11px',
@@ -342,8 +342,8 @@ export default function FeedsSpeedsModal({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
               {/* Spindle Speed */}
               <div style={{
-                background: '#090d14',
-                border: '1px solid #1e293b',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: '6px',
                 padding: '10px',
                 display: 'flex',
@@ -359,8 +359,8 @@ export default function FeedsSpeedsModal({
 
               {/* Feed Rate */}
               <div style={{
-                background: '#090d14',
-                border: '1px solid #1e293b',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: '6px',
                 padding: '10px',
                 display: 'flex',
@@ -376,8 +376,8 @@ export default function FeedsSpeedsModal({
 
               {/* MRR */}
               <div style={{
-                background: '#090d14',
-                border: '1px solid #1e293b',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: '6px',
                 padding: '10px',
                 display: 'flex',
@@ -420,7 +420,7 @@ export default function FeedsSpeedsModal({
                     {physics.powerLoadPct}% Load
                   </span>
                 </div>
-                <div style={{ width: '100%', height: '8px', background: '#0a0d14', borderRadius: '4px', overflow: 'hidden', border: '1px solid #1e293b' }}>
+                <div style={{ width: '100%', height: '8px', background: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
                   <div style={{
                     width: `${Math.min(100, physics.powerLoadPct)}%`,
                     height: '100%',
@@ -437,7 +437,7 @@ export default function FeedsSpeedsModal({
                     {physics.torqueLoadPct}% Load
                   </span>
                 </div>
-                <div style={{ width: '100%', height: '8px', background: '#0a0d14', borderRadius: '4px', overflow: 'hidden', border: '1px solid #1e293b' }}>
+                <div style={{ width: '100%', height: '8px', background: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
                   <div style={{
                     width: `${Math.min(100, physics.torqueLoadPct)}%`,
                     height: '100%',

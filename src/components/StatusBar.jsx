@@ -3,14 +3,15 @@ import React from 'react';
 export default function StatusBar({
   coords = { x: '-390.6200', y: '-233.6562', z: '100.0000' },
   activeWcs = 'G54',
-  activeMachine = { name: 'DMG MORI DMU 50 (5X)' }
+  activeMachine = { name: 'DMG MORI DMU 50 (5X)' },
+  theme = 'light'
 }) {
   return (
     <footer className="app-statusbar" aria-label="Status Bar">
       <div className="status-left">
         <div className="status-item">
           <span>MACHINE:</span>
-          <span className="status-val" style={{ color: '#38bdf8' }}>{activeMachine?.name || 'DMU 50 (5X)'}</span>
+          <span className="status-val" style={{ color: 'var(--accent-blue)', fontWeight: 700 }}>{activeMachine?.name || 'DMU 50 (5X)'}</span>
         </div>
 
         <div className="status-item">
@@ -18,14 +19,14 @@ export default function StatusBar({
           <span className="status-val">1 (Solid Mesh)</span>
         </div>
 
-        <div className="status-item" style={{ color: '#38bdf8' }}>
+        <div className="status-item" style={{ color: 'var(--accent-cyan)' }}>
           <span>X:</span>
           <span className="status-val">{coords.x}</span>
           <span>Y:</span>
           <span className="status-val">{coords.y}</span>
           <span>Z:</span>
           <span className="status-val">{coords.z}</span>
-          <span style={{ color: '#a855f7' }}>3D</span>
+          <span style={{ color: 'var(--accent-violet)', fontWeight: 700 }}>3D</span>
         </div>
       </div>
 
@@ -42,11 +43,11 @@ export default function StatusBar({
 
         <div className="status-item">
           <span>WCS:</span>
-          <span className="status-val" style={{ color: '#10b981' }}>{activeWcs}</span>
+          <span className="status-val" style={{ color: 'var(--accent-emerald)', fontWeight: 700 }}>{activeWcs}</span>
         </div>
 
         <div className="status-item">
-          <span className="status-val" style={{ color: '#f59e0b' }}>Metric (G21)</span>
+          <span className="status-val" style={{ color: 'var(--accent-amber)', fontWeight: 600 }}>Metric (G21)</span>
         </div>
       </div>
     </footer>

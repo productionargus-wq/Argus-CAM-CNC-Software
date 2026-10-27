@@ -300,12 +300,12 @@ export default function CAMOperationsWizardModal({
       style={{
         maxWidth: '880px',
         width: '94vw',
-        background: '#141824',
-        border: '1px solid #2a3449',
+        background: 'var(--dialog-bg)',
+        border: '1px solid var(--dialog-border)',
         borderRadius: '10px',
-        color: '#e2e8f0',
+        color: 'var(--text-primary)',
         padding: 0,
-        boxShadow: '0 25px 65px rgba(0,0,0,0.75)'
+        boxShadow: 'var(--shadow-lg)'
       }}
     >
       {/* Header */}

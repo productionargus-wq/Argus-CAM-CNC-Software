@@ -34,6 +34,7 @@ export default function Viewport3D({
   activeOpId = null,
   activePlane = 'Top (G17)',
   planes = [],
+  theme = 'light',
   isBackplotActive = false,
   backplotMode = 'backplot',
   onCloseBackplot = null,
@@ -814,7 +815,7 @@ export default function Viewport3D({
     const allPlanes = planes && planes.length > 0 ? planes : DEFAULT_PLANES;
     const currentPlane = allPlanes.find((p) => p.name === activePlane) || allPlanes[0];
     if (currentPlane) {
-      const helperGroup = buildCPlaneHelperGroup(currentPlane, 240);
+      const helperGroup = buildCPlaneHelperGroup(currentPlane, 240, theme === 'light');
       scene.add(helperGroup);
       cplaneHelperGroupRef.current = helperGroup;
     }
@@ -825,7 +826,29 @@ export default function Viewport3D({
         cplaneHelperGroupRef.current = null;
       }
     };
-  }, [activePlane, planes, layerVisibility?.wcs]);
+  }, [activePlane, planes, layerVisibility?.wcs, theme]);
+
+  // 11c. Dynamic Theme Machine Bed Grid Update
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    const scene = sceneRef.current;
+    if (gridHelperRef.current) {
+      scene.remove(gridHelperRef.current);
+      gridHelperRef.current.geometry.dispose();
+      gridHelperRef.current = null;
+    }
+    const isLight = theme === 'light';
+    const gridHelper = new THREE.GridHelper(
+      400,
+      40,
+      isLight ? 0x94a3b8 : 0x334155,
+      isLight ? 0xcbd5e1 : 0x1e293b
+    );
+    gridHelper.position.y = -20;
+    gridHelper.visible = layerVisibility.bed !== false;
+    scene.add(gridHelper);
+    gridHelperRef.current = gridHelper;
+  }, [theme]);
 
   // 12. Backplot Trajectory Compilation & Scene Object Setup
   useEffect(() => {

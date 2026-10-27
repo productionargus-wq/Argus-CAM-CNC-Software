@@ -226,10 +226,10 @@ export default function OperationsTree({
             gap: '4px',
             fontSize: '10px',
             fontWeight: 700,
-            color: '#94a3b8',
+            color: 'var(--text-muted)',
             padding: '4px 6px',
-            borderBottom: '1px solid #283344',
-            background: '#131822'
+            borderBottom: '1px solid var(--border-subtle)',
+            background: 'var(--bg-tertiary)'
           }}>
             <span>Vis</span>
             <span>#</span>
@@ -248,8 +248,8 @@ export default function OperationsTree({
                   alignItems: 'center',
                   gap: '4px',
                   padding: '5px 6px',
-                  background: lvl.active ? '#1e293b' : '#141822',
-                  border: `1px solid ${lvl.active ? '#3b82f6' : 'transparent'}`,
+                  background: lvl.active ? 'var(--bg-active)' : 'var(--bg-secondary)',
+                  border: `1px solid ${lvl.active ? 'var(--border-focus)' : 'var(--border-subtle)'}`,
                   borderRadius: '3px',
                   cursor: 'pointer',
                   fontSize: '11px'
@@ -341,8 +341,8 @@ export default function OperationsTree({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '6px 8px',
-                  background: s.active ? '#1e293b' : '#141822',
-                  border: `1px solid ${s.active ? '#3b82f6' : '#232c3d'}`,
+                  background: s.active ? 'var(--bg-active)' : 'var(--bg-secondary)',
+                  border: `1px solid ${s.active ? 'var(--border-focus)' : 'var(--border-subtle)'}`,
                   borderRadius: '4px',
                   cursor: 'pointer'
                 }}
@@ -359,17 +359,17 @@ export default function OperationsTree({
                   </button>
                   <Box size={14} color={s.color || '#38bdf8'} />
                   <div style={{ overflow: 'hidden' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: s.active ? 'var(--accent-blue)' : 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                       {s.name}
                     </div>
-                    <div style={{ fontSize: '9.5px', color: '#94a3b8' }}>
+                    <div style={{ fontSize: '9.5px', color: 'var(--text-muted)' }}>
                       {s.material || 'Solid Body'} {s.volumeCm3 ? `| ${s.volumeCm3} cm³` : ''}
                     </div>
                   </div>
                 </div>
 
                 {s.isPrimary && (
-                  <span style={{ fontSize: '8.5px', padding: '1px 4px', borderRadius: '2px', backgroundColor: '#2563eb33', color: '#38bdf8', flexShrink: 0 }}>
+                  <span style={{ fontSize: '8.5px', padding: '1px 4px', borderRadius: '2px', backgroundColor: 'rgba(37,99,235,0.15)', color: 'var(--accent-blue)', fontWeight: 600, flexShrink: 0 }}>
                     WORKPIECE
                   </span>
                 )}
@@ -377,8 +377,8 @@ export default function OperationsTree({
             ))}
           </div>
 
-          <div style={{ marginTop: '12px', padding: '8px', background: '#0e1218', borderRadius: '4px', border: '1px solid #1f2737', fontSize: '10px', color: '#94a3b8' }}>
-            <div>Active Solid: <strong style={{ color: '#38bdf8' }}>{solids.find(s => s.active)?.name || solids[0]?.name || 'Finished Workpiece'}</strong></div>
+          <div style={{ marginTop: '12px', padding: '8px', background: 'var(--bg-tertiary)', borderRadius: '4px', border: '1px solid var(--border-subtle)', fontSize: '10px', color: 'var(--text-secondary)' }}>
+            <div>Active Solid: <strong style={{ color: 'var(--accent-blue)' }}>{solids.find(s => s.active)?.name || solids[0]?.name || 'Finished Workpiece'}</strong></div>
             <div style={{ marginTop: '2px' }}>Solids are chained as machining stock or finished geometry.</div>
           </div>
         </div>
@@ -421,8 +421,8 @@ export default function OperationsTree({
                   key={plane.id || plane.name}
                   onClick={() => onSelectPlane && onSelectPlane(plane.name)}
                   style={{
-                    background: isActive ? '#1e293b' : '#141822',
-                    border: `1px solid ${isActive ? '#38bdf8' : '#283344'}`,
+                    background: isActive ? 'var(--bg-active)' : 'var(--bg-secondary)',
+                    border: `1px solid ${isActive ? 'var(--border-focus)' : 'var(--border-subtle)'}`,
                     padding: '8px 10px',
                     borderRadius: '5px',
                     cursor: 'pointer',
@@ -437,11 +437,11 @@ export default function OperationsTree({
                           width: '6px',
                           height: '6px',
                           borderRadius: '50%',
-                          backgroundColor: isActive ? '#38bdf8' : '#475569',
-                          boxShadow: isActive ? '0 0 6px #38bdf8' : 'none'
+                          backgroundColor: isActive ? 'var(--accent-blue)' : 'var(--border-strong)',
+                          boxShadow: isActive ? '0 0 6px rgba(37,99,235,0.6)' : 'none'
                         }}
                       />
-                      <span style={{ fontSize: '11.5px', fontWeight: 600, color: isActive ? '#38bdf8' : '#f8fafc' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: 600, color: isActive ? 'var(--accent-blue)' : 'var(--text-primary)' }}>
                         {plane.name}
                       </span>
                     </div>
@@ -451,9 +451,9 @@ export default function OperationsTree({
                           fontSize: '9.5px',
                           padding: '1px 4px',
                           borderRadius: '3px',
-                          background: '#0f172a',
-                          color: '#38bdf8',
-                          border: '1px solid #1e293b',
+                          background: 'var(--bg-tertiary)',
+                          color: 'var(--accent-cyan)',
+                          border: '1px solid var(--border-subtle)',
                           fontFamily: 'var(--font-mono)'
                         }}
                       >
@@ -465,8 +465,8 @@ export default function OperationsTree({
                             fontSize: '9.5px',
                             padding: '1px 4px',
                             borderRadius: '3px',
-                            background: '#1e3a5f',
-                            color: '#93c5fd',
+                            background: 'rgba(37,99,235,0.12)',
+                            color: 'var(--accent-blue)',
                             fontWeight: 600,
                             fontFamily: 'var(--font-mono)'
                           }}

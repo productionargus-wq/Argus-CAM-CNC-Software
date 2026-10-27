@@ -1,6 +1,58 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
 
-:root {
+:root, [data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --bg-active: #e2e8f0;
+  --bg-hover: #e8eef6;
+  
+  --border-subtle: #cbd5e1;
+  --border-strong: #94a3b8;
+  --border-focus: #2563eb;
+
+  --accent-blue: #2563eb;
+  --accent-blue-hover: #1d4ed8;
+  --accent-cyan: #0284c7;
+  --accent-amber: #d97706;
+  --accent-emerald: #059669;
+  --accent-rose: #e11d48;
+  --accent-violet: #7c3aed;
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-bright: #020617;
+
+  --titlebar-bg: #e2e8f0;
+  --ribbon-header-bg: #f1f5f9;
+  --ribbon-body-bg: #ffffff;
+  --tree-bg: #f8fafc;
+  --status-bar-bg: #e2e8f0;
+
+  --dialog-bg: #ffffff;
+  --dialog-header-bg: #f1f5f9;
+  --dialog-border: #cbd5e1;
+
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-text: #0f172a;
+
+  --viewport-bg: radial-gradient(circle at 50% 50%, #ffffff 0%, #cbd5e1 100%);
+  --hud-bg: rgba(255, 255, 255, 0.92);
+  --hud-border: rgba(0, 0, 0, 0.12);
+  --hud-text: #0f172a;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 16px rgba(37, 99, 235, 0.15);
+}
+
+[data-theme="dark"] {
   --bg-primary: #12151b;
   --bg-secondary: #1a1e27;
   --bg-tertiary: #222834;
@@ -24,13 +76,24 @@
   --text-muted: #64748b;
   --text-bright: #ffffff;
 
+  --titlebar-bg: #0d1017;
   --ribbon-header-bg: #1e2430;
   --ribbon-body-bg: #181d26;
   --tree-bg: #161a22;
   --status-bar-bg: #0f1217;
 
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  --dialog-bg: #181d27;
+  --dialog-header-bg: linear-gradient(90deg, #1e293b 0%, #171d27 100%);
+  --dialog-border: #333d4e;
+
+  --input-bg: #141822;
+  --input-border: #333d4e;
+  --input-text: #f8fafc;
+
+  --viewport-bg: radial-gradient(circle at 50% 50%, #202736 0%, #0e1218 100%);
+  --hud-bg: rgba(15, 23, 42, 0.75);
+  --hud-border: rgba(255, 255, 255, 0.08);
+  --hud-text: #f1f5f9;
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.25);
@@ -87,7 +150,7 @@ body {
   align-items: center;
   justify-content: space-between;
   height: 32px;
-  background-color: #0d1017;
+  background-color: var(--titlebar-bg);
   border-bottom: 1px solid var(--border-subtle);
   padding: 0 8px;
   font-size: 11px;
@@ -219,7 +282,7 @@ body {
 }
 
 .ribbon-tab.active {
-  color: #ffffff;
+  color: var(--text-primary);
   background-color: var(--ribbon-body-bg);
   font-weight: 600;
   border-top: 2px solid var(--accent-blue);
@@ -244,7 +307,7 @@ body {
   padding: 4px 6px;
   gap: 6px;
   overflow-x: auto;
-  background: linear-gradient(180deg, #1a202c 0%, #151922 100%);
+  background: var(--ribbon-body-bg);
 }
 
 .ribbon-group {
@@ -269,7 +332,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding-top: 2px;
-  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .ribbon-btn-large {
@@ -352,15 +415,16 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 6px 10px;
-  background-color: #1a1e28;
+  background-color: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-subtle);
   font-weight: 600;
   font-size: 11.5px;
+  color: var(--text-primary);
 }
 
 .ops-manager-tabs {
   display: flex;
-  background-color: #12151c;
+  background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -387,7 +451,7 @@ body {
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
-  background-color: #181d26;
+  background-color: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -422,11 +486,11 @@ body {
   align-items: center;
   gap: 6px;
   padding: 4px 6px;
-  background-color: #1f2533;
+  background-color: var(--bg-tertiary);
   border-radius: 4px;
   border: 1px solid var(--border-subtle);
   font-weight: 600;
-  color: #e2e8f0;
+  color: var(--text-primary);
   margin-bottom: 4px;
   cursor: pointer;
 }
@@ -444,17 +508,18 @@ body {
   justify-content: space-between;
   padding: 4px 6px;
   border-radius: 3px;
-  background-color: #171b24;
-  border: 1px solid transparent;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.1s ease;
 }
 .tree-op-item:hover {
   background-color: var(--bg-hover);
-  border-color: var(--border-subtle);
+  border-color: var(--border-strong);
 }
 .tree-op-item.active {
-  background-color: #1e293b;
+  background-color: var(--bg-active);
   border-color: var(--accent-blue);
 }
 
@@ -498,7 +563,7 @@ body {
 .viewport-area {
   flex: 1;
   position: relative;
-  background: radial-gradient(circle at 50% 50%, #202736 0%, #0e1218 100%);
+  background: var(--viewport-bg);
   overflow: hidden;
 }
 
@@ -516,13 +581,14 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(15, 23, 42, 0.75);
+  background: var(--hud-bg);
   backdrop-filter: blur(8px);
   padding: 4px 8px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--hud-border);
   box-shadow: var(--shadow-md);
   z-index: 2;
+  color: var(--hud-text);
 }
 
 .hud-btn {
@@ -538,13 +604,13 @@ body {
   cursor: pointer;
 }
 .hud-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-bright);
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 .hud-btn.active {
-  background: rgba(59, 130, 246, 0.25);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: var(--bg-active);
+  color: var(--accent-blue);
+  border: 1px solid var(--border-focus);
 }
 
 .viewport-cube-controls {
@@ -560,8 +626,9 @@ body {
 .viewcube-box {
   width: 58px;
   height: 58px;
-  background: rgba(18, 24, 38, 0.85);
-  border: 1px solid var(--border-strong);
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  color: var(--hud-text);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -594,10 +661,10 @@ body {
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--text-secondary);
-  background: rgba(15, 23, 42, 0.7);
+  background: var(--hud-bg);
   padding: 4px 8px;
   border-radius: 4px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--hud-border);
   pointer-events: none;
 }
 .scale-bar {
@@ -671,10 +738,11 @@ dialog::backdrop {
 }
 
 .modal-window {
-  background: #181d27;
-  border: 1px solid #333d4e;
+  background: var(--dialog-bg);
+  border: 1px solid var(--dialog-border);
+  color: var(--text-primary);
   border-radius: 8px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 24px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 24px rgba(37, 99, 235, 0.12);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -685,10 +753,11 @@ dialog::backdrop {
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px;
-  background: linear-gradient(90deg, #1e293b 0%, #171d27 100%);
+  background: var(--dialog-header-bg);
   border-bottom: 1px solid var(--border-subtle);
   font-weight: 600;
   font-size: 12.5px;
+  color: var(--text-primary);
 }
 
 .modal-close-btn {
@@ -718,7 +787,7 @@ dialog::backdrop {
 }
 
 .nc2check-section {
-  background: #141821;
+  background: var(--bg-tertiary);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 12px;
@@ -733,7 +802,7 @@ dialog::backdrop {
   color: var(--accent-cyan);
   font-weight: 700;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 4px;
 }
 
@@ -754,10 +823,10 @@ dialog::backdrop {
 
 .text-input {
   flex: 1;
-  background: #0f131a;
-  border: 1px solid var(--border-strong);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 4px;
-  color: #ffffff;
+  color: var(--input-text);
   padding: 5px 8px;
   font-family: var(--font-mono);
   font-size: 11px;
@@ -769,9 +838,9 @@ dialog::backdrop {
 }
 
 .btn-secondary {
-  background: #273040;
-  border: 1px solid var(--border-strong);
-  color: #e2e8f0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
   padding: 5px 10px;
   border-radius: 4px;
   font-size: 11px;
@@ -780,8 +849,8 @@ dialog::backdrop {
   white-space: nowrap;
 }
 .btn-secondary:hover {
-  background: #333e52;
-  border-color: #4a5770;
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
 }
 
 .btn-primary {
@@ -818,7 +887,7 @@ dialog::backdrop {
 
 .sim-canvas-box {
   height: 480px;
-  background: #0c0f14;
+  background: var(--viewport-bg);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   position: relative;
@@ -832,7 +901,7 @@ dialog::backdrop {
 }
 
 .sim-status-card {
-  background: #131720;
+  background: var(--bg-tertiary);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   padding: 10px;
@@ -850,15 +919,15 @@ dialog::backdrop {
 }
 
 .axis-item {
-  background: #0b0e13;
+  background: var(--bg-secondary);
   padding: 4px 6px;
   border-radius: 4px;
   border: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
 }
-.axis-label { color: #38bdf8; font-weight: 700; }
-.axis-val { color: #f8fafc; }
+.axis-label { color: var(--accent-cyan); font-weight: 700; }
+.axis-val { color: var(--text-primary); }
 
 .collision-badge {
   display: flex;
@@ -882,31 +951,31 @@ dialog::backdrop {
 
 .gcode-stream-box {
   height: 180px;
-  background: #0a0d12;
+  background: var(--bg-primary);
   border: 1px solid var(--border-subtle);
   border-radius: 4px;
   padding: 6px;
   font-family: var(--font-mono);
   font-size: 10.5px;
   overflow-y: auto;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 .gcode-line {
   padding: 1px 4px;
   border-radius: 2px;
 }
 .gcode-line.active {
-  background: rgba(37, 99, 235, 0.3);
-  color: #ffffff;
+  background: rgba(37, 99, 235, 0.2);
+  color: var(--text-primary);
   font-weight: 600;
-  border-left: 2px solid var(--accent-cyan);
+  border-left: 2px solid var(--accent-blue);
 }
 
 .sim-playback-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #11151c;
+  background: var(--bg-tertiary);
   padding: 8px;
   border-radius: 6px;
   border: 1px solid var(--border-subtle);
@@ -946,11 +1015,11 @@ dialog::backdrop {
   position: absolute;
   bottom: 12px;
   left: 12px;
-  background: rgba(15, 23, 42, 0.85);
+  background: var(--hud-bg);
   backdrop-filter: blur(8px);
   padding: 8px 12px;
   border-radius: 6px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--hud-border);
   font-family: var(--font-mono);
   font-size: 10.5px;
   display: flex;
@@ -958,6 +1027,7 @@ dialog::backdrop {
   gap: 4px;
   box-shadow: var(--shadow-md);
   z-index: 2;
+  color: var(--hud-text);
 }
 
 .part-info-row {
@@ -966,12 +1036,12 @@ dialog::backdrop {
   gap: 16px;
 }
 .part-info-label { color: var(--text-muted); }
-.part-info-val { color: #f1f5f9; font-weight: 600; }
+.part-info-val { color: var(--text-primary); font-weight: 600; }
 
 /* Stock Setup Modal Form */
 .stock-preview-box {
   height: 140px;
-  background: #0f131a;
+  background: var(--bg-primary);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   display: flex;
@@ -987,15 +1057,15 @@ dialog::backdrop {
   gap: 4px;
   width: 110px;
   height: 110px;
-  background: #1e293b;
+  background: var(--bg-tertiary);
   padding: 6px;
   border-radius: 4px;
   border: 1px solid var(--border-subtle);
 }
 
 .origin-point-btn {
-  background: #334155;
-  border: 1px solid transparent;
+  background: var(--bg-active);
+  border: 1px solid var(--border-subtle);
   border-radius: 3px;
   cursor: pointer;
   display: flex;
@@ -1004,12 +1074,12 @@ dialog::backdrop {
   transition: all 0.15s ease;
 }
 .origin-point-btn:hover {
-  background: #475569;
+  background: var(--bg-hover);
 }
 .origin-point-btn.active {
-  background: #0284c7;
-  border-color: #38bdf8;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+  background: var(--accent-blue);
+  border-color: #60a5fa;
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
 }
 
 /* Print Stylesheet for Shop Floor CNC Setup Sheet */

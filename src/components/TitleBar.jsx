@@ -1,9 +1,11 @@
 import React from 'react';
-import { Save, RotateCcw, RotateCw, Printer, HelpCircle, Minus, Square, X, Cpu } from 'lucide-react';
+import { Save, RotateCcw, RotateCw, Printer, HelpCircle, Minus, Square, X, Cpu, Sun, Moon } from 'lucide-react';
 
 export default function TitleBar({
   currentProject = "DMU_50evo_Katana_Schraubstock.mcam",
   activeMachine = { name: "DMG MORI DMU 50", type: "5-Axis Mill-Turn" },
+  theme = 'light',
+  onToggleTheme,
   onSaveProject,
   onOpenSetupSheet,
   onOpenHelpGuide,
@@ -86,6 +88,14 @@ export default function TitleBar({
           </button>
           <button className="quick-btn" onClick={onOpenHelpGuide} title="Help &amp; Keyboard Navigation Guide">
             <HelpCircle size={13} />
+          </button>
+          <button
+            className="quick-btn"
+            onClick={onToggleTheme}
+            title={theme === 'light' ? 'Switch to Dark Mode (CAD Night)' : 'Switch to Light Mode (CAD Day)'}
+            style={{ color: theme === 'light' ? '#d97706' : '#38bdf8', marginLeft: '4px' }}
+          >
+            {theme === 'light' ? <Moon size={13} /> : <Sun size={13} />}
           </button>
         </div>
       </div>
