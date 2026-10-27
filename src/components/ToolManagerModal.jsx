@@ -1,7 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Wrench, Plus, Trash2, Copy, Check, Disc, Shield, Zap } from 'lucide-react';
+import { X, Wrench, Plus, Trash2, Copy, Check, Disc, Shield, Zap, Gauge } from 'lucide-react';
 
-export default function ToolManagerModal({ isOpen, onClose, tools, onUpdateTools }) {
+export default function ToolManagerModal({
+  isOpen,
+  onClose,
+  tools,
+  onUpdateTools,
+  onOpenFeedsSpeedsModal
+}) {
   const dialogRef = useRef(null);
 
   const [toolList, setToolList] = useState(tools);
@@ -269,8 +275,23 @@ export default function ToolManagerModal({ isOpen, onClose, tools, onUpdateTools
 
               {/* Speeds & Feeds Card */}
               <div className="nc2check-section">
-                <div className="section-label">SPEEDS & FEEDS (CHIP LOAD CALCULATOR)</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '4px' }}>
+                  <div className="section-label" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+                    SPEEDS &amp; FEEDS (CHIP LOAD CALCULATOR)
+                  </div>
+                  {onOpenFeedsSpeedsModal && (
+                    <button
+                      className="btn-secondary"
+                      onClick={() => onOpenFeedsSpeedsModal(selectedTool.id)}
+                      style={{ padding: '2px 8px', fontSize: '10px', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      title="Open Material Machinability Physics Calculator"
+                    >
+                      <Gauge size={11} color="#38bdf8" />
+                      Physics Calculator
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '6px' }}>
                   <div className="form-group">
                     <label>Cutting Speed Vc (m/min):</label>
                     <input

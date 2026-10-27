@@ -18,6 +18,8 @@ import SaveAsModal from './components/SaveAsModal';
 import RecentProjectsModal from './components/RecentProjectsModal';
 import ExportCADModal from './components/ExportCADModal';
 import WireframeSketcherModal from './components/WireframeSketcherModal';
+import FeedsSpeedsModal from './components/FeedsSpeedsModal';
+import { parseNCFileToToolpath } from './utils/gcodeParser';
 import SurfacesCADModal from './components/SurfacesCADModal';
 import SolidsCADModal from './components/SolidsCADModal';
 import ModelPrepModal from './components/ModelPrepModal';
@@ -165,6 +167,71 @@ export default function App() {
     setBackplotMode('verify');
     setIsBackplotActive(true);
     showToast("Solid Verify: Material removal simulation initialized", "info");
+  };
+
+  // Feeds & Speeds Calculator State
+  const [isFeedsSpeedsOpen, setIsFeedsSpeedsOpen] = useState(false);
+  const [feedsSpeedsToolId, setFeedsSpeedsToolId] = useState(null);
+
+  const handleOpenFeedsSpeeds = (toolId = null) => {
+    setFeedsSpeedsToolId(toolId || tools[0]?.id);
+    setIsFeedsSpeedsOpen(true);
+  };
+
+  const handleUpdateToolParams = (toolId, params) => {
+    setTools((prev) =>
+      prev.map((t) => (t.id === toolId ? { ...t, ...params } : t))
+    );
+    pushSnapshot();
+  };
+
+  const handleUpdateOpParams = (opId, params) => {
+    setOperations((prev) =>
+      prev.map((op) => (op.id === opId ? { ...op, ...params } : op))
+    );
+    pushSnapshot();
+  };
+
+  // G-Code Reverse Backplotter & NC Importer
+  const handleImportNCProgram = async (file) => {
+    try {
+      const text = await file.text();
+      const result = parseNCFileToToolpath(text, file.name);
+
+      const newOpId = operations.length > 0 ? Math.max(...operations.map((o) => o.id)) + 1 : 1;
+      const importedOp = {
+        id: newOpId,
+        name: `NC: ${file.name.replace(/\.[^/.]+$/, "")}`,
+        toolId: tools[0]?.id || 1,
+        toolName: `Imported NC Program`,
+        badgeClass: 'contour',
+        badgeText: 'NC',
+        visible: true,
+        stepoverPct: 30,
+        stepdown: 2.0,
+        totalDepth: result.dimensions.y || 15.0,
+        rapidHeight: 15.0,
+        feedRate: 1500,
+        spindleRpm: 8000
+      };
+
+      setOperations((prev) => [...prev, importedOp]);
+      setActiveOpId(newOpId);
+
+      if (!currentModel && result.box) {
+        setPartMetrics({
+          box: result.box,
+          dimensions: result.dimensions,
+          triangles: result.lineCount
+        });
+      }
+
+      showToast(`Imported "${file.name}": ${result.lineCount} blocks, ${result.cuttingLines.length} cuts, ${result.estTimeMin}m cycle`, 'success');
+      handleStartBackplot(newOpId);
+    } catch (err) {
+      console.error("G-code parsing error:", err);
+      showToast(`Failed to parse G-code file: ${err.message}`, 'danger');
+    }
   };
 
   const [activeOpId, setActiveOpId] = useState(1);
@@ -1090,6 +1157,8 @@ export default function App() {
         onOpenSimModal={() => setIsSimModalOpen(true)}
         onOpenStockModal={() => setIsStockModalOpen(true)}
         onOpenToolManager={() => setIsToolManagerOpen(true)}
+        onOpenFeedsSpeedsModal={handleOpenFeedsSpeeds}
+        onImportNCProgram={handleImportNCProgram}
         onOpenGCodeViewer={() => setIsGCodeViewerOpen(true)}
         onOpenEntityAnalyzer={() => setIsEntityAnalyzerOpen(true)}
         onOpenDistanceCaliper={() => setIsDistanceCaliperOpen(true)}
@@ -1428,6 +1497,21 @@ export default function App() {
         onClose={() => setIsToolManagerOpen(false)}
         tools={tools}
         onUpdateTools={setTools}
+        onOpenFeedsSpeedsModal={handleOpenFeedsSpeeds}
+      />
+
+      {/* Feeds, Speeds & Material Machinability Physics Modal */}
+      <FeedsSpeedsModal
+        isOpen={isFeedsSpeedsOpen}
+        onClose={() => setIsFeedsSpeedsOpen(false)}
+        tools={tools}
+        activeToolId={feedsSpeedsToolId}
+        operations={operations}
+        activeOpId={activeOpId}
+        activeMachine={activeMachine}
+        onUpdateToolParams={handleUpdateToolParams}
+        onUpdateOpParams={handleUpdateOpParams}
+        onNotify={showToast}
       />
 
       {/* 10. Operation Parameters Modal */}

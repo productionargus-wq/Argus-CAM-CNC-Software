@@ -5,7 +5,7 @@ import {
   Wrench, FileCode, CheckSquare, Upload, FolderOpen, Download,
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
-  Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun
+  Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Gauge
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -17,6 +17,8 @@ export default function RibbonBar({
   onOpenSimModal,
   onOpenStockModal,
   onOpenToolManager,
+  onOpenFeedsSpeedsModal,
+  onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
   onOpenDistanceCaliper,
@@ -81,6 +83,7 @@ export default function RibbonBar({
 }) {
   const fileInputRef = useRef(null);
   const mcamFileInputRef = useRef(null);
+  const ncFileInputRef = useRef(null);
 
   const tabs = [
     'File', 'Home', 'Wireframe', 'Surfaces', 'Solids',
@@ -122,6 +125,16 @@ export default function RibbonBar({
     }
   };
 
+  const handleNCFileChange = async (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      if (onImportNCProgram) {
+        onImportNCProgram(file);
+      }
+      e.target.value = '';
+    }
+  };
+
   return (
     <nav className="ribbon-container" aria-label="Application Ribbon Navigation">
       {/* Hidden file input for 3D CAD meshes (.stl, .obj) */}
@@ -140,6 +153,15 @@ export default function RibbonBar({
         accept=".mcam,.json"
         style={{ display: 'none' }}
         onChange={handleMCAMFileChange}
+      />
+
+      {/* Hidden file input for raw CNC NC Programs */}
+      <input
+        ref={ncFileInputRef}
+        type="file"
+        accept=".nc,.gcode,.h,.mpf,.tap,.txt"
+        style={{ display: 'none' }}
+        onChange={handleNCFileChange}
       />
 
       {/* Ribbon Navigation Tabs */}
@@ -230,6 +252,14 @@ export default function RibbonBar({
 
             <div className="ribbon-group">
               <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => ncFileInputRef.current?.click()}
+                  title="Import Raw CNC G-Code File (.nc, .gcode, .h, .mpf) for 3D Backplot"
+                >
+                  <FileCode size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Import<br />G-Code</span>
+                </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={onOpenGCodeViewer}
@@ -1239,6 +1269,10 @@ export default function RibbonBar({
                   <Wrench size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Mill Tool<br />Manager</span>
                 </button>
+                <button className="ribbon-btn-large" onClick={onOpenFeedsSpeedsModal} title="Feeds, Speeds & Material Machinability Physics Calculator">
+                  <Gauge size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Feeds &amp;<br />Speeds</span>
+                </button>
               </div>
               <span className="ribbon-group-title">Job Setup</span>
             </div>
@@ -1511,6 +1545,14 @@ export default function RibbonBar({
                 >
                   <ShieldAlert size={22} color="#f59e0b" />
                   <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Collision<br />Check</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenFeedsSpeedsModal}
+                  title="Feeds, Speeds & Material Machinability Physics Calculator"
+                >
+                  <Gauge size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Feeds &amp;<br />Speeds</span>
                 </button>
               </div>
               <span className="ribbon-group-title">CAM Manager</span>
