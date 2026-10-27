@@ -19,6 +19,10 @@ import {
   compileBackplotTrajectory,
   sampleTrajectoryAtT
 } from '../utils/toolpathEngine';
+import {
+  buildCPlaneHelperGroup,
+  DEFAULT_PLANES
+} from '../utils/cplaneGeometry';
 
 export default function Viewport3D({
   currentModel,
@@ -26,6 +30,8 @@ export default function Viewport3D({
   operations,
   tools,
   activeOpId = null,
+  activePlane = 'Top (G17)',
+  planes = [],
   isBackplotActive = false,
   backplotMode = 'backplot',
   onCloseBackplot = null,
@@ -76,6 +82,7 @@ export default function Viewport3D({
   const dirLight1Ref = useRef(null);
   const dirLight2Ref = useRef(null);
   const clipPlaneHelperRef = useRef(null);
+  const cplaneHelperGroupRef = useRef(null);
   const normalMaterialRef = useRef(new THREE.MeshNormalMaterial());
 
   // Backplot & Solid Verify Simulation State & Refs
@@ -770,6 +777,35 @@ export default function Viewport3D({
       group.add(entity);
     });
   }, [customGeometry, layerVisibility.wireframe, layerVisibility.surfaces]);
+
+  // 11b. Dynamic CPlanes & Construction Coordinate System Grid/Triad
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    const scene = sceneRef.current;
+
+    // Remove previous helper if present
+    if (cplaneHelperGroupRef.current) {
+      scene.remove(cplaneHelperGroupRef.current);
+      cplaneHelperGroupRef.current = null;
+    }
+
+    if (layerVisibility?.wcs === false) return;
+
+    const allPlanes = planes && planes.length > 0 ? planes : DEFAULT_PLANES;
+    const currentPlane = allPlanes.find((p) => p.name === activePlane) || allPlanes[0];
+    if (currentPlane) {
+      const helperGroup = buildCPlaneHelperGroup(currentPlane, 240);
+      scene.add(helperGroup);
+      cplaneHelperGroupRef.current = helperGroup;
+    }
+
+    return () => {
+      if (cplaneHelperGroupRef.current && sceneRef.current) {
+        sceneRef.current.remove(cplaneHelperGroupRef.current);
+        cplaneHelperGroupRef.current = null;
+      }
+    };
+  }, [activePlane, planes, layerVisibility?.wcs]);
 
   // 12. Backplot Trajectory Compilation & Scene Object Setup
   useEffect(() => {

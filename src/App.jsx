@@ -19,7 +19,9 @@ import RecentProjectsModal from './components/RecentProjectsModal';
 import ExportCADModal from './components/ExportCADModal';
 import WireframeSketcherModal from './components/WireframeSketcherModal';
 import FeedsSpeedsModal from './components/FeedsSpeedsModal';
+import CPlanesCADModal from './components/CPlanesCADModal';
 import { parseNCFileToToolpath } from './utils/gcodeParser';
+import { DEFAULT_PLANES } from './utils/cplaneGeometry';
 import SurfacesCADModal from './components/SurfacesCADModal';
 import SolidsCADModal from './components/SolidsCADModal';
 import ModelPrepModal from './components/ModelPrepModal';
@@ -92,6 +94,8 @@ export default function App() {
   // Mastercam Manager Sidebar Tab ('Toolpaths', 'Levels', 'Solids', 'Planes')
   const [activeManagerTab, setActiveManagerTab] = useState('Toolpaths');
   const [activePlane, setActivePlane] = useState('Top (G17)');
+  const [planesList, setPlanesList] = useState(DEFAULT_PLANES);
+  const [isCPlanesModalOpen, setIsCPlanesModalOpen] = useState(false);
 
   // Mastercam Core Levels
   const [levels, setLevels] = useState([
@@ -924,11 +928,42 @@ export default function App() {
 
   const handleSelectPlane = (planeName) => {
     setActivePlane(planeName);
+    const target = planesList.find((p) => p.name === planeName);
+    if (target?.wcsCode) {
+      setActiveWcs(target.wcsCode);
+    }
     if (planeName.includes('Top')) handleSnapCamera('top');
     else if (planeName.includes('Front')) handleSnapCamera('front');
     else if (planeName.includes('Right')) handleSnapCamera('right');
     else if (planeName.includes('Isometric')) handleSnapCamera('iso');
     else if (planeName.includes('Bottom')) handleSnapCamera('bottom');
+  };
+
+  const handleCreatePlane = (newPlane) => {
+    setPlanesList((prev) => [...prev, newPlane]);
+    setActivePlane(newPlane.name);
+    if (newPlane.wcsCode) {
+      setActiveWcs(newPlane.wcsCode);
+    }
+    showToast(`CPlane "${newPlane.name}" created and set active.`, 'success');
+  };
+
+  const handleDeletePlane = (planeId) => {
+    setPlanesList((prev) => {
+      const target = prev.find((p) => p.id === planeId);
+      if (!target) return prev;
+      if (target.isStandard) {
+        showToast('Standard system planes (G17/G18/G19) cannot be deleted.', 'error');
+        return prev;
+      }
+      const filtered = prev.filter((p) => p.id !== planeId);
+      if (activePlane === target.name) {
+        setActivePlane('Top (G17)');
+        handleSnapCamera('top');
+      }
+      showToast(`Plane "${target.name}" removed.`);
+      return filtered;
+    });
   };
 
   // Transform Handlers
@@ -1171,6 +1206,7 @@ export default function App() {
         onOpenTransformModal={handleOpenTransformModal}
         onOpenMachineConfigModal={() => setIsMachineConfigModalOpen(true)}
         onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
+        onOpenCPlanesModal={() => setIsCPlanesModalOpen(true)}
         onOpenOperationsWizard={() => { setOperationsWizardTab('create'); setIsOperationsWizardOpen(true); }}
         onOpenCollisionCheck={() => { setOperationsWizardTab('safety'); setIsOperationsWizardOpen(true); }}
         onStartBackplot={handleStartBackplot}
@@ -1241,8 +1277,11 @@ export default function App() {
           activeLevelId={levels.find((l) => l.active)?.id || 1}
           onSetActiveLevel={handleSetActiveLevel}
           onAddLevel={handleAddLevel}
+          planes={planesList}
           activePlane={activePlane}
           onSelectPlane={handleSelectPlane}
+          onOpenCPlanesModal={() => setIsCPlanesModalOpen(true)}
+          onDeletePlane={handleDeletePlane}
           solids={solidsList}
           activeSolidId={solidsList.find((s) => s.active)?.id || 1}
           onSelectSolid={(id) => setSolidsList((prev) => prev.map((s) => ({ ...s, active: s.id === id })))}
@@ -1259,6 +1298,8 @@ export default function App() {
           operations={operations}
           tools={tools}
           activeOpId={activeOpId}
+          activePlane={activePlane}
+          planes={planesList}
           isBackplotActive={isBackplotActive}
           backplotMode={backplotMode}
           onCloseBackplot={() => setIsBackplotActive(false)}
@@ -1511,6 +1552,18 @@ export default function App() {
         activeMachine={activeMachine}
         onUpdateToolParams={handleUpdateToolParams}
         onUpdateOpParams={handleUpdateOpParams}
+        onNotify={showToast}
+      />
+
+      {/* CPlanes & Construction Coordinate System Studio Modal */}
+      <CPlanesCADModal
+        isOpen={isCPlanesModalOpen}
+        onClose={() => setIsCPlanesModalOpen(false)}
+        planes={planesList}
+        activePlaneName={activePlane}
+        onSelectPlane={handleSelectPlane}
+        onCreatePlane={handleCreatePlane}
+        onDeletePlane={handleDeletePlane}
         onNotify={showToast}
       />
 

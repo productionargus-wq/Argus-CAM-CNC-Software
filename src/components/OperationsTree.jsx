@@ -23,8 +23,11 @@ export default function OperationsTree({
   activeLevelId = 1,
   onSetActiveLevel,
   onAddLevel,
+  planes = [],
   activePlane = 'Top (G17)',
   onSelectPlane,
+  onOpenCPlanesModal,
+  onDeletePlane,
   solids = [],
   activeSolidId,
   onSelectSolid,
@@ -43,12 +46,13 @@ export default function OperationsTree({
 
   const tabs = ['Toolpaths', 'Levels', 'Solids', 'Planes'];
 
-  const planesList = [
-    { name: 'Top (G17)', code: 'G17', desc: 'Spindle along Z, XY Table', active: true },
-    { name: 'Front (G18)', code: 'G18', desc: 'Spindle along Y, XZ Plane' },
-    { name: 'Right (G19)', code: 'G19', desc: 'Spindle along X, YZ Plane' },
-    { name: 'Isometric (WCS G54)', code: 'G54', desc: '3D Angled Reference' },
-    { name: 'Bottom (Inverted)', code: 'G17-B', desc: 'Sub-spindle / 2nd Op' }
+  const displayPlanes = planes && planes.length > 0 ? planes : [
+    { id: 'plane_top', name: 'Top (G17)', code: 'G17', desc: 'Spindle along Z, XY Table', isStandard: true, wcsCode: 'G54' },
+    { id: 'plane_front', name: 'Front (G18)', code: 'G18', desc: 'Spindle along Y, XZ Plane', isStandard: true, wcsCode: 'G54' },
+    { id: 'plane_right', name: 'Right (G19)', code: 'G19', desc: 'Spindle along X, YZ Plane', isStandard: true, wcsCode: 'G54' },
+    { id: 'plane_bottom', name: 'Bottom (G17-B)', code: 'G17-B', desc: 'Inverted Sub-Spindle Second Op', isStandard: true, wcsCode: 'G55' },
+    { id: 'plane_iso', name: 'Isometric (WCS G54)', code: 'G54', desc: '3D Compound Isometric Reference', isStandard: true, wcsCode: 'G54' },
+    { id: 'plane_b45_c90', name: '5-Axis B45 C90 Tilted', code: '5X-B45', desc: 'Trunnion Table B=45°, C=90°', isStandard: false, wcsCode: 'G56' }
   ];
 
   return (
@@ -383,29 +387,120 @@ export default function OperationsTree({
       {/* ================= 4. PLANES & WCS TAB ================= */}
       {currentTab === 'Planes' && (
         <div className="ops-tree-content">
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8', marginBottom: '8px' }}>
-            WORK COORDINATE SYSTEM (WCS) &amp; PLANES
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {planesList.map((plane) => (
-              <div
-                key={plane.name}
-                onClick={() => onSelectPlane && onSelectPlane(plane.name)}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8' }}>
+              WCS &amp; CONSTRUCTION PLANES
+            </div>
+            {onOpenCPlanesModal && (
+              <button
+                onClick={onOpenCPlanesModal}
                 style={{
-                  background: activePlane === plane.name ? '#1e293b' : '#141822',
-                  border: `1px solid ${activePlane === plane.name ? '#3b82f6' : '#283344'}`,
-                  padding: '8px',
-                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'linear-gradient(135deg, #0284c7, #2563eb)',
+                  border: 'none',
+                  borderRadius: '3px',
+                  padding: '3px 8px',
+                  color: '#ffffff',
+                  fontSize: '10px',
+                  fontWeight: 600,
                   cursor: 'pointer'
                 }}
+                title="Launch CPlanes & Construction Coordinate System Studio"
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#f8fafc' }}>{plane.name}</span>
-                  <span style={{ fontSize: '10px', color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>[{plane.code}]</span>
+                <Plus size={11} /> New Plane
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            {displayPlanes.map((plane) => {
+              const isActive = activePlane === plane.name;
+              return (
+                <div
+                  key={plane.id || plane.name}
+                  onClick={() => onSelectPlane && onSelectPlane(plane.name)}
+                  style={{
+                    background: isActive ? '#1e293b' : '#141822',
+                    border: `1px solid ${isActive ? '#38bdf8' : '#283344'}`,
+                    padding: '8px 10px',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'border-color 0.15s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor: isActive ? '#38bdf8' : '#475569',
+                          boxShadow: isActive ? '0 0 6px #38bdf8' : 'none'
+                        }}
+                      />
+                      <span style={{ fontSize: '11.5px', fontWeight: 600, color: isActive ? '#38bdf8' : '#f8fafc' }}>
+                        {plane.name}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <span
+                        style={{
+                          fontSize: '9.5px',
+                          padding: '1px 4px',
+                          borderRadius: '3px',
+                          background: '#0f172a',
+                          color: '#38bdf8',
+                          border: '1px solid #1e293b',
+                          fontFamily: 'var(--font-mono)'
+                        }}
+                      >
+                        {plane.code || 'CPLANE'}
+                      </span>
+                      {plane.wcsCode && (
+                        <span
+                          style={{
+                            fontSize: '9.5px',
+                            padding: '1px 4px',
+                            borderRadius: '3px',
+                            background: '#1e3a5f',
+                            color: '#93c5fd',
+                            fontWeight: 600,
+                            fontFamily: 'var(--font-mono)'
+                          }}
+                        >
+                          {plane.wcsCode}
+                        </span>
+                      )}
+                      {!plane.isStandard && onDeletePlane && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeletePlane(plane.id);
+                          }}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            padding: '2px',
+                            marginLeft: '2px'
+                          }}
+                          title="Delete Custom Plane"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '3px', lineHeight: 1.3 }}>
+                    {plane.desc}
+                  </div>
                 </div>
-                <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>{plane.desc}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

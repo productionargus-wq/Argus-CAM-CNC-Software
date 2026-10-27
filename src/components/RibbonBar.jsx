@@ -31,6 +31,7 @@ export default function RibbonBar({
   onOpenTransformModal,
   onOpenMachineConfigModal,
   onOpenViewStudioModal,
+  onOpenCPlanesModal,
   onOpenOperationsWizard,
   onOpenCollisionCheck,
   onStartBackplot,
@@ -337,6 +338,14 @@ export default function RibbonBar({
                 >
                   <Compass size={20} color="#10b981" />
                   <span className="btn-label">WCS<br />Planes</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenCPlanesModal}
+                  title="Open CPlanes & Dynamic WCS Origin Studio (Compound 5-Axis Planes & Offsets)"
+                >
+                  <Grid size={20} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>CPlane<br />Studio</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Levels &amp; Structure</span>
@@ -1231,6 +1240,15 @@ export default function RibbonBar({
                     ))}
                   </div>
                 </div>
+
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenCPlanesModal}
+                  title="Open Construction Planes & Dynamic WCS Origin Studio (Compound 5-Axis Planes)"
+                >
+                  <Compass size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Planes /<br />WCS Studio</span>
+                </button>
               </div>
               <span className="ribbon-group-title">Machine &amp; WCS</span>
             </div>

@@ -163,3 +163,4 @@ export function parseNCFileToToolpath(text, filename = 'Imported_Program.nc') {
     toolsFound: toolChanges.length > 0 ? toolChanges : [{ line: 1, tool: 1 }]
   };
 }
+
