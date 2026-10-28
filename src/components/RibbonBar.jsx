@@ -27,6 +27,7 @@ export default function RibbonBar({
   onOpenLeadInOutModal,
   onOpenFiveAxisStudio,
   onOpenSolidVerifyModal,
+  onOpenFeedOptimizerModal,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -1740,6 +1741,14 @@ export default function RibbonBar({
                 <button className="ribbon-btn-large" onClick={() => onStartVerify ? onStartVerify(null, 'heatmap') : null} title="Inspect In-Process Tolerance Deviation Heatmap (Gouges vs Excess Stock)">
                   <Gauge size={20} color="#f59e0b" />
                   <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Tolerance<br />Heatmap</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenFeedOptimizerModal}
+                  title="Open Feed Rate Optimization & Constant Chip Thickness Studio (Corner Deceleration & RCTF High-Feed)"
+                >
+                  <Activity size={20} color="#f59e0b" />
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Feed Rate<br />Optimizer</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={onOpenSimModal} title="Full 5-Axis Machine Kinematic Digital Twin Simulation">
                   <Eye size={20} color="#38bdf8" />

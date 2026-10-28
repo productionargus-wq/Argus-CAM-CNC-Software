@@ -38,6 +38,7 @@ import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
 import SolidVerifyModal from './components/SolidVerifyModal';
 import ToolAssemblyStudioModal from './components/ToolAssemblyStudioModal';
+import FeedOptimizerModal from './components/FeedOptimizerModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -131,6 +132,7 @@ export default function App() {
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
   const [isSolidVerifyModalOpen, setIsSolidVerifyModalOpen] = useState(false);
   const [isToolAssemblyModalOpen, setIsToolAssemblyModalOpen] = useState(false);
+  const [isFeedOptimizerModalOpen, setIsFeedOptimizerModalOpen] = useState(false);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
@@ -1420,6 +1422,7 @@ export default function App() {
         onOpenLeadInOutModal={() => setIsLeadInOutModalOpen(true)}
         onOpenFiveAxisStudio={() => setIsFiveAxisModalOpen(true)}
         onOpenSolidVerifyModal={() => setIsSolidVerifyModalOpen(true)}
+        onOpenFeedOptimizerModal={() => setIsFeedOptimizerModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1566,6 +1569,28 @@ export default function App() {
         tools={tools}
         operations={operations}
         onApplyAFROperations={handleApplyAFROperations}
+      />
+
+      {/* Feed Rate Optimization & Constant Chip Thickness Studio */}
+      <FeedOptimizerModal
+        isOpen={isFeedOptimizerModalOpen}
+        onClose={() => setIsFeedOptimizerModalOpen(false)}
+        operations={operations}
+        tools={tools}
+        activeOpId={activeOpId}
+        onApplyOptimization={({ scope, opId, config }) => {
+          setOperations((prev) =>
+            prev.map((op) => {
+              const matches = scope === 'all' || op.id === opId;
+              if (!matches) return op;
+              return {
+                ...op,
+                feedOptimization: config
+              };
+            })
+          );
+          showToast(`Feed Rate Optimization applied (${config.strategy.toUpperCase()})`, 'success');
+        }}
       />
 
       {/* Parametric Custom Tool & Toolholder Assembly Studio */}

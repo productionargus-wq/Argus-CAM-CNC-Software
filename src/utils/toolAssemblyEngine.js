@@ -490,3 +490,4 @@ export function auditHolderClearance(toolAssembly = {}, partMetrics = null, maxC
     warnings
   };
 }
+
