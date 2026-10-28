@@ -38,6 +38,7 @@ export default function RibbonBar({
   onOpenCostQuotingModal,
   onOpenCornerReliefStudio,
   onOpenKioskModal,
+  onOpenTombstoneStudio,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -324,6 +325,15 @@ export default function RibbonBar({
                 >
                   <Tablet size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
+                </button>
+
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenTombstoneStudio}
+                  title="Open Multi-WCS Tombstone &amp; 4th-Axis Rotary Indexing Studio (HMC B-Axis &amp; VMC A-Axis Multi-Part)"
+                >
+                  <Grid size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
@@ -1364,6 +1374,15 @@ export default function RibbonBar({
                   <Tablet size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
                 </button>
+
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenTombstoneStudio}
+                  title="Open Multi-WCS Tombstone &amp; 4th-Axis Rotary Indexing Studio (HMC B-Axis &amp; VMC A-Axis Multi-Part)"
+                >
+                  <Grid size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
+                </button>
               </div>
               <span className="ribbon-group-title">Machine &amp; WCS</span>
             </div>
@@ -1473,6 +1492,15 @@ export default function RibbonBar({
                 >
                   <Tablet size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
+                </button>
+
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenTombstoneStudio}
+                  title="Open Multi-WCS Tombstone &amp; 4th-Axis Rotary Indexing Studio (HMC B-Axis &amp; VMC A-Axis Multi-Part)"
+                >
+                  <Grid size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
@@ -1860,6 +1888,15 @@ export default function RibbonBar({
                 >
                   <Tablet size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
+                </button>
+
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenTombstoneStudio}
+                  title="Open Multi-WCS Tombstone &amp; 4th-Axis Rotary Indexing Studio (HMC B-Axis &amp; VMC A-Axis Multi-Part)"
+                >
+                  <Grid size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
                 </button>
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"
