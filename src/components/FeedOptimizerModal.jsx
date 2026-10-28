@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import * as THREE from 'three';
 import {
   X, Gauge, Sliders, CheckCircle2, ShieldCheck, Zap,
   TrendingDown, TrendingUp, Clock, RefreshCw, Layers, Check, Activity, Sparkles
@@ -445,3 +446,4 @@ export default function FeedOptimizerModal({
     </dialog>
   );
 }
+
