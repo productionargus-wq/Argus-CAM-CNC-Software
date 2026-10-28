@@ -734,3 +734,4 @@ export function build3DLatheScene(setupConfig = DEFAULT_LATHE_SETUP) {
 
   return group;
 }
+

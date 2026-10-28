@@ -5,7 +5,8 @@ import {
   Wrench, FileCode, CheckSquare, Upload, FolderOpen, Download,
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
-  Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge
+  Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge,
+  Copy, Cpu, Activity
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -1323,6 +1324,14 @@ export default function RibbonBar({
                   <Wrench size={22} color="#a855f7" />
                   <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Workholding<br />&amp; Fixtures</span>
                 </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenLatheStudio}
+                  title="Open CNC Turning & Lathe / Mill-Turn Studio (OD Roughing G71, Profile Finishing G70, Threading G76, Grooving G75)"
+                >
+                  <Disc size={22} color="#ec4899" />
+                  <span className="btn-label" style={{ color: '#ec4899', fontWeight: 600 }}>Lathe &amp;<br />Mill-Turn</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Mill Tool<br />Manager</span>
@@ -1334,14 +1343,6 @@ export default function RibbonBar({
                 <button className="ribbon-btn-large" onClick={onOpenFeedsSpeedsModal} title="Feeds, Speeds & Material Machinability Physics Calculator">
                   <Gauge size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Feeds &amp;<br />Speeds</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenLatheStudio}
-                  title="Open CNC Turning & Lathe / Mill-Turn Studio (OD Roughing G71, Profile Finishing G70, Threading G76, Grooving G75)"
-                >
-                  <Disc size={22} color="#ec4899" />
-                  <span className="btn-label" style={{ color: '#ec4899', fontWeight: 600 }}>Lathe &amp;<br />Mill-Turn</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={onOpenProbingStudio} title="Renishaw Inspection Plus & Haas WIPS Touch Probing Studio">
                   <Crosshair size={22} color="#d946ef" />
@@ -1644,6 +1645,14 @@ export default function RibbonBar({
                 >
                   <Wrench size={22} color="#a855f7" />
                   <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Workholding<br />&amp; Fixtures</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenLatheStudio}
+                  title="Open CNC Turning & Lathe / Mill-Turn Studio (OD Roughing G71, Profile Finishing G70, Threading G76, Grooving G75)"
+                >
+                  <Disc size={22} color="#ec4899" />
+                  <span className="btn-label" style={{ color: '#ec4899', fontWeight: 600 }}>Lathe &amp;<br />Mill-Turn</span>
                 </button>
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"
