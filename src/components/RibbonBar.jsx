@@ -23,6 +23,7 @@ export default function RibbonBar({
   onOpenProbingStudio,
   onOpenAFRModal,
   onOpenAdaptiveModal,
+  onOpenLeadInOutModal,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -1686,6 +1687,21 @@ export default function RibbonBar({
                 </button>
               </div>
               <span className="ribbon-group-title">Probing &amp; CMM</span>
+            </div>
+
+            {/* Lead In / Lead Out & Compensation Designer Studio */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenLeadInOutModal}
+                  title="Open Toolpath Lead-In / Lead-Out Ramp & Tangent Arc Designer Studio (Mastercam Grade)"
+                >
+                  <Compass size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Lead In/Out<br />Studio</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Lead In/Out &amp; Comp</span>
             </div>
 
             {/* Regeneration & Editing */}

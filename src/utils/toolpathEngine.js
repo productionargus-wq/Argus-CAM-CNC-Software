@@ -1,6 +1,14 @@
 import * as THREE from 'three';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
+import {
+  applyLeadInOutToContour,
+  buildTangentArcLeadIn,
+  buildTangentArcLeadOut,
+  buildHelicalRampEntry,
+  LEAD_ENTRY_TYPES,
+  DEFAULT_LEAD_CONFIG
+} from './leadInOutEngine.js';
 
 export {
   createTouchProbe3D,
@@ -8,7 +16,13 @@ export {
   PROBING_STRATEGIES,
   generateAdaptiveTrochoidalToolpath,
   ADAPTIVE_MATERIALS,
-  calculateAdaptivePhysics
+  calculateAdaptivePhysics,
+  applyLeadInOutToContour,
+  buildTangentArcLeadIn,
+  buildTangentArcLeadOut,
+  buildHelicalRampEntry,
+  LEAD_ENTRY_TYPES,
+  DEFAULT_LEAD_CONFIG
 };
 
 /**
@@ -375,63 +389,28 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
     }
 
     if (slicedLoops.length > 0) {
-      // Use real sliced geometry contours
+      // Use real sliced geometry contours with smooth lead-in / lead-out transitions
       slicedLoops.forEach((loop) => {
         if (loop.length < 2) return;
-
-        // Tangential lead-in arc from clearance
-        const firstPt = loop[0];
-        const leadInStart = new THREE.Vector3(firstPt.x - 6, curY, firstPt.z - 6);
-
-        rapidLines.push([
-          new THREE.Vector3(leadInStart.x, topY + rapidHeight, leadInStart.z),
-          leadInStart
-        ]);
-        cuttingLines.push([leadInStart, firstPt]);
-
-        // Cut along sliced polygon edges
-        for (let i = 0; i < loop.length - 1; i++) {
-          cuttingLines.push([loop[i], loop[i + 1]]);
+        const closedLoop = [...loop];
+        if (loop[0].distanceTo(loop[loop.length - 1]) > 0.1) {
+          closedLoop.push(loop[0].clone());
         }
-        // Close polygon if endpoints are proximate
-        if (loop[0].distanceTo(loop[loop.length - 1]) < 3.0) {
-          cuttingLines.push([loop[loop.length - 1], loop[0]]);
-        }
-
-        // Tangential lead-out arc
-        const lastPt = loop[loop.length - 1];
-        const leadOutEnd = new THREE.Vector3(lastPt.x - 6, curY, lastPt.z + 6);
-        cuttingLines.push([lastPt, leadOutEnd]);
-        rapidLines.push([
-          leadOutEnd,
-          new THREE.Vector3(leadOutEnd.x, topY + rapidHeight, leadOutEnd.z)
-        ]);
+        const leadRes = applyLeadInOutToContour(closedLoop, params.leadConfig, rapidHeight);
+        cuttingLines.push(...leadRes.cuttingLines);
+        rapidLines.push(...leadRes.rapidLines);
       });
     } else {
-      // Fallback perimeter contour
+      // Fallback perimeter contour with tangent circular lead-in & lead-out
       const p1 = new THREE.Vector3(centerX - halfX, curY, centerZ - halfZ);
       const p2 = new THREE.Vector3(centerX + halfX, curY, centerZ - halfZ);
       const p3 = new THREE.Vector3(centerX + halfX, curY, centerZ + halfZ);
       const p4 = new THREE.Vector3(centerX - halfX, curY, centerZ + halfZ);
+      const contour = [p1, p2, p3, p4, p1.clone()];
 
-      const leadInStart = new THREE.Vector3(centerX - halfX - 8, curY, centerZ - halfZ - 8);
-      rapidLines.push([
-        new THREE.Vector3(leadInStart.x, topY + rapidHeight, leadInStart.z),
-        leadInStart
-      ]);
-      cuttingLines.push([leadInStart, p1]);
-
-      cuttingLines.push([p1, p2]);
-      cuttingLines.push([p2, p3]);
-      cuttingLines.push([p3, p4]);
-      cuttingLines.push([p4, p1]);
-
-      const leadOutEnd = new THREE.Vector3(centerX - halfX - 8, curY, centerZ - halfZ + 8);
-      cuttingLines.push([p1, leadOutEnd]);
-      rapidLines.push([
-        leadOutEnd,
-        new THREE.Vector3(leadOutEnd.x, topY + rapidHeight, leadOutEnd.z)
-      ]);
+      const leadRes = applyLeadInOutToContour(contour, params.leadConfig, rapidHeight);
+      cuttingLines.push(...leadRes.cuttingLines);
+      rapidLines.push(...leadRes.rapidLines);
     }
   }
 
@@ -601,32 +580,13 @@ export function generateChamferToolpath(bounds, tool, params = {}) {
     new THREE.Vector3(-halfX, chamferDepth, -halfZ),
     new THREE.Vector3(halfX, chamferDepth, -halfZ),
     new THREE.Vector3(halfX, chamferDepth, halfZ),
-    new THREE.Vector3(-halfX, chamferDepth, halfZ)
+    new THREE.Vector3(-halfX, chamferDepth, halfZ),
+    new THREE.Vector3(-halfX, chamferDepth, -halfZ)
   ];
 
-  // Lead-in
-  const leadStart = new THREE.Vector3(-halfX - 6, chamferDepth + 2, -halfZ);
-  rapidLines.push([
-    new THREE.Vector3(leadStart.x, topY + rapidHeight, leadStart.z),
-    leadStart
-  ]);
-  cuttingLines.push([leadStart, corners[0]]);
-
-  // Chamfer boundary loops (2 finish spring passes)
-  for (let p = 0; p < 2; p++) {
-    cuttingLines.push([corners[0], corners[1]]);
-    cuttingLines.push([corners[1], corners[2]]);
-    cuttingLines.push([corners[2], corners[3]]);
-    cuttingLines.push([corners[3], corners[0]]);
-  }
-
-  // Lead-out
-  const leadEnd = new THREE.Vector3(-halfX - 6, chamferDepth + 2, -halfZ);
-  cuttingLines.push([corners[0], leadEnd]);
-  rapidLines.push([
-    leadEnd,
-    new THREE.Vector3(leadEnd.x, topY + rapidHeight, leadEnd.z)
-  ]);
+  const leadRes = applyLeadInOutToContour(corners, params.leadConfig, rapidHeight);
+  cuttingLines.push(...leadRes.cuttingLines);
+  rapidLines.push(...leadRes.rapidLines);
 
   return { cuttingLines, rapidLines };
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Sliders, Check, RefreshCw, Scissors, Layers } from 'lucide-react';
+import { X, Sliders, Check, RefreshCw, Scissors, Layers, Compass } from 'lucide-react';
 
 export default function OperationModal({ isOpen, onClose, operation, tools, onSaveOperation }) {
   const dialogRef = useRef(null);
@@ -13,7 +13,13 @@ export default function OperationModal({ isOpen, onClose, operation, tools, onSa
     totalDepth: 15.0,
     stockToLeaveXY: 0.2,
     stockToLeaveZ: 0.0,
-    rapidHeight: 15.0
+    rapidHeight: 15.0,
+    entryType: 'tangent_arc',
+    arcRadius: 5.0,
+    sweepAngleDeg: 90,
+    linearExtension: 2.5,
+    overlapDist: 2.0,
+    cutterComp: 'G41'
   });
 
   useEffect(() => {
@@ -27,7 +33,13 @@ export default function OperationModal({ isOpen, onClose, operation, tools, onSa
         totalDepth: operation.totalDepth ?? 15.0,
         stockToLeaveXY: operation.stockToLeaveXY ?? 0.2,
         stockToLeaveZ: operation.stockToLeaveZ ?? 0.0,
-        rapidHeight: operation.rapidHeight ?? 15.0
+        rapidHeight: operation.rapidHeight ?? 15.0,
+        entryType: operation.leadConfig?.entryType || 'tangent_arc',
+        arcRadius: operation.leadConfig?.arcRadius ?? 5.0,
+        sweepAngleDeg: operation.leadConfig?.sweepAngleDeg ?? 90,
+        linearExtension: operation.leadConfig?.linearExtension ?? 2.5,
+        overlapDist: operation.leadConfig?.overlapDist ?? 2.0,
+        cutterComp: operation.leadConfig?.cutterComp || 'G41'
       });
     }
   }, [operation]);
@@ -66,7 +78,15 @@ export default function OperationModal({ isOpen, onClose, operation, tools, onSa
       totalDepth: Number(formData.totalDepth),
       stockToLeaveXY: Number(formData.stockToLeaveXY),
       stockToLeaveZ: Number(formData.stockToLeaveZ),
-      rapidHeight: Number(formData.rapidHeight)
+      rapidHeight: Number(formData.rapidHeight),
+      leadConfig: {
+        entryType: formData.entryType,
+        arcRadius: Number(formData.arcRadius),
+        sweepAngleDeg: Number(formData.sweepAngleDeg),
+        linearExtension: Number(formData.linearExtension || 2.5),
+        overlapDist: Number(formData.overlapDist),
+        cutterComp: formData.cutterComp
+      }
     });
     onClose();
   };
@@ -204,6 +224,100 @@ export default function OperationModal({ isOpen, onClose, operation, tools, onSa
                   value={formData.rapidHeight}
                   onChange={(e) => setFormData({ ...formData, rapidHeight: e.target.value })}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Lead-In / Lead-Out & Cutter Compensation */}
+          <div className="nc2check-section">
+            <div className="section-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Compass size={13} color="#38bdf8" />
+                <span>LEAD-IN / LEAD-OUT &amp; CUTTER COMPENSATION</span>
+              </div>
+              <span style={{ fontSize: '10px', color: '#38bdf8', textTransform: 'none', fontWeight: 'normal' }}>
+                Tangential Circular Arc &bull; G41/G42
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+              <div className="form-group">
+                <label>Entry Strategy:</label>
+                <select
+                  value={formData.entryType}
+                  onChange={(e) => setFormData({ ...formData, entryType: e.target.value })}
+                  className="text-input"
+                >
+                  <option value="tangent_arc">Tangent Circular Arc</option>
+                  <option value="linear_perpendicular">Linear Perpendicular (90&deg;)</option>
+                  <option value="helical_ramp">Helical Spiral Ramp</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Arc Radius (mm):</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="1"
+                  max="50"
+                  className="text-input"
+                  value={formData.arcRadius}
+                  onChange={(e) => setFormData({ ...formData, arcRadius: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Sweep Angle (&deg;):</label>
+                <input
+                  type="number"
+                  step="5"
+                  min="15"
+                  max="180"
+                  className="text-input"
+                  value={formData.sweepAngleDeg}
+                  onChange={(e) => setFormData({ ...formData, sweepAngleDeg: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Linear Extension (mm):</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0.5"
+                  max="20"
+                  className="text-input"
+                  value={formData.linearExtension}
+                  onChange={(e) => setFormData({ ...formData, linearExtension: e.target.value })}
+                  title="Linear segment to engage cutter radius compensation safely before arc"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Contour Seam Overlap (mm):</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="10"
+                  className="text-input"
+                  value={formData.overlapDist}
+                  onChange={(e) => setFormData({ ...formData, overlapDist: e.target.value })}
+                  title="Overlaps cut past start point to eliminate cutter dwell mark"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Cutter Compensation:</label>
+                <select
+                  value={formData.cutterComp}
+                  onChange={(e) => setFormData({ ...formData, cutterComp: e.target.value })}
+                  className="text-input"
+                >
+                  <option value="G41">G41 (Climb / Left)</option>
+                  <option value="G42">G42 (Conventional / Right)</option>
+                  <option value="off">Off (Centerline)</option>
+                </select>
               </div>
             </div>
           </div>

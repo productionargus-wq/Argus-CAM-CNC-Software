@@ -34,6 +34,7 @@ import CAMOperationsWizardModal from './components/CAMOperationsWizardModal';
 import ProbingStudioModal from './components/ProbingStudioModal';
 import AFRModal from './components/AFRModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
+import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -123,6 +124,7 @@ export default function App() {
   const [isProbingModalOpen, setIsProbingModalOpen] = useState(false);
   const [isAFRModalOpen, setIsAFRModalOpen] = useState(false);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
+  const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
@@ -1403,6 +1405,7 @@ export default function App() {
         onOpenProbingStudio={() => setIsProbingModalOpen(true)}
         onOpenAFRModal={() => setIsAFRModalOpen(true)}
         onOpenAdaptiveModal={() => setIsAdaptiveModalOpen(true)}
+        onOpenLeadInOutModal={() => setIsLeadInOutModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1549,6 +1552,15 @@ export default function App() {
         tools={tools}
         operations={operations}
         onApplyAFROperations={handleApplyAFROperations}
+      />
+
+      {/* Lead-In / Lead-Out & Tangent Arc Designer Studio */}
+      <LeadInOutDesignerModal
+        isOpen={isLeadInOutModalOpen}
+        onClose={() => setIsLeadInOutModalOpen(false)}
+        operations={operations}
+        activeOpId={activeOpId}
+        onUpdateOperations={(updatedOps) => setOperations(updatedOps)}
       />
 
       {/* Adaptive Trochoidal High-Speed Roughing Studio (Dynamic Motion) */}
