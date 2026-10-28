@@ -169,11 +169,12 @@ export default function App() {
     showToast("Backplot: In-Viewport 3D tool tracing initialized", "info");
   };
 
-  const handleStartVerify = (opId = null) => {
-    if (opId) setActiveOpId(opId);
-    setBackplotMode('verify');
+  const handleStartVerify = (opId = null, mode = 'verify') => {
+    if (opId && typeof opId === 'number') setActiveOpId(opId);
+    const targetMode = typeof opId === 'string' ? opId : mode;
+    setBackplotMode(targetMode);
     setIsBackplotActive(true);
-    showToast("Solid Verify: Material removal simulation initialized", "info");
+    showToast(targetMode === 'heatmap' ? "Tolerance Heatmap: Gouge & Excess inspection active" : "Solid Verify: Material removal simulation initialized", "info");
   };
 
   // Feeds & Speeds Calculator State

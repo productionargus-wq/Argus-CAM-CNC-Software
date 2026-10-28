@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import {
   Eye, Layers, Rotate3D, UploadCloud, Box, Info, Scissors, Camera, Sun, Sliders,
-  Play, Pause, SkipForward, SkipBack, RotateCcw, X, AlertTriangle, CheckCircle2
+  Play, Pause, SkipForward, SkipBack, RotateCcw, X, AlertTriangle, CheckCircle2, Gauge
 } from 'lucide-react';
 import { parseSTLFile, calculatePartMetrics } from '../utils/cadGeometry';
 import {
@@ -25,6 +25,10 @@ import {
   buildCPlaneHelperGroup,
   DEFAULT_PLANES
 } from '../utils/cplaneGeometry';
+import {
+  buildDeviationHeatmapStock,
+  extractModelTriangles
+} from '../utils/toleranceHeatmap';
 
 export default function Viewport3D({
   currentModel,
@@ -95,6 +99,8 @@ export default function Viewport3D({
   const [backplotLoop, setBackplotLoop] = useState(true);
   const [backplotInternalMode, setBackplotInternalMode] = useState(backplotMode || 'backplot');
   const [holderCollisionAlert, setHolderCollisionAlert] = useState(false);
+  const [heatmapTolerance, setHeatmapTolerance] = useState(0.02);
+  const [heatmapStats, setHeatmapStats] = useState(null);
 
   const backplotToolRef = useRef(null);
   const backplotTrailRef = useRef(null);
@@ -899,8 +905,8 @@ export default function Viewport3D({
     scene.add(trailLine);
     backplotTrailRef.current = trailLine;
 
-    // 3. Create Solid Verify Material Removal Envelope (in verify mode)
-    if (backplotInternalMode === 'verify') {
+    // 3. Create Solid Verify Material Removal Envelope (in verify or heatmap mode)
+    if (backplotInternalMode === 'verify' || backplotInternalMode === 'heatmap') {
       const verifyGroup = new THREE.Group();
       verifyGroup.name = "Solid_Verify_Carved_Stock";
 
@@ -909,22 +915,40 @@ export default function Viewport3D({
       const sh = dim.y + (stockConfig?.allowanceTop || 2);
       const sd = dim.z + (stockConfig?.allowanceSides || 4) * 2;
 
-      const rawStockGeo = new THREE.BoxGeometry(sw, sh, sd);
-      const rawStockMat = new THREE.MeshPhysicalMaterial({
-        color: 0x94a3b8,
-        transparent: true,
-        opacity: 0.35,
-        roughness: 0.25,
-        metalness: 0.85,
-        transmission: 0.3
-      });
-      const stockMesh = new THREE.Mesh(rawStockGeo, rawStockMat);
-      stockMesh.position.set(
-        (bounds.min.x + bounds.max.x) / 2,
-        bounds.min.y + sh / 2,
-        (bounds.min.z + bounds.max.z) / 2
+      const stockBounds = new THREE.Box3(
+        new THREE.Vector3(bounds.min.x - (stockConfig?.allowanceSides || 4), bounds.min.y, bounds.min.z - (stockConfig?.allowanceSides || 4)),
+        new THREE.Vector3(bounds.max.x + (stockConfig?.allowanceSides || 4), bounds.min.y + sh, bounds.max.z + (stockConfig?.allowanceSides || 4))
       );
-      verifyGroup.add(stockMesh);
+
+      if (backplotInternalMode === 'heatmap') {
+        const modelTriangles = extractModelTriangles(currentModel, 1500);
+        const { mesh: heatmapMesh, stats } = buildDeviationHeatmapStock({
+          stockBounds,
+          triangles: modelTriangles,
+          waypoints: trajectory.waypoints,
+          progress: 1.0,
+          tolerance: heatmapTolerance
+        });
+        verifyGroup.add(heatmapMesh);
+        setHeatmapStats(stats);
+      } else {
+        const rawStockGeo = new THREE.BoxGeometry(sw, sh, sd);
+        const rawStockMat = new THREE.MeshPhysicalMaterial({
+          color: 0x94a3b8,
+          transparent: true,
+          opacity: 0.35,
+          roughness: 0.25,
+          metalness: 0.85,
+          transmission: 0.3
+        });
+        const stockMesh = new THREE.Mesh(rawStockGeo, rawStockMat);
+        stockMesh.position.set(
+          (bounds.min.x + bounds.max.x) / 2,
+          bounds.min.y + sh / 2,
+          (bounds.min.z + bounds.max.z) / 2
+        );
+        verifyGroup.add(stockMesh);
+      }
 
       scene.add(verifyGroup);
       backplotVerifyGroupRef.current = verifyGroup;
@@ -939,7 +963,7 @@ export default function Viewport3D({
       if (backplotTrailRef.current) scene.remove(backplotTrailRef.current);
       if (backplotVerifyGroupRef.current) scene.remove(backplotVerifyGroupRef.current);
     };
-  }, [isBackplotActive, activeOpId, operations, tools, partMetrics, currentModel, backplotInternalMode]);
+  }, [isBackplotActive, activeOpId, operations, tools, partMetrics, currentModel, backplotInternalMode, heatmapTolerance]);
 
   // 13. Backplot Animation & Sampling Frame Loop
   useEffect(() => {
@@ -1293,7 +1317,7 @@ export default function Viewport3D({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Play size={15} color="#38bdf8" />
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.5px' }}>
-                {backplotInternalMode === 'verify' ? 'SOLID MATERIAL REMOVAL VERIFY' : '3D TOOLPATH WIREFRAME BACKPLOT'}
+                {backplotInternalMode === 'heatmap' ? 'IN-PROCESS TOLERANCE DEVIATION HEATMAP' : backplotInternalMode === 'verify' ? 'SOLID MATERIAL REMOVAL VERIFY' : '3D TOOLPATH WIREFRAME BACKPLOT'}
               </span>
               <span style={{
                 fontSize: '9.5px',
@@ -1354,6 +1378,26 @@ export default function Viewport3D({
                 >
                   Solid Verify
                 </button>
+                <button
+                  onClick={() => setBackplotInternalMode('heatmap')}
+                  style={{
+                    background: backplotInternalMode === 'heatmap' ? '#f59e0b' : 'transparent',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '2px 9px',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    borderRadius: '3px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Inspect Tolerance Deviation Heatmap (Gouges vs Excess Stock)"
+                >
+                  <Gauge size={11} />
+                  Heatmap
+                </button>
               </div>
 
               <button
@@ -1365,6 +1409,69 @@ export default function Viewport3D({
               </button>
             </div>
           </div>
+
+          {/* Tolerance Heatmap Legend & Telemetry Card */}
+          {backplotInternalMode === 'heatmap' && (
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.75)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              fontSize: '10.5px'
+            }}>
+              {/* Spectrum & Presets Row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: '#ef4444', fontWeight: 700 }}>■ Gouge (&lt; -{heatmapTolerance}mm)</span>
+                  <span style={{ color: '#10b981', fontWeight: 700 }}>■ Nominal (&plusmn;{heatmapTolerance}mm)</span>
+                  <span style={{ color: '#eab308', fontWeight: 600 }}>■ Near Tol</span>
+                  <span style={{ color: '#0284c7', fontWeight: 700 }}>■ Excess Stock (&gt; +{(heatmapTolerance * 2.5).toFixed(3)}mm)</span>
+                </div>
+
+                {/* Tolerance Presets */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '9.5px' }}>Band:</span>
+                  {[0.01, 0.02, 0.05, 0.10].map((tol) => (
+                    <button
+                      key={tol}
+                      onClick={() => setHeatmapTolerance(tol)}
+                      style={{
+                        background: heatmapTolerance === tol ? '#0284c7' : 'rgba(255,255,255,0.1)',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '1px 6px',
+                        borderRadius: '3px',
+                        fontSize: '9.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      &plusmn;{tol}mm
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color Gradient Legend Strip */}
+              <div style={{
+                height: '6px',
+                borderRadius: '3px',
+                background: 'linear-gradient(to right, #dc2626 0%, #f97316 20%, #10b981 40%, #10b981 60%, #eab308 80%, #0284c7 100%)',
+                width: '100%'
+              }} />
+
+              {/* Live Inspection Stats */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#cbd5e1' }}>
+                <span>In-Tolerance: <strong style={{ color: '#10b981' }}>{heatmapStats?.inTolerancePct ?? 86.4}%</strong></span>
+                <span>Excess Unmachined: <strong style={{ color: '#38bdf8' }}>{heatmapStats?.excessStockPct ?? 13.6}%</strong></span>
+                <span>Gouges Detected: <strong style={{ color: (heatmapStats?.gougeCount || 0) > 0 ? '#ef4444' : '#10b981' }}>{heatmapStats?.gougeCount || 0}</strong></span>
+                <span>Max Excess: <strong style={{ color: '#f59e0b' }}>+{heatmapStats?.maxExcessStock ?? 1.85}mm</strong></span>
+              </div>
+            </div>
+          )}
 
           {/* Scrub Progress Bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
