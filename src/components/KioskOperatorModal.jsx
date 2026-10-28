@@ -25,7 +25,6 @@ export default function KioskOperatorModal({
   activeOperations = [],
   tools = []
 }) {
-  if (!isOpen) return null;
 
   // Kiosk Window & Audio Settings
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -269,6 +268,8 @@ export default function KioskOperatorModal({
 
   // Active Machine Display Name
   const machineName = activeMachine?.name || 'DMG MORI DMU 50 (5-Axis VMC)';
+
+  if (!isOpen) return null;
 
   return (
     <div

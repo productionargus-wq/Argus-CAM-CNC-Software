@@ -19,7 +19,6 @@ export default function TombstoneStudioModal({
   activeMachine = null,
   onApplyTombstoneToCAM = null
 }) {
-  if (!isOpen) return null;
 
   // View States
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -319,6 +318,8 @@ export default function TombstoneStudioModal({
       if (container) container.innerHTML = '';
     };
   }, [activeTab, layout]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-hidden">

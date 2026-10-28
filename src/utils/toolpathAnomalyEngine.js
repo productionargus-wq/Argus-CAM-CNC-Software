@@ -366,3 +366,4 @@ export function scanProjectToolpaths(operations = [], tools = [], stockConfig = 
     timestamp: new Date().toLocaleTimeString()
   };
 }
+

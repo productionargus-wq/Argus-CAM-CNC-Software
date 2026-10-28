@@ -19,7 +19,6 @@ export default function CustomPostStudioModal({
   activeMachine = null,
   onSaveCustomPost = null
 }) {
-  if (!isOpen) return null;
 
   // Window State
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -176,6 +175,8 @@ export default function CustomPostStudioModal({
     { token: 'DATE', desc: 'ISO creation date timestamp' },
     { token: 'N', desc: 'Dynamic block sequence number' }
   ];
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-hidden select-none">

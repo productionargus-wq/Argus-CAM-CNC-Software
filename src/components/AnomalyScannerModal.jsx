@@ -20,7 +20,6 @@ export default function AnomalyScannerModal({
   stockConfig = {},
   onApplyAutoFixes = null
 }) {
-  if (!isOpen) return null;
 
   // Window State
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -112,6 +111,8 @@ export default function AnomalyScannerModal({
 
   const scoreColor = scanResult.healthScore >= 80 ? 'text-emerald-400' : scanResult.healthScore >= 60 ? 'text-amber-400' : 'text-rose-400';
   const scoreBg = scanResult.healthScore >= 80 ? 'bg-emerald-500/10 border-emerald-500/30' : scanResult.healthScore >= 60 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-rose-500/10 border-rose-500/30';
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-hidden select-none">
@@ -691,3 +692,4 @@ export default function AnomalyScannerModal({
     </div>
   );
 }
+

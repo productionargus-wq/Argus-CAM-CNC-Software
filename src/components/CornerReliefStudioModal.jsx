@@ -18,7 +18,6 @@ export default function CornerReliefStudioModal({
   activeWorkpiece = null,
   onApplyReliefGeometry = null
 }) {
-  if (!isOpen) return null;
 
   // Modal display states
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -151,6 +150,8 @@ export default function CornerReliefStudioModal({
   const polyPointsString = rawPolygon
     .map(pt => `${pt.x + padding},${svgHeight - (pt.y + padding)}`)
     .join(' ');
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-hidden">
