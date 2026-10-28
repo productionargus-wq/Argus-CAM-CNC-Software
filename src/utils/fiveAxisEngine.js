@@ -485,7 +485,7 @@ export function generate5AxisGCode(fiveAxisData, op, tool, controllerDialect = '
   }
 
   // Activate Tool Center Point Management
-  const tcpmAct = tcpm.activateCmd.replace('{T}', tool.number);
+  const tcpmAct = String(tcpm?.activateCmd || 'M128').replace('{T}', String(tool?.number || '1'));
   lines.push(tcpmAct);
 
   // Emit 5-Axis Simultaneous Interpolated Blocks

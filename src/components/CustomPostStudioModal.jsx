@@ -114,7 +114,7 @@ export default function CustomPostStudioModal({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `ArgusCAM_${activeProfile.name.replace(/\s+/g, '_')}${activeProfile.extension || '.nc'}`;
+    link.download = `ArgusCAM_${String(activeProfile?.name || 'Custom_Post').replace(/\s+/g, '_')}${activeProfile?.extension || '.nc'}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

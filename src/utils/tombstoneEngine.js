@@ -331,14 +331,16 @@ export function generateTombstoneGCode(layout, operations = []) {
     lines.push(`; ----------------------------------------------------------------------------`);
 
     ops.forEach((op, opIdx) => {
+      const rawTool = op.toolId !== undefined && op.toolId !== null ? String(op.toolId) : `${opIdx + 1}`;
+      const toolCall = rawTool.toUpperCase().startsWith('T') ? rawTool.toUpperCase() : `T${rawTool.padStart(2, '0')}`;
       lines.push(``);
       lines.push(`; ============================================================================`);
-      lines.push(`; OPERATION ${opIdx + 1}: ${op.name.toUpperCase()}`);
-      lines.push(`; Tool: ${op.toolId} - ${op.toolName}`);
-      lines.push(`; Spindle: ${op.rpm} RPM | Cutting Feed: ${op.feed} mm/min`);
+      lines.push(`; OPERATION ${opIdx + 1}: ${(op.name || 'Operation').toUpperCase()}`);
+      lines.push(`; Tool: ${toolCall} - ${op.toolName || op.name || 'Carbide Tool'}`);
+      lines.push(`; Spindle: ${op.rpm || 6000} RPM | Cutting Feed: ${op.feed || 1200} mm/min`);
       lines.push(`; ============================================================================`);
-      lines.push(`${nextN()} ${op.toolId} M06`);
-      lines.push(`${nextN()} S${op.rpm} M03`);
+      lines.push(`${nextN()} ${toolCall} M06`);
+      lines.push(`${nextN()} S${op.rpm || 6000} M03`);
       lines.push(`${nextN()} G00 G90 Z${safeClearanceZ.toFixed(3)}`);
       lines.push(`${nextN()} M08 (Coolant ON)`);
 
@@ -388,11 +390,13 @@ export function generateTombstoneGCode(layout, operations = []) {
       lines.push(`${nextN()} G00 ${axis}${face.angleDeg}.000`);
       lines.push(`${nextN()} ${clamp} (Table Clamp)`);
 
-      ops.forEach((op) => {
+      ops.forEach((op, opIdx) => {
+        const rawTool = op.toolId !== undefined && op.toolId !== null ? String(op.toolId) : `${opIdx + 1}`;
+        const toolCall = rawTool.toUpperCase().startsWith('T') ? rawTool.toUpperCase() : `T${rawTool.padStart(2, '0')}`;
         lines.push(``);
-        lines.push(`; Tool: ${op.toolId} - ${op.name}`);
-        lines.push(`${nextN()} ${op.toolId} M06`);
-        lines.push(`${nextN()} S${op.rpm} M03`);
+        lines.push(`; Tool: ${toolCall} - ${op.name || op.toolName || 'Carbide Tool'}`);
+        lines.push(`${nextN()} ${toolCall} M06`);
+        lines.push(`${nextN()} S${op.rpm || 6000} M03`);
         lines.push(`${nextN()} M08`);
 
         face.parts.forEach((part) => {

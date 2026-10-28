@@ -271,14 +271,15 @@ export function calculateJobMachiningQuote({
     totalMachiningSeconds += opSec;
 
     // Track tool engagement
-    const toolId = op.tool?.id || 'T01_TOOL';
+    const matchedTool = tools.find(t => t.id === op.toolId || t.id === Number(op.toolId) || String(t.id) === String(op.toolId)) || op.tool || {};
+    const toolId = matchedTool.id || op.tool?.id || op.toolId || 'T01_TOOL';
     if (!toolUsageMap[toolId]) {
       toolUsageMap[toolId] = {
-        toolName: op.tool?.name || 'Carbide Endmill',
-        toolType: op.tool?.type || 'Endmill',
+        toolName: matchedTool.name || op.tool?.name || op.name || 'Carbide Endmill',
+        toolType: matchedTool.type || op.tool?.type || 'Endmill',
         engagedSeconds: 0,
-        rpm: op.parameters?.spindleRpm || 10000,
-        diameter: op.tool?.diameter || 10.0
+        rpm: op.parameters?.spindleRpm || matchedTool.rpm || 10000,
+        diameter: matchedTool.diameter || op.tool?.diameter || 10.0
       };
     }
     toolUsageMap[toolId].engagedSeconds += opSec;

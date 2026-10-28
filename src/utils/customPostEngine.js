@@ -402,10 +402,12 @@ export function generateWithCustomPost(postProfile, operations = [], tools = [],
   ];
 
   opsToProcess.forEach((op, opIdx) => {
-    const toolNum = op.toolId ? op.toolId.replace(/\D/g, '') || String(opIdx + 1) : String(opIdx + 1);
+    const rawToolId = op.toolId !== undefined && op.toolId !== null ? String(op.toolId) : '';
+    const digitsOnly = rawToolId.replace(/\D/g, '');
+    const toolNum = digitsOnly || String(opIdx + 1);
     const rpm = op.rpm || 6000;
     const feed = op.feed || 1500;
-    const toolObj = tools.find(t => t.id === op.toolId) || { name: op.name || `Endmill ${op.toolId}` };
+    const toolObj = tools.find(t => t.id === op.toolId || t.id === Number(op.toolId) || String(t.id) === String(op.toolId)) || { name: op.name || `Endmill ${op.toolId || opIdx + 1}` };
 
     // Tool Change Block
     const toolContext = {

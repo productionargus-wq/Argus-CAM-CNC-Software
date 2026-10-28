@@ -257,9 +257,9 @@ export function scanProjectToolpaths(operations = [], tools = [], stockConfig = 
   ];
 
   opsToScan.forEach((op, idx) => {
-    const tool = tools.find(t => t.id === op.toolId) || {
+    const tool = tools.find(t => t.id === op.toolId || t.id === Number(op.toolId) || String(t.id) === String(op.toolId)) || {
       id: op.toolId || `T${idx + 1}`,
-      name: op.toolName || `Ø10mm Endmill`,
+      name: op.toolName || op.name || `Ø10mm Endmill`,
       diameter: 10.0,
       flutes: 4,
       stickout: 48.0

@@ -285,7 +285,7 @@ export default function EngravingStudioModal({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Argus_Engraving_${toolpathResult?.text.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.nc`;
+    link.download = `Argus_Engraving_${String(toolpathResult?.text || 'Engrave').replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.nc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
