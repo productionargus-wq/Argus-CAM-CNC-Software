@@ -41,6 +41,7 @@ import ToolAssemblyStudioModal from './components/ToolAssemblyStudioModal';
 import FeedOptimizerModal from './components/FeedOptimizerModal';
 import FixtureStudioModal from './components/FixtureStudioModal';
 import LatheStudioModal from './components/LatheStudioModal';
+import NestingStudioModal from './components/NestingStudioModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import {
@@ -138,6 +139,7 @@ export default function App() {
   const [isFeedOptimizerModalOpen, setIsFeedOptimizerModalOpen] = useState(false);
   const [isFixtureModalOpen, setIsFixtureModalOpen] = useState(false);
   const [isLatheStudioOpen, setIsLatheStudioOpen] = useState(false);
+  const [isNestingStudioOpen, setIsNestingStudioOpen] = useState(false);
   const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
@@ -1431,6 +1433,7 @@ export default function App() {
         onOpenFeedOptimizerModal={() => setIsFeedOptimizerModalOpen(true)}
         onOpenFixtureModal={() => setIsFixtureModalOpen(true)}
         onOpenLatheStudio={() => setIsLatheStudioOpen(true)}
+        onOpenNestingStudio={() => setIsNestingStudioOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1644,6 +1647,17 @@ export default function App() {
       <LatheStudioModal
         isOpen={isLatheStudioOpen}
         onClose={() => setIsLatheStudioOpen(false)}
+        onAddOperation={(newOp) => {
+          setOperations((prev) => [...prev, newOp]);
+          setActiveOpId(newOp.id);
+        }}
+      />
+
+      {/* CNC True-Shape Sheet Nesting & Multi-Part Production Studio */}
+      <NestingStudioModal
+        isOpen={isNestingStudioOpen}
+        onClose={() => setIsNestingStudioOpen(false)}
+        partMetrics={partMetrics}
         onAddOperation={(newOp) => {
           setOperations((prev) => [...prev, newOp]);
           setActiveOpId(newOp.id);

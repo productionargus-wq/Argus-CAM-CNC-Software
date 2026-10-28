@@ -31,6 +31,7 @@ export default function RibbonBar({
   onOpenSolidVerifyModal,
   onOpenFeedOptimizerModal,
   onOpenLatheStudio,
+  onOpenNestingStudio,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -1198,6 +1199,21 @@ export default function RibbonBar({
               <span className="ribbon-group-title">Mirror &amp; Array</span>
             </div>
 
+            {/* Sheet Nesting & Stock Optimizer */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenNestingStudio}
+                  title="Open CNC True-Shape Sheet Nesting Studio (2D/2.5D Router, Waterjet, Laser, Plasma Stock Packing &amp; Remnant Recovery)"
+                >
+                  <Scissors size={21} color="#0284c7" />
+                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 700 }}>Sheet<br />Nesting</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Sheet CAM</span>
+            </div>
+
             {/* Reset */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
@@ -1331,6 +1347,14 @@ export default function RibbonBar({
                 >
                   <Disc size={22} color="#ec4899" />
                   <span className="btn-label" style={{ color: '#ec4899', fontWeight: 600 }}>Lathe &amp;<br />Mill-Turn</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenNestingStudio}
+                  title="Open CNC True-Shape Sheet Nesting Studio (2D/2.5D Router, Waterjet, Laser, Plasma Stock Packing &amp; Remnant Recovery)"
+                >
+                  <Scissors size={22} color="#0284c7" />
+                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 600 }}>Sheet<br />Nesting</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
@@ -1653,6 +1677,14 @@ export default function RibbonBar({
                 >
                   <Disc size={22} color="#ec4899" />
                   <span className="btn-label" style={{ color: '#ec4899', fontWeight: 600 }}>Lathe &amp;<br />Mill-Turn</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenNestingStudio}
+                  title="Open CNC True-Shape Sheet Nesting Studio (2D/2.5D Router, Waterjet, Laser, Plasma Stock Packing &amp; Remnant Recovery)"
+                >
+                  <Scissors size={22} color="#0284c7" />
+                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 600 }}>Sheet<br />Nesting</span>
                 </button>
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"
