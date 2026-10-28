@@ -474,3 +474,4 @@ function formatMinutesToTime(minutes) {
   const s = Math.round((minutes - m) * 60);
   return `${m}m ${String(s).padStart(2, '0')}s`;
 }
+

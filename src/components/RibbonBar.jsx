@@ -36,6 +36,7 @@ export default function RibbonBar({
   onOpenEngravingStudio,
   onOpenHSMFilterStudio,
   onOpenCostQuotingModal,
+  onOpenCornerReliefStudio,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -308,6 +309,14 @@ export default function RibbonBar({
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Cost &amp;<br />Quoting</span>
                 </button>
                 <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCornerReliefStudio}
+                  title="Open CNC Automatic Corner Relief &amp; Dog-Bone / T-Bone Studio (Pockets, Enclosures &amp; Tabs)"
+                >
+                  <Box size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Corner<br />Relief</span>
+                </button>
+                <button
                   className="ribbon-btn-large"
                   onClick={onOpenHelpGuide}
                   title="Mastercam User Manual & Shortcuts"
@@ -529,6 +538,14 @@ export default function RibbonBar({
                 >
                   <Grid size={21} color="#a855f7" />
                   <span className="btn-label">Polygon<br />Hexagon</span>
+                </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCornerReliefStudio}
+                  title="Open CNC Automatic Corner Relief &amp; Dog-Bone / T-Bone Studio (Pockets, Enclosures &amp; Tabs)"
+                >
+                  <Box size={21} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Corner<br />Relief</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Shapes</span>
@@ -1237,6 +1254,14 @@ export default function RibbonBar({
                   <Scissors size={21} color="#0284c7" />
                   <span className="btn-label" style={{ color: '#0284c7', fontWeight: 700 }}>Sheet<br />Nesting</span>
                 </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCornerReliefStudio}
+                  title="Open CNC Automatic Corner Relief &amp; Dog-Bone / T-Bone Studio (Pockets, Enclosures &amp; Tabs)"
+                >
+                  <Box size={21} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Corner<br />Relief</span>
+                </button>
               </div>
               <span className="ribbon-group-title">Sheet CAM</span>
             </div>
@@ -1414,6 +1439,14 @@ export default function RibbonBar({
                 >
                   <DollarSign size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Cost &amp;<br />Quoting</span>
+                </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCornerReliefStudio}
+                  title="Open CNC Automatic Corner Relief &amp; Dog-Bone / T-Bone Studio (Pockets, Enclosures &amp; Tabs)"
+                >
+                  <Box size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Corner<br />Relief</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
@@ -1776,6 +1809,14 @@ export default function RibbonBar({
                 >
                   <DollarSign size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Cost &amp;<br />Quoting</span>
+                </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCornerReliefStudio}
+                  title="Open CNC Automatic Corner Relief &amp; Dog-Bone / T-Bone Studio (Pockets, Enclosures &amp; Tabs)"
+                >
+                  <Box size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Corner<br />Relief</span>
                 </button>
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"

@@ -46,6 +46,7 @@ import ThreadStudioModal from './components/ThreadStudioModal';
 import EngravingStudioModal from './components/EngravingStudioModal';
 import HSMFilterStudioModal from './components/HSMFilterStudioModal';
 import CostQuotingModal from './components/CostQuotingModal';
+import CornerReliefStudioModal from './components/CornerReliefStudioModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import {
@@ -148,6 +149,7 @@ export default function App() {
   const [isEngravingStudioOpen, setIsEngravingStudioOpen] = useState(false);
   const [isHSMFilterModalOpen, setIsHSMFilterModalOpen] = useState(false);
   const [isCostQuotingModalOpen, setIsCostQuotingModalOpen] = useState(false);
+  const [isCornerReliefModalOpen, setIsCornerReliefModalOpen] = useState(false);
   const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
@@ -1446,6 +1448,7 @@ export default function App() {
         onOpenEngravingStudio={() => setIsEngravingStudioOpen(true)}
         onOpenHSMFilterStudio={() => setIsHSMFilterModalOpen(true)}
         onOpenCostQuotingModal={() => setIsCostQuotingModalOpen(true)}
+        onOpenCornerReliefStudio={() => setIsCornerReliefModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1723,6 +1726,16 @@ export default function App() {
         stockConfig={stockConfig}
         partMetrics={partMetrics}
         activeMachine={machines.find(m => m.id === activeMachineId)}
+      />
+
+      {/* CNC Automatic Corner Relief & Dog-Bone / T-Bone Studio */}
+      <CornerReliefStudioModal
+        isOpen={isCornerReliefModalOpen}
+        onClose={() => setIsCornerReliefModalOpen(false)}
+        activeWorkpiece={activeGeometryType}
+        onApplyReliefGeometry={(reliefData) => {
+          console.log('Corner Relief Applied to CAM Operations:', reliefData);
+        }}
       />
 
       {/* Simultaneous 5-Axis Multiaxis Studio & TCPM Manager */}
