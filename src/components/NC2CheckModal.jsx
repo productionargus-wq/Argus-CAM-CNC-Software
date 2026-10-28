@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { CONTROLLER_DIALECTS, generateNCProgram, downloadNCFile } from '../utils/postProcessor';
 import { checkToolpathCollisions } from '../utils/toolpathEngine';
+import { MACHINE_KINEMATICS } from '../utils/machineKinematics.js';
 
 export default function NC2CheckModal({
   isOpen,
@@ -30,14 +31,18 @@ export default function NC2CheckModal({
   const [isGenerated, setIsGenerated] = useState(false);
   const [ncResult, setNcResult] = useState(null);
 
-  // Machine physical stroke limits (DMU 50 5-Axis)
-  const limits = useMemo(() => ({
-    x: { min: -250, max: 250 },
-    y: { min: -200, max: 200 },
-    z: { min: -100, max: 350 },
-    b: { min: -5, max: 110 },
-    c: { min: -360, max: 360 }
-  }), []);
+  // Machine physical stroke limits from active machine kinematics
+  const limits = useMemo(() => {
+    const config = MACHINE_KINEMATICS[activeMachine?.id] || MACHINE_KINEMATICS.dmu50;
+    const ax = config.axes;
+    return {
+      x: { min: ax.X?.min ?? -250, max: ax.X?.max ?? 250 },
+      y: { min: ax.Y?.min ?? -200, max: ax.Y?.max ?? 200 },
+      z: { min: ax.Z?.min ?? -100, max: ax.Z?.max ?? 350 },
+      b: { min: ax.B?.min ?? -5, max: ax.B?.max ?? 110 },
+      c: { min: ax.C?.min ?? -360, max: ax.C?.max ?? 360 }
+    };
+  }, [activeMachine]);
 
   // Modal dialog lifecycle
   useEffect(() => {
