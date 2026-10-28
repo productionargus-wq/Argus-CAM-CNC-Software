@@ -36,7 +36,7 @@ export function generateNCProgram({
   programName = 'DMU50_ZeroClamp_Job',
   model = null
 }) {
-  const bounds = partMetrics?.box || new THREE.Box3(
+  const bounds = partMetrics?.box || partMetrics?.bounds || new THREE.Box3(
     new THREE.Vector3(-40, 49, -35),
     new THREE.Vector3(40, 85, 35)
   );

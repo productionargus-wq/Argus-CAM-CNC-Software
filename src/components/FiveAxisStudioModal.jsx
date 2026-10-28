@@ -48,7 +48,8 @@ export default function FiveAxisStudioModal({
 
   // Model bounds fallback
   const bounds = useMemo(() => {
-    if (partMetrics?.bounds) return partMetrics.bounds;
+    const b = partMetrics?.box || partMetrics?.bounds;
+    if (b && b.min && b.max) return b;
     return {
       min: { x: -30, y: -20, z: -30 },
       max: { x: 30, y: 15, z: 30 }

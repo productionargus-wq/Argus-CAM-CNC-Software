@@ -132,6 +132,19 @@ export function calculateAdaptivePhysics(tool = {}, params = {}, materialKey = '
  * with Helical Ramp Plunge, Constant Engagement Trochoidal Cycloids, and Micro-Lift Retracts.
  */
 export function generateAdaptiveTrochoidalToolpath(bounds, tool = {}, params = {}) {
+  const b = (bounds?.min && bounds?.max)
+    ? bounds
+    : (bounds?.box?.min && bounds?.box?.max)
+      ? bounds.box
+      : (bounds?.bounds?.min && bounds?.bounds?.max)
+        ? bounds.bounds
+        : null;
+
+  const safeBounds = {
+    min: new THREE.Vector3(b?.min?.x ?? -35, b?.min?.y ?? 0, b?.min?.z ?? -25),
+    max: new THREE.Vector3(b?.max?.x ?? 35, b?.max?.y ?? 25, b?.max?.z ?? 25)
+  };
+
   const {
     stepoverPct = 15,
     stepdown = 18.0,
@@ -145,16 +158,16 @@ export function generateAdaptiveTrochoidalToolpath(bounds, tool = {}, params = {
   const toolDiameter = Number(tool.diameter || 10);
   const toolRadius = toolDiameter / 2;
   const stepover = Math.max(0.5, (toolDiameter * stepoverPct) / 100);
-  const topY = bounds.max.y;
+  const topY = safeBounds.max.y;
 
   const cuttingLines = [];
   const rapidLines = [];
   const waypoints = [];
 
-  const minX = bounds.min.x + toolRadius + 1.0;
-  const maxX = bounds.max.x - toolRadius - 1.0;
-  const minZ = bounds.min.z + toolRadius + 1.0;
-  const maxZ = bounds.max.z - toolRadius - 1.0;
+  const minX = safeBounds.min.x + toolRadius + 1.0;
+  const maxX = safeBounds.max.x - toolRadius - 1.0;
+  const minZ = safeBounds.min.z + toolRadius + 1.0;
+  const maxZ = safeBounds.max.z - toolRadius - 1.0;
 
   let totalDist = 0;
   let lastPos = new THREE.Vector3(0, topY + rapidHeight, 0);

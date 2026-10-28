@@ -249,6 +249,19 @@ export function audit5AxisKinematics(trajectoryPoints, kinematicsId = 'table_tab
  * Aligns the cutter flank with ruled blade/flank surfaces while continuously rotating tool orientation.
  */
 export function generate5AxisSwarfToolpath(bounds, tool, params = {}) {
+  const b = (bounds?.min && bounds?.max)
+    ? bounds
+    : (bounds?.box?.min && bounds?.box?.max)
+      ? bounds.box
+      : (bounds?.bounds?.min && bounds?.bounds?.max)
+        ? bounds.bounds
+        : null;
+
+  const safeBounds = {
+    min: { x: b?.min?.x ?? -30, y: b?.min?.y ?? -20, z: b?.min?.z ?? -30 },
+    max: { x: b?.max?.x ?? 30, y: b?.max?.y ?? 15, z: b?.max?.z ?? 30 }
+  };
+
   const {
     tiltAngleDeg = 15.0,
     leadAngleDeg = 5.0,
@@ -262,10 +275,10 @@ export function generate5AxisSwarfToolpath(bounds, tool, params = {}) {
   const trajectoryPoints = [];
   const vectorNeedles = [];
 
-  const topY = bounds.max.y;
-  const centerX = (bounds.max.x + bounds.min.x) / 2;
-  const centerZ = (bounds.max.z + bounds.min.z) / 2;
-  const radius = Math.min((bounds.max.x - bounds.min.x) / 2, (bounds.max.z - bounds.min.z) / 2) + 2;
+  const topY = safeBounds.max.y;
+  const centerX = (safeBounds.max.x + safeBounds.min.x) / 2;
+  const centerZ = (safeBounds.max.z + safeBounds.min.z) / 2;
+  const radius = Math.min((safeBounds.max.x - safeBounds.min.x) / 2, (safeBounds.max.z - safeBounds.min.z) / 2) + 2;
 
   const needleLength = Math.min(12, (tool.diameter || 10) * 1.5);
 
@@ -342,6 +355,19 @@ export function generate5AxisSwarfToolpath(bounds, tool, params = {}) {
  * Surfaces complex curved geometry (molds, blisks, ports) using true normal orientation.
  */
 export function generate5AxisFlowlineToolpath(bounds, tool, params = {}) {
+  const b = (bounds?.min && bounds?.max)
+    ? bounds
+    : (bounds?.box?.min && bounds?.box?.max)
+      ? bounds.box
+      : (bounds?.bounds?.min && bounds?.bounds?.max)
+        ? bounds.bounds
+        : null;
+
+  const safeBounds = {
+    min: { x: b?.min?.x ?? -30, y: b?.min?.y ?? -20, z: b?.min?.z ?? -30 },
+    max: { x: b?.max?.x ?? 30, y: b?.max?.y ?? 15, z: b?.max?.z ?? 30 }
+  };
+
   const {
     leadAngleDeg = 12.0,
     tiltAngleDeg = 8.0,
@@ -355,11 +381,11 @@ export function generate5AxisFlowlineToolpath(bounds, tool, params = {}) {
   const trajectoryPoints = [];
   const vectorNeedles = [];
 
-  const topY = bounds.max.y;
-  const minX = bounds.min.x;
-  const maxX = bounds.max.x;
-  const minZ = bounds.min.z;
-  const maxZ = bounds.max.z;
+  const topY = safeBounds.max.y;
+  const minX = safeBounds.min.x;
+  const maxX = safeBounds.max.x;
+  const minZ = safeBounds.min.z;
+  const maxZ = safeBounds.max.z;
 
   const needleLength = Math.min(10, (tool.diameter || 8) * 1.4);
 

@@ -57,8 +57,8 @@ export default function SolidVerifyModal({
 
   // Stock Bounds
   const stockBounds = useMemo(() => {
-    if (partMetrics?.bounds) {
-      const b = partMetrics.bounds;
+    const b = partMetrics?.box || partMetrics?.bounds;
+    if (b && b.min && b.max) {
       const allowanceSides = stockConfig?.allowanceSides || 4.0;
       const allowanceTop = stockConfig?.allowanceTop || 2.0;
       return new THREE.Box3(
@@ -71,7 +71,8 @@ export default function SolidVerifyModal({
 
   // Compile full trajectory waypoints across operations
   const trajectory = useMemo(() => {
-    return compileBackplotTrajectory(operations, tools, boundsToMetrics(stockBounds));
+    if (!stockBounds) return { waypoints: [], totalDistance: 0, totalDurationSec: 0 };
+    return compileBackplotTrajectory(operations, tools, stockBounds);
   }, [operations, tools, stockBounds]);
 
   // Initialize Voxel Simulator
@@ -494,9 +495,22 @@ export default function SolidVerifyModal({
 }
 
 function boundsToMetrics(bounds) {
+  if (!bounds || typeof bounds.getSize !== 'function') {
+    return {
+      dimensions: { x: 70, y: 25, z: 50 },
+      min: { x: -35, y: 0, z: -25 },
+      max: { x: 35, y: 25, z: 25 },
+      bounds: {
+        min: { x: -35, y: 0, z: -25 },
+        max: { x: 35, y: 25, z: 25 }
+      }
+    };
+  }
   const size = bounds.getSize(new THREE.Vector3());
   return {
     dimensions: { x: size.x, y: size.y, z: size.z },
+    min: { x: bounds.min.x, y: bounds.min.y, z: bounds.min.z },
+    max: { x: bounds.max.x, y: bounds.max.y, z: bounds.max.z },
     bounds: {
       min: { x: bounds.min.x, y: bounds.min.y, z: bounds.min.z },
       max: { x: bounds.max.x, y: bounds.max.y, z: bounds.max.z }

@@ -44,6 +44,25 @@ export {
 };
 
 /**
+ * Safely resolves a bounding box representation (THREE.Box3, { box }, { bounds }, or plain object)
+ * into a guaranteed valid object with min and max Vector3s.
+ */
+export function resolveSafeBounds(bounds) {
+  const b = (bounds?.min && bounds?.max)
+    ? bounds
+    : (bounds?.box?.min && bounds?.box?.max)
+      ? bounds.box
+      : (bounds?.bounds?.min && bounds?.bounds?.max)
+        ? bounds.bounds
+        : null;
+
+  return {
+    min: new THREE.Vector3(b?.min?.x ?? -35, b?.min?.y ?? 0, b?.min?.z ?? -25),
+    max: new THREE.Vector3(b?.max?.x ?? 35, b?.max?.y ?? 25, b?.max?.z ?? 25)
+  };
+}
+
+/**
  * Toolpath Generation Engine
  * Calculates mathematically accurate 2.5D and 3D CNC toolpath trajectories
  */
@@ -52,6 +71,7 @@ export {
  * Generates Face Milling Toolpath (Zigzag Raster with Lead-in/Lead-out and Smooth Loops)
  */
 export function generateFacingToolpath(bounds, tool, params = {}) {
+  bounds = resolveSafeBounds(bounds);
   const {
     stepoverPct = 65,
     faceAllowance = 2.0,
@@ -275,10 +295,11 @@ export function detectHoleFeatures(object3D, bounds) {
 
   // Fallback to geometric 4-corner flange mounting coordinates if no explicit cylinder meshes
   if (holes.length === 0 && bounds) {
-    const halfX = (bounds.max.x - bounds.min.x) * 0.35;
-    const halfZ = (bounds.max.z - bounds.min.z) * 0.35;
-    const centerX = (bounds.max.x + bounds.min.x) / 2;
-    const centerZ = (bounds.max.z + bounds.min.z) / 2;
+    const b = resolveSafeBounds(bounds);
+    const halfX = (b.max.x - b.min.x) * 0.35;
+    const halfZ = (b.max.z - b.min.z) * 0.35;
+    const centerX = (b.max.x + b.min.x) / 2;
+    const centerZ = (b.max.z + b.min.z) / 2;
 
     holes.push(
       { x: centerX - halfX, z: centerZ - halfZ, radius: 4.5, depth: 25.0, name: 'Corner Bore 1' },
@@ -295,6 +316,7 @@ export function detectHoleFeatures(object3D, bounds) {
  * Generates 2D Dynamic Pocketing Toolpath (Concentric Clearing with Helical Ramp Plunge)
  */
 export function generatePocketToolpath(bounds, tool, params = {}, model = null) {
+  bounds = resolveSafeBounds(bounds);
   const {
     stepoverPct = 50,
     totalDepth = 15.0,
@@ -378,6 +400,7 @@ export function generatePocketToolpath(bounds, tool, params = {}, model = null) 
  * Generates 3D Waterline Finishing Toolpath (Multi-Z Surface Contouring with True Mesh Slicing)
  */
 export function generateWaterlineToolpath(bounds, tool, params = {}, model = null) {
+  bounds = resolveSafeBounds(bounds);
   const {
     stepdown = 3.0,
     rapidHeight = 15.0
@@ -439,13 +462,14 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
  * Generates 5-Axis Simultaneous Swarf Contour Toolpath (XYZ plus Tool Orientation Vectors)
  */
 export function generateSwarfToolpath(bounds, tool, params = {}, model = null) {
-  return generate5AxisSwarfToolpath(bounds, tool, params);
+  return generate5AxisSwarfToolpath(resolveSafeBounds(bounds), tool, params);
 }
 
 /**
  * Generates Deep Hole Peck Drilling Toolpath (G83 Cycle) with Automatic Hole Feature Detection
  */
 export function generateDrillingToolpath(bounds, tool, params = {}, model = null) {
+  bounds = resolveSafeBounds(bounds);
   const {
     drillDepth = 25.0,
     peckDepth = 5.0,
@@ -529,13 +553,14 @@ export function buildToolpathMeshes(toolpathData) {
  * Generates 3D High-Speed Adaptive Roughing Toolpath (Constant Tool Engagement Trochoidal Cycloids & Micro-Lifts)
  */
 export function generateAdaptiveRoughingToolpath(bounds, tool, params = {}) {
-  return generateAdaptiveTrochoidalToolpath(bounds, tool, params);
+  return generateAdaptiveTrochoidalToolpath(resolveSafeBounds(bounds), tool, params);
 }
 
 /**
  * Generates Perimeter Chamfer / Deburring Toolpath (45-degree Edge Break)
  */
 export function generateChamferToolpath(bounds, tool, params = {}) {
+  bounds = resolveSafeBounds(bounds);
   const {
     chamferWidth = 1.0,
     rapidHeight = 15.0
@@ -619,8 +644,9 @@ export function detectToolpathCollisions3D(operations = [], tools = [], bounds =
   const issues = [];
   const minRapidClearance = 3.0; // mm above stock
 
-  const stockTopY = bounds ? bounds.max.y : 85.0;
-  const partMinY = bounds ? bounds.min.y : 25.0;
+  const safeBounds = resolveSafeBounds(bounds);
+  const stockTopY = safeBounds.max.y;
+  const partMinY = safeBounds.min.y;
 
   operations.forEach((op) => {
     const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || {
@@ -716,7 +742,7 @@ export function detectToolpathCollisions3D(operations = [], tools = [], bounds =
     }
 
     // 5. Part Floor / Nominal CAD Surface Gouge Check
-    const maxPartHeight = bounds ? (bounds.max.y - bounds.min.y) : 35.0;
+    const maxPartHeight = safeBounds.max.y - safeBounds.min.y;
     if (totalDepth > maxPartHeight + 5.0) {
       const gougeMm = (totalDepth - maxPartHeight).toFixed(2);
       issues.push({
@@ -761,6 +787,7 @@ export function checkToolpathCollisions(operations = [], tools = [], bounds = nu
  * Samples the true elevation of the 3D model using vertical raycasting to follow organic curvatures.
  */
 export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model = null) {
+  bounds = resolveSafeBounds(bounds);
   const {
     stepoverPct = 20,
     rapidHeight = 15.0
@@ -867,6 +894,7 @@ export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model
  * Performs targeted corner picking with inward stepping passes and peripheral sweep arcs.
  */
 export function generateRestMillingToolpath(bounds, tool, params = {}, model = null) {
+  bounds = resolveSafeBounds(bounds);
   const {
     refToolDiameter = 12.0,
     stepdown = 2.5,
@@ -971,6 +999,7 @@ export function generateRestMillingToolpath(bounds, tool, params = {}, model = n
  * Traces along bi-tangent internal fillet valleys and corner intersection boundaries.
  */
 export function generatePencilTracingToolpath(bounds, tool, params = {}, model = null) {
+  bounds = resolveSafeBounds(bounds);
   const {
     totalDepth = 15.0,
     stepdown = 1.0,
@@ -1147,66 +1176,67 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
     ? operations.filter((op) => op.id === targetOpId)
     : operations.filter((op) => op.visible !== false);
 
-  if (activeOps.length === 0 || !bounds) {
+  if (activeOps.length === 0) {
     return { waypoints: [], totalDistance: 0, totalDurationSec: 0 };
   }
 
+  const safeBounds = resolveSafeBounds(bounds);
   let totalDist = 0;
-  let lastPos = new THREE.Vector3(0, bounds.max.y + 20, 0);
+  let lastPos = new THREE.Vector3(0, safeBounds.max.y + 20, 0);
 
   activeOps.forEach((op) => {
     let assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10, rpm: 8000, feedRate: 1500 };
     let data = null;
 
     if (op.badgeClass === 'face') {
-      data = generateFacingToolpath(bounds, assignedTool, {
+      data = generateFacingToolpath(safeBounds, assignedTool, {
         stepoverPct: op.stepoverPct || 65,
         faceAllowance: 2.0,
         depthOfCut: op.stepdown || 1.0,
         rapidHeight: op.rapidHeight || 15.0
       });
     } else if (op.badgeClass === 'pocket') {
-      data = generatePocketToolpath(bounds, assignedTool, {
+      data = generatePocketToolpath(safeBounds, assignedTool, {
         stepoverPct: op.stepoverPct || 50,
         totalDepth: op.totalDepth || 15.0,
         stepdown: op.stepdown || 5.0,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
     } else if (op.badgeClass === 'contour') {
-      data = generateWaterlineToolpath(bounds, assignedTool, {
+      data = generateWaterlineToolpath(safeBounds, assignedTool, {
         stepdown: op.stepdown || 3.0,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
     } else if (op.badgeClass === 'swarf') {
-      data = generateSwarfToolpath(bounds, assignedTool, {
+      data = generateSwarfToolpath(safeBounds, assignedTool, {
         tiltAngleDeg: 15.0,
         passes: 3
       }, model);
     } else if (op.badgeClass === 'drill') {
-      data = generateDrillingToolpath(bounds, assignedTool, {
+      data = generateDrillingToolpath(safeBounds, assignedTool, {
         drillDepth: op.totalDepth || 25.0,
         peckDepth: op.stepdown || 5.0,
         rapidHeight: op.rapidHeight || 10.0
       }, model);
     } else if (op.badgeClass === 'adaptive') {
-      data = generateAdaptiveRoughingToolpath(bounds, assignedTool, {
+      data = generateAdaptiveRoughingToolpath(safeBounds, assignedTool, {
         stepoverPct: op.stepoverPct || 25,
         stepdown: op.stepdown || 6.0,
         totalDepth: op.totalDepth || 18.0,
         rapidHeight: op.rapidHeight || 15.0
       });
     } else if (op.badgeClass === 'chamfer') {
-      data = generateChamferToolpath(bounds, assignedTool, {
+      data = generateChamferToolpath(safeBounds, assignedTool, {
         chamferWidth: op.stepdown || 1.0,
         rapidHeight: op.rapidHeight || 15.0
       });
     } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
-      data = generateSurfaceParallelToolpath(bounds, assignedTool, {
+      data = generateSurfaceParallelToolpath(safeBounds, assignedTool, {
         stepoverPct: op.stepoverPct || 20,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
     } else if (op.badgeClass === 'rest' || op.badgeClass === 'rest_milling') {
-      data = generateRestMillingToolpath(bounds, assignedTool, {
+      data = generateRestMillingToolpath(safeBounds, assignedTool, {
         refToolDiameter: op.refToolDiameter || 12.0,
         stepdown: op.stepdown || 2.5,
         totalDepth: op.totalDepth || 15.0,
@@ -1214,7 +1244,7 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
         rapidHeight: op.rapidHeight || 15.0
       }, model);
     } else if (op.badgeClass === 'pencil') {
-      data = generatePencilTracingToolpath(bounds, assignedTool, {
+      data = generatePencilTracingToolpath(safeBounds, assignedTool, {
         totalDepth: op.totalDepth || 15.0,
         stepdown: op.stepdown || 1.0,
         biTangencyRadius: op.biTangencyRadius || 3.0,
@@ -1222,9 +1252,9 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
       }, model);
     } else if (op.badgeClass === 'probe') {
       const pCenter = op.center || {
-        x: (bounds.min.x + bounds.max.x) / 2,
-        y: bounds.max.y,
-        z: (bounds.min.z + bounds.max.z) / 2
+        x: (safeBounds.min.x + safeBounds.max.x) / 2,
+        y: safeBounds.max.y,
+        z: (safeBounds.min.z + safeBounds.max.z) / 2
       };
       data = generateProbingToolpath(op.strategyKey || 'bore_centering', pCenter, op.probingParams || {});
       assignedTool = data.probeTool || assignedTool;

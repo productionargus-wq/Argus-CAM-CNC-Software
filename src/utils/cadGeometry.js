@@ -1332,6 +1332,7 @@ export function calculatePartMetrics(object3D) {
       z: Number(size.z.toFixed(2))
     },
     box,
+    bounds: box,
     center: {
       x: Number(center.x.toFixed(2)),
       y: Number(center.y.toFixed(2)),

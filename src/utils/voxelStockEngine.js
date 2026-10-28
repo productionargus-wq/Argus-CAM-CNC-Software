@@ -31,7 +31,18 @@ const COLOR_GOUGE     = new THREE.Color('#ef4444'); // Gouge (< -tolerance)
 
 export class VoxelStockSimulator {
   constructor(stockBounds, partMetrics = null, options = {}) {
-    this.stockBounds = stockBounds || new THREE.Box3(
+    const rawBounds = (stockBounds?.min && stockBounds?.max)
+      ? stockBounds
+      : (stockBounds?.box?.min && stockBounds?.box?.max)
+        ? stockBounds.box
+        : (stockBounds?.bounds?.min && stockBounds?.bounds?.max)
+          ? stockBounds.bounds
+          : null;
+
+    this.stockBounds = rawBounds ? new THREE.Box3(
+      new THREE.Vector3(rawBounds.min.x ?? -40, rawBounds.min.y ?? 0, rawBounds.min.z ?? -30),
+      new THREE.Vector3(rawBounds.max.x ?? 40, rawBounds.max.y ?? 30, rawBounds.max.z ?? 30)
+    ) : new THREE.Box3(
       new THREE.Vector3(-40, 0, -30),
       new THREE.Vector3(40, 30, 30)
     );
@@ -59,7 +70,8 @@ export class VoxelStockSimulator {
     this.initialVolumeCm3 = (this.width * this.height * this.depth) / 1000;
 
     // Nominal part floor reference
-    this.partBottomY = partMetrics?.bounds?.min?.y ?? (this.minY + 2.0);
+    const partB = partMetrics?.box || partMetrics?.bounds;
+    this.partBottomY = partB?.min?.y ?? (this.minY + 2.0);
     this.tolerance = options.tolerance || 0.02; // mm
 
     this.reset();
