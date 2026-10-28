@@ -39,6 +39,7 @@ export default function RibbonBar({
   onOpenCornerReliefStudio,
   onOpenKioskModal,
   onOpenTombstoneStudio,
+  onOpenCustomPostStudio,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -334,6 +335,15 @@ export default function RibbonBar({
                 >
                   <Grid size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
+                </button>
+
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCustomPostStudio}
+                  title="Open Custom Post-Processor Syntax Builder &amp; Macro Variable Engine (Fanuc, Haas, Heidenhain, Siemens, Mach4, GRBL)"
+                >
+                  <FileCode size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Custom<br />Post</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
@@ -1383,6 +1393,15 @@ export default function RibbonBar({
                   <Grid size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
                 </button>
+
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCustomPostStudio}
+                  title="Open Custom Post-Processor Syntax Builder &amp; Macro Variable Engine (Fanuc, Haas, Heidenhain, Siemens, Mach4, GRBL)"
+                >
+                  <FileCode size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Custom<br />Post</span>
+                </button>
               </div>
               <span className="ribbon-group-title">Machine &amp; WCS</span>
             </div>
@@ -1501,6 +1520,15 @@ export default function RibbonBar({
                 >
                   <Grid size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
+                </button>
+
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCustomPostStudio}
+                  title="Open Custom Post-Processor Syntax Builder &amp; Macro Variable Engine (Fanuc, Haas, Heidenhain, Siemens, Mach4, GRBL)"
+                >
+                  <FileCode size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Custom<br />Post</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
@@ -1897,6 +1925,15 @@ export default function RibbonBar({
                 >
                   <Grid size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
+                </button>
+
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCustomPostStudio}
+                  title="Open Custom Post-Processor Syntax Builder &amp; Macro Variable Engine (Fanuc, Haas, Heidenhain, Siemens, Mach4, GRBL)"
+                >
+                  <FileCode size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Custom<br />Post</span>
                 </button>
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"

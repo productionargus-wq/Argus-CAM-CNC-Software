@@ -49,6 +49,7 @@ import CostQuotingModal from './components/CostQuotingModal';
 import CornerReliefStudioModal from './components/CornerReliefStudioModal';
 import KioskOperatorModal from './components/KioskOperatorModal';
 import TombstoneStudioModal from './components/TombstoneStudioModal';
+import CustomPostStudioModal from './components/CustomPostStudioModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import {
@@ -154,6 +155,7 @@ export default function App() {
   const [isCornerReliefModalOpen, setIsCornerReliefModalOpen] = useState(false);
   const [isKioskModalOpen, setIsKioskModalOpen] = useState(false);
   const [isTombstoneModalOpen, setIsTombstoneModalOpen] = useState(false);
+  const [isCustomPostModalOpen, setIsCustomPostModalOpen] = useState(false);
   const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
@@ -1455,6 +1457,7 @@ export default function App() {
         onOpenCornerReliefStudio={() => setIsCornerReliefModalOpen(true)}
         onOpenKioskModal={() => setIsKioskModalOpen(true)}
         onOpenTombstoneStudio={() => setIsTombstoneModalOpen(true)}
+        onOpenCustomPostStudio={() => setIsCustomPostModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1761,6 +1764,18 @@ export default function App() {
         activeMachine={machines.find(m => m.id === activeMachineId)}
         onApplyTombstoneToCAM={(tombLayout) => {
           console.log('Tombstone Layout Applied to CAM Operations:', tombLayout);
+        }}
+      />
+
+      {/* Custom Post-Processor Syntax Builder & Macro Variable Engine */}
+      <CustomPostStudioModal
+        isOpen={isCustomPostModalOpen}
+        onClose={() => setIsCustomPostModalOpen(false)}
+        operations={operations}
+        tools={tools}
+        activeMachine={machines.find(m => m.id === activeMachineId)}
+        onSaveCustomPost={(customProfile) => {
+          console.log('Custom Post Profile Saved for Machine:', customProfile);
         }}
       />
 

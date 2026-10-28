@@ -425,3 +425,4 @@ export function generateTombstoneGCode(layout, operations = []) {
 
   return lines.join('\n');
 }
+
