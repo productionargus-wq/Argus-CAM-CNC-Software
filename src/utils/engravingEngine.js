@@ -458,3 +458,4 @@ export function exportEngravingSVG(toolpathResult) {
   <path d="${pathsD}" fill="none" stroke="#38bdf8" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round" />
 </svg>`;
 }
+

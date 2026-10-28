@@ -44,6 +44,7 @@ import LatheStudioModal from './components/LatheStudioModal';
 import NestingStudioModal from './components/NestingStudioModal';
 import ThreadStudioModal from './components/ThreadStudioModal';
 import EngravingStudioModal from './components/EngravingStudioModal';
+import HSMFilterStudioModal from './components/HSMFilterStudioModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import {
@@ -144,6 +145,7 @@ export default function App() {
   const [isNestingStudioOpen, setIsNestingStudioOpen] = useState(false);
   const [isThreadStudioOpen, setIsThreadStudioOpen] = useState(false);
   const [isEngravingStudioOpen, setIsEngravingStudioOpen] = useState(false);
+  const [isHSMFilterModalOpen, setIsHSMFilterModalOpen] = useState(false);
   const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
@@ -1440,6 +1442,7 @@ export default function App() {
         onOpenNestingStudio={() => setIsNestingStudioOpen(true)}
         onOpenThreadStudio={() => setIsThreadStudioOpen(true)}
         onOpenEngravingStudio={() => setIsEngravingStudioOpen(true)}
+        onOpenHSMFilterStudio={() => setIsHSMFilterModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1691,6 +1694,20 @@ export default function App() {
         onAddOperation={(newOp) => {
           setOperations((prev) => [...prev, newOp]);
           setActiveOpId(newOp.id);
+        }}
+      />
+
+      {/* High-Speed Machining (HSM) Tolerance Filter & Arc Spline Studio */}
+      <HSMFilterStudioModal
+        isOpen={isHSMFilterModalOpen}
+        onClose={() => setIsHSMFilterModalOpen(false)}
+        operations={operations}
+        tools={tools}
+        partMetrics={partMetrics}
+        onUpdateOperation={(params) => {
+          setOperations((prev) =>
+            prev.map((op) => (op.id === activeOpId ? { ...op, ...params } : op))
+          );
         }}
       />
 

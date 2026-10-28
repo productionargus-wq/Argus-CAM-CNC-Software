@@ -34,6 +34,7 @@ export default function RibbonBar({
   onOpenNestingStudio,
   onOpenThreadStudio,
   onOpenEngravingStudio,
+  onOpenHSMFilterStudio,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -1389,6 +1390,14 @@ export default function RibbonBar({
                   <Type size={22} color="#06b6d4" />
                   <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Engraving<br />&amp; V-Carve</span>
                 </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenHSMFilterStudio}
+                  title="Open CNC High-Speed Machining (HSM) Tolerance Filter &amp; Arc Spline Studio"
+                >
+                  <Zap size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>HSM Arc<br />Filter</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Mill Tool<br />Manager</span>
@@ -1734,6 +1743,14 @@ export default function RibbonBar({
                 >
                   <Type size={22} color="#06b6d4" />
                   <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Engraving<br />&amp; V-Carve</span>
+                </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenHSMFilterStudio}
+                  title="Open CNC High-Speed Machining (HSM) Tolerance Filter &amp; Arc Spline Studio"
+                >
+                  <Zap size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>HSM Arc<br />Filter</span>
                 </button>
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"
