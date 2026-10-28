@@ -47,6 +47,7 @@ import EngravingStudioModal from './components/EngravingStudioModal';
 import HSMFilterStudioModal from './components/HSMFilterStudioModal';
 import CostQuotingModal from './components/CostQuotingModal';
 import CornerReliefStudioModal from './components/CornerReliefStudioModal';
+import KioskOperatorModal from './components/KioskOperatorModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import {
@@ -150,6 +151,7 @@ export default function App() {
   const [isHSMFilterModalOpen, setIsHSMFilterModalOpen] = useState(false);
   const [isCostQuotingModalOpen, setIsCostQuotingModalOpen] = useState(false);
   const [isCornerReliefModalOpen, setIsCornerReliefModalOpen] = useState(false);
+  const [isKioskModalOpen, setIsKioskModalOpen] = useState(false);
   const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
@@ -1449,6 +1451,7 @@ export default function App() {
         onOpenHSMFilterStudio={() => setIsHSMFilterModalOpen(true)}
         onOpenCostQuotingModal={() => setIsCostQuotingModalOpen(true)}
         onOpenCornerReliefStudio={() => setIsCornerReliefModalOpen(true)}
+        onOpenKioskModal={() => setIsKioskModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1736,6 +1739,15 @@ export default function App() {
         onApplyReliefGeometry={(reliefData) => {
           console.log('Corner Relief Applied to CAM Operations:', reliefData);
         }}
+      />
+
+      {/* CNC Shop Floor Operator Tablet / Kiosk View */}
+      <KioskOperatorModal
+        isOpen={isKioskModalOpen}
+        onClose={() => setIsKioskModalOpen(false)}
+        activeMachine={machines.find(m => m.id === activeMachineId)}
+        activeOperations={operations}
+        tools={tools}
       />
 
       {/* Simultaneous 5-Axis Multiaxis Studio & TCPM Manager */}

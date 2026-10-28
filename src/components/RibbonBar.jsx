@@ -6,7 +6,7 @@ import {
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
   Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge,
-  Copy, Cpu, Activity, Type, DollarSign
+  Copy, Cpu, Activity, Type, DollarSign, Tablet
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -37,6 +37,7 @@ export default function RibbonBar({
   onOpenHSMFilterStudio,
   onOpenCostQuotingModal,
   onOpenCornerReliefStudio,
+  onOpenKioskModal,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -315,6 +316,14 @@ export default function RibbonBar({
                 >
                   <Box size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Corner<br />Relief</span>
+                </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenKioskModal}
+                  title="Open Shop Floor Operator Tablet Kiosk (Touch DRO, Jog Pendant, Feed/Spindle Overrides & E-Stop)"
+                >
+                  <Tablet size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
@@ -1346,6 +1355,15 @@ export default function RibbonBar({
                   <Compass size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Planes /<br />WCS Studio</span>
                 </button>
+
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenKioskModal}
+                  title="Open Shop Floor Operator Tablet Kiosk (Touch DRO, Jog Pendant, Feed/Spindle Overrides & E-Stop)"
+                >
+                  <Tablet size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
+                </button>
               </div>
               <span className="ribbon-group-title">Machine &amp; WCS</span>
             </div>
@@ -1448,6 +1466,14 @@ export default function RibbonBar({
                   <Box size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Corner<br />Relief</span>
                 </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenKioskModal}
+                  title="Open Shop Floor Operator Tablet Kiosk (Touch DRO, Jog Pendant, Feed/Spindle Overrides & E-Stop)"
+                >
+                  <Tablet size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Mill Tool<br />Manager</span>
@@ -1541,6 +1567,15 @@ export default function RibbonBar({
                 >
                   {theme === 'light' ? <Sun size={20} color="#d97706" /> : <Moon size={20} color="#38bdf8" />}
                   <span className="btn-label">{theme === 'light' ? 'Light<br />Theme' : 'Dark<br />Theme'}</span>
+                </button>
+
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenKioskModal}
+                  title="Open Shop Floor Operator Tablet Kiosk (Touch DRO, Jog Pendant, Feed/Spindle Overrides & E-Stop)"
+                >
+                  <Tablet size={20} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Camera Mode</span>
@@ -1817,6 +1852,14 @@ export default function RibbonBar({
                 >
                   <Box size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Corner<br />Relief</span>
+                </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenKioskModal}
+                  title="Open Shop Floor Operator Tablet Kiosk (Touch DRO, Jog Pendant, Feed/Spindle Overrides & E-Stop)"
+                >
+                  <Tablet size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
                 </button>
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"
