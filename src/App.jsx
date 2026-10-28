@@ -1744,7 +1744,7 @@ export default function App() {
       <CornerReliefStudioModal
         isOpen={isCornerReliefModalOpen}
         onClose={() => setIsCornerReliefModalOpen(false)}
-        activeWorkpiece={activeGeometryType}
+        activeWorkpiece={currentModel}
         onApplyReliefGeometry={(reliefData) => {
           console.log('Corner Relief Applied to CAM Operations:', reliefData);
         }}
