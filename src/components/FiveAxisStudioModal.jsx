@@ -110,7 +110,7 @@ export default function FiveAxisStudioModal({
   // Compute Current Vector Demo Coordinates for SVG
   const sampleVector = useMemo(() => {
     const dummyTangent = { x: 1, y: 0, z: 0, clone: () => ({ ...dummyTangent, normalize: () => dummyTangent }) };
-    const dummyNormal = { x: 0, y: 1, z: 0, clone: () => ({ ...dummyNormal, normalize: () => dummyNormal, applyAxisAngle: () => {} }) };
+    const dummyNormal = { x: 0, y: 1, z: 0, clone: () => ({ ...dummyNormal, normalize: () => dummyNormal, applyAxisAngle: () => { } }) };
     // Simplified sample orientation calculation for SVG cone display
     const leadRad = (leadAngleDeg * Math.PI) / 180;
     const tiltRad = (tiltAngleDeg * Math.PI) / 180;

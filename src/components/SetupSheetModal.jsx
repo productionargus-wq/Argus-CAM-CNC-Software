@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { X, Printer, FileText, CheckCircle2, Clock, Wrench, Box } from 'lucide-react';
+import { FIXTURE_MODELS } from '../utils/fixtureEngine';
 
 export default function SetupSheetModal({
   isOpen,
   onClose,
   currentProjectName,
   stockConfig,
+  fixtureConfig,
   partMetrics,
   tools,
   operations,
@@ -107,7 +109,10 @@ export default function SetupSheetModal({
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Fixture / Vise:</span>
-              <div style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>ZeroClamp Vise (Jaw 49mm)</div>
+              <div style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                {FIXTURE_MODELS[fixtureConfig?.type]?.name || 'Lang Makro-Grip 5-Axis Vise'}{' '}
+                (Opening: {fixtureConfig?.jawOpening || 85}mm, Grip: {fixtureConfig?.gripDepth || 3}mm, Force: {fixtureConfig?.clampingForceKn || 22} kN)
+              </div>
             </div>
           </div>
 

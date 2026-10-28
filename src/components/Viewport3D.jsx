@@ -31,10 +31,12 @@ import {
   extractModelTriangles
 } from '../utils/toleranceHeatmap';
 import { VoxelStockSimulator } from '../utils/voxelStockEngine';
+import { createParametricFixture3D, DEFAULT_FIXTURE_CONFIG } from '../utils/fixtureEngine';
 
 export default function Viewport3D({
   currentModel,
   stockConfig,
+  fixtureConfig = DEFAULT_FIXTURE_CONFIG,
   operations,
   tools,
   activeOpId = null,
@@ -170,44 +172,13 @@ export default function Viewport3D({
     scene.add(gridHelper);
     gridHelperRef.current = gridHelper;
 
-    // Fixture Group (Baseplate + Studs + ZeroClamp CNC Vise)
-    const fixtureGroup = new THREE.Group();
+    // Fixture Group (Parametric CNC Workholding & Vise)
+    const initialBounds = new THREE.Box3(
+      new THREE.Vector3(-40, 49, -35),
+      new THREE.Vector3(40, 85, 35)
+    );
+    const fixtureGroup = createParametricFixture3D(fixtureConfig || DEFAULT_FIXTURE_CONFIG, initialBounds);
     fixtureGroup.name = "fixture_group";
-
-    const basePlateGeo = new THREE.BoxGeometry(260, 18, 200);
-    const basePlateMat = new THREE.MeshStandardMaterial({
-      color: 0x242a36,
-      roughness: 0.35,
-      metalness: 0.8
-    });
-    const basePlate = new THREE.Mesh(basePlateGeo, basePlateMat);
-    basePlate.position.set(0, -9, 0);
-    basePlate.receiveShadow = true;
-    fixtureGroup.add(basePlate);
-
-    const studGeo = new THREE.CylinderGeometry(14, 14, 4, 32);
-    const studMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.9, roughness: 0.2 });
-    [[-70, 0, -50], [70, 0, -50], [-70, 0, 50], [70, 0, 50]].forEach(([x, y, z]) => {
-      const stud = new THREE.Mesh(studGeo, studMat);
-      stud.position.set(x, 0.5, z);
-      fixtureGroup.add(stud);
-    });
-
-    const viseBodyGeo = new THREE.BoxGeometry(110, 40, 150);
-    const viseMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7, roughness: 0.3 });
-    const viseBody = new THREE.Mesh(viseBodyGeo, viseMat);
-    viseBody.position.set(0, 20, 0);
-    viseBody.castShadow = true;
-    fixtureGroup.add(viseBody);
-
-    const jawGeo = new THREE.BoxGeometry(110, 18, 16);
-    const jawMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
-    const fixedJaw = new THREE.Mesh(jawGeo, jawMat);
-    fixedJaw.position.set(0, 49, -45);
-    const movableJaw = new THREE.Mesh(jawGeo, jawMat);
-    movableJaw.position.set(0, 49, 45);
-    fixtureGroup.add(fixedJaw, movableJaw);
-
     scene.add(fixtureGroup);
     fixtureGroupRef.current = fixtureGroup;
 
@@ -578,6 +549,27 @@ export default function Viewport3D({
       });
     }
   }, [layerVisibility]);
+
+  // 7b. Update Dynamic Workholding Fixture Mesh
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    const scene = sceneRef.current;
+
+    if (fixtureGroupRef.current) {
+      scene.remove(fixtureGroupRef.current);
+      fixtureGroupRef.current = null;
+    }
+
+    const bounds = partMetrics?.box || partMetrics?.bounds || new THREE.Box3(
+      new THREE.Vector3(-40, 49, -35),
+      new THREE.Vector3(40, 85, 35)
+    );
+
+    const fixtureMesh = createParametricFixture3D(fixtureConfig || DEFAULT_FIXTURE_CONFIG, bounds);
+    fixtureMesh.visible = layerVisibility.fixture !== false;
+    scene.add(fixtureMesh);
+    fixtureGroupRef.current = fixtureMesh;
+  }, [fixtureConfig, partMetrics, stockConfig, layerVisibility.fixture]);
 
   // 8. Update Dynamic Stock Box Mesh
   useEffect(() => {

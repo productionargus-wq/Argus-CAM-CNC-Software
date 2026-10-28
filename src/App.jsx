@@ -39,6 +39,8 @@ import FiveAxisStudioModal from './components/FiveAxisStudioModal';
 import SolidVerifyModal from './components/SolidVerifyModal';
 import ToolAssemblyStudioModal from './components/ToolAssemblyStudioModal';
 import FeedOptimizerModal from './components/FeedOptimizerModal';
+import FixtureStudioModal from './components/FixtureStudioModal';
+import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -133,6 +135,8 @@ export default function App() {
   const [isSolidVerifyModalOpen, setIsSolidVerifyModalOpen] = useState(false);
   const [isToolAssemblyModalOpen, setIsToolAssemblyModalOpen] = useState(false);
   const [isFeedOptimizerModalOpen, setIsFeedOptimizerModalOpen] = useState(false);
+  const [isFixtureModalOpen, setIsFixtureModalOpen] = useState(false);
+  const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
@@ -1423,6 +1427,7 @@ export default function App() {
         onOpenFiveAxisStudio={() => setIsFiveAxisModalOpen(true)}
         onOpenSolidVerifyModal={() => setIsSolidVerifyModalOpen(true)}
         onOpenFeedOptimizerModal={() => setIsFeedOptimizerModalOpen(true)}
+        onOpenFixtureModal={() => setIsFixtureModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1488,6 +1493,7 @@ export default function App() {
         <Viewport3D
           currentModel={currentModel}
           stockConfig={stockConfig}
+          fixtureConfig={fixtureConfig}
           operations={operations}
           tools={tools}
           activeOpId={activeOpId}
@@ -1617,6 +1623,18 @@ export default function App() {
         activeOpId={activeOpId}
         stockConfig={stockConfig}
         partMetrics={partMetrics}
+      />
+
+      {/* CNC Workholding, Clamping & Fixture Setup Studio (5-Axis Vises & Toe Clamps) */}
+      <FixtureStudioModal
+        isOpen={isFixtureModalOpen}
+        onClose={() => setIsFixtureModalOpen(false)}
+        fixtureConfig={fixtureConfig}
+        onSaveFixture={(newCfg) => setFixtureConfig(newCfg)}
+        stockConfig={stockConfig}
+        partMetrics={partMetrics}
+        operations={operations}
+        tools={tools}
       />
 
       {/* Simultaneous 5-Axis Multiaxis Studio & TCPM Manager */}
@@ -1911,6 +1929,7 @@ export default function App() {
         onClose={() => setIsSetupSheetOpen(false)}
         currentProjectName={currentProjectName}
         stockConfig={stockConfig}
+        fixtureConfig={fixtureConfig}
         partMetrics={partMetrics}
         tools={tools}
         operations={operations}

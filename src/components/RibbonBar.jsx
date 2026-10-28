@@ -18,6 +18,7 @@ export default function RibbonBar({
   onOpenPostModal,
   onOpenSimModal,
   onOpenStockModal,
+  onOpenFixtureModal,
   onOpenToolManager,
   onOpenToolAssemblyModal,
   onOpenFeedsSpeedsModal,
@@ -1313,6 +1314,14 @@ export default function RibbonBar({
                   <Box size={22} color="#f59e0b" />
                   <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Stock<br />Setup</span>
                 </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenFixtureModal}
+                  title="Open 3D Parametric CNC Workholding & Fixture Setup Studio (5-Axis Vises, Dovetail Step Jaws, Clamps)"
+                >
+                  <Wrench size={22} color="#a855f7" />
+                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Workholding<br />&amp; Fixtures</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Mill Tool<br />Manager</span>
@@ -1324,6 +1333,14 @@ export default function RibbonBar({
                 <button className="ribbon-btn-large" onClick={onOpenFeedsSpeedsModal} title="Feeds, Speeds & Material Machinability Physics Calculator">
                   <Gauge size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Feeds &amp;<br />Speeds</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenFixtureModal}
+                  title="Open 3D Parametric CNC Workholding & Fixture Setup Studio (5-Axis Vises, Dovetail Step Jaws, Clamps)"
+                >
+                  <Wrench size={22} color="#a855f7" />
+                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Workholding<br />&amp; Fixtures</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={onOpenProbingStudio} title="Renishaw Inspection Plus & Haas WIPS Touch Probing Studio">
                   <Crosshair size={22} color="#d946ef" />
@@ -1618,6 +1635,14 @@ export default function RibbonBar({
                 >
                   <Gauge size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Feeds &amp;<br />Speeds</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenFixtureModal}
+                  title="Open 3D Parametric CNC Workholding & Fixture Setup Studio (5-Axis Vises, Dovetail Step Jaws, Clamps)"
+                >
+                  <Wrench size={22} color="#a855f7" />
+                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Workholding<br />&amp; Fixtures</span>
                 </button>
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"
