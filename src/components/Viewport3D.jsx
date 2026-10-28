@@ -30,6 +30,7 @@ import {
   buildDeviationHeatmapStock,
   extractModelTriangles
 } from '../utils/toleranceHeatmap';
+import { VoxelStockSimulator } from '../utils/voxelStockEngine';
 
 export default function Viewport3D({
   currentModel,
@@ -106,6 +107,7 @@ export default function Viewport3D({
   const backplotToolRef = useRef(null);
   const backplotTrailRef = useRef(null);
   const backplotVerifyGroupRef = useRef(null);
+  const viewportSimulatorRef = useRef(null);
   const backplotAnimRef = useRef(null);
   const lastAnimTimeRef = useRef(performance.now());
   const waypointsRef = useRef([]);
@@ -941,22 +943,11 @@ export default function Viewport3D({
         verifyGroup.add(heatmapMesh);
         setHeatmapStats(stats);
       } else {
-        const rawStockGeo = new THREE.BoxGeometry(sw, sh, sd);
-        const rawStockMat = new THREE.MeshPhysicalMaterial({
-          color: 0x94a3b8,
-          transparent: true,
-          opacity: 0.35,
-          roughness: 0.25,
-          metalness: 0.85,
-          transmission: 0.3
-        });
-        const stockMesh = new THREE.Mesh(rawStockGeo, rawStockMat);
-        stockMesh.position.set(
-          (bounds.min.x + bounds.max.x) / 2,
-          bounds.min.y + sh / 2,
-          (bounds.min.z + bounds.max.z) / 2
-        );
+        const sim = new VoxelStockSimulator(stockBounds, partMetrics, { gridResX: 42 });
+        sim.simulateToProgress(trajectory.waypoints, 0.0, tools);
+        const stockMesh = sim.buildMesh('tool');
         verifyGroup.add(stockMesh);
+        viewportSimulatorRef.current = sim;
       }
 
       scene.add(verifyGroup);
@@ -1034,6 +1025,14 @@ export default function Viewport3D({
             new THREE.Float32BufferAttribute(trailPts, 3)
           );
           backplotTrailRef.current.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // Dynamic material removal carving in verify mode
+        if (backplotInternalMode === 'verify' && viewportSimulatorRef.current && backplotVerifyGroupRef.current) {
+          viewportSimulatorRef.current.simulateToProgress(waypointsRef.current, backplotProgress, tools);
+          const updatedMesh = viewportSimulatorRef.current.buildMesh('tool');
+          backplotVerifyGroupRef.current.clear();
+          backplotVerifyGroupRef.current.add(updatedMesh);
         }
       }
 

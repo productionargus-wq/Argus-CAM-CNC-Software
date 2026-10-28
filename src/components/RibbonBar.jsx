@@ -25,6 +25,7 @@ export default function RibbonBar({
   onOpenAdaptiveModal,
   onOpenLeadInOutModal,
   onOpenFiveAxisStudio,
+  onOpenSolidVerifyModal,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -1727,7 +1728,7 @@ export default function RibbonBar({
                   <Play size={20} color="#06b6d4" />
                   <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Backplot</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onStartVerify} title="Solid Stock Material Removal Verification">
+                <button className="ribbon-btn-large" onClick={onOpenSolidVerifyModal ? onOpenSolidVerifyModal : onStartVerify} title="Open Solid Stock Material Removal Verification & Real-Time Voxel Simulator">
                   <Box size={20} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Verify<br />Solid</span>
                 </button>

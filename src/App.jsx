@@ -36,6 +36,7 @@ import AFRModal from './components/AFRModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
+import SolidVerifyModal from './components/SolidVerifyModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -127,6 +128,7 @@ export default function App() {
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
+  const [isSolidVerifyModalOpen, setIsSolidVerifyModalOpen] = useState(false);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
@@ -1409,6 +1411,7 @@ export default function App() {
         onOpenAdaptiveModal={() => setIsAdaptiveModalOpen(true)}
         onOpenLeadInOutModal={() => setIsLeadInOutModalOpen(true)}
         onOpenFiveAxisStudio={() => setIsFiveAxisModalOpen(true)}
+        onOpenSolidVerifyModal={() => setIsSolidVerifyModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1555,6 +1558,17 @@ export default function App() {
         tools={tools}
         operations={operations}
         onApplyAFROperations={handleApplyAFROperations}
+      />
+
+      {/* Dynamic Stock Material Removal Voxel Simulator (Mastercam Verify Grade) */}
+      <SolidVerifyModal
+        isOpen={isSolidVerifyModalOpen}
+        onClose={() => setIsSolidVerifyModalOpen(false)}
+        operations={operations}
+        tools={tools}
+        activeOpId={activeOpId}
+        stockConfig={stockConfig}
+        partMetrics={partMetrics}
       />
 
       {/* Simultaneous 5-Axis Multiaxis Studio & TCPM Manager */}
