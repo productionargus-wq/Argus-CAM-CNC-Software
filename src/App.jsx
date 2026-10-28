@@ -45,6 +45,7 @@ import NestingStudioModal from './components/NestingStudioModal';
 import ThreadStudioModal from './components/ThreadStudioModal';
 import EngravingStudioModal from './components/EngravingStudioModal';
 import HSMFilterStudioModal from './components/HSMFilterStudioModal';
+import CostQuotingModal from './components/CostQuotingModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import {
@@ -146,6 +147,7 @@ export default function App() {
   const [isThreadStudioOpen, setIsThreadStudioOpen] = useState(false);
   const [isEngravingStudioOpen, setIsEngravingStudioOpen] = useState(false);
   const [isHSMFilterModalOpen, setIsHSMFilterModalOpen] = useState(false);
+  const [isCostQuotingModalOpen, setIsCostQuotingModalOpen] = useState(false);
   const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
@@ -1443,6 +1445,7 @@ export default function App() {
         onOpenThreadStudio={() => setIsThreadStudioOpen(true)}
         onOpenEngravingStudio={() => setIsEngravingStudioOpen(true)}
         onOpenHSMFilterStudio={() => setIsHSMFilterModalOpen(true)}
+        onOpenCostQuotingModal={() => setIsCostQuotingModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1709,6 +1712,17 @@ export default function App() {
             prev.map((op) => (op.id === activeOpId ? { ...op, ...params } : op))
           );
         }}
+      />
+
+      {/* CNC Production Quoting, Machining Cost & Tool Wear Calculator */}
+      <CostQuotingModal
+        isOpen={isCostQuotingModalOpen}
+        onClose={() => setIsCostQuotingModalOpen(false)}
+        operations={operations}
+        tools={tools}
+        stockConfig={stockConfig}
+        partMetrics={partMetrics}
+        activeMachine={machines.find(m => m.id === activeMachineId)}
       />
 
       {/* Simultaneous 5-Axis Multiaxis Studio & TCPM Manager */}

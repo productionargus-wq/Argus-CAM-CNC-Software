@@ -6,7 +6,7 @@ import {
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
   Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge,
-  Copy, Cpu, Activity, Type
+  Copy, Cpu, Activity, Type, DollarSign
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -35,6 +35,7 @@ export default function RibbonBar({
   onOpenThreadStudio,
   onOpenEngravingStudio,
   onOpenHSMFilterStudio,
+  onOpenCostQuotingModal,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -297,6 +298,14 @@ export default function RibbonBar({
                 >
                   <Printer size={22} color="#e2e8f0" />
                   <span className="btn-label">Setup<br />Sheet</span>
+                </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCostQuotingModal}
+                  title="Open CNC Machining Cost, Tool Wear &amp; Production Quoting Calculator"
+                >
+                  <DollarSign size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Cost &amp;<br />Quoting</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
@@ -1398,6 +1407,14 @@ export default function RibbonBar({
                   <Zap size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>HSM Arc<br />Filter</span>
                 </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCostQuotingModal}
+                  title="Open CNC Machining Cost, Tool Wear &amp; Production Quoting Calculator"
+                >
+                  <DollarSign size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Cost &amp;<br />Quoting</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Mill Tool<br />Manager</span>
@@ -1751,6 +1768,14 @@ export default function RibbonBar({
                 >
                   <Zap size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>HSM Arc<br />Filter</span>
+                </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenCostQuotingModal}
+                  title="Open CNC Machining Cost, Tool Wear &amp; Production Quoting Calculator"
+                >
+                  <DollarSign size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Cost &amp;<br />Quoting</span>
                 </button>
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"
