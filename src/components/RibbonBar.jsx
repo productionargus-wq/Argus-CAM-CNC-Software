@@ -32,6 +32,7 @@ export default function RibbonBar({
   onOpenFeedOptimizerModal,
   onOpenLatheStudio,
   onOpenNestingStudio,
+  onOpenThreadStudio,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -1356,6 +1357,14 @@ export default function RibbonBar({
                   <Scissors size={22} color="#0284c7" />
                   <span className="btn-label" style={{ color: '#0284c7', fontWeight: 600 }}>Sheet<br />Nesting</span>
                 </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenThreadStudio}
+                  title="Open CNC Feature-Based Thread Milling &amp; Tapping Studio (Metric M, Unified UNC/UNF, NPT Pipe)"
+                >
+                  <Disc size={22} color="#c084fc" />
+                  <span className="btn-label" style={{ color: '#c084fc', fontWeight: 600 }}>Thread Mill<br />&amp; Tapping</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Mill Tool<br />Manager</span>
@@ -1687,6 +1696,14 @@ export default function RibbonBar({
                   <span className="btn-label" style={{ color: '#0284c7', fontWeight: 600 }}>Sheet<br />Nesting</span>
                 </button>
                 <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenThreadStudio}
+                  title="Open CNC Feature-Based Thread Milling &amp; Tapping Studio (Metric M, Unified UNC/UNF, NPT Pipe)"
+                >
+                  <Disc size={22} color="#c084fc" />
+                  <span className="btn-label" style={{ color: '#c084fc', fontWeight: 600 }}>Thread Mill<br />&amp; Tapping</span>
+                </button>
+                <button
                   className="ribbon-btn-large ribbon-btn-highlight"
                   onClick={onOpenAFRModal}
                   title="Automatic Feature Recognition (AFR) & Feature-Based Machining (FBM)"
@@ -1728,6 +1745,14 @@ export default function RibbonBar({
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('drilling')} title="Add Peck Drilling Cycle">
                   <div style={{ width: '16px', height: '16px', background: '#ef4444', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>DR</div>
                   <span className="btn-label">Peck<br />Drill</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenThreadStudio}
+                  title="Open Helical Thread Milling &amp; Rigid Tapping Studio (G03/G02 &amp; G84 Cycle)"
+                >
+                  <div style={{ width: '16px', height: '16px', background: '#c084fc', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>TM</div>
+                  <span className="btn-label" style={{ color: '#c084fc', fontWeight: 600 }}>Thread<br />Mill</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('chamfer')} title="Add 45-degree Chamfer & Deburr">
                   <div style={{ width: '16px', height: '16px', background: '#ec4899', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CH</div>
