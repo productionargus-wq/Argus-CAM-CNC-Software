@@ -20,6 +20,7 @@ export default function RibbonBar({
   onOpenStockModal,
   onOpenToolManager,
   onOpenFeedsSpeedsModal,
+  onOpenProbingStudio,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -1305,6 +1306,10 @@ export default function RibbonBar({
                   <Gauge size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Feeds &amp;<br />Speeds</span>
                 </button>
+                <button className="ribbon-btn-large" onClick={onOpenProbingStudio} title="Renishaw Inspection Plus & Haas WIPS Touch Probing Studio">
+                  <Crosshair size={22} color="#d946ef" />
+                  <span className="btn-label" style={{ color: '#d946ef', fontWeight: 600 }}>Touch<br />Probing</span>
+                </button>
               </div>
               <span className="ribbon-group-title">Job Setup</span>
             </div>
@@ -1638,8 +1643,27 @@ export default function RibbonBar({
                   <div style={{ width: '16px', height: '16px', background: '#f97316', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PC</div>
                   <span className="btn-label">3D<br />Pencil</span>
                 </button>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('probe')} title="Add In-Process Touch Probing Cycle (Renishaw / Haas WIPS)">
+                  <div style={{ width: '16px', height: '16px', background: '#d946ef', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PR</div>
+                  <span className="btn-label">Touch<br />Probe</span>
+                </button>
               </div>
               <span className="ribbon-group-title">CAM Strategies</span>
+            </div>
+
+            {/* Probing & CMM Group */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenProbingStudio}
+                  title="Open Renishaw Inspection Plus & Haas WIPS Touch Probing Studio"
+                >
+                  <Crosshair size={22} color="#d946ef" />
+                  <span className="btn-label" style={{ color: '#d946ef', fontWeight: 600 }}>Probing<br />Studio</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Probing &amp; CMM</span>
             </div>
 
             {/* Regeneration & Editing */}

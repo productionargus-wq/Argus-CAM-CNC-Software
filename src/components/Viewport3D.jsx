@@ -16,6 +16,7 @@ import {
   generateSurfaceParallelToolpath,
   generateRestMillingToolpath,
   generatePencilTracingToolpath,
+  generateProbingToolpath,
   buildToolpathMeshes,
   createToolAssembly3D,
   compileBackplotTrajectory,
@@ -678,7 +679,8 @@ export default function Viewport3D({
         surface: 0xd946ef,
         rest: 0x14b8a6,
         rest_milling: 0x14b8a6,
-        pencil: 0xf97316
+        pencil: 0xf97316,
+        probe: 0xd946ef
       };
 
     operations.forEach((op) => {
@@ -747,6 +749,13 @@ export default function Viewport3D({
           biTangencyRadius: op.biTangencyRadius || 3.0,
           rapidHeight: op.rapidHeight || 15.0
         }, currentModel);
+      } else if (op.badgeClass === 'probe') {
+        const center = op.center || {
+          x: (bounds.min.x + bounds.max.x) / 2,
+          y: bounds.max.y,
+          z: (bounds.min.z + bounds.max.z) / 2
+        };
+        toolpathData = generateProbingToolpath(op.strategyKey || 'bore_centering', center, op.probingParams || {});
       }
 
       if (toolpathData) {

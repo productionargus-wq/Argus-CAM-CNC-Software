@@ -552,6 +552,7 @@ body {
 .op-type-parallel { background: #d946ef; color: white; }
 .op-type-rest { background: #14b8a6; color: white; }
 .op-type-pencil { background: #f97316; color: white; }
+.op-type-probe { background: #d946ef; color: white; }
 
 .op-badge {
   font-size: 9px;

@@ -7,6 +7,7 @@ import {
   generateDrillingToolpath,
   generateSurfaceParallelToolpath
 } from './toolpathEngine.js';
+import { generateProbingGCode } from './probingEngine.js';
 
 /**
  * Industrial G-Code Post-Processor Engine
@@ -83,6 +84,22 @@ export function generateNCProgram({
 
   // 2. Process each enabled CAM Operation
   operations.filter((op) => op.visible).forEach((op, opIndex) => {
+    // Probing cycle operations (Renishaw Inspection Plus / Haas WIPS)
+    if (op.badgeClass === 'probe') {
+      lines.push(``);
+      const probeGCode = generateProbingGCode(op, controller, op.probingParams?.wcs || 'G54');
+      const pLines = probeGCode.split('\n');
+      pLines.forEach((pl) => {
+        if (!pl.trim()) return;
+        if (pl.startsWith(';')) {
+          lines.push(pl);
+        } else {
+          lines.push(`${nextN()} ${pl}`.trim());
+        }
+      });
+      return;
+    }
+
     const tool = tools.find((t) => t.id === op.toolId) || tools[0] || {
       number: 1,
       name: '10mm Endmill',

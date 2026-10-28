@@ -31,6 +31,7 @@ import TransformCADModal from './components/TransformCADModal';
 import MachineConfigModal from './components/MachineConfigModal';
 import ViewStudioModal from './components/ViewStudioModal';
 import CAMOperationsWizardModal from './components/CAMOperationsWizardModal';
+import ProbingStudioModal from './components/ProbingStudioModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -117,6 +118,7 @@ export default function App() {
   const [isSaveAsModalOpen, setIsSaveAsModalOpen] = useState(false);
   const [isRecentProjectsModalOpen, setIsRecentProjectsModalOpen] = useState(false);
   const [isExportCADModalOpen, setIsExportCADModalOpen] = useState(false);
+  const [isProbingModalOpen, setIsProbingModalOpen] = useState(false);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
@@ -332,6 +334,24 @@ export default function App() {
       feedRate: 713,
       plungeRate: 713,
       coolant: 'Through'
+    },
+    {
+      id: 99,
+      number: 99,
+      name: 'Renishaw OMP60 Optical Touch Probe',
+      type: 'probe',
+      diameter: 6.0,
+      cornerRad: 3.0,
+      fluteLength: 50,
+      overallLength: 120,
+      flutes: 0,
+      cuttingSpeedVc: 0,
+      rpm: 0,
+      feedPerTooth: 0,
+      feedRate: 150,
+      plungeRate: 150,
+      coolant: 'Off',
+      isProbe: true
     }
   ]);
 
@@ -778,12 +798,74 @@ export default function App() {
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
+    } else if (strategy === 'probe') {
+      newOp = {
+        id: nextId,
+        name: `Probing: Bore Centering ${nextId}`,
+        toolId: 99,
+        toolName: 'T99 - Renishaw OMP60 Touch Probe',
+        badgeClass: 'probe',
+        badgeText: 'PR',
+        visible: true,
+        strategyKey: 'bore_centering',
+        probingParams: {
+          nominalDiameter: 40,
+          depthZ: -10,
+          clearanceZ: 15,
+          wcs: activeWcs || 'G54'
+        },
+        rapidHeight: 15.0
+      };
     }
 
     if (newOp) {
       setOperations([...operations, newOp]);
       setActiveOpId(newOp.id);
     }
+  };
+
+  const handleAddProbingOp = (cycleConfig) => {
+    // Ensure probe tool exists in tool library
+    let probeTool = tools.find((t) => t.id === 99 || t.type === 'probe');
+    if (!probeTool) {
+      probeTool = {
+        id: 99,
+        number: 99,
+        name: 'Renishaw OMP60 Optical Touch Probe',
+        type: 'probe',
+        diameter: 6.0,
+        cornerRad: 3.0,
+        fluteLength: 50,
+        overallLength: 120,
+        flutes: 0,
+        cuttingSpeedVc: 0,
+        rpm: 0,
+        feedPerTooth: 0,
+        feedRate: 150,
+        plungeRate: 150,
+        coolant: 'Off',
+        isProbe: true
+      };
+      setTools((prev) => [...prev, probeTool]);
+    }
+
+    const nextId = operations.length > 0 ? Math.max(...operations.map((o) => o.id)) + 1 : 1;
+    const newOp = {
+      id: nextId,
+      name: `Probing: ${cycleConfig.strategyName || 'Touch Cycle'} [${cycleConfig.wcs || activeWcs || 'G54'}]`,
+      toolId: probeTool.id,
+      toolName: `T${probeTool.number} - ${probeTool.name}`,
+      badgeClass: 'probe',
+      badgeText: 'PR',
+      visible: true,
+      strategyKey: cycleConfig.strategyKey,
+      probingParams: { ...cycleConfig.params, wcs: cycleConfig.wcs || activeWcs || 'G54' },
+      rapidHeight: cycleConfig.params?.clearanceZ || 15.0
+    };
+
+    setOperations((prev) => [...prev, newOp]);
+    setActiveOpId(newOp.id);
+    setIsProbingModalOpen(false);
   };
 
   const handleSelectSampleModel = async (type) => {
@@ -1300,6 +1382,7 @@ export default function App() {
         onOpenSaveAsModal={() => setIsSaveAsModalOpen(true)}
         onOpenRecentProjectsModal={() => setIsRecentProjectsModalOpen(true)}
         onOpenExportCADModal={() => setIsExportCADModalOpen(true)}
+        onOpenProbingStudio={() => setIsProbingModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1423,6 +1506,17 @@ export default function App() {
         onClose={() => setIsExportCADModalOpen(false)}
         currentModel={currentModel}
         currentProjectName={currentProjectName}
+      />
+
+      {/* Renishaw Inspection Plus & Haas WIPS Touch Probing Studio */}
+      <ProbingStudioModal
+        isOpen={isProbingModalOpen}
+        onClose={() => setIsProbingModalOpen(false)}
+        onAddProbingOperation={handleAddProbingOp}
+        activeWcs={activeWcs}
+        stockConfig={stockConfig}
+        partMetrics={partMetrics}
+        activeMachine={activeMachine}
       />
 
       {/* Wireframe CAD Sketcher Modal (Tab 3) */}

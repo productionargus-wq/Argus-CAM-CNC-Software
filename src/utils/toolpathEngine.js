@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
+
+export { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES };
 
 /**
  * Toolpath Generation Engine
@@ -1163,6 +1166,11 @@ export function generatePencilTracingToolpath(bounds, tool, params = {}, model =
  * (CAT40/BT30 Spindle Arbor + ER Collet Nut + Ground Steel Shank + TiN Flutes + Glowing Apex Tip)
  */
 export function createToolAssembly3D(tool = {}) {
+  // If tool is a touch probe, return the Renishaw OMP60 kinematic assembly
+  if (tool.type === 'probe' || tool.number === 99 || tool.isProbe) {
+    return createTouchProbe3D(tool);
+  }
+
   const group = new THREE.Group();
   group.name = "Backplot_Tool_Assembly";
 
@@ -1264,7 +1272,7 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
   let lastPos = new THREE.Vector3(0, bounds.max.y + 20, 0);
 
   activeOps.forEach((op) => {
-    const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10, rpm: 8000, feedRate: 1500 };
+    let assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10, rpm: 8000, feedRate: 1500 };
     let data = null;
 
     if (op.badgeClass === 'face') {
@@ -1329,6 +1337,14 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
         biTangencyRadius: op.biTangencyRadius || 3.0,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
+    } else if (op.badgeClass === 'probe') {
+      const pCenter = op.center || {
+        x: (bounds.min.x + bounds.max.x) / 2,
+        y: bounds.max.y,
+        z: (bounds.min.z + bounds.max.z) / 2
+      };
+      data = generateProbingToolpath(op.strategyKey || 'bore_centering', pCenter, op.probingParams || {});
+      assignedTool = data.probeTool || assignedTool;
     }
 
     if (!data) return;
@@ -1341,6 +1357,8 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
     if (data.cuttingLines && data.cuttingLines.length > 0) {
       data.cuttingLines.forEach((seg) => segments.push({ seg, isRapid: false }));
     }
+
+    const isProbeOp = op.badgeClass === 'probe';
 
     segments.forEach(({ seg, isRapid }) => {
       const p1 = seg[0];
@@ -1356,7 +1374,7 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
           opName: op.name,
           tool: assignedTool,
           feedRate: 5000,
-          spindleRpm: op.spindleRpm || assignedTool.rpm || 8000,
+          spindleRpm: isProbeOp ? 0 : (op.spindleRpm || assignedTool.rpm || 8000),
           cumulativeDist: totalDist
         });
       }
@@ -1369,8 +1387,8 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
         opId: op.id,
         opName: op.name,
         tool: assignedTool,
-        feedRate: isRapid ? 5000 : (op.feedRate || assignedTool.feedRate || 1500),
-        spindleRpm: op.spindleRpm || assignedTool.rpm || 8000,
+        feedRate: isRapid ? 5000 : (isProbeOp ? 150 : (op.feedRate || assignedTool.feedRate || 1500)),
+        spindleRpm: isProbeOp ? 0 : (op.spindleRpm || assignedTool.rpm || 8000),
         cumulativeDist: totalDist
       });
 
