@@ -1,7 +1,15 @@
 import * as THREE from 'three';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
+import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 
-export { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES };
+export {
+  createTouchProbe3D,
+  generateProbingToolpath,
+  PROBING_STRATEGIES,
+  generateAdaptiveTrochoidalToolpath,
+  ADAPTIVE_MATERIALS,
+  calculateAdaptivePhysics
+};
 
 /**
  * Toolpath Generation Engine
@@ -564,70 +572,10 @@ export function buildToolpathMeshes(toolpathData) {
 }
 
 /**
- * Generates 3D High-Speed Adaptive Roughing Toolpath (Constant Tool Engagement Trochoidal Arcs)
+ * Generates 3D High-Speed Adaptive Roughing Toolpath (Constant Tool Engagement Trochoidal Cycloids & Micro-Lifts)
  */
 export function generateAdaptiveRoughingToolpath(bounds, tool, params = {}) {
-  const {
-    stepoverPct = 25,
-    stepdown = 8.0,
-    totalDepth = 24.0,
-    rapidHeight = 15.0
-  } = params;
-
-  const toolRadius = (tool.diameter || 10) / 2;
-  const stepover = (tool.diameter * stepoverPct) / 100;
-  const topY = bounds.max.y;
-
-  const cuttingLines = [];
-  const rapidLines = [];
-
-  const minX = bounds.min.x - toolRadius;
-  const maxX = bounds.max.x + toolRadius;
-  const minZ = bounds.min.z - toolRadius;
-  const maxZ = bounds.max.z + toolRadius;
-
-  for (let curDepth = stepdown; curDepth <= totalDepth; curDepth += stepdown) {
-    const cutY = topY - curDepth;
-
-    // Helical center lead-in
-    rapidLines.push([
-      new THREE.Vector3(minX, topY + rapidHeight, minZ),
-      new THREE.Vector3(minX, cutY + 2, minZ)
-    ]);
-
-    // Trochoidal clearing motion (small circular loops advancing along the cut vector)
-    let direction = 1;
-    for (let z = minZ; z <= maxZ; z += stepover * 2) {
-      const startX = direction === 1 ? minX : maxX;
-      const endX = direction === 1 ? maxX : minX;
-      const dist = Math.abs(endX - startX);
-      const steps = Math.max(10, Math.floor(dist / 4));
-
-      let prevPt = new THREE.Vector3(startX, cutY, z);
-      for (let s = 1; s <= steps; s++) {
-        const t = s / steps;
-        const baseX = startX + (endX - startX) * t;
-        // Superimpose trochoidal circular loop
-        const loopAngle = (s % 6) * (Math.PI / 3);
-        const trochoidX = baseX + Math.cos(loopAngle) * (stepover * 0.7);
-        const trochoidZ = z + Math.sin(loopAngle) * (stepover * 0.7);
-
-        const currPt = new THREE.Vector3(trochoidX, cutY, trochoidZ);
-        cuttingLines.push([prevPt, currPt]);
-        prevPt = currPt;
-      }
-
-      direction *= -1;
-    }
-
-    // Retract
-    rapidLines.push([
-      new THREE.Vector3(maxX, cutY, maxZ),
-      new THREE.Vector3(maxX, topY + rapidHeight, maxZ)
-    ]);
-  }
-
-  return { cuttingLines, rapidLines };
+  return generateAdaptiveTrochoidalToolpath(bounds, tool, params);
 }
 
 /**

@@ -5,7 +5,8 @@ import {
   generateWaterlineToolpath,
   generateSwarfToolpath,
   generateDrillingToolpath,
-  generateSurfaceParallelToolpath
+  generateSurfaceParallelToolpath,
+  generateAdaptiveRoughingToolpath
 } from './toolpathEngine.js';
 import { generateProbingGCode } from './probingEngine.js';
 
@@ -145,6 +146,13 @@ export function generateNCProgram({
         stepoverPct: op.stepoverPct || 20,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
+    } else if (op.badgeClass === 'adaptive') {
+      toolpathData = generateAdaptiveRoughingToolpath(bounds, tool, {
+        stepoverPct: op.stepoverPct || 15,
+        stepdown: op.stepdown || 18.0,
+        totalDepth: op.totalDepth || 20.0,
+        rapidHeight: op.rapidHeight || 15.0
+      });
     }
 
     if (!toolpathData) return;
@@ -163,13 +171,18 @@ export function generateNCProgram({
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} PLANE SPATIAL SPA+15.00 SPB+0.00 SPC+0.00 TURN FMAX`);
         lines.push(`${nextN()} FUNCTION TCPM F CONT AXIS SPAT`);
+      } else if (op.badgeClass === 'adaptive') {
+        lines.push(`${nextN()} CYCL DEF 32.0 TOLERANCE`);
+        lines.push(`${nextN()} CYCL DEF 32.1 T0.02 HSC-MODE:1`);
       }
     } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
-      lines.push(`${nextN()} T="T${tool.number}_${tool.type.toUpperCase()}" M6`);
+      lines.push(`${nextN()} T="T${tool.number}_${(tool.type || 'FLAT').toUpperCase()}" M6`);
       lines.push(`${nextN()} S${tool.rpm} M3`);
       lines.push(`${nextN()} D1 M8`);
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} TRAORI ; 5-AXIS TCP`);
+      } else if (op.badgeClass === 'adaptive') {
+        lines.push(`${nextN()} CYCLE832(0.02, 1, 1) ; HIGH SPEED TOLERANCE`);
       }
     } else {
       // Fanuc / Haas / GRBL / Mach3
@@ -178,6 +191,8 @@ export function generateNCProgram({
       lines.push(`${nextN()} G43 H${tool.number} M08`);
       if (op.badgeClass === 'contour' || op.badgeClass === 'chamfer') {
         lines.push(`${nextN()} G41 D${tool.number} ; CUTTER RADIUS COMPENSATION LEFT`);
+      } else if (op.badgeClass === 'adaptive') {
+        lines.push(`${nextN()} G05.1 Q1 (HIGH SPEED LOOK-AHEAD ACCEL/DECEL)`);
       }
     }
 

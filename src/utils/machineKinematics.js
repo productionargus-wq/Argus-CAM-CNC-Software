@@ -347,3 +347,4 @@ export function auditKinematicsAndCollisions(motionBlocks = [], machineId = 'dmu
     machineConfig: config
   };
 }
+

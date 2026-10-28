@@ -22,6 +22,7 @@ export default function RibbonBar({
   onOpenFeedsSpeedsModal,
   onOpenProbingStudio,
   onOpenAFRModal,
+  onOpenAdaptiveModal,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -1636,7 +1637,11 @@ export default function RibbonBar({
                   <div style={{ width: '16px', height: '16px', background: '#f59e0b', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>WL</div>
                   <span className="btn-label">Waterline<br />3D</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('adaptive')} title="Add 3D High-Speed Adaptive Roughing">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenAdaptiveModal ? onOpenAdaptiveModal : () => onQuickAddOp('adaptive')}
+                  title="Open Adaptive Trochoidal High-Speed Roughing Studio (Constant Engagement & Chip Thinning)"
+                >
                   <div style={{ width: '16px', height: '16px', background: '#06b6d4', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>AD</div>
                   <span className="btn-label">Adaptive<br />Roughing</span>
                 </button>

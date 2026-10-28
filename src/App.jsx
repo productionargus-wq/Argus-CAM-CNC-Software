@@ -33,6 +33,7 @@ import ViewStudioModal from './components/ViewStudioModal';
 import CAMOperationsWizardModal from './components/CAMOperationsWizardModal';
 import ProbingStudioModal from './components/ProbingStudioModal';
 import AFRModal from './components/AFRModal';
+import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -121,6 +122,7 @@ export default function App() {
   const [isExportCADModalOpen, setIsExportCADModalOpen] = useState(false);
   const [isProbingModalOpen, setIsProbingModalOpen] = useState(false);
   const [isAFRModalOpen, setIsAFRModalOpen] = useState(false);
+  const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
@@ -878,6 +880,12 @@ export default function App() {
     }
   };
 
+  const handleAddAdaptiveOp = (newOp) => {
+    if (!newOp) return;
+    setOperations((prev) => [...prev, newOp]);
+    setActiveOpId(newOp.id);
+  };
+
   const handleSelectSampleModel = async (type) => {
     if (type === 'step_bracket') {
       try {
@@ -1394,6 +1402,7 @@ export default function App() {
         onOpenExportCADModal={() => setIsExportCADModalOpen(true)}
         onOpenProbingStudio={() => setIsProbingModalOpen(true)}
         onOpenAFRModal={() => setIsAFRModalOpen(true)}
+        onOpenAdaptiveModal={() => setIsAdaptiveModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1540,6 +1549,17 @@ export default function App() {
         tools={tools}
         operations={operations}
         onApplyAFROperations={handleApplyAFROperations}
+      />
+
+      {/* Adaptive Trochoidal High-Speed Roughing Studio (Dynamic Motion) */}
+      <AdaptiveRoughingModal
+        isOpen={isAdaptiveModalOpen}
+        onClose={() => setIsAdaptiveModalOpen(false)}
+        tools={tools}
+        operations={operations}
+        stockConfig={stockConfig}
+        partMetrics={partMetrics}
+        onAddAdaptiveOperation={handleAddAdaptiveOp}
       />
 
       {/* Wireframe CAD Sketcher Modal (Tab 3) */}
