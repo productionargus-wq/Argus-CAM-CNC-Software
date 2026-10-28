@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   FolderTree, CheckSquare, Square, Eye, RefreshCw, 
   Trash2, Lock, FileCode, PlusCircle, ChevronDown, ChevronRight, Sliders,
-  Layers, Box, Compass, Check, Plus, Play
+  Layers, Box, Compass, Check, Plus, Play, Sparkles
 } from 'lucide-react';
 
 export default function OperationsTree({
@@ -16,6 +16,7 @@ export default function OperationsTree({
   onOpenStockModal,
   onStartBackplot,
   onStartVerify,
+  onOpenAFR = null,
   activeManagerTab = 'Toolpaths',
   onSelectManagerTab,
   levels = [],
@@ -124,6 +125,11 @@ export default function OperationsTree({
             <button className="ops-tool-btn" title="Configure Stock" onClick={onOpenStockModal}>
               <Sliders size={13} color="#a855f7" />
             </button>
+            {onOpenAFR && (
+              <button className="ops-tool-btn" title="Automatic Feature Recognition (AFR) & FBM" onClick={onOpenAFR}>
+                <Sparkles size={13} color="#10b981" />
+              </button>
+            )}
           </div>
 
           {/* Tree Content */}

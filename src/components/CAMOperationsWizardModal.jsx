@@ -25,6 +25,7 @@ export default function CAMOperationsWizardModal({
   onRegenerateAll,
   onLaunchSimulation,
   onOpenGCodeViewer,
+  onOpenAFR = null,
   partMetrics,
   stockConfig
 }) {
@@ -184,6 +185,17 @@ export default function CAMOperationsWizardModal({
       defaultStepdown: 1.0,
       defaultDepth: 15.0,
       badgeClass: 'pencil'
+    },
+    {
+      id: 'probe',
+      name: 'Touch Probe Cycle',
+      badge: 'PR',
+      color: '#d946ef',
+      desc: 'Renishaw Inspection Plus & Haas WIPS in-process bore/boss/surface datum touch',
+      defaultStepover: 0,
+      defaultStepdown: 10.0,
+      defaultDepth: 10.0,
+      badgeClass: 'probe'
     }
   ];
 
@@ -407,6 +419,50 @@ export default function CAMOperationsWizardModal({
         {/* ================= TAB 1: CREATE OPERATION ================= */}
         {activeTab === 'create' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {/* Automatic Feature Recognition Quick Banner */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 182, 212, 0.12))',
+              border: '1px solid rgba(16, 185, 129, 0.3)'
+            }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={15} />
+                  Automatic Feature Recognition (AFR) Available
+                </div>
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                  Auto-decompose solid CAD B-Rep faces, pockets &amp; holes, and synthesize toolpaths with 1 click.
+                </div>
+              </div>
+              {onOpenAFR && (
+                <button
+                  type="button"
+                  onClick={() => { onClose(); onOpenAFR(); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    borderRadius: '5px',
+                    background: 'linear-gradient(135deg, #10b981, #06b6d4)',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  <Sparkles size={13} />
+                  Launch AFR Studio
+                </button>
+              )}
+            </div>
+
             {/* Strategy Selector Grid */}
             <div>
               <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '8px' }}>

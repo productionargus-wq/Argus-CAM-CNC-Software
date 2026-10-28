@@ -32,6 +32,7 @@ import MachineConfigModal from './components/MachineConfigModal';
 import ViewStudioModal from './components/ViewStudioModal';
 import CAMOperationsWizardModal from './components/CAMOperationsWizardModal';
 import ProbingStudioModal from './components/ProbingStudioModal';
+import AFRModal from './components/AFRModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -119,6 +120,7 @@ export default function App() {
   const [isRecentProjectsModalOpen, setIsRecentProjectsModalOpen] = useState(false);
   const [isExportCADModalOpen, setIsExportCADModalOpen] = useState(false);
   const [isProbingModalOpen, setIsProbingModalOpen] = useState(false);
+  const [isAFRModalOpen, setIsAFRModalOpen] = useState(false);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
@@ -868,6 +870,14 @@ export default function App() {
     setIsProbingModalOpen(false);
   };
 
+  const handleApplyAFROperations = (newOps) => {
+    if (!newOps || newOps.length === 0) return;
+    setOperations((prev) => [...prev, ...newOps]);
+    if (newOps[0]) {
+      setActiveOpId(newOps[0].id);
+    }
+  };
+
   const handleSelectSampleModel = async (type) => {
     if (type === 'step_bracket') {
       try {
@@ -1383,6 +1393,7 @@ export default function App() {
         onOpenRecentProjectsModal={() => setIsRecentProjectsModalOpen(true)}
         onOpenExportCADModal={() => setIsExportCADModalOpen(true)}
         onOpenProbingStudio={() => setIsProbingModalOpen(true)}
+        onOpenAFRModal={() => setIsAFRModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1422,6 +1433,7 @@ export default function App() {
           onAddOp={() => handleQuickAddOp('pocket')}
           onRegenerate={handleRegenerateAll}
           onOpenStockModal={() => setIsStockModalOpen(true)}
+          onOpenAFR={() => setIsAFRModalOpen(true)}
           activeManagerTab={activeManagerTab}
           onSelectManagerTab={setActiveManagerTab}
           levels={levels}
@@ -1517,6 +1529,17 @@ export default function App() {
         stockConfig={stockConfig}
         partMetrics={partMetrics}
         activeMachine={activeMachine}
+      />
+
+      {/* Automatic Feature Recognition & Feature-Based Machining Studio */}
+      <AFRModal
+        isOpen={isAFRModalOpen}
+        onClose={() => setIsAFRModalOpen(false)}
+        currentModel={currentModel}
+        partMetrics={partMetrics}
+        tools={tools}
+        operations={operations}
+        onApplyAFROperations={handleApplyAFROperations}
       />
 
       {/* Wireframe CAD Sketcher Modal (Tab 3) */}
@@ -1657,6 +1680,7 @@ export default function App() {
         onRegenerateAll={handleRegenerateAll}
         onLaunchSimulation={() => setIsSimModalOpen(true)}
         onOpenGCodeViewer={() => setIsGCodeViewerOpen(true)}
+        onOpenAFR={() => setIsAFRModalOpen(true)}
         partMetrics={partMetrics}
         stockConfig={stockConfig}
       />

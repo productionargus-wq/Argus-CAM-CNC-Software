@@ -21,6 +21,7 @@ export default function RibbonBar({
   onOpenToolManager,
   onOpenFeedsSpeedsModal,
   onOpenProbingStudio,
+  onOpenAFRModal,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -755,6 +756,14 @@ export default function RibbonBar({
                 >
                   <Settings size={20} color="#10b981" />
                   <span className="btn-label">Solid<br />Stock</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenAFRModal}
+                  title="Automatic Feature Recognition (AFR) & Feature-Based Machining"
+                >
+                  <Sparkles size={20} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Recognize<br />Features</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Solids Management</span>
@@ -1599,6 +1608,14 @@ export default function RibbonBar({
                 >
                   <Gauge size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Feeds &amp;<br />Speeds</span>
+                </button>
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenAFRModal}
+                  title="Automatic Feature Recognition (AFR) & Feature-Based Machining (FBM)"
+                >
+                  <Sparkles size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Auto Feature<br />Recognition</span>
                 </button>
               </div>
               <span className="ribbon-group-title">CAM Manager</span>
