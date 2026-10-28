@@ -179,7 +179,7 @@ export default function CustomPostStudioModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-hidden select-none">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-hidden select-none">
       <div
         className={`bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col transition-all duration-200 ${
           isFullscreen ? 'w-full h-full rounded-none m-0' : 'w-[96vw] max-w-7xl h-[92vh]'

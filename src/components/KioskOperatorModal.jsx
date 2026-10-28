@@ -274,7 +274,7 @@ export default function KioskOperatorModal({
   return (
     <div
       ref={modalContainerRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md overflow-hidden select-none"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md overflow-hidden select-none"
     >
       <div
         className={`bg-[#0a0e17] border border-slate-700/80 shadow-2xl flex flex-col transition-all duration-150 ${
