@@ -50,6 +50,7 @@ import CornerReliefStudioModal from './components/CornerReliefStudioModal';
 import KioskOperatorModal from './components/KioskOperatorModal';
 import TombstoneStudioModal from './components/TombstoneStudioModal';
 import CustomPostStudioModal from './components/CustomPostStudioModal';
+import AnomalyScannerModal from './components/AnomalyScannerModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import {
@@ -156,6 +157,7 @@ export default function App() {
   const [isKioskModalOpen, setIsKioskModalOpen] = useState(false);
   const [isTombstoneModalOpen, setIsTombstoneModalOpen] = useState(false);
   const [isCustomPostModalOpen, setIsCustomPostModalOpen] = useState(false);
+  const [isAnomalyScannerOpen, setIsAnomalyScannerOpen] = useState(false);
   const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
@@ -1458,6 +1460,7 @@ export default function App() {
         onOpenKioskModal={() => setIsKioskModalOpen(true)}
         onOpenTombstoneStudio={() => setIsTombstoneModalOpen(true)}
         onOpenCustomPostStudio={() => setIsCustomPostModalOpen(true)}
+        onOpenAnomalyScanner={() => setIsAnomalyScannerOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1776,6 +1779,18 @@ export default function App() {
         activeMachine={machines.find(m => m.id === activeMachineId)}
         onSaveCustomPost={(customProfile) => {
           console.log('Custom Post Profile Saved for Machine:', customProfile);
+        }}
+      />
+
+      {/* AI Toolpath Anomaly, Deflection & Chatter Diagnostic Scanner */}
+      <AnomalyScannerModal
+        isOpen={isAnomalyScannerOpen}
+        onClose={() => setIsAnomalyScannerOpen(false)}
+        operations={operations}
+        tools={tools}
+        stockConfig={stockConfig}
+        onApplyAutoFixes={(anomalies) => {
+          console.log('AI Auto-Fixes Applied to CAM Operations:', anomalies);
         }}
       />
 
