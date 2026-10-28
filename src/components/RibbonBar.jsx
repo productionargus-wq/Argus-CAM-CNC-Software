@@ -19,6 +19,7 @@ export default function RibbonBar({
   onOpenSimModal,
   onOpenStockModal,
   onOpenToolManager,
+  onOpenToolAssemblyModal,
   onOpenFeedsSpeedsModal,
   onOpenProbingStudio,
   onOpenAFRModal,
@@ -1314,6 +1315,10 @@ export default function RibbonBar({
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Mill Tool<br />Manager</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenToolAssemblyModal} title="Open 3D Parametric Tool & Toolholder Assembly Studio (BT40, HSK-A63, ShrinkFit, Collets)">
+                  <Wrench size={22} color="#0284c7" />
+                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 600 }}>Tool<br />Assembly</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={onOpenFeedsSpeedsModal} title="Feeds, Speeds & Material Machinability Physics Calculator">
                   <Gauge size={22} color="#38bdf8" />

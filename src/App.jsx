@@ -37,6 +37,7 @@ import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
 import SolidVerifyModal from './components/SolidVerifyModal';
+import ToolAssemblyStudioModal from './components/ToolAssemblyStudioModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -129,6 +130,8 @@ export default function App() {
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
   const [isSolidVerifyModalOpen, setIsSolidVerifyModalOpen] = useState(false);
+  const [isToolAssemblyModalOpen, setIsToolAssemblyModalOpen] = useState(false);
+  const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
@@ -1367,7 +1370,12 @@ export default function App() {
         onOpenSimModal={() => setIsSimModalOpen(true)}
         onOpenStockModal={() => setIsStockModalOpen(true)}
         onOpenToolManager={() => setIsToolManagerOpen(true)}
+        onOpenToolAssemblyModal={() => setIsToolAssemblyModalOpen(true)}
         onOpenFeedsSpeedsModal={handleOpenFeedsSpeeds}
+        onOpenToolAssemblyStudio={(tId) => {
+          setSelectedAssemblyToolId(tId);
+          setIsToolAssemblyModalOpen(true);
+        }}
         onImportNCProgram={handleImportNCProgram}
         onOpenGCodeViewer={() => setIsGCodeViewerOpen(true)}
         onOpenEntityAnalyzer={() => setIsEntityAnalyzerOpen(true)}
@@ -1558,6 +1566,21 @@ export default function App() {
         tools={tools}
         operations={operations}
         onApplyAFROperations={handleApplyAFROperations}
+      />
+
+      {/* Parametric Custom Tool & Toolholder Assembly Studio */}
+      <ToolAssemblyStudioModal
+        isOpen={isToolAssemblyModalOpen}
+        onClose={() => setIsToolAssemblyModalOpen(false)}
+        tools={tools}
+        activeToolId={selectedAssemblyToolId || tools[0]?.id}
+        partMetrics={partMetrics}
+        onSaveTool={(updatedTool) => {
+          setTools((prev) => prev.map((t) => (t.id === updatedTool.id ? { ...t, ...updatedTool } : t)));
+        }}
+        onAddTool={(newTool) => {
+          setTools((prev) => [...prev, newTool]);
+        }}
       />
 
       {/* Dynamic Stock Material Removal Voxel Simulator (Mastercam Verify Grade) */}

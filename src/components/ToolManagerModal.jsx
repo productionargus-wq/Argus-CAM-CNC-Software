@@ -6,7 +6,8 @@ export default function ToolManagerModal({
   onClose,
   tools,
   onUpdateTools,
-  onOpenFeedsSpeedsModal
+  onOpenFeedsSpeedsModal,
+  onOpenToolAssemblyStudio
 }) {
   const dialogRef = useRef(null);
 
@@ -201,8 +202,23 @@ export default function ToolManagerModal({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {/* Tool Geometry Card */}
               <div className="nc2check-section">
-                <div className="section-label">TOOL GEOMETRY (T{selectedTool.number})</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '4px' }}>
+                  <div className="section-label" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+                    TOOL GEOMETRY (T{selectedTool.number})
+                  </div>
+                  {onOpenToolAssemblyStudio && (
+                    <button
+                      className="btn-secondary"
+                      onClick={() => onOpenToolAssemblyStudio(selectedTool.id)}
+                      style={{ padding: '2px 8px', fontSize: '10px', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      title="Open 3D Parametric Tool & Toolholder Assembly Studio"
+                    >
+                      <Wrench size={11} color="#38bdf8" />
+                      3D Assembly Studio
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '6px' }}>
                   <div className="form-group">
                     <label>Tool Type:</label>
                     <select
