@@ -6,7 +6,7 @@ import {
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
   Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge,
-  Copy, Cpu, Activity
+  Copy, Cpu, Activity, Type
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -33,6 +33,7 @@ export default function RibbonBar({
   onOpenLatheStudio,
   onOpenNestingStudio,
   onOpenThreadStudio,
+  onOpenEngravingStudio,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -1090,6 +1091,21 @@ export default function RibbonBar({
               </div>
               <span className="ribbon-group-title">Management</span>
             </div>
+
+            {/* CNC Engraving & Marking */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large ribbon-btn-highlight"
+                  onClick={onOpenEngravingStudio}
+                  title="Open CNC 2.5D &amp; 3D Engraving &amp; V-Carve Studio (Serial Numbers, Single-Line Stick Font, 3D Prism V-Carving)"
+                >
+                  <Type size={22} color="#06b6d4" />
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 700 }}>Engraving<br />&amp; V-Carve</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Part Marking</span>
+            </div>
           </>
         )}
 
@@ -1364,6 +1380,14 @@ export default function RibbonBar({
                 >
                   <Disc size={22} color="#c084fc" />
                   <span className="btn-label" style={{ color: '#c084fc', fontWeight: 600 }}>Thread Mill<br />&amp; Tapping</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenEngravingStudio}
+                  title="Open CNC 2.5D &amp; 3D Engraving &amp; V-Carve Studio (Serial Numbers, Single-Line Stick Font, 3D Prism V-Carving)"
+                >
+                  <Type size={22} color="#06b6d4" />
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Engraving<br />&amp; V-Carve</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
                   <Wrench size={22} color="#10b981" />
@@ -1704,6 +1728,14 @@ export default function RibbonBar({
                   <span className="btn-label" style={{ color: '#c084fc', fontWeight: 600 }}>Thread Mill<br />&amp; Tapping</span>
                 </button>
                 <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenEngravingStudio}
+                  title="Open CNC 2.5D &amp; 3D Engraving &amp; V-Carve Studio (Serial Numbers, Single-Line Stick Font, 3D Prism V-Carving)"
+                >
+                  <Type size={22} color="#06b6d4" />
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Engraving<br />&amp; V-Carve</span>
+                </button>
+                <button
                   className="ribbon-btn-large ribbon-btn-highlight"
                   onClick={onOpenAFRModal}
                   title="Automatic Feature Recognition (AFR) & Feature-Based Machining (FBM)"
@@ -1757,6 +1789,14 @@ export default function RibbonBar({
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('chamfer')} title="Add 45-degree Chamfer & Deburr">
                   <div style={{ width: '16px', height: '16px', background: '#ec4899', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CH</div>
                   <span className="btn-label">Chamfer<br />Deburr</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenEngravingStudio}
+                  title="Open CNC 2.5D &amp; 3D Engraving &amp; V-Carve Studio (Serial Numbers, Single-Line Stick Font, 3D Prism V-Carving)"
+                >
+                  <div style={{ width: '16px', height: '16px', background: '#06b6d4', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>VC</div>
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Engrave<br />V-Carve</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('rest_milling')} title="Add Rest Machining & Corner Cleanout">
                   <div style={{ width: '16px', height: '16px', background: '#14b8a6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>RM</div>

@@ -43,6 +43,7 @@ import FixtureStudioModal from './components/FixtureStudioModal';
 import LatheStudioModal from './components/LatheStudioModal';
 import NestingStudioModal from './components/NestingStudioModal';
 import ThreadStudioModal from './components/ThreadStudioModal';
+import EngravingStudioModal from './components/EngravingStudioModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import {
@@ -142,6 +143,7 @@ export default function App() {
   const [isLatheStudioOpen, setIsLatheStudioOpen] = useState(false);
   const [isNestingStudioOpen, setIsNestingStudioOpen] = useState(false);
   const [isThreadStudioOpen, setIsThreadStudioOpen] = useState(false);
+  const [isEngravingStudioOpen, setIsEngravingStudioOpen] = useState(false);
   const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
@@ -1437,6 +1439,7 @@ export default function App() {
         onOpenLatheStudio={() => setIsLatheStudioOpen(true)}
         onOpenNestingStudio={() => setIsNestingStudioOpen(true)}
         onOpenThreadStudio={() => setIsThreadStudioOpen(true)}
+        onOpenEngravingStudio={() => setIsEngravingStudioOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1671,6 +1674,18 @@ export default function App() {
       <ThreadStudioModal
         isOpen={isThreadStudioOpen}
         onClose={() => setIsThreadStudioOpen(false)}
+        model={currentModel}
+        partMetrics={partMetrics}
+        onAddOperation={(newOp) => {
+          setOperations((prev) => [...prev, newOp]);
+          setActiveOpId(newOp.id);
+        }}
+      />
+
+      {/* CNC 2.5D & 3D Engraving & V-Carve Studio */}
+      <EngravingStudioModal
+        isOpen={isEngravingStudioOpen}
+        onClose={() => setIsEngravingStudioOpen(false)}
         model={currentModel}
         partMetrics={partMetrics}
         onAddOperation={(newOp) => {
