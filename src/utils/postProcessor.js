@@ -189,7 +189,9 @@ export function generateNCProgram({
       lines.push(`${nextN()} T${tool.number} M06 (${tool.name})`);
       lines.push(`${nextN()} S${tool.rpm} M03`);
       lines.push(`${nextN()} G43 H${tool.number} M08`);
-      if (op.badgeClass === 'contour' || op.badgeClass === 'chamfer') {
+      if (op.badgeClass === 'swarf') {
+        lines.push(`${nextN()} G43.4 H${tool.number} ; 5-AXIS TCPM ACTIVATION`);
+      } else if (op.badgeClass === 'contour' || op.badgeClass === 'chamfer') {
         lines.push(`${nextN()} G41 D${tool.number} ; CUTTER RADIUS COMPENSATION LEFT`);
       } else if (op.badgeClass === 'adaptive') {
         lines.push(`${nextN()} G05.1 Q1 (HIGH SPEED LOOK-AHEAD ACCEL/DECEL)`);
@@ -210,7 +212,7 @@ export function generateNCProgram({
     }
 
     // Emit Cutting Passes (G01 / G02 / G03)
-    toolpathData.cuttingLines.slice(0, 80).forEach(([p1, p2]) => {
+    toolpathData.cuttingLines.slice(0, 80).forEach(([p1, p2], idx) => {
       const dist = p1.distanceTo(p2);
       totalCuttingDistanceMm += dist;
       totalCuttingSeconds += (dist / (tool.feedRate || 1000)) * 60;
@@ -220,21 +222,29 @@ export function generateNCProgram({
       const cncY = p2.z.toFixed(3);
       const cncZ = p2.y.toFixed(3);
 
+      const tp = toolpathData.trajectoryPoints?.[idx];
+
       if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
-        if (op.badgeClass === 'swarf') {
+        if (op.badgeClass === 'swarf' && tp?.angles) {
+          lines.push(`${nextN()} L X${cncX} Y${cncY} Z${cncZ} B${tp.angles.B >= 0 ? '+' : ''}${tp.angles.B.toFixed(3)} C${tp.angles.C >= 0 ? '+' : ''}${tp.angles.C.toFixed(3)} F${tool.feedRate}`);
+        } else if (op.badgeClass === 'swarf') {
           lines.push(`${nextN()} L X${cncX} Y${cncY} Z${cncZ} B+15.000 C+45.300 F${tool.feedRate}`);
         } else {
           lines.push(`${nextN()} L X${cncX} Y${cncY} Z${cncZ} F${tool.feedRate}`);
         }
       } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
-        if (op.badgeClass === 'swarf') {
+        if (op.badgeClass === 'swarf' && tp?.angles) {
+          lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} B=${tp.angles.B.toFixed(2)} C=${tp.angles.C.toFixed(2)} F${tool.feedRate}`);
+        } else if (op.badgeClass === 'swarf') {
           lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} B=15.00 C=45.30 F${tool.feedRate}`);
         } else {
           lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} F${tool.feedRate}`);
         }
       } else {
         // Fanuc / Haas / GRBL / Mach3
-        if (op.badgeClass === 'swarf') {
+        if (op.badgeClass === 'swarf' && tp?.angles) {
+          lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} A${tp.angles.A.toFixed(3)} C${tp.angles.C.toFixed(3)} F${tool.feedRate}`);
+        } else if (op.badgeClass === 'swarf') {
           lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} B15.000 C45.300 F${tool.feedRate}`);
         } else {
           lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} F${tool.feedRate}`);
@@ -256,6 +266,9 @@ export function generateNCProgram({
       }
       lines.push(`${nextN()} G00 Z${(bounds.max.y + 40).toFixed(3)} M09`);
     } else {
+      if (op.badgeClass === 'swarf') {
+        lines.push(`${nextN()} G49 ; CANCEL 5-AXIS TCPM`);
+      }
       lines.push(`${nextN()} G00 Z${(bounds.max.y + 40).toFixed(3)} M09`);
     }
   });

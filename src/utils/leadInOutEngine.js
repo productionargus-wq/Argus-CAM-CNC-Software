@@ -242,3 +242,4 @@ export function applyLeadInOutToContour(contourPoints, config = {}, rapidHeight 
     leadOutPoints
   };
 }
+

@@ -35,6 +35,7 @@ import ProbingStudioModal from './components/ProbingStudioModal';
 import AFRModal from './components/AFRModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
+import FiveAxisStudioModal from './components/FiveAxisStudioModal';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
@@ -125,6 +126,7 @@ export default function App() {
   const [isAFRModalOpen, setIsAFRModalOpen] = useState(false);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
+  const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
@@ -1406,6 +1408,7 @@ export default function App() {
         onOpenAFRModal={() => setIsAFRModalOpen(true)}
         onOpenAdaptiveModal={() => setIsAdaptiveModalOpen(true)}
         onOpenLeadInOutModal={() => setIsLeadInOutModalOpen(true)}
+        onOpenFiveAxisStudio={() => setIsFiveAxisModalOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1552,6 +1555,21 @@ export default function App() {
         tools={tools}
         operations={operations}
         onApplyAFROperations={handleApplyAFROperations}
+      />
+
+      {/* Simultaneous 5-Axis Multiaxis Studio & TCPM Manager */}
+      <FiveAxisStudioModal
+        isOpen={isFiveAxisModalOpen}
+        onClose={() => setIsFiveAxisModalOpen(false)}
+        tools={tools}
+        operations={operations}
+        activeOpId={activeOpId}
+        partMetrics={partMetrics}
+        onAddOperation={(newOp) => {
+          setOperations((prev) => [...prev, newOp]);
+          setActiveOpId(newOp.id);
+        }}
+        onUpdateOperations={(updatedOps) => setOperations(updatedOps)}
       />
 
       {/* Lead-In / Lead-Out & Tangent Arc Designer Studio */}

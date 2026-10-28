@@ -9,6 +9,16 @@ import {
   LEAD_ENTRY_TYPES,
   DEFAULT_LEAD_CONFIG
 } from './leadInOutEngine.js';
+import {
+  generate5AxisSwarfToolpath,
+  generate5AxisFlowlineToolpath,
+  calculateToolOrientationVector,
+  vectorToMachineAngles,
+  audit5AxisKinematics,
+  FIVE_AXIS_STRATEGIES,
+  MACHINE_KINEMATICS,
+  TCPM_MODES
+} from './fiveAxisEngine.js';
 
 export {
   createTouchProbe3D,
@@ -22,7 +32,15 @@ export {
   buildTangentArcLeadOut,
   buildHelicalRampEntry,
   LEAD_ENTRY_TYPES,
-  DEFAULT_LEAD_CONFIG
+  DEFAULT_LEAD_CONFIG,
+  generate5AxisSwarfToolpath,
+  generate5AxisFlowlineToolpath,
+  calculateToolOrientationVector,
+  vectorToMachineAngles,
+  audit5AxisKinematics,
+  FIVE_AXIS_STRATEGIES,
+  MACHINE_KINEMATICS,
+  TCPM_MODES
 };
 
 /**
@@ -421,50 +439,7 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
  * Generates 5-Axis Simultaneous Swarf Contour Toolpath (XYZ plus Tool Orientation Vectors)
  */
 export function generateSwarfToolpath(bounds, tool, params = {}, model = null) {
-  const {
-    tiltAngleDeg = 15.0,
-    passes = 2
-  } = params;
-
-  const cuttingLines = [];
-  const rapidLines = [];
-  const topY = bounds.max.y;
-  const centerX = (bounds.max.x + bounds.min.x) / 2;
-  const centerZ = (bounds.max.z + bounds.min.z) / 2;
-  const radius = Math.min((bounds.max.x - bounds.min.x) / 2, (bounds.max.z - bounds.min.z) / 2) + 2;
-
-  // Rapid approach to first pass
-  const startX = centerX + radius;
-  const startZ = centerZ;
-  rapidLines.push([
-    new THREE.Vector3(startX, topY + 15, startZ),
-    new THREE.Vector3(startX, topY - 10, startZ)
-  ]);
-
-  for (let p = 0; p < passes; p++) {
-    const yLevel = topY - 10 - p * 8;
-    const points = [];
-
-    for (let angle = 0; angle <= Math.PI * 2; angle += 0.12) {
-      const x = centerX + Math.cos(angle) * radius;
-      const z = centerZ + Math.sin(angle) * radius;
-      // 5-axis wave variation conforming to blade/flank draft
-      const y = yLevel + Math.sin(angle * 4) * 6;
-      points.push(new THREE.Vector3(x, y, z));
-    }
-
-    for (let i = 0; i < points.length - 1; i++) {
-      cuttingLines.push([points[i], points[i + 1]]);
-    }
-  }
-
-  // Rapid retract to clearance
-  rapidLines.push([
-    new THREE.Vector3(startX, topY - 10 - (passes - 1) * 8, startZ),
-    new THREE.Vector3(startX, topY + 15, startZ)
-  ]);
-
-  return { cuttingLines, rapidLines };
+  return generate5AxisSwarfToolpath(bounds, tool, params);
 }
 
 /**

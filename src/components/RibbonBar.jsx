@@ -24,6 +24,7 @@ export default function RibbonBar({
   onOpenAFRModal,
   onOpenAdaptiveModal,
   onOpenLeadInOutModal,
+  onOpenFiveAxisStudio,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -1646,7 +1647,7 @@ export default function RibbonBar({
                   <div style={{ width: '16px', height: '16px', background: '#06b6d4', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>AD</div>
                   <span className="btn-label">Adaptive<br />Roughing</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('swarf')} title="Add 5-Axis Swarf Machining">
+                <button className="ribbon-btn-large" onClick={onOpenFiveAxisStudio ? onOpenFiveAxisStudio : () => onQuickAddOp('swarf')} title="Open 5-Axis Multiaxis Studio (Continuous Swarf, Flowline & TCPM Kinematics)">
                   <div style={{ width: '16px', height: '16px', background: '#8b5cf6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>5X</div>
                   <span className="btn-label">5-Axis<br />Swarf</span>
                 </button>
