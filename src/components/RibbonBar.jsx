@@ -29,6 +29,7 @@ export default function RibbonBar({
   onOpenFiveAxisStudio,
   onOpenSolidVerifyModal,
   onOpenFeedOptimizerModal,
+  onOpenLatheStudio,
   onImportNCProgram,
   onOpenGCodeViewer,
   onOpenEntityAnalyzer,
@@ -1336,11 +1337,11 @@ export default function RibbonBar({
                 </button>
                 <button
                   className="ribbon-btn-large"
-                  onClick={onOpenFixtureModal}
-                  title="Open 3D Parametric CNC Workholding & Fixture Setup Studio (5-Axis Vises, Dovetail Step Jaws, Clamps)"
+                  onClick={onOpenLatheStudio}
+                  title="Open CNC Turning & Lathe / Mill-Turn Studio (OD Roughing G71, Profile Finishing G70, Threading G76, Grooving G75)"
                 >
-                  <Wrench size={22} color="#a855f7" />
-                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Workholding<br />&amp; Fixtures</span>
+                  <Disc size={22} color="#ec4899" />
+                  <span className="btn-label" style={{ color: '#ec4899', fontWeight: 600 }}>Lathe &amp;<br />Mill-Turn</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={onOpenProbingStudio} title="Renishaw Inspection Plus & Haas WIPS Touch Probing Studio">
                   <Crosshair size={22} color="#d946ef" />
@@ -1702,6 +1703,14 @@ export default function RibbonBar({
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('probe')} title="Add In-Process Touch Probing Cycle (Renishaw / Haas WIPS)">
                   <div style={{ width: '16px', height: '16px', background: '#d946ef', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PR</div>
                   <span className="btn-label">Touch<br />Probe</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenLatheStudio}
+                  title="Open CNC Turning & Lathe / Mill-Turn Studio (OD Roughing G71, Profile Finishing G70, Threading G76, Grooving G75)"
+                >
+                  <div style={{ width: '16px', height: '16px', background: '#ec4899', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>LT</div>
+                  <span className="btn-label" style={{ color: '#ec4899', fontWeight: 600 }}>Lathe /<br />Turning</span>
                 </button>
               </div>
               <span className="ribbon-group-title">CAM Strategies</span>

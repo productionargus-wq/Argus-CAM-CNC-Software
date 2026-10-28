@@ -40,6 +40,7 @@ import SolidVerifyModal from './components/SolidVerifyModal';
 import ToolAssemblyStudioModal from './components/ToolAssemblyStudioModal';
 import FeedOptimizerModal from './components/FeedOptimizerModal';
 import FixtureStudioModal from './components/FixtureStudioModal';
+import LatheStudioModal from './components/LatheStudioModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import {
@@ -136,6 +137,7 @@ export default function App() {
   const [isToolAssemblyModalOpen, setIsToolAssemblyModalOpen] = useState(false);
   const [isFeedOptimizerModalOpen, setIsFeedOptimizerModalOpen] = useState(false);
   const [isFixtureModalOpen, setIsFixtureModalOpen] = useState(false);
+  const [isLatheStudioOpen, setIsLatheStudioOpen] = useState(false);
   const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
@@ -1428,6 +1430,7 @@ export default function App() {
         onOpenSolidVerifyModal={() => setIsSolidVerifyModalOpen(true)}
         onOpenFeedOptimizerModal={() => setIsFeedOptimizerModalOpen(true)}
         onOpenFixtureModal={() => setIsFixtureModalOpen(true)}
+        onOpenLatheStudio={() => setIsLatheStudioOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
         onChangeWorkpieceColor={setWorkpieceColor}
@@ -1635,6 +1638,16 @@ export default function App() {
         partMetrics={partMetrics}
         operations={operations}
         tools={tools}
+      />
+
+      {/* CNC Turning & Lathe / Mill-Turn Studio */}
+      <LatheStudioModal
+        isOpen={isLatheStudioOpen}
+        onClose={() => setIsLatheStudioOpen(false)}
+        onAddOperation={(newOp) => {
+          setOperations((prev) => [...prev, newOp]);
+          setActiveOpId(newOp.id);
+        }}
       />
 
       {/* Simultaneous 5-Axis Multiaxis Studio & TCPM Manager */}

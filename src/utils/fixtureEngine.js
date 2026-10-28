@@ -715,3 +715,4 @@ export function calculateClampingPhysics(fixtureConfig = DEFAULT_FIXTURE_CONFIG,
     mrrCm3Min: Number(mrrCm3Min.toFixed(1))
   };
 }
+
