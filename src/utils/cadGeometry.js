@@ -2125,3 +2125,16 @@ export function exportProjectMCAM(projectState, filename = "Project.mcam") {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Re-export Native STEP (ISO 10303-21) and IGES B-Rep solid model parsers and exporters
+ */
+export {
+  parseSTEPFile,
+  parseSTEPText,
+  parseIGESFile,
+  parseIGESText,
+  generateSampleSTEPString,
+  generateSTEPFromObject3D,
+  exportSceneToSTEP
+} from './stepIgesParser.js';

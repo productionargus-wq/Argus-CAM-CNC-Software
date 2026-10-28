@@ -83,8 +83,8 @@ export default function SetupSheetModal({
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Header Summary Table */}
           <div style={{
-            background: '#131822',
-            border: '1px solid #283344',
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: '6px',
             padding: '12px 16px',
             display: 'grid',
@@ -94,27 +94,27 @@ export default function SetupSheetModal({
             fontSize: '11.5px'
           }}>
             <div>
-              <span style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase' }}>Program / Part:</span>
-              <div style={{ color: '#38bdf8', fontWeight: 700, fontSize: '13px' }}>{currentProjectName}</div>
+              <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Program / Part:</span>
+              <div style={{ color: 'var(--accent-blue)', fontWeight: 700, fontSize: '13px' }}>{currentProjectName}</div>
             </div>
             <div>
-              <span style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase' }}>Target Machine:</span>
-              <div style={{ color: '#f8fafc', fontWeight: 600 }}>{activeMachine?.name || 'DMG MORI DMU 50 (5-Axis)'}</div>
+              <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Target Machine:</span>
+              <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{activeMachine?.name || 'DMG MORI DMU 50 (5-Axis)'}</div>
             </div>
             <div>
-              <span style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase' }}>Work Offset (WCS):</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Work Offset (WCS):</span>
               <div style={{ color: '#10b981', fontWeight: 700 }}>G54 (Top Center Stock)</div>
             </div>
             <div>
-              <span style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase' }}>Fixture / Vise:</span>
-              <div style={{ color: '#e2e8f0', fontWeight: 600 }}>ZeroClamp Vise (Jaw 49mm)</div>
+              <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Fixture / Vise:</span>
+              <div style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>ZeroClamp Vise (Jaw 49mm)</div>
             </div>
           </div>
 
           {/* Stock & Material Specs */}
           <div style={{
-            background: '#0f131a',
-            border: '1px solid #222a38',
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: '6px',
             padding: '10px 14px',
             display: 'flex',
@@ -125,19 +125,19 @@ export default function SetupSheetModal({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Box size={16} color="#f59e0b" />
               <div>
-                <span style={{ color: '#94a3b8' }}>Raw Stock Bounding Size: </span>
+                <span style={{ color: 'var(--text-secondary)' }}>Raw Stock Bounding Size: </span>
                 <span style={{ color: '#f59e0b', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
                   {stockW} &times; {stockH} &times; {stockD} mm
                 </span>
               </div>
             </div>
             <div>
-              <span style={{ color: '#94a3b8' }}>Material: </span>
-              <span style={{ color: '#38bdf8', fontWeight: 600 }}>{stockConfig.material} ({stockConfig.massKg} kg)</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Material: </span>
+              <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{stockConfig.material} ({stockConfig.massKg} kg)</span>
             </div>
             <div>
-              <span style={{ color: '#94a3b8' }}>Finish Part: </span>
-              <span style={{ color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Finish Part: </span>
+              <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
                 {dim.x} &times; {dim.y} &times; {dim.z} mm
               </span>
             </div>
@@ -145,13 +145,13 @@ export default function SetupSheetModal({
 
           {/* Tooling List Table */}
           <div>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Wrench size={13} />
               <span>SHOP TOOLING LIST</span>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', background: '#0e1218', borderRadius: '4px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', overflow: 'hidden' }}>
               <thead>
-                <tr style={{ background: '#19202c', color: '#94a3b8', borderBottom: '1px solid #2b3547', textAlign: 'left' }}>
+                <tr style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-subtle)', textAlign: 'left' }}>
                   <th style={{ padding: '6px 8px' }}>Tool#</th>
                   <th style={{ padding: '6px 8px' }}>Description</th>
                   <th style={{ padding: '6px 8px' }}>Diameter</th>
@@ -163,14 +163,14 @@ export default function SetupSheetModal({
               </thead>
               <tbody>
                 {tools.map((tool) => (
-                  <tr key={tool.id} style={{ borderBottom: '1px solid #1a2230', fontFamily: 'var(--font-mono)' }}>
-                    <td style={{ padding: '6px 8px', color: '#38bdf8', fontWeight: 700 }}>T{tool.number}</td>
-                    <td style={{ padding: '6px 8px', color: '#f8fafc', fontFamily: 'var(--font-sans)' }}>{tool.name}</td>
-                    <td style={{ padding: '6px 8px' }}>&empty;{tool.diameter} mm</td>
-                    <td style={{ padding: '6px 8px' }}>{tool.fluteLength} mm</td>
+                  <tr key={tool.id} style={{ borderBottom: '1px solid var(--border-subtle)', fontFamily: 'var(--font-mono)' }}>
+                    <td style={{ padding: '6px 8px', color: 'var(--accent-blue)', fontWeight: 700 }}>T{tool.number}</td>
+                    <td style={{ padding: '6px 8px', color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>{tool.name}</td>
+                    <td style={{ padding: '6px 8px', color: 'var(--text-secondary)' }}>&empty;{tool.diameter} mm</td>
+                    <td style={{ padding: '6px 8px', color: 'var(--text-secondary)' }}>{tool.fluteLength} mm</td>
                     <td style={{ padding: '6px 8px', color: '#f59e0b' }}>{tool.rpm} RPM</td>
                     <td style={{ padding: '6px 8px', color: '#10b981' }}>{tool.feedRate} mm/min</td>
-                    <td style={{ padding: '6px 8px', color: '#94a3b8' }}>{tool.coolant || 'Flood'}</td>
+                    <td style={{ padding: '6px 8px', color: 'var(--text-muted)' }}>{tool.coolant || 'Flood'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -183,9 +183,9 @@ export default function SetupSheetModal({
               <Clock size={13} />
               <span>OPERATION SEQUENCE & CUTTING PARAMETERS</span>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', background: '#0e1218', borderRadius: '4px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '4px', overflow: 'hidden' }}>
               <thead>
-                <tr style={{ background: '#19202c', color: '#94a3b8', borderBottom: '1px solid #2b3547', textAlign: 'left' }}>
+                <tr style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-subtle)', textAlign: 'left' }}>
                   <th style={{ padding: '6px 8px' }}>Op#</th>
                   <th style={{ padding: '6px 8px' }}>Operation Name</th>
                   <th style={{ padding: '6px 8px' }}>Assigned Tool</th>
@@ -196,12 +196,12 @@ export default function SetupSheetModal({
               </thead>
               <tbody>
                 {operations.map((op, idx) => (
-                  <tr key={op.id} style={{ borderBottom: '1px solid #1a2230' }}>
-                    <td style={{ padding: '6px 8px', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>#{idx + 1}</td>
-                    <td style={{ padding: '6px 8px', color: '#f8fafc', fontWeight: 600 }}>{op.name}</td>
-                    <td style={{ padding: '6px 8px', color: '#38bdf8' }}>{op.toolName}</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{op.stepdown || 1.0} mm</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{op.stepoverPct || 50}%</td>
+                  <tr key={op.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '6px 8px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>#{idx + 1}</td>
+                    <td style={{ padding: '6px 8px', color: 'var(--text-primary)', fontWeight: 600 }}>{op.name}</td>
+                    <td style={{ padding: '6px 8px', color: 'var(--accent-blue)' }}>{op.toolName}</td>
+                    <td style={{ padding: '6px 8px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{op.stepdown || 1.0} mm</td>
+                    <td style={{ padding: '6px 8px', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{op.stepoverPct || 50}%</td>
                     <td style={{ padding: '6px 8px', fontFamily: 'var(--font-mono)', color: '#f59e0b' }}>{op.totalDepth || 10.0} mm</td>
                   </tr>
                 ))}
@@ -209,7 +209,35 @@ export default function SetupSheetModal({
             </table>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: '1px solid #283344' }}>
+          {/* Quality Control & First Article Sign-off */}
+          <div style={{
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '6px',
+            padding: '10px 14px',
+            fontSize: '11px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CheckCircle2 size={13} color="#10b981" />
+              <span>SHOP FLOOR OPERATOR INSPECTION & FIRST ARTICLE SIGN-OFF</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', color: 'var(--text-secondary)', fontSize: '10.5px' }}>
+              <div>[ &nbsp; ] G54 Datum Probed &amp; Set</div>
+              <div>[ &nbsp; ] Tool Stickouts Verified</div>
+              <div>[ &nbsp; ] Flood Coolant Clean</div>
+              <div>[ &nbsp; ] First Article Tolerance (&plusmn;0.02mm)</div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--border-subtle)', paddingTop: '8px', fontSize: '10.5px', color: 'var(--text-muted)' }}>
+              <span>CNC Machinist / Operator: _______________________</span>
+              <span>QC Inspector: _______________________</span>
+              <span>Date: ____ / ____ / 2026</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
             <button className="btn-secondary" onClick={onClose}>Close</button>
           </div>
         </div>

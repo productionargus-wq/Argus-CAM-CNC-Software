@@ -7,7 +7,7 @@ import {
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
   Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge
 } from 'lucide-react';
-import { parseSTLFile, parseOBJFile } from '../utils/cadGeometry';
+import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
 
 export default function RibbonBar({
@@ -99,7 +99,11 @@ export default function RibbonBar({
       const ext = file.name.split('.').pop().toLowerCase();
       try {
         let modelGroup;
-        if (ext === 'obj') {
+        if (ext === 'step' || ext === 'stp') {
+          modelGroup = await parseSTEPFile(file);
+        } else if (ext === 'iges' || ext === 'igs') {
+          modelGroup = await parseIGESFile(file);
+        } else if (ext === 'obj') {
           modelGroup = await parseOBJFile(file);
         } else {
           modelGroup = await parseSTLFile(file);
@@ -109,7 +113,7 @@ export default function RibbonBar({
         }
       } catch (err) {
         console.error("Failed to parse CAD file:", err);
-        alert(`Failed to load ${file.name}. Ensure it is a valid .STL or .OBJ file.`);
+        alert(`Failed to load ${file.name}. Ensure it is a valid .STEP, .IGES, .STL, or .OBJ file.`);
       }
     }
   };
@@ -140,11 +144,11 @@ export default function RibbonBar({
 
   return (
     <nav className="ribbon-container" aria-label="Application Ribbon Navigation">
-      {/* Hidden file input for 3D CAD meshes (.stl, .obj) */}
+      {/* Hidden file input for 3D CAD models (.step, .stp, .iges, .igs, .stl, .obj) */}
       <input
         ref={fileInputRef}
         type="file"
-        accept=".stl,.obj"
+        accept=".step,.stp,.iges,.igs,.stl,.obj"
         style={{ display: 'none' }}
         onChange={handleCADFileChange}
       />
@@ -236,10 +240,10 @@ export default function RibbonBar({
                 <button
                   className="ribbon-btn-large"
                   onClick={() => fileInputRef.current?.click()}
-                  title="Import 3D CAD Part (STL / OBJ)"
+                  title="Import 3D CAD Solid Part (STEP / IGES / STL / OBJ)"
                 >
                   <Upload size={22} color="#06b6d4" />
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Import<br />STL / OBJ</span>
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Import<br />STEP / CAD</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
@@ -293,6 +297,10 @@ export default function RibbonBar({
 
             <div className="ribbon-group">
               <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => onSelectSampleModel('step_bracket')} title="Load Native STEP (ISO 10303-21) Solid B-Rep CAD Part">
+                  <FileCode size={19} color="#3b82f6" />
+                  <span className="btn-label" style={{ color: '#3b82f6', fontWeight: 600 }}>STEP B-Rep<br />Sample</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={() => onSelectSampleModel('impeller')} title="Load 5-Axis Impeller">
                   <Compass size={19} color="#a855f7" />
                   <span className="btn-label">5X Impeller<br />Sample</span>
@@ -1258,9 +1266,13 @@ export default function RibbonBar({
             {/* CAD Model & Samples Group */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => fileInputRef.current?.click()} title="Import 3D CAD Part (STL / OBJ)">
+                <button className="ribbon-btn-large" onClick={() => fileInputRef.current?.click()} title="Import 3D CAD Solid Part (STEP / IGES / STL / OBJ)">
                   <Upload size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Import<br />STL / OBJ</span>
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Import<br />STEP / CAD</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onSelectSampleModel('step_bracket')} title="Load Native STEP (ISO 10303-21) Solid B-Rep CAD Part">
+                  <FileCode size={19} color="#3b82f6" />
+                  <span className="btn-label" style={{ color: '#3b82f6', fontWeight: 600 }}>STEP B-Rep<br />Sample</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={() => onSelectSampleModel('impeller')} title="Load 5-Axis Impeller CAD Model">
                   <Compass size={19} color="#a855f7" />

@@ -46,7 +46,9 @@ import {
   createDrillPointsGrid,
   createPlanarSurface,
   createCylinderSurface,
-  exportSceneToSTL
+  exportSceneToSTL,
+  parseSTEPText,
+  generateSampleSTEPString
 } from './utils/cadGeometry';
 import {
   exportProjectMCAM,
@@ -783,8 +785,19 @@ export default function App() {
     }
   };
 
-  const handleSelectSampleModel = (type) => {
-    if (type === 'impeller') {
+  const handleSelectSampleModel = async (type) => {
+    if (type === 'step_bracket') {
+      try {
+        const stepText = generateSampleSTEPString('aerospace_bracket');
+        const group = await parseSTEPText(stepText);
+        setCurrentModel(group);
+        setCurrentProjectName('Aerospace_5X_Bracket.step');
+        setActiveMachineId('dmu50');
+        showToast('Native ISO 10303-21 STEP Solid B-Rep Model Loaded', 'success');
+      } catch (err) {
+        showToast(`Failed to parse STEP: ${err.message}`, 'danger');
+      }
+    } else if (type === 'impeller') {
       setCurrentModel(createImpellerGeometry());
       setCurrentProjectName('DMU50_5Axis_Impeller.mcam');
       setActiveMachineId('dmu50');
@@ -804,6 +817,8 @@ export default function App() {
     setCurrentModel(modelGroup);
     setCurrentProjectName(filename);
     handleResetTransform();
+    const fmt = modelGroup?.userData?.format || filename.split('.').pop().toUpperCase();
+    showToast(`Loaded ${filename} (${fmt} 3D Solid Model)`, 'success');
   };
 
   // Create New Project Wizard Handler
