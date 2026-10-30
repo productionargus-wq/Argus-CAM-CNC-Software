@@ -394,7 +394,45 @@ export default function RibbonBar({
         {/* ==================== 2. HOME TAB ==================== */}
         {activeTab === 'Home' && (
           <>
-            {/* Levels & Structure Management */}
+            {/* Clipboard */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => console.log('Cut')} title="Cut Selection to Clipboard">
+                  <Scissors size={20} color="#f43f5e" />
+                  <span className="btn-label">Cut</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Copy')} title="Copy Selection">
+                  <Copy size={20} color="#38bdf8" />
+                  <span className="btn-label">Copy</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Copy Image')} title="Copy Viewport Image to Clipboard">
+                  <Camera size={20} color="#10b981" />
+                  <span className="btn-label">Copy<br />Image</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Clipboard</span>
+            </div>
+
+            {/* Attributes */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px' }}>
+                  <button style={{ width: '20px', height: '20px', background: '#3b82f6', border: '1px solid #60a5fa', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#3b82f6')} title="Billet Blue" />
+                  <button style={{ width: '20px', height: '20px', background: '#94a3b8', border: '1px solid #cbd5e1', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#94a3b8')} title="Steel Silver" />
+                  <button style={{ width: '20px', height: '20px', background: '#f59e0b', border: '1px solid #fcd34d', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#f59e0b')} title="Gold Brass" />
+                  <button style={{ width: '20px', height: '20px', background: '#10b981', border: '1px solid #34d399', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#10b981')} title="Emerald Green" />
+                  <button style={{ width: '20px', height: '20px', background: '#8b5cf6', border: '1px solid #c084fc', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#8b5cf6')} title="Anodized Violet" />
+                  <button style={{ width: '20px', height: '20px', background: '#ef4444', border: '1px solid #f87171', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#ef4444')} title="High-Vis Red" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '10px', color: '#94a3b8' }}>
+                  <span style={{ fontWeight: 600 }}>Z: 0.0</span>
+                  <span style={{ color: '#38bdf8' }}>3D / 2D</span>
+                </div>
+              </div>
+              <span className="ribbon-group-title">Attributes</span>
+            </div>
+
+            {/* Organize */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
@@ -405,41 +443,67 @@ export default function RibbonBar({
                   <Layers size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Levels<br />Manager</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onSelectManagerTab && onSelectManagerTab('Solids')}
-                  title="Open Solids Body History Tree"
-                >
-                  <Box size={20} color="#f59e0b" />
-                  <span className="btn-label">Solids<br />Tree</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Non-Associative')} title="Non-Associative Geometry Selection">
+                  <CheckSquare size={20} color="#94a3b8" />
+                  <span className="btn-label">Non-<br />Associative</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onSelectManagerTab && onSelectManagerTab('Planes')}
-                  title="Open WCS Coordinate Planes Manager (G17/G18/G19)"
-                >
-                  <Compass size={20} color="#10b981" />
-                  <span className="btn-label">WCS<br />Planes</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenCPlanesModal}
-                  title="Open CPlanes & Dynamic WCS Origin Studio (Compound 5-Axis Planes & Offsets)"
-                >
-                  <Grid size={20} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>CPlane<br />Studio</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Duplicates')} title="Find & Select Duplicate Entities">
+                  <Copy size={20} color="#f59e0b" />
+                  <span className="btn-label">Duplicates</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Levels &amp; Structure</span>
+              <span className="ribbon-group-title">Organize</span>
             </div>
 
-            {/* Analyze & Precision Calipers */}
+            {/* Delete */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={onDeleteActiveOp} title="Delete Selected Entities / Op">
+                  <Trash2 size={20} color="#ef4444" />
+                  <span className="btn-label" style={{ color: '#ef4444', fontWeight: 600 }}>Delete<br />Entities</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Undelete Entity')} title="Undelete Last Deleted Entity">
+                  <RotateCcw size={20} color="#10b981" />
+                  <span className="btn-label">Undelete<br />Entity</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Delete</span>
+            </div>
+
+            {/* Display */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => console.log('Arc Center Points')} title="Display Arc Center Points">
+                  <Disc size={20} color="#38bdf8" />
+                  <span className="btn-label">Arc Center<br />Points</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Endpoints')} title="Display Curve Endpoints">
+                  <Crosshair size={20} color="#f59e0b" />
+                  <span className="btn-label">Endpoints</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onToggleLayer && onToggleLayer('stock')} title="Blank / Hide Selected Entity">
+                  <Eye size={20} color="#a855f7" />
+                  <span className="btn-label">Blank</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onUnblankAll} title="Unblank All Entities">
+                  <Eye size={20} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Unblank<br />All</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onInvertVisibility} title="Hide / Unhide Toggle">
+                  <RefreshCw size={20} color="#38bdf8" />
+                  <span className="btn-label">Hide /<br />Unhide</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Display</span>
+            </div>
+
+            {/* Analyze */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={onOpenEntityAnalyzer}
-                  title="Analyze Solid Dimensions, Volume, Surface Area & Mass"
+                  title="Analyze Entity Dimensions, Volume, Surface Area & Mass"
                 >
                   <Crosshair size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Analyze<br />Entity</span>
@@ -447,62 +511,52 @@ export default function RibbonBar({
                 <button
                   className="ribbon-btn-large"
                   onClick={onOpenDistanceCaliper}
-                  title="Precision Distance Caliper (3D Vector & Inclination Angle)"
+                  title="Analyze Distance & Angle (3D Caliper)"
                 >
                   <Scissors size={22} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Distance<br />Caliper</span>
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Analyze<br />Distance</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Analyze Toolpath')} title="Analyze Toolpath Motion">
+                  <Activity size={20} color="#10b981" />
+                  <span className="btn-label">Analyze<br />Toolpath</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Analyze Chain')} title="Analyze Wireframe Chain">
+                  <Compass size={20} color="#60a5fa" />
+                  <span className="btn-label">Analyze<br />Chain</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('2D Area')} title="Calculate 2D Planar Area">
+                  <Grid size={20} color="#c084fc" />
+                  <span className="btn-label">2D Area</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Statistics')} title="Display File & Geometry Statistics">
+                  <FileText size={20} color="#e2e8f0" />
+                  <span className="btn-label">Statistics</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Check Solid')} title="Check Solid Integrity">
+                  <Box size={20} color="#34d399" />
+                  <span className="btn-label">Check<br />Solid</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Analyze &amp; Measure</span>
+              <span className="ribbon-group-title">Analyze</span>
             </div>
 
-            {/* Workpiece Attributes & Colors */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', padding: '2px 4px' }}>
-                <button style={{ width: '22px', height: '22px', background: '#3b82f6', border: '1px solid #60a5fa', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#3b82f6')} title="Billet Blue" />
-                <button style={{ width: '22px', height: '22px', background: '#94a3b8', border: '1px solid #cbd5e1', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#94a3b8')} title="Steel Silver" />
-                <button style={{ width: '22px', height: '22px', background: '#f59e0b', border: '1px solid #fcd34d', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#f59e0b')} title="Gold Brass" />
-                <button style={{ width: '22px', height: '22px', background: '#10b981', border: '1px solid #34d399', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#10b981')} title="Emerald Green" />
-                <button style={{ width: '22px', height: '22px', background: '#8b5cf6', border: '1px solid #c084fc', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#8b5cf6')} title="Anodized Violet" />
-                <button style={{ width: '22px', height: '22px', background: '#ef4444', border: '1px solid #f87171', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#ef4444')} title="High-Vis Red" />
-              </div>
-              <span className="ribbon-group-title">Attributes (Color)</span>
-            </div>
-
-            {/* Blank / Visibility Utilities */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className={`ribbon-btn-large ${layerVisibility.fixture ? 'active' : ''}`} onClick={() => onToggleLayer('fixture')} title="Blank / Unblank Fixture Vise">
-                  <span className="btn-label">Vise<br />Visibility</span>
-                </button>
-                <button className={`ribbon-btn-large ${layerVisibility.stock ? 'active' : ''}`} onClick={() => onToggleLayer('stock')} title="Blank / Unblank Stock Bounding Box">
-                  <span className="btn-label">Stock<br />Visibility</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onUnblankAll} title="Unblank All (Restore All Hidden Layers)">
-                  <Eye size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Unblank<br />All</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onInvertVisibility} title="Invert Layer Visibility">
-                  <RefreshCw size={20} color="#a855f7" />
-                  <span className="btn-label">Invert<br />Visibility</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Blank / Unblank</span>
-            </div>
-
-            {/* Operations Manager Actions */}
+            {/* Add-Ins */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onRegenerateAll} title="Regenerate All Dirty Toolpaths">
-                  <RefreshCw size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Regenerate<br />All Ops</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Run Add-In')} title="Run Mastercam C-Hook / NET-Hook Add-In">
+                  <Cpu size={22} color="#38bdf8" />
+                  <span className="btn-label">Run<br />Add-In</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onDeleteActiveOp} title="Delete Active Operation">
-                  <Trash2 size={20} color="#ef4444" />
-                  <span className="btn-label">Delete<br />Op</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Command Finder')} title="Search All Mastercam Commands">
+                  <HelpCircle size={22} color="#f59e0b" />
+                  <span className="btn-label">Command<br />Finder</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenCPlanesModal} title="Open CPlanes & Dynamic WCS Origin Studio">
+                  <Grid size={20} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>CPlane<br />Studio</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Operations</span>
+              <span className="ribbon-group-title">Add-Ins</span>
             </div>
           </>
         )}
@@ -510,42 +564,16 @@ export default function RibbonBar({
         {/* ==================== 3. WIREFRAME TAB ==================== */}
         {activeTab === 'Wireframe' && (
           <>
-            {/* Lines */}
+            {/* Points */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('line') : onAddWireframe('line')}
-                  title="3D Line 2 Points (Endpoints or Angle + Length)"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('datum') : onAddWireframe('drillpoints')}
+                  title="Create 3D Point Position Reference"
                 >
-                  <div style={{ width: '22px', height: '2px', background: '#f43f5e', transform: 'rotate(-30deg)', margin: '10px 0' }} />
-                  <span className="btn-label" style={{ color: '#f43f5e', fontWeight: 600 }}>Line<br />2 Points</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('parallel') : onAddWireframe('parallel')}
-                  title="Parallel Offset Wireframe Line"
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '8px 0' }}>
-                    <div style={{ width: '22px', height: '2px', background: '#f59e0b' }} />
-                    <div style={{ width: '22px', height: '2px', background: '#38bdf8' }} />
-                  </div>
-                  <span className="btn-label">Parallel<br />Line</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Lines</span>
-            </div>
-
-            {/* Arcs & Circles */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('circle') : onAddWireframe('circle')}
-                  title="Parametric 3D Circle / Arc (Radius, Diameter, Plane G17/G18/G19)"
-                >
-                  <div style={{ width: '20px', height: '20px', border: '2px solid #38bdf8', borderRadius: '50%' }} />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Circle<br />Radius</span>
+                  <Crosshair size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Point<br />Position</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
@@ -553,10 +581,89 @@ export default function RibbonBar({
                   title="Bolt Hole Circle Pattern (PCD & Drill Centers)"
                 >
                   <Disc size={22} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Bolt Circle<br />(PCD)</span>
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Bolt<br />Circle</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Arcs &amp; Circles</span>
+              <span className="ribbon-group-title">Points</span>
+            </div>
+
+            {/* Lines */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('line') : onAddWireframe('line')}
+                  title="Create Line Between 2 Endpoints"
+                >
+                  <div style={{ width: '22px', height: '2px', background: '#f43f5e', transform: 'rotate(-30deg)', margin: '10px 0' }} />
+                  <span className="btn-label" style={{ color: '#f43f5e', fontWeight: 600 }}>Line<br />Endpoints</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('parallel') : onAddWireframe('parallel')}
+                  title="Create Parallel Line Offset"
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '8px 0' }}>
+                    <div style={{ width: '22px', height: '2px', background: '#f59e0b' }} />
+                    <div style={{ width: '22px', height: '2px', background: '#38bdf8' }} />
+                  </div>
+                  <span className="btn-label">Line<br />Parallel</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('perp') : onAddWireframe('perp')}
+                  title="Create Perpendicular Line from Entity"
+                >
+                  <div style={{ position: 'relative', width: '20px', height: '20px', margin: '2px 0' }}>
+                    <div style={{ position: 'absolute', bottom: '2px', width: '20px', height: '2px', background: '#10b981' }} />
+                    <div style={{ position: 'absolute', left: '10px', top: '2px', width: '2px', height: '16px', background: '#10b981' }} />
+                  </div>
+                  <span className="btn-label">Line<br />Perpendicular</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Line Closest')} title="Create Line Along Closest Distance">
+                  <div style={{ width: '18px', height: '2px', background: '#94a3b8', margin: '10px 0' }} />
+                  <span className="btn-label">Line<br />Closest</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Lines</span>
+            </div>
+
+            {/* Arcs */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('circle') : onAddWireframe('circle')}
+                  title="Create Circle by Center Point & Radius"
+                >
+                  <div style={{ width: '20px', height: '20px', border: '2px solid #38bdf8', borderRadius: '50%' }} />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Circle<br />Center Point</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Arc 3 Points')} title="Create Arc Defined by 3 Points">
+                  <Orbit size={20} color="#f59e0b" />
+                  <span className="btn-label">Arc 3<br />Points</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Arc Tangent')} title="Create Tangent Arc to Existing Curve">
+                  <Disc size={20} color="#10b981" />
+                  <span className="btn-label">Arc<br />Tangent</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Circle Edge Point')} title="Create Circle Through Edge Points">
+                  <Orbit size={20} color="#a855f7" />
+                  <span className="btn-label">Circle<br />Edge Point</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Arcs</span>
+            </div>
+
+            {/* Splines */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => console.log('Spline Manual')} title="Create Manual NURBS Spline through Points">
+                  <Sliders size={22} color="#38bdf8" />
+                  <span className="btn-label">Spline<br />Manual</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Splines</span>
             </div>
 
             {/* Shapes */}
@@ -565,83 +672,107 @@ export default function RibbonBar({
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenWireframeModal ? onOpenWireframeModal('rect') : onAddWireframe('rect')}
-                  title="3D Rectangular Pocket Boundary (Corner Fillet R)"
+                  title="Create Parametric 2D / 3D Rectangle"
                 >
                   <div style={{ width: '22px', height: '16px', border: '2px solid #4ade80', borderRadius: '3px' }} />
-                  <span className="btn-label" style={{ color: '#4ade80', fontWeight: 600 }}>Rectangle<br />Pocket</span>
+                  <span className="btn-label" style={{ color: '#4ade80', fontWeight: 600 }}>Rectangle</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('polygon') : onAddWireframe('polygon')}
-                  title="Regular Polygon (Hexagon, Octagon, Prismatic Flange)"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('datum') : onAddWireframe('bounding')}
+                  title="Create 3D Bounding Box Wireframe"
                 >
-                  <Grid size={21} color="#a855f7" />
-                  <span className="btn-label">Polygon<br />Hexagon</span>
+                  <Box size={22} color="#facc15" />
+                  <span className="btn-label">Bounding<br />Box</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Silhouette Boundary')} title="Create Silhouette Boundary Contour">
+                  <Layers size={20} color="#06b6d4" />
+                  <span className="btn-label">Silhouette<br />Boundary</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Create Letters')} title="Create Stick / TrueType Lettering Wireframe">
+                  <Type size={20} color="#c084fc" />
+                  <span className="btn-label">Create<br />Letters</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Turn Profile')} title="Extract Lathe Turning Profile">
+                  <Disc size={20} color="#ec4899" />
+                  <span className="btn-label">Turn<br />Profile</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Relief Groove')} title="Create Standard Relief Groove Profile">
+                  <Scissors size={20} color="#f59e0b" />
+                  <span className="btn-label">Relief<br />Groove</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Raster to Vector')} title="Convert Raster Image to Vector Wireframe">
+                  <Sparkles size={20} color="#34d399" />
+                  <span className="btn-label">Raster to<br />Vector</span>
                 </button>
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"
                   onClick={onOpenCornerReliefStudio}
-                  title="Open CNC Automatic Corner Relief &amp; Dog-Bone / T-Bone Studio (Pockets, Enclosures &amp; Tabs)"
+                  title="Open CNC Automatic Corner Relief & Dog-Bone Studio"
                 >
-                  <Box size={21} color="#10b981" />
+                  <Box size={20} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Corner<br />Relief</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Shapes</span>
             </div>
 
-            {/* Curves from Solid CAD Model */}
+            {/* Curves */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenWireframeModal ? onOpenWireframeModal('edges') : onAddWireframe('edges')}
-                  title="Extract Sharp Feature Edges from 3D Workpiece Model into Level 10 Wireframe Curves"
+                  title="Extract Curve on Single Solid Edge"
                 >
                   <Box size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Curve on<br />All Edges</span>
+                  <span className="btn-label">Curve<br />One Edge</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('datum') : onAddWireframe('bounding')}
-                  title="Generate 3D Wireframe Cage Enclosing Part"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('edges') : onAddWireframe('edges')}
+                  title="Extract Curves on All Solid Edges"
                 >
-                  <Box size={22} color="#facc15" />
-                  <span className="btn-label">Bounding<br />Cage</span>
+                  <Box size={22} color="#60a5fa" />
+                  <span className="btn-label" style={{ color: '#60a5fa', fontWeight: 600 }}>Curve<br />All Edges</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Curve Slice')} title="Create Wireframe Slice Along Plane">
+                  <Scissors size={20} color="#ec4899" />
+                  <span className="btn-label">Curve<br />Slice</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Solid Edges</span>
+              <span className="ribbon-group-title">Curves</span>
             </div>
 
-            {/* Datum & Management */}
+            {/* Modify */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('datum') : onAddWireframe('drillpoints')}
-                  title="WCS Coordinate Datum Reference Points"
-                >
-                  <Crosshair size={22} color="#ef4444" />
-                  <span className="btn-label">Datum<br />Points</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Trim Break Extend')} title="Trim / Break / Extend Wireframe Entities">
+                  <Scissors size={20} color="#f43f5e" />
+                  <span className="btn-label">Trim Break<br />Extend</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('list') : null}
-                  title="Inspect Level 10 Wireframe Entities Manager"
-                >
-                  <Layers size={21} color="#60a5fa" />
-                  <span className="btn-label">Wireframe<br />Manager</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Fillet Entities')} title="Add Fillet Radius Between Entities">
+                  <Orbit size={20} color="#10b981" />
+                  <span className="btn-label">Fillet<br />Entities</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onClearWireframes}
-                  title="Clear All Level 10 Wireframe Geometry"
-                >
+                <button className="ribbon-btn-large" onClick={() => console.log('Chamfer Entities')} title="Add Chamfer Angle Between Entities">
+                  <Scissors size={20} color="#f59e0b" />
+                  <span className="btn-label">Chamfer<br />Entities</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Offset')} title="Offset Contour by Distance">
+                  <Move size={20} color="#38bdf8" />
+                  <span className="btn-label">Offset</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Project')} title="Project Wireframe Onto Surface / Plane">
+                  <ArrowDown size={20} color="#c084fc" />
+                  <span className="btn-label">Project</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onClearWireframes} title="Clear All Level 10 Wireframe Geometry">
                   <Trash2 size={20} color="#94a3b8" />
                   <span className="btn-label">Clear<br />Wireframes</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Datum &amp; Manage</span>
+              <span className="ribbon-group-title">Modify</span>
             </div>
           </>
         )}
@@ -649,84 +780,171 @@ export default function RibbonBar({
         {/* ==================== 4. SURFACES TAB ==================== */}
         {activeTab === 'Surfaces' && (
           <>
-            {/* Primitives */}
+            {/* Simple */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('plane') : onAddSurface('plane')}
-                  title="Create 3D Planar Surface Sheet (G17/G18/G19, Drive or Check)"
+                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('cylinder') : onAddSurface('cylinder')}
+                  title="Create 3D Cylindrical Surface Sleeve"
                 >
-                  <Layers size={22} color="#06b6d4" />
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Planar<br />Surface</span>
+                  <Orbit size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Cylinder</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('cylinder') : onAddSurface('cylinder')}
-                  title="Create 3D Cylindrical Surface Sleeve Wrapper"
+                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('plane') : onAddSurface('plane')}
+                  title="Create 3D Planar Surface Block Sheet"
                 >
-                  <Orbit size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Cylinder<br />Surface</span>
+                  <Box size={22} color="#06b6d4" />
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Block</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Sphere Surface')} title="Create Spherical Surface Primitive">
+                  <Disc size={20} color="#38bdf8" />
+                  <span className="btn-label">Sphere</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Cone Surface')} title="Create Conical Surface Primitive">
+                  <Compass size={20} color="#f59e0b" />
+                  <span className="btn-label">Cone</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Torus Surface')} title="Create Torus Surface Primitive">
+                  <Orbit size={20} color="#a855f7" />
+                  <span className="btn-label">Torus</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Primitives</span>
+              <span className="ribbon-group-title">Simple</span>
             </div>
 
-            {/* Loft & Extrusions */}
+            {/* Create */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('extrude') : null}
-                  title="Extrude 2D Boundary into Vertical Surface Walls"
+                  title="Extrude Wireframe Contour into Surface Wall"
                 >
                   <Box size={22} color="#8b5cf6" />
-                  <span className="btn-label">Extrude<br />Wall</span>
+                  <span className="btn-label">Extrude</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('revolve') : null}
-                  title="Revolve Profile Around Spindle Axis (Turned & Conical Surfaces)"
-                >
-                  <Disc size={22} color="#ec4899" />
-                  <span className="btn-label">Revolve<br />Surface</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Draft Surface')} title="Create Draft Angle Surface">
+                  <Maximize2 size={20} color="#f59e0b" />
+                  <span className="btn-label">Draft</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('From Solid')} title="Create Surface Sheet From Solid Body Faces">
+                  <Layers size={20} color="#38bdf8" />
+                  <span className="btn-label">From<br />Solid</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Flat Boundary')} title="Create Flat Boundary Surface from Closed Curves">
+                  <Grid size={20} color="#10b981" />
+                  <span className="btn-label">Flat<br />Boundary</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('loft') : null}
-                  title="Ruled Loft Surface Blending Between Two Profiles"
+                  title="Create Loft Surface Blending Multiple Contours"
                 >
                   <Sliders size={22} color="#3b82f6" />
-                  <span className="btn-label">Ruled<br />Loft</span>
+                  <span className="btn-label">Loft</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Sweep Surface')} title="Create Swept Surface Along Trajectory">
+                  <Move size={20} color="#c084fc" />
+                  <span className="btn-label">Sweep</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Net Surface')} title="Create Coons Patch Net Surface">
+                  <Grid size={20} color="#06b6d4" />
+                  <span className="btn-label">Net</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('revolve') : null}
+                  title="Revolve Profile Around Axis (Turned Surface)"
+                >
+                  <Disc size={22} color="#ec4899" />
+                  <span className="btn-label">Revolve</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Offset Surface')} title="Offset Surface Body by Normal Distance">
+                  <ArrowUp size={20} color="#facc15" />
+                  <span className="btn-label">Offset</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Lofts &amp; Extrude</span>
+              <span className="ribbon-group-title">Create</span>
             </div>
 
-            {/* CAM Hole Capping & Blends */}
+            {/* Modify */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => console.log('Trim to Curves')} title="Trim Surface to Boundary Curves">
+                  <Scissors size={20} color="#f43f5e" />
+                  <span className="btn-label">Trim to<br />Curves</span>
+                </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('cap') : null}
-                  title="Cap Holes / Patch Surface Openings (Prevents Cutter Plunge)"
+                  title="Fill Holes & Cap Openings in Surfaces"
                 >
                   <Sparkles size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Cap<br />Holes</span>
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Fill<br />Holes</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Extend Surface')} title="Extend Surface Edges Tangentially">
+                  <Maximize2 size={20} color="#10b981" />
+                  <span className="btn-label">Extend</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('fillet') : null}
-                  title="Curved Fillet Blend Transition Sheet"
+                  title="Fillet Transition Blend Between Surfaces"
                 >
-                  <Maximize2 size={21} color="#14b8a6" />
-                  <span className="btn-label">Fillet<br />Blend</span>
+                  <Orbit size={20} color="#14b8a6" />
+                  <span className="btn-label">Fillet to<br />Surfaces</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Two Surface Blend')} title="Create Blend Surface Between 2 Surfaces">
+                  <Layers size={20} color="#60a5fa" />
+                  <span className="btn-label">Two Surface<br />Blend</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Three Surface Blend')} title="Create Blend Surface Across 3 Surfaces">
+                  <Layers size={20} color="#a855f7" />
+                  <span className="btn-label">Three Surface<br />Blend</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Three Fillet Blend')} title="Corner Blend at Three Fillet Intersection">
+                  <Sparkles size={20} color="#f59e0b" />
+                  <span className="btn-label">Three Fillet<br />Blend</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Untrim')} title="Restore Untrimmed Underlying Surface">
+                  <RotateCcw size={20} color="#94a3b8" />
+                  <span className="btn-label">Untrim</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Remove Boundary')} title="Remove Outer / Inner Surface Boundaries">
+                  <Trash2 size={20} color="#ef4444" />
+                  <span className="btn-label">Remove<br />Boundary</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Split Surface')} title="Split Surface by Isoparametric Curve">
+                  <Scissors size={20} color="#ec4899" />
+                  <span className="btn-label">Split</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">CAM Patches</span>
+              <span className="ribbon-group-title">Modify</span>
             </div>
 
-            {/* Drive & Check Management */}
+            {/* Normals */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => onChangeRenderMode && onChangeRenderMode('normals')} title="Flip Normal Vectors">
+                  <RefreshCw size={20} color="#38bdf8" />
+                  <span className="btn-label">Change</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Set Normal')} title="Set Normal Vector Direction">
+                  <ArrowUp size={20} color="#10b981" />
+                  <span className="btn-label">Set</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Orient Normals')} title="Orient Connected Surface Patch Normals">
+                  <Compass size={20} color="#f59e0b" />
+                  <span className="btn-label">Orient</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Normals</span>
+            </div>
+
+            {/* Drive / Check */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
@@ -737,11 +955,7 @@ export default function RibbonBar({
                   <ShieldAlert size={22} color="#f59e0b" />
                   <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Drive &amp; Check<br />Manager</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onClearSurfaces}
-                  title="Clear All Added Surface Sheets on Level 15"
-                >
+                <button className="ribbon-btn-large" onClick={onClearSurfaces} title="Clear All Level 15 Surface Sheets">
                   <Trash2 size={20} color="#94a3b8" />
                   <span className="btn-label">Clear<br />Surfaces</span>
                 </button>
@@ -754,86 +968,157 @@ export default function RibbonBar({
         {/* ==================== 5. SOLIDS TAB ==================== */}
         {activeTab === 'Solids' && (
           <>
-            {/* Primitives */}
+            {/* Simple */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('box') : onAddSolid('box')}
-                  title="Generate Parametric 3D Rectangular Billet Block"
+                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('cylinder') : onAddSolid('cylinder')}
+                  title="Create Parametric 3D Cylindrical Blank Solid"
                 >
-                  <Box size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Block<br />Billet</span>
+                  <Orbit size={22} color="#60a5fa" />
+                  <span className="btn-label" style={{ color: '#60a5fa', fontWeight: 600 }}>Cylinder</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('cylinder') : onAddSolid('cylinder')}
-                  title="Generate Parametric 3D Cylindrical Blank (Solid or Hollow Bore)"
+                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('box') : onAddSolid('box')}
+                  title="Create Parametric 3D Rectangular Billet Solid"
                 >
-                  <Orbit size={22} color="#60a5fa" />
-                  <span className="btn-label" style={{ color: '#60a5fa', fontWeight: 600 }}>Cylinder<br />Blank</span>
+                  <Box size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Block</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('sphere') : onAddSolid('sphere')}
+                  title="Create Parametric Spherical Solid"
+                >
+                  <Disc size={20} color="#10b981" />
+                  <span className="btn-label">Sphere</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenSolidsModal ? onOpenSolidsModal('cone') : onAddSolid('cone')}
-                  title="Generate Parametric 3D Conical Frustum Solid"
+                  title="Create Parametric Conical Frustum Solid"
                 >
-                  <Compass size={22} color="#f59e0b" />
-                  <span className="btn-label">Cone<br />Frustum</span>
+                  <Compass size={20} color="#f59e0b" />
+                  <span className="btn-label">Cone</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenSolidsModal ? onOpenSolidsModal('torus') : onAddSolid('torus')}
-                  title="Generate Parametric 3D Torus Solid Ring"
+                  title="Create Parametric Torus Ring Solid"
                 >
-                  <Disc size={22} color="#a855f7" />
-                  <span className="btn-label">Torus<br />Ring</span>
+                  <Orbit size={20} color="#a855f7" />
+                  <span className="btn-label">Torus</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Solid Primitives</span>
+              <span className="ribbon-group-title">Simple</span>
             </div>
 
-            {/* Extrusion & Cavities */}
+            {/* Create */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenSolidsModal ? onOpenSolidsModal('extrude') : onAddSolid('extrude')}
-                  title="Extrude 2D Contour to 3D Solid with Draft Angle"
+                  title="Extrude 2D Contour to 3D Solid Body"
                 >
                   <Sliders size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Extrude<br />Solid</span>
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Extrude</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('pocket') : null}
-                  title="Generate CNC Milled Pocket Workpiece (Cavity + Fillets)"
-                >
-                  <Sparkles size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Pocket<br />Cavity</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Revolve Solid')} title="Revolve Profile Into Solid of Revolution">
+                  <Disc size={20} color="#ec4899" />
+                  <span className="btn-label">Revolve</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Loft Solid')} title="Loft Solid Body Through Multiple Sections">
+                  <Layers size={20} color="#3b82f6" />
+                  <span className="btn-label">Loft</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Sweep Solid')} title="Sweep Solid Profile Along Trajectory">
+                  <Move size={20} color="#c084fc" />
+                  <span className="btn-label">Sweep</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Boolean Solid')} title="Boolean Union, Subtract, or Intersect">
+                  <Sparkles size={20} color="#f59e0b" />
+                  <span className="btn-label">Boolean</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Impression Solid')} title="Create Mold Core/Cavity Impression">
+                  <Box size={20} color="#06b6d4" />
+                  <span className="btn-label">Impression</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Rectangular Pattern')} title="Rectangular Matrix Pattern of Features">
+                  <Grid size={20} color="#38bdf8" />
+                  <span className="btn-label">Rectangular<br />Pattern</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Circular Pattern')} title="Circular PCD Pattern of Features">
+                  <Orbit size={20} color="#facc15" />
+                  <span className="btn-label">Circular<br />Pattern</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Manual Pattern')} title="Point-Driven Manual Pattern">
+                  <Crosshair size={20} color="#94a3b8" />
+                  <span className="btn-label">Manual<br />Pattern</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('From Surfaces')} title="Stitch Surfaces into Watertight Solid Body">
+                  <Layers size={20} color="#34d399" />
+                  <span className="btn-label">From<br />Surfaces</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Features &amp; Cavities</span>
+              <span className="ribbon-group-title">Create</span>
             </div>
 
-            {/* Manager & Stock Operations */}
+            {/* Modify */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => console.log('Constant Fillet')} title="Apply Constant Radius Fillet to Solid Edges">
+                  <Orbit size={20} color="#10b981" />
+                  <span className="btn-label">Constant<br />Fillet</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('One Distance Chamfer')} title="Apply One Distance Chamfer to Edges">
+                  <Scissors size={20} color="#f59e0b" />
+                  <span className="btn-label">One Distance<br />Chamfer</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Shell Solid')} title="Hollow Out Solid to Thin-Wall Shell">
+                  <Box size={20} color="#38bdf8" />
+                  <span className="btn-label">Shell</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Thicken Solid')} title="Thicken Sheet Surface into Solid">
+                  <Maximize2 size={20} color="#60a5fa" />
+                  <span className="btn-label">Thicken</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Draft Solid')} title="Add Mold Release Draft Angle to Faces">
+                  <Maximize2 size={20} color="#c084fc" />
+                  <span className="btn-label">Draft</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Trim by Plane')} title="Trim Solid Body by Cutting Plane">
+                  <Scissors size={20} color="#ef4444" />
+                  <span className="btn-label">Trim by<br />Plane</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Modify</span>
+            </div>
+
+            {/* Drawing & Features */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenSolidsModal ? onOpenSolidsModal('manager') : null}
-                  title="Inspect Solids Manager Tree & Material Densities"
+                  title="Open Solids History Tree & Feature Manager"
                 >
                   <Layers size={22} color="#60a5fa" />
-                  <span className="btn-label" style={{ color: '#60a5fa', fontWeight: 600 }}>Solids<br />Manager</span>
+                  <span className="btn-label" style={{ color: '#60a5fa', fontWeight: 600 }}>Layout /<br />Tree</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
-                  onClick={onOpenStockModal}
-                  title="Configure Raw Stock Bounding Box Dimensions"
+                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('pocket') : null}
+                  title="Generate Milled Pocket Workpiece Cavity"
                 >
+                  <Sparkles size={22} color="#38bdf8" />
+                  <span className="btn-label">Pocket<br />Cavity</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenStockModal} title="Configure Raw Stock Bounding Box">
                   <Settings size={20} color="#10b981" />
-                  <span className="btn-label">Solid<br />Stock</span>
+                  <span className="btn-label">Stock<br />Setup</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
@@ -844,7 +1129,7 @@ export default function RibbonBar({
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Recognize<br />Features</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Solids Management</span>
+              <span className="ribbon-group-title">Drawing &amp; Features</span>
             </div>
           </>
         )}
@@ -852,137 +1137,131 @@ export default function RibbonBar({
         {/* ==================== 6. MODEL PREP TAB ==================== */}
         {activeTab === 'Model Prep' && (
           <>
-            {/* Direct Modeling */}
+            {/* Create */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => console.log('Hole Axis')} title="Create Coordinate Axis Centerline in Holes">
+                  <Crosshair size={20} color="#38bdf8" />
+                  <span className="btn-label">Hole<br />Axis</span>
+                </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('pushpull') : (onPushPull && onPushPull(2))}
-                  title="Direct Modeling Push / Pull Face (Offset Any Planar or Cylindrical Face)"
+                  title="Direct Modeling Push / Pull Face Offset"
                 >
                   <Maximize2 size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Push / Pull<br />Face</span>
                 </button>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <button
-                    className="ribbon-btn-small"
-                    onClick={() => onPushPull ? onPushPull(1) : (onOpenModelPrepModal && onOpenModelPrepModal('pushpull'))}
-                    title="Quick Add +1.0mm Top Face Stock Allowance"
-                  >
-                    <ArrowUp size={12} color="#4ade80" />
-                    <span>+1mm Top</span>
-                  </button>
-                  <button
-                    className="ribbon-btn-small"
-                    onClick={() => onPushPull ? onPushPull(-1) : (onOpenModelPrepModal && onOpenModelPrepModal('pushpull'))}
-                    title="Quick Pull -1.0mm Top Face Finish Skim"
-                  >
-                    <ArrowDown size={12} color="#f43f5e" />
-                    <span>-1mm Top</span>
-                  </button>
-                  <button
-                    className="ribbon-btn-small"
-                    onClick={() => onPushPull ? onPushPull(1.5) : (onOpenModelPrepModal && onOpenModelPrepModal('pushpull'))}
-                    title="Add Uniform +1.5mm Roughing Stock Skin"
-                  >
-                    <Sparkles size={12} color="#f59e0b" />
-                    <span>+1.5mm Skin</span>
-                  </button>
-                </div>
-              </div>
-              <span className="ribbon-group-title">Direct Modeling</span>
-            </div>
-
-            {/* WCS & Table Alignment */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('align') : onResetTransform()}
-                  title="WCS Coordinate Alignment & Table Positioning Workbench"
+                  title="Move Solid Faces / Features"
                 >
-                  <Crosshair size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Align<br />WCS</span>
+                  <Move size={20} color="#10b981" />
+                  <span className="btn-label">Move</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onResetTransform}
-                  title="Snap Top Face Directly to Z=0 Datum (CNC Standard Origin)"
-                >
-                  <Grid size={21} color="#60a5fa" />
-                  <span className="btn-label">Top to<br />Z0 Datum</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onDropToTable}
-                  title="Align Bottom Face of Part to Fixture Baseplate / Vise Jaws"
-                >
-                  <Layers size={21} color="#10b981" />
-                  <span className="btn-label">Drop to<br />Table</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Split Solid Faces')} title="Split Faces Along Curve Boundary">
+                  <Scissors size={20} color="#f59e0b" />
+                  <span className="btn-label">Split Solid<br />Faces</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">WCS &amp; Alignment</span>
+              <span className="ribbon-group-title">Create</span>
             </div>
 
-            {/* Setup Orientation & Indexing */}
+            {/* Direct Editing */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('orient') : onRotatePart(0, 0, Math.PI)}
-                  title="Setup 2 Flip (Rotate 180° for Backside Machining)"
-                >
-                  <RotateCcw size={22} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Flip Op 2<br />(180&deg;)</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Modify Feature')} title="Modify CAD Hole Diameter & Depth Directly">
+                  <Sliders size={20} color="#38bdf8" />
+                  <span className="btn-label">Modify<br />Feature</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onRotatePart ? onRotatePart(0, Math.PI / 2, 0) : null}
-                  title="Index 90° Around Vertical Spindle Axis"
-                >
-                  <RefreshCw size={21} color="#a855f7" />
-                  <span className="btn-label">Rotate<br />+90&deg;</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Modify Fillet')} title="Modify Existing Fillet Radius">
+                  <Orbit size={20} color="#f59e0b" />
+                  <span className="btn-label">Modify<br />Fillet</span>
                 </button>
-              </div>
-              <span className="ribbon-group-title">Setup Indexing</span>
-            </div>
-
-            {/* Defeaturing & CAM Capping */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('defeature') : null}
-                  title="CAM Defeaturing & Auto-Capping Bolt Holes (Level 15)"
+                  title="Remove Faces & Auto-Cap Cavities (CAM Defeaturing)"
                 >
                   <ShieldAlert size={22} color="#06b6d4" />
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>CAM Hole<br />Capping</span>
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Remove<br />Faces</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Remove Fillets')} title="Remove Fillets & Restore Sharp Corners">
+                  <Scissors size={20} color="#ef4444" />
+                  <span className="btn-label">Remove<br />Fillets</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Defeaturing</span>
+              <span className="ribbon-group-title">Direct Editing</span>
             </div>
 
-            {/* Manifold Diagnostics & Healing */}
+            {/* Modify */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => console.log('Simplify Solid')} title="Simplify B-Rep Topology into Analytic Planes & Cylinders">
+                  <Sparkles size={20} color="#10b981" />
+                  <span className="btn-label">Simplify<br />Solid</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenAFRModal} title="Find Milled Pockets, Slots & Drilled Holes">
+                  <Compass size={20} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Find<br />Features</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Remove History')} title="Remove History Tree (Convert to Direct Solid Body)">
+                  <Trash2 size={20} color="#94a3b8" />
+                  <span className="btn-label">Remove<br />History</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Modify</span>
+            </div>
+
+            {/* Layout */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => console.log('Disassemble')} title="Disassemble Multi-Body Assembly onto Table">
+                  <Grid size={20} color="#60a5fa" />
+                  <span className="btn-label">Disassemble</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('orient') : onRotatePart(0, 0, Math.PI)}
+                  title="Position & Orient Part on CNC Machine Table (Flip 180°)"
+                >
+                  <RotateCcw size={22} color="#f59e0b" />
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Position /<br />Flip</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onResetTransform} title="Clear All Offsets & Snap to Origin">
+                  <RefreshCw size={20} color="#ef4444" />
+                  <span className="btn-label">Clear All</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onDropToTable} title="Align Part Bottom Face to Table Baseplate">
+                  <Layers size={20} color="#10b981" />
+                  <span className="btn-label">Drop to<br />Table</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Layout</span>
+            </div>
+
+            {/* Color & Diagnostics */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => console.log('Change Face Color')} title="Change Color of Specific Solid Faces">
+                  <Palette size={20} color="#38bdf8" />
+                  <span className="btn-label">Change<br />Face</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Clear Feature Color')} title="Clear Color Override on Selected Feature">
+                  <Trash2 size={20} color="#94a3b8" />
+                  <span className="btn-label">Clear<br />Feature</span>
+                </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('manifold') : onOpenEntityAnalyzer()}
-                  title="Inspect Watertight Manifold Topology & Check for Holes"
+                  title="Check Watertight Manifold Topology"
                 >
                   <CheckCircle2 size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Check<br />Manifold</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenEntityAnalyzer}
-                  title="Entity Inspector (Dimensions, Volume, Center of Gravity)"
-                >
-                  <Compass size={21} color="#94a3b8" />
-                  <span className="btn-label">Entity<br />Inspector</span>
-                </button>
               </div>
-              <span className="ribbon-group-title">Diagnostics</span>
+              <span className="ribbon-group-title">Color &amp; Health</span>
             </div>
           </>
         )}
@@ -1079,32 +1358,91 @@ export default function RibbonBar({
         {/* ==================== 8. DRAFTING TAB ==================== */}
         {activeTab === 'Drafting' && (
           <>
-            {/* Dimensions */}
+            {/* Dimension */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenDraftingModal ? onOpenDraftingModal('linear') : null}
-                  title="3D Linear Dimensions with Dual Arrowheads &amp; Tolerances (Level 100)"
+                  title="Smart Linear Dimension (Horizontal, Vertical & Aligned)"
                 >
                   <Scissors size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Linear<br />Dimension</span>
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Smart<br />Dimension</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Horizontal Dimension')} title="Horizontal Dimension">
+                  <div style={{ width: '20px', height: '2px', background: '#94a3b8', margin: '10px 0' }} />
+                  <span className="btn-label">Horizontal</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Angular Dimension')} title="Angular Dimension Between Lines">
+                  <Compass size={20} color="#f59e0b" />
+                  <span className="btn-label">Angular</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenDraftingModal ? onOpenDraftingModal('radial') : null}
-                  title="3D Radial (R) &amp; Diametral (Ø) Leader Callouts"
+                  title="3D Radial (R) & Diametral (Ø) Leader Callouts"
                 >
-                  <Disc size={22} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Radial / &Oslash;<br />Callout</span>
+                  <Disc size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Circular<br />Callout</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Parallel Dimension')} title="Parallel Dimension">
+                  <Layers size={20} color="#60a5fa" />
+                  <span className="btn-label">Parallel</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Point Dimension')} title="Point Coordinate Dimension">
+                  <Crosshair size={20} color="#c084fc" />
+                  <span className="btn-label">Point</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Baseline Dimension')} title="Baseline Dimension Stack">
+                  <Grid size={20} color="#34d399" />
+                  <span className="btn-label">Baseline</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Chained Dimension')} title="Chained Continuous Dimension">
+                  <Sliders size={20} color="#f43f5e" />
+                  <span className="btn-label">Chained</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Dimensions</span>
+              <span className="ribbon-group-title">Dimension</span>
             </div>
 
-            {/* Datums & Leaders */}
+            {/* Ordinate */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => console.log('Horizontal Ordinate')} title="Horizontal Ordinate Dimensioning">
+                  <Grid size={20} color="#38bdf8" />
+                  <span className="btn-label">Horizontal<br />Ordinate</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Vertical Ordinate')} title="Vertical Ordinate Dimensioning">
+                  <Grid size={20} color="#10b981" />
+                  <span className="btn-label">Vertical<br />Ordinate</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Parallel Ordinate')} title="Parallel Ordinate Dimensioning">
+                  <Grid size={20} color="#f59e0b" />
+                  <span className="btn-label">Parallel<br />Ordinate</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Ordinate</span>
+            </div>
+
+            {/* Annotate */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('leader') : null}
+                  title="Machining Operator Leader Note"
+                >
+                  <FileText size={22} color="#a855f7" />
+                  <span className="btn-label">Note /<br />Leader</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Witness Line')} title="Add Witness Extension Line">
+                  <div style={{ width: '18px', height: '2px', background: '#38bdf8', margin: '10px 0' }} />
+                  <span className="btn-label">Witness<br />Line</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Cross Hatch')} title="Cross Hatch Section Pattern">
+                  <Grid size={20} color="#facc15" />
+                  <span className="btn-label">Cross<br />Hatch</span>
+                </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenDraftingModal ? onOpenDraftingModal('datum') : null}
@@ -1113,64 +1451,39 @@ export default function RibbonBar({
                   <Crosshair size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>WCS Datum<br />Tag</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('leader') : null}
-                  title="Machining Operator Leader Note (Taps, Reams, Surface Finishes)"
-                >
-                  <FileText size={22} color="#a855f7" />
-                  <span className="btn-label">Leader<br />Note</span>
-                </button>
               </div>
-              <span className="ribbon-group-title">Annotations</span>
+              <span className="ribbon-group-title">Annotate</span>
             </div>
 
-            {/* Level 100 Management & Caliper */}
+            {/* Regenerate & Modify */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button
-                  className={`ribbon-btn-large ${layerVisibility.dimensions ? 'active' : ''}`}
-                  onClick={() => onToggleLayer('dimensions')}
-                  title="Toggle Level 100 Drafting Dimensions Visibility"
-                >
-                  <Eye size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>
-                    {layerVisibility.dimensions ? 'Hide' : 'Show'}<br />Level 100
-                  </span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Regenerate All Dimensions')} title="Regenerate All Annotations">
+                  <RefreshCw size={20} color="#10b981" />
+                  <span className="btn-label">Regenerate<br />All</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Align Note')} title="Align Multiple Notes">
+                  <Sliders size={20} color="#38bdf8" />
+                  <span className="btn-label">Align<br />Note</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenDraftingModal ? onOpenDraftingModal('manager') : null}
-                  title="Drafting Entity Manager Tree (Inspect &amp; Delete Annotations)"
+                  title="Drafting Entity Manager Tree"
                 >
                   <Layers size={21} color="#60a5fa" />
                   <span className="btn-label">Drafting<br />Manager</span>
                 </button>
                 <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenDistanceCaliper}
-                  title="Interactive Digital Vernier Caliper Measure"
-                >
-                  <Sliders size={20} color="#10b981" />
-                  <span className="btn-label">Digital<br />Caliper</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Management</span>
-            </div>
-
-            {/* CNC Engraving & Marking */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
                   className="ribbon-btn-large ribbon-btn-highlight"
                   onClick={onOpenEngravingStudio}
-                  title="Open CNC 2.5D &amp; 3D Engraving &amp; V-Carve Studio (Serial Numbers, Single-Line Stick Font, 3D Prism V-Carving)"
+                  title="Open CNC 2.5D & 3D Engraving & V-Carve Studio"
                 >
                   <Type size={22} color="#06b6d4" />
                   <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 700 }}>Engraving<br />&amp; V-Carve</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Part Marking</span>
+              <span className="ribbon-group-title">Modify &amp; Engrave</span>
             </div>
           </>
         )}
@@ -1178,156 +1491,126 @@ export default function RibbonBar({
         {/* ==================== 9. TRANSFORM TAB ==================== */}
         {activeTab === 'Transform' && (
           <>
-            {/* Translation & Step Move */}
+            {/* Position */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenTransformModal ? onOpenTransformModal('translate') : null}
-                  title="3D Translation Workbench (Exact Delta X/Y/Z, Move Original or Multi-Copy)"
+                  title="Dynamic 3D Translation Workbench"
                 >
                   <Move size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>3D Move<br />/ Copy</span>
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Dynamic<br />Translate</span>
                 </button>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px' }}>
-                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(10, 0, 0)} title="Translate +10 mm on X">
-                    <span style={{ color: '#38bdf8' }}>X+10</span>
-                  </button>
-                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(0, 10, 0)} title="Translate +10 mm on Y">
-                    <span style={{ color: '#10b981' }}>Y+10</span>
-                  </button>
-                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(0, 0, 10)} title="Translate +10 mm on Z">
-                    <span style={{ color: '#f59e0b' }}>Z+10</span>
-                  </button>
-                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(-10, 0, 0)} title="Translate -10 mm on X">
-                    <span style={{ color: '#38bdf8' }}>X-10</span>
-                  </button>
-                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(0, -10, 0)} title="Translate -10 mm on Y">
-                    <span style={{ color: '#10b981' }}>Y-10</span>
-                  </button>
-                  <button className="ribbon-btn-small" onClick={() => onTranslatePart(0, 0, -10)} title="Translate -10 mm on Z">
-                    <span style={{ color: '#f59e0b' }}>Z-10</span>
-                  </button>
-                </div>
-              </div>
-              <span className="ribbon-group-title">Translation</span>
-            </div>
-
-            {/* Rotation & Indexing */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenTransformModal ? onOpenTransformModal('rotate') : null}
-                  title="Rotary Indexer &amp; Spindle Alignment (X, Y, Z Axis Angles)"
+                  title="3D Rotate Around Axis"
                 >
                   <RotateCcw size={22} color="#a855f7" />
-                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>3D Rotate<br />&amp; Index</span>
+                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Rotate</span>
                 </button>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <button className="ribbon-btn-small" onClick={() => onRotatePart(0, 0, Math.PI / 2)} title="Rotate 90° around Spindle (Z)">
-                    <span>Rot 90&deg; Z</span>
-                  </button>
-                  <button className="ribbon-btn-small" onClick={() => onRotatePart(Math.PI / 2, 0, 0)} title="Tilt 90° around Trunnion (X)">
-                    <span>Tilt 90&deg; X</span>
-                  </button>
-                </div>
-              </div>
-              <span className="ribbon-group-title">Rotation</span>
-            </div>
-
-            {/* Scale & Shrinkage */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenTransformModal ? onOpenTransformModal('scale') : null}
-                  title="Scale Factor &amp; Casting Shrinkage Compensation (+2.5%, Unit Conversion)"
-                >
-                  <Maximize2 size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Scale &amp;<br />Shrinkage</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Project Transform')} title="Project Geometry onto Plane">
+                  <ArrowDown size={20} color="#60a5fa" />
+                  <span className="btn-label">Project</span>
                 </button>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <button className="ribbon-btn-small" onClick={() => onScalePart(1.25)} title="Scale Up 1.25x">
-                    <span>1.25&times;</span>
-                  </button>
-                  <button className="ribbon-btn-small" onClick={() => onScalePart(0.8)} title="Scale Down 0.8x">
-                    <span>0.8&times;</span>
-                  </button>
-                </div>
-              </div>
-              <span className="ribbon-group-title">Scale</span>
-            </div>
-
-            {/* Mirror & Multi-Part Pattern */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={onResetTransform} title="Move Selection Directly to WCS Origin (0,0,0)">
+                  <Crosshair size={20} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Move to<br />Origin</span>
+                </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenTransformModal ? onOpenTransformModal('mirror') : null}
-                  title="Mirror Left/Right Hand Symmetrical Pairs across YZ/XZ/XY Planes"
+                  title="Mirror Left/Right Hand Symmetrical Pairs"
                 >
                   <Copy size={21} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Mirror<br />(LH / RH)</span>
+                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Mirror</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenTransformModal ? onOpenTransformModal('pattern') : null}
-                  title="Multi-Part Matrix Pattern &amp; Circular PCD Array (Multi-Fixture Setup)"
-                >
-                  <Grid size={21} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Matrix<br />Pattern</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Roll Transform')} title="Roll Geometry Around Cylindrical Surface">
+                  <Orbit size={20} color="#ec4899" />
+                  <span className="btn-label">Roll</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Mirror &amp; Array</span>
+              <span className="ribbon-group-title">Position</span>
             </div>
 
-            {/* Sheet Nesting & Stock Optimizer */}
+            {/* Offset */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => console.log('Offset Entity')} title="Offset Individual Entity">
+                  <Move size={20} color="#38bdf8" />
+                  <span className="btn-label">Entity<br />Offset</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Offset Chains')} title="Offset Connected Wireframe Chains">
+                  <Layers size={20} color="#10b981" />
+                  <span className="btn-label">Chains<br />Offset</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Offset</span>
+            </div>
+
+            {/* Layout */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"
                   onClick={onOpenNestingStudio}
-                  title="Open CNC True-Shape Sheet Nesting Studio (2D/2.5D Router, Waterjet, Laser, Plasma Stock Packing &amp; Remnant Recovery)"
+                  title="Open CNC True-Shape Sheet Nesting Studio"
                 >
                   <Scissors size={21} color="#0284c7" />
-                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 700 }}>Sheet<br />Nesting</span>
+                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 700 }}>Geometry<br />Nesting</span>
                 </button>
                 <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenCornerReliefStudio}
-                  title="Open CNC Automatic Corner Relief &amp; Dog-Bone / T-Bone Studio (Pockets, Enclosures &amp; Tabs)"
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenTransformModal ? onOpenTransformModal('pattern') : null}
+                  title="Rectangular Array / Matrix Pattern"
                 >
-                  <Box size={21} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Corner<br />Relief</span>
+                  <Grid size={21} color="#38bdf8" />
+                  <span className="btn-label">Rectangular<br />Array</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Distribute')} title="Distribute Geometry Evenly">
+                  <Sliders size={20} color="#a855f7" />
+                  <span className="btn-label">Distribute</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Sheet CAM</span>
+              <span className="ribbon-group-title">Layout</span>
             </div>
 
-            {/* Reset */}
+            {/* Size & Reset */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onResetTransform} title="Reset All Position, Rotation &amp; Scale to WCS G54 Origin">
+                <button className="ribbon-btn-large" onClick={() => console.log('Stretch')} title="Stretch Geometry by Vector">
+                  <Maximize2 size={20} color="#f59e0b" />
+                  <span className="btn-label">Stretch</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenTransformModal ? onOpenTransformModal('scale') : null}
+                  title="Scale Factor & Casting Shrinkage Compensation"
+                >
+                  <Maximize2 size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Scale</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onResetTransform} title="Reset All Position, Rotation & Scale">
                   <RefreshCw size={20} color="#ef4444" />
-                  <span className="btn-label" style={{ color: '#ef4444', fontWeight: 600 }}>Reset All<br />Transforms</span>
+                  <span className="btn-label">Reset All</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Reset</span>
+              <span className="ribbon-group-title">Size &amp; Reset</span>
             </div>
           </>
         )}
 
-        {/* ==================== 10. MACHINE TAB (Default & Main Screenshot Tab) ==================== */}
+        {/* ==================== 10. MACHINE TAB ==================== */}
         {activeTab === 'Machine' && (
           <>
-            {/* Machine Definition Selector */}
+            {/* Machine Type */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={onOpenMachineConfigModal}
-                  title="Configure CNC Machine Definition &amp; Kinematic Limits (Axes, Controller, ATC)"
+                  title="Configure CNC Machine Definition & Kinematic Limits"
                 >
                   <Cpu size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Machine<br />Definition</span>
@@ -1345,7 +1628,7 @@ export default function RibbonBar({
                       borderRadius: '4px',
                       fontSize: '11px',
                       fontWeight: 600,
-                      width: '160px'
+                      width: '150px'
                     }}
                   >
                     <option value="dmu50">DMG MORI DMU 50 (5X)</option>
@@ -1354,7 +1637,7 @@ export default function RibbonBar({
                     <option value="integrex">Mazak Integrex i-200</option>
                   </select>
 
-                  <div style={{ display: 'flex', gap: '4px', width: '160px' }}>
+                  <div style={{ display: 'flex', gap: '3px', width: '150px' }}>
                     {['G54', 'G55', 'G56'].map((wcs) => (
                       <button
                         key={wcs}
@@ -1380,242 +1663,133 @@ export default function RibbonBar({
                 <button
                   className="ribbon-btn-large"
                   onClick={onOpenCPlanesModal}
-                  title="Open Construction Planes & Dynamic WCS Origin Studio (Compound 5-Axis Planes)"
+                  title="Open Construction Planes & Dynamic WCS Origin Studio"
                 >
                   <Compass size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Planes /<br />WCS Studio</span>
                 </button>
-
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenKioskModal}
-                  title="Open Shop Floor Operator Tablet Kiosk (Touch DRO, Jog Pendant, Feed/Spindle Overrides & E-Stop)"
-                >
-                  <Tablet size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
-                </button>
-
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenTombstoneStudio}
-                  title="Open Multi-WCS Tombstone &amp; 4th-Axis Rotary Indexing Studio (HMC B-Axis &amp; VMC A-Axis Multi-Part)"
-                >
-                  <Grid size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
-                </button>
-
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenCustomPostStudio}
-                  title="Open Custom Post-Processor Syntax Builder &amp; Macro Variable Engine (Fanuc, Haas, Heidenhain, Siemens, Mach4, GRBL)"
-                >
-                  <FileCode size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Custom<br />Post</span>
-                </button>
-
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenAnomalyScanner}
-                  title="Open AI Toolpath Anomaly, Deflection &amp; Chatter Diagnostic Scanner (Stability Lobes, Cantilever Deflection &amp; Breakage Prevention)"
-                >
-                  <Activity size={22} color="#f43f5e" />
-                  <span className="btn-label" style={{ color: '#f43f5e', fontWeight: 700 }}>AI Chatter<br />&amp; Deflect</span>
-                </button>
               </div>
-              <span className="ribbon-group-title">Machine &amp; WCS</span>
+              <span className="ribbon-group-title">Machine Type</span>
             </div>
 
-            {/* CAD Model & Samples Group */}
+            {/* Job Setup */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => fileInputRef.current?.click()} title="Import 3D CAD Solid Part (STEP / IGES / STL / OBJ)">
-                  <Upload size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Import<br />STEP / CAD</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSelectSampleModel('step_bracket')} title="Load Native STEP (ISO 10303-21) Solid B-Rep CAD Part">
-                  <FileCode size={19} color="#3b82f6" />
-                  <span className="btn-label" style={{ color: '#3b82f6', fontWeight: 600 }}>STEP B-Rep<br />Sample</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSelectSampleModel('impeller')} title="Load 5-Axis Impeller CAD Model">
-                  <Compass size={19} color="#a855f7" />
-                  <span className="btn-label">5X Impeller<br />Sample</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSelectSampleModel('bracket')} title="Load Aerospace Pocketing Bracket Model">
-                  <Layers size={19} color="#06b6d4" />
-                  <span className="btn-label">Aero Bracket<br />Sample</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSelectSampleModel('mold')} title="Load Precision Mold Core Model">
-                  <Box size={19} color="#f59e0b" />
-                  <span className="btn-label">Mold Core<br />Sample</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">CAD Models</span>
-            </div>
-
-            {/* Job Setup Group */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onOpenStockModal} title="Configure Stock Bounding Box & Raw Allowances">
+                <button className="ribbon-btn-large" onClick={onOpenStockModal} title="Configure Stock Bounding Box Dimensions">
                   <Box size={22} color="#f59e0b" />
                   <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Stock<br />Setup</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={onOpenFixtureModal}
-                  title="Open 3D Parametric CNC Workholding & Fixture Setup Studio (5-Axis Vises, Dovetail Step Jaws, Clamps)"
+                  title="Workholding Vises & Fixture Setup"
                 >
                   <Wrench size={22} color="#a855f7" />
                   <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Workholding<br />&amp; Fixtures</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenLatheStudio}
-                  title="Open CNC Turning & Lathe / Mill-Turn Studio (OD Roughing G71, Profile Finishing G70, Threading G76, Grooving G75)"
-                >
-                  <Disc size={22} color="#ec4899" />
-                  <span className="btn-label" style={{ color: '#ec4899', fontWeight: 600 }}>Lathe &amp;<br />Mill-Turn</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenNestingStudio}
-                  title="Open CNC True-Shape Sheet Nesting Studio (2D/2.5D Router, Waterjet, Laser, Plasma Stock Packing &amp; Remnant Recovery)"
-                >
-                  <Scissors size={22} color="#0284c7" />
-                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 600 }}>Sheet<br />Nesting</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenThreadStudio}
-                  title="Open CNC Feature-Based Thread Milling &amp; Tapping Studio (Metric M, Unified UNC/UNF, NPT Pipe)"
-                >
-                  <Disc size={22} color="#c084fc" />
-                  <span className="btn-label" style={{ color: '#c084fc', fontWeight: 600 }}>Thread Mill<br />&amp; Tapping</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenEngravingStudio}
-                  title="Open CNC 2.5D &amp; 3D Engraving &amp; V-Carve Studio (Serial Numbers, Single-Line Stick Font, 3D Prism V-Carving)"
-                >
-                  <Type size={22} color="#06b6d4" />
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Engraving<br />&amp; V-Carve</span>
-                </button>
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenHSMFilterStudio}
-                  title="Open CNC High-Speed Machining (HSM) Tolerance Filter &amp; Arc Spline Studio"
-                >
-                  <Zap size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>HSM Arc<br />Filter</span>
-                </button>
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenCostQuotingModal}
-                  title="Open CNC Machining Cost, Tool Wear &amp; Production Quoting Calculator"
-                >
-                  <DollarSign size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Cost &amp;<br />Quoting</span>
-                </button>
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenCornerReliefStudio}
-                  title="Open CNC Automatic Corner Relief &amp; Dog-Bone / T-Bone Studio (Pockets, Enclosures &amp; Tabs)"
-                >
-                  <Box size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Corner<br />Relief</span>
-                </button>
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenKioskModal}
-                  title="Open Shop Floor Operator Tablet Kiosk (Touch DRO, Jog Pendant, Feed/Spindle Overrides & E-Stop)"
-                >
-                  <Tablet size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
-                </button>
-
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenTombstoneStudio}
-                  title="Open Multi-WCS Tombstone &amp; 4th-Axis Rotary Indexing Studio (HMC B-Axis &amp; VMC A-Axis Multi-Part)"
-                >
-                  <Grid size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
-                </button>
-
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenCustomPostStudio}
-                  title="Open Custom Post-Processor Syntax Builder &amp; Macro Variable Engine (Fanuc, Haas, Heidenhain, Siemens, Mach4, GRBL)"
-                >
-                  <FileCode size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Custom<br />Post</span>
-                </button>
-
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenAnomalyScanner}
-                  title="Open AI Toolpath Anomaly, Deflection &amp; Chatter Diagnostic Scanner (Stability Lobes, Cantilever Deflection &amp; Breakage Prevention)"
-                >
-                  <Activity size={22} color="#f43f5e" />
-                  <span className="btn-label" style={{ color: '#f43f5e', fontWeight: 700 }}>AI Chatter<br />&amp; Deflect</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library (Endmill, Ballnose, Drills)">
+                <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library">
                   <Wrench size={22} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Mill Tool<br />Manager</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenToolAssemblyModal} title="Open 3D Parametric Tool & Toolholder Assembly Studio (BT40, HSK-A63, ShrinkFit, Collets)">
+                <button className="ribbon-btn-large" onClick={onOpenToolAssemblyModal} title="Toolholder Assembly Studio (BT40, HSK, Collets)">
                   <Wrench size={22} color="#0284c7" />
-                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 600 }}>Tool<br />Assembly</span>
+                  <span className="btn-label">Tool<br />Assembly</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenFeedsSpeedsModal} title="Feeds, Speeds & Material Machinability Physics Calculator">
+                <button className="ribbon-btn-large" onClick={onOpenFeedsSpeedsModal} title="Feeds & Speeds Calculator">
                   <Gauge size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Feeds &amp;<br />Speeds</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenProbingStudio} title="Renishaw Inspection Plus & Haas WIPS Touch Probing Studio">
-                  <Crosshair size={22} color="#d946ef" />
-                  <span className="btn-label" style={{ color: '#d946ef', fontWeight: 600 }}>Touch<br />Probing</span>
+                  <span className="btn-label">Feeds &amp;<br />Speeds</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Job Setup</span>
             </div>
 
-            {/* Post Group - BUBBLE 1 FROM USER'S SCREENSHOT */}
+            {/* Simulator */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={onStartBackplot} title="Backplot Wireframe Tool Tracing">
+                  <Play size={20} color="#06b6d4" />
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Backplot</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenSolidVerifyModal ? onOpenSolidVerifyModal : onStartVerify} title="Verify Solid Stock Removal">
+                  <Box size={20} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Verify</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenSimModal} title="Kinematic Machine Digital Twin Simulation">
+                  <Play size={22} color="#10b981" />
+                  <span className="btn-label">Simulate</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenCollisionCheck} title="Run Tool Collision & Gouge Detection Audit">
+                  <ShieldAlert size={20} color="#f43f5e" />
+                  <span className="btn-label">Collision<br />Check</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Simulator</span>
+            </div>
+
+            {/* Post */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large ribbon-btn-highlight"
                   onClick={onOpenPostModal}
-                  title="Generate G-Code & Launch NC2Check Simulation (Step 1)"
+                  title="Generate G-Code (G1)"
                 >
                   <div className="post-badge">G1</div>
-                  <FileCode size={26} color="#ffffff" />
+                  <FileCode size={24} color="#ffffff" />
                   <span className="btn-label" style={{ fontWeight: 700, color: '#ffffff' }}>Generate<br />Post</span>
                 </button>
-
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenGCodeViewer}
-                  title="Inspect & Download Multi-Controller G-Code (Fanuc, Heidenhain, Haas, GRBL)"
-                >
-                  <Download size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Export<br />G-Code</span>
+                <button className="ribbon-btn-large" onClick={onOpenCustomPostStudio} title="Create Custom Post-Processor">
+                  <FileCode size={20} color="#38bdf8" />
+                  <span className="btn-label">Create</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenGCodeViewer} title="Export CNC G-Code">
+                  <Download size={20} color="#10b981" />
+                  <span className="btn-label">Export<br />G-Code</span>
                 </button>
               </div>
-              <span className="ribbon-group-title" style={{ color: '#60a5fa', fontWeight: 600 }}>Post &amp; Export</span>
+              <span className="ribbon-group-title">Post</span>
             </div>
 
-            {/* Machine Kinematic Simulation - BUBBLE 3 FROM SCREENSHOT */}
+            {/* Setup Sheet */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onOpenSimModal} title="Run Digital Twin Kinematic Simulation">
-                  <Play size={22} color="#10b981" />
-                  <span className="btn-label">Run<br />Machine</span>
+                <button className="ribbon-btn-large" onClick={onOpenSetupSheet} title="Generate Setup Sheet">
+                  <Printer size={22} color="#e2e8f0" />
+                  <span className="btn-label">Setup<br />Sheet</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenSimModal} title="Collision & Safety Check">
-                  <ShieldAlert size={22} color="#f43f5e" />
-                  <span className="btn-label">Verify<br />Safety</span>
+                <button className="ribbon-btn-large" onClick={() => console.log('Image Capture')} title="Capture Image for Setup Sheet">
+                  <Camera size={20} color="#38bdf8" />
+                  <span className="btn-label">Image<br />Capture</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Machine Simulation</span>
+              <span className="ribbon-group-title">Setup Sheet</span>
+            </div>
+
+            {/* Argus Production Suite */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large ribbon-btn-highlight" onClick={onOpenTombstoneStudio} title="Tombstone 4-Axis Rotary Studio">
+                  <Grid size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
+                </button>
+                <button className="ribbon-btn-large ribbon-btn-highlight" onClick={onOpenKioskModal} title="Shop Floor Operator Tablet Kiosk">
+                  <Tablet size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
+                </button>
+                <button className="ribbon-btn-large ribbon-btn-highlight" onClick={onOpenAnomalyScanner} title="AI Chatter & Cantilever Deflection Scanner">
+                  <Activity size={22} color="#f43f5e" />
+                  <span className="btn-label" style={{ color: '#f43f5e', fontWeight: 700 }}>AI Chatter<br />&amp; Deflect</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenLatheStudio} title="Turning & Lathe Studio">
+                  <Disc size={20} color="#ec4899" />
+                  <span className="btn-label">Lathe /<br />Turn</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenProbingStudio} title="Renishaw & Haas Touch Probing Studio">
+                  <Crosshair size={20} color="#d946ef" />
+                  <span className="btn-label">Touch<br />Probe</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Argus CAM Suite</span>
             </div>
           </>
         )}
@@ -1623,222 +1797,162 @@ export default function RibbonBar({
         {/* ==================== 11. VIEW TAB ==================== */}
         {activeTab === 'View' && (
           <>
-            {/* View Studio & Camera Projection */}
+            {/* Zoom */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenViewStudioModal}
-                  title="Open Mastercam 3D View Studio (Ortho/Persp, Clipping, Shading, Lighting)"
-                >
-                  <Sliders size={20} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>View<br />Studio</span>
+                <button className="ribbon-btn-large" onClick={() => onSnapCamera('fit')} title="Fit Workpiece to Viewport">
+                  <Maximize2 size={20} color="#e2e8f0" />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Fit</span>
                 </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Unzoom 50%')} title="Zoom Out 50%">
+                  <Minimize2 size={20} color="#94a3b8" />
+                  <span className="btn-label">Unzoom<br />50%</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => console.log('Unzoom 80%')} title="Zoom Out 80%">
+                  <Minimize2 size={20} color="#94a3b8" />
+                  <span className="btn-label">Unzoom<br />80%</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Zoom</span>
+            </div>
 
+            {/* Graphics View */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => onSnapCamera('iso')} title="Isometric Camera View">
+                  <Box size={20} color="#38bdf8" />
+                  <span className="btn-label">Isometric</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onSnapCamera('top')} title="Top View (G17 XY)">
+                  <Eye size={20} color="#f59e0b" />
+                  <span className="btn-label">Top</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onSnapCamera('front')} title="Front View (G18 XZ)">
+                  <Eye size={20} color="#10b981" />
+                  <span className="btn-label">Front</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onSnapCamera('right')} title="Right View (G19 YZ)">
+                  <Eye size={20} color="#a855f7" />
+                  <span className="btn-label">Right</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onSnapCamera('bottom')} title="Bottom View (-Z)">
+                  <Eye size={20} color="#94a3b8" />
+                  <span className="btn-label">Bottom</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onSnapCamera('left')} title="Left View (-X)">
+                  <Eye size={20} color="#94a3b8" />
+                  <span className="btn-label">Left</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Graphics View</span>
+            </div>
+
+            {/* Appearance */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className={`ribbon-btn-large ${renderMode === 'wireframe' ? 'active' : ''}`} onClick={() => onChangeRenderMode('wireframe')} title="Pure CAD Wireframe Only">
+                  <Crosshair size={20} color="#10b981" />
+                  <span className="btn-label">Wireframe</span>
+                </button>
+                <button className={`ribbon-btn-large ${renderMode === 'edges' ? 'active' : ''}`} onClick={() => onChangeRenderMode('edges')} title="Outline Shaded with Polygon Edges">
+                  <Layers size={20} color="#f59e0b" />
+                  <span className="btn-label">Outline<br />Shaded</span>
+                </button>
+                <button className={`ribbon-btn-large ${renderMode === 'shaded' ? 'active' : ''}`} onClick={() => onChangeRenderMode('shaded')} title="PBR Metallic Shading">
+                  <Eye size={20} color="#38bdf8" />
+                  <span className="btn-label">Metallic</span>
+                </button>
+                <button className={`ribbon-btn-large ${renderMode === 'transparent' ? 'active' : ''}`} onClick={() => onChangeRenderMode('transparent')} title="Translucency Glass">
+                  <Eye size={20} color="#a855f7" />
+                  <span className="btn-label">Translucency</span>
+                </button>
+                <button className={`ribbon-btn-large ${renderMode === 'normals' ? 'active' : ''}`} onClick={() => onChangeRenderMode('normals')} title="Inspect Surface Normals">
+                  <Sparkles size={20} color="#ec4899" />
+                  <span className="btn-label">Normals</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Appearance</span>
+            </div>
+
+            {/* Managers */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => onSelectManagerTab && onSelectManagerTab('Toolpaths')} title="Toolpaths Manager">
+                  <Layers size={20} color="#10b981" />
+                  <span className="btn-label">Toolpaths</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onSelectManagerTab && onSelectManagerTab('Levels')} title="Levels Manager">
+                  <Layers size={20} color="#38bdf8" />
+                  <span className="btn-label">Levels</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onSelectManagerTab && onSelectManagerTab('Solids')} title="Solids Manager">
+                  <Box size={20} color="#f59e0b" />
+                  <span className="btn-label">Solids</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onSelectManagerTab && onSelectManagerTab('Planes')} title="Planes Manager">
+                  <Compass size={20} color="#a855f7" />
+                  <span className="btn-label">Planes</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Managers</span>
+            </div>
+
+            {/* Display */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={() => onToggleLayer('bed')} title="Toggle Grid Bed">
+                  <Grid size={20} color="#60a5fa" />
+                  <span className="btn-label">Show Grid</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onToggleLayer('stock')} title="Toggle Stock Bounding Box">
+                  <Box size={20} color="#f59e0b" />
+                  <span className="btn-label">Show Stock</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onToggleLayer('fixture')} title="Toggle Fixture Vise">
+                  <Wrench size={20} color="#a855f7" />
+                  <span className="btn-label">Show Vise</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Display</span>
+            </div>
+
+            {/* Controller & Studio */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
                 <button
                   className={`ribbon-btn-large ${cameraMode === 'orthographic' ? 'active' : ''}`}
                   onClick={() => onToggleCameraMode && onToggleCameraMode(cameraMode === 'orthographic' ? 'perspective' : 'orthographic')}
                   title="Toggle Perspective vs Orthographic Parallel CAD Projection"
                 >
                   <Camera size={20} color={cameraMode === 'orthographic' ? '#38bdf8' : '#64748b'} />
-                  <span className="btn-label">{cameraMode === 'orthographic' ? 'Ortho<br />CAD' : 'Persp<br />3D'}</span>
+                  <span className="btn-label">{cameraMode === 'orthographic' ? 'Ortho CAD' : 'Persp 3D'}</span>
                 </button>
-
                 <button
                   className="ribbon-btn-large"
                   onClick={onToggleTheme}
                   title={`Toggle UI Theme (Current: ${theme === 'light' ? 'Light CAD Day' : 'Dark CAD Night'})`}
                 >
                   {theme === 'light' ? <Sun size={20} color="#d97706" /> : <Moon size={20} color="#38bdf8" />}
-                  <span className="btn-label">{theme === 'light' ? 'Light<br />Theme' : 'Dark<br />Theme'}</span>
+                  <span className="btn-label">{theme === 'light' ? 'Light Theme' : 'Dark Theme'}</span>
                 </button>
-
                 <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenKioskModal}
-                  title="Open Shop Floor Operator Tablet Kiosk (Touch DRO, Jog Pendant, Feed/Spindle Overrides & E-Stop)"
+                  className="ribbon-btn-large"
+                  onClick={onOpenViewStudioModal}
+                  title="Open Mastercam 3D View Studio"
                 >
-                  <Tablet size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
+                  <Sliders size={20} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>View Studio</span>
                 </button>
-              </div>
-              <span className="ribbon-group-title">Camera Mode</span>
-            </div>
-
-            {/* Standard Views */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('iso')} title="Isometric Camera (WCS G54)">
-                  <Box size={20} color="#38bdf8" />
-                  <span className="btn-label">Isometric</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('top')} title="Top View (G17 XY Plane)">
-                  <Eye size={20} color="#f59e0b" />
-                  <span className="btn-label">Top (G17)</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('front')} title="Front View (G18 XZ Plane)">
-                  <Eye size={20} color="#10b981" />
-                  <span className="btn-label">Front (G18)</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('right')} title="Right View (G19 YZ Plane)">
-                  <Eye size={20} color="#a855f7" />
-                  <span className="btn-label">Right (G19)</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('bottom')} title="Bottom View (-Z Plane)">
-                  <Eye size={20} color="#94a3b8" />
-                  <span className="btn-label">Bottom</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('left')} title="Left View (-X Plane)">
-                  <Eye size={20} color="#94a3b8" />
-                  <span className="btn-label">Left</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('fit')} title="Fit Part to Viewport">
-                  <Maximize2 size={20} color="#e2e8f0" />
-                  <span className="btn-label">Fit Screen</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Standard Views</span>
-            </div>
-
-            {/* Dynamic 3D Cross-Section Cut */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
                 <button
                   className={`ribbon-btn-large ${clippingPlane?.enabled ? 'active' : ''}`}
                   onClick={() => onUpdateClippingPlane && onUpdateClippingPlane({ ...clippingPlane, enabled: !clippingPlane?.enabled })}
-                  title="Toggle Real-time 3D Cross-Section Slicing Plane"
+                  title="Toggle 3D Cross-Section Cut"
                 >
                   <Scissors size={20} color={clippingPlane?.enabled ? '#f472b6' : '#ec4899'} />
-                  <span className="btn-label" style={{ color: clippingPlane?.enabled ? '#f472b6' : 'inherit' }}>
-                    Section Cut<br />{clippingPlane?.enabled ? 'Active' : 'Off'}
-                  </span>
-                </button>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', justifyContent: 'center' }}>
-                  <div style={{ display: 'flex', gap: '3px' }}>
-                    {['X', 'Y', 'Z'].map(axis => (
-                      <button
-                        key={axis}
-                        onClick={() => onUpdateClippingPlane && onUpdateClippingPlane({ ...clippingPlane, enabled: true, axis })}
-                        style={{
-                          padding: '3px 8px',
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          borderRadius: '3px',
-                          background: clippingPlane?.axis === axis && clippingPlane?.enabled ? 'rgba(236,72,153,0.3)' : '#1e293b',
-                          border: clippingPlane?.axis === axis && clippingPlane?.enabled ? '1px solid #ec4899' : '1px solid #334155',
-                          color: clippingPlane?.axis === axis && clippingPlane?.enabled ? '#f472b6' : '#94a3b8',
-                          cursor: 'pointer'
-                        }}
-                        title={`Cut normal along ${axis}-axis`}
-                      >
-                        {axis}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => onUpdateClippingPlane && onUpdateClippingPlane({ ...clippingPlane, invert: !clippingPlane?.invert })}
-                    disabled={!clippingPlane?.enabled}
-                    style={{
-                      padding: '2px 6px',
-                      fontSize: '9px',
-                      borderRadius: '3px',
-                      background: '#161b29',
-                      border: '1px solid #283347',
-                      color: '#94a3b8',
-                      cursor: clippingPlane?.enabled ? 'pointer' : 'default',
-                      opacity: clippingPlane?.enabled ? 1 : 0.5
-                    }}
-                    title="Flip Section Normal Vector"
-                  >
-                    Flip Cut
-                  </button>
-                </div>
-              </div>
-              <span className="ribbon-group-title">3D Section Cut</span>
-            </div>
-
-            {/* Display & Shading Modes */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className={`ribbon-btn-large ${renderMode === 'shaded' ? 'active' : ''}`} onClick={() => onChangeRenderMode('shaded')} title="PBR Metallic Shading">
-                  <Eye size={20} color="#38bdf8" />
-                  <span className="btn-label">Shaded</span>
-                </button>
-                <button className={`ribbon-btn-large ${renderMode === 'edges' ? 'active' : ''}`} onClick={() => onChangeRenderMode('edges')} title="Shaded with Polygon Edges">
-                  <Layers size={20} color="#f59e0b" />
-                  <span className="btn-label">Edges</span>
-                </button>
-                <button className={`ribbon-btn-large ${renderMode === 'transparent' ? 'active' : ''}`} onClick={() => onChangeRenderMode('transparent')} title="Translucent Glass (Inspect Internal Cavities)">
-                  <Eye size={20} color="#a855f7" />
-                  <span className="btn-label">Glass</span>
-                </button>
-                <button className={`ribbon-btn-large ${renderMode === 'wireframe' ? 'active' : ''}`} onClick={() => onChangeRenderMode('wireframe')} title="Pure CAD Wireframe Only">
-                  <Crosshair size={20} color="#10b981" />
-                  <span className="btn-label">Wireframe</span>
-                </button>
-                <button className={`ribbon-btn-large ${renderMode === 'normals' ? 'active' : ''}`} onClick={() => onChangeRenderMode('normals')} title="Inspect Surface Normals & Draft Angles">
-                  <Sparkles size={20} color="#ec4899" />
-                  <span className="btn-label">Normals</span>
+                  <span className="btn-label">Section<br />Cut</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Display Modes</span>
-            </div>
-
-            {/* Lighting Studio */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className={`ribbon-btn-large ${lightingMode === 'studio' ? 'active' : ''}`}
-                  onClick={() => onChangeLightingMode && onChangeLightingMode('studio')}
-                  title="CAD Dark Studio Lighting"
-                >
-                  <Sun size={20} color="#38bdf8" />
-                  <span className="btn-label">Studio<br />Dark</span>
-                </button>
-                <button
-                  className={`ribbon-btn-large ${lightingMode === 'shop' ? 'active' : ''}`}
-                  onClick={() => onChangeLightingMode && onChangeLightingMode('shop')}
-                  title="Bright CNC Machine Enclosure Flood Lighting"
-                >
-                  <Sun size={20} color="#f59e0b" />
-                  <span className="btn-label">Machine<br />Shop</span>
-                </button>
-                <button
-                  className={`ribbon-btn-large ${lightingMode === 'inspect' ? 'active' : ''}`}
-                  onClick={() => onChangeLightingMode && onChangeLightingMode('inspect')}
-                  title="High-Contrast Scallop & Surface Quality Raking Light"
-                >
-                  <Sun size={20} color="#ec4899" />
-                  <span className="btn-label">Inspect<br />Rake</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Lighting</span>
-            </div>
-
-            {/* Layer Toggles */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className={`ribbon-btn-large ${layerVisibility.fixture ? 'active' : ''}`} onClick={() => onToggleLayer('fixture')} title="Toggle Vise & Baseplate">
-                  <span className="btn-label">Toggle<br />Vise</span>
-                </button>
-                <button className={`ribbon-btn-large ${layerVisibility.bed ? 'active' : ''}`} onClick={() => onToggleLayer('bed')} title="Toggle Machine Bed Grid">
-                  <span className="btn-label">Toggle<br />Bed</span>
-                </button>
-                <button className={`ribbon-btn-large ${layerVisibility.stock ? 'active' : ''}`} onClick={() => onToggleLayer('stock')} title="Toggle Stock Bounding Box">
-                  <span className="btn-label">Toggle<br />Stock</span>
-                </button>
-                <button className={`ribbon-btn-large ${layerVisibility.toolpaths ? 'active' : ''}`} onClick={() => onToggleLayer('toolpaths')} title="Toggle Feed Cut Moves">
-                  <span className="btn-label">Toggle<br />Feed Cuts</span>
-                </button>
-                <button className={`ribbon-btn-large ${layerVisibility.rapids ? 'active' : ''}`} onClick={() => onToggleLayer('rapids')} title="Toggle Rapid Moves">
-                  <span className="btn-label">Toggle<br />Rapids</span>
-                </button>
-                <button className={`ribbon-btn-large ${layerVisibility.dimensions ? 'active' : ''}`} onClick={() => onToggleLayer('dimensions')} title="Toggle 3D Drafting Dimensions (Level 100)">
-                  <span className="btn-label">Toggle<br />Dims</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Layer Toggles</span>
+              <span className="ribbon-group-title">Controller &amp; Studio</span>
             </div>
           </>
         )}
@@ -1846,298 +1960,182 @@ export default function RibbonBar({
         {/* ==================== 12. TOOLPATHS TAB ==================== */}
         {activeTab === 'Toolpaths' && (
           <>
-            {/* Operations Wizard & Setup */}
+            {/* 2D */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenOperationsWizard}
-                  title="Open Mastercam CAM Operations Manager Wizard"
-                >
-                  <Layers size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Operations<br />Wizard</span>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pocket')} title="2D Contour Milling">
+                  <div style={{ width: '18px', height: '18px', background: '#3b82f6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CT</div>
+                  <span className="btn-label">Contour</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenCollisionCheck}
-                  title="Run Tool Collision & Gouge Detection Audit"
-                >
-                  <ShieldAlert size={22} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Collision<br />Check</span>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('drilling')} title="2D Hole Drilling Cycle">
+                  <div style={{ width: '18px', height: '18px', background: '#ef4444', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>DR</div>
+                  <span className="btn-label">Drill</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenFeedsSpeedsModal}
-                  title="Feeds, Speeds & Material Machinability Physics Calculator"
-                >
-                  <Gauge size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Feeds &amp;<br />Speeds</span>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('adaptive')} title="2D Dynamic High-Speed Trochoidal Roughing">
+                  <div style={{ width: '18px', height: '18px', background: '#10b981', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>DY</div>
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Dynamic</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenFixtureModal}
-                  title="Open 3D Parametric CNC Workholding & Fixture Setup Studio (5-Axis Vises, Dovetail Step Jaws, Clamps)"
-                >
-                  <Wrench size={22} color="#a855f7" />
-                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Workholding<br />&amp; Fixtures</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenLatheStudio}
-                  title="Open CNC Turning & Lathe / Mill-Turn Studio (OD Roughing G71, Profile Finishing G70, Threading G76, Grooving G75)"
-                >
-                  <Disc size={22} color="#ec4899" />
-                  <span className="btn-label" style={{ color: '#ec4899', fontWeight: 600 }}>Lathe &amp;<br />Mill-Turn</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenNestingStudio}
-                  title="Open CNC True-Shape Sheet Nesting Studio (2D/2.5D Router, Waterjet, Laser, Plasma Stock Packing &amp; Remnant Recovery)"
-                >
-                  <Scissors size={22} color="#0284c7" />
-                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 600 }}>Sheet<br />Nesting</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenThreadStudio}
-                  title="Open CNC Feature-Based Thread Milling &amp; Tapping Studio (Metric M, Unified UNC/UNF, NPT Pipe)"
-                >
-                  <Disc size={22} color="#c084fc" />
-                  <span className="btn-label" style={{ color: '#c084fc', fontWeight: 600 }}>Thread Mill<br />&amp; Tapping</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenEngravingStudio}
-                  title="Open CNC 2.5D &amp; 3D Engraving &amp; V-Carve Studio (Serial Numbers, Single-Line Stick Font, 3D Prism V-Carving)"
-                >
-                  <Type size={22} color="#06b6d4" />
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Engraving<br />&amp; V-Carve</span>
-                </button>
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenHSMFilterStudio}
-                  title="Open CNC High-Speed Machining (HSM) Tolerance Filter &amp; Arc Spline Studio"
-                >
-                  <Zap size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>HSM Arc<br />Filter</span>
-                </button>
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenCostQuotingModal}
-                  title="Open CNC Machining Cost, Tool Wear &amp; Production Quoting Calculator"
-                >
-                  <DollarSign size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Cost &amp;<br />Quoting</span>
-                </button>
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenCornerReliefStudio}
-                  title="Open CNC Automatic Corner Relief &amp; Dog-Bone / T-Bone Studio (Pockets, Enclosures &amp; Tabs)"
-                >
-                  <Box size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Corner<br />Relief</span>
-                </button>
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenKioskModal}
-                  title="Open Shop Floor Operator Tablet Kiosk (Touch DRO, Jog Pendant, Feed/Spindle Overrides & E-Stop)"
-                >
-                  <Tablet size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
-                </button>
-
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenTombstoneStudio}
-                  title="Open Multi-WCS Tombstone &amp; 4th-Axis Rotary Indexing Studio (HMC B-Axis &amp; VMC A-Axis Multi-Part)"
-                >
-                  <Grid size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
-                </button>
-
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenCustomPostStudio}
-                  title="Open Custom Post-Processor Syntax Builder &amp; Macro Variable Engine (Fanuc, Haas, Heidenhain, Siemens, Mach4, GRBL)"
-                >
-                  <FileCode size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Custom<br />Post</span>
-                </button>
-
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenAnomalyScanner}
-                  title="Open AI Toolpath Anomaly, Deflection &amp; Chatter Diagnostic Scanner (Stability Lobes, Cantilever Deflection &amp; Breakage Prevention)"
-                >
-                  <Activity size={22} color="#f43f5e" />
-                  <span className="btn-label" style={{ color: '#f43f5e', fontWeight: 700 }}>AI Chatter<br />&amp; Deflect</span>
-                </button>
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenAFRModal}
-                  title="Automatic Feature Recognition (AFR) & Feature-Based Machining (FBM)"
-                >
-                  <Sparkles size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Auto Feature<br />Recognition</span>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('facing')} title="Face Milling Planar Pass">
+                  <div style={{ width: '18px', height: '18px', background: '#f59e0b', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>FC</div>
+                  <span className="btn-label">Face</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">CAM Manager</span>
+              <span className="ribbon-group-title">2D</span>
             </div>
 
-            {/* CAM Strategies */}
+            {/* 3D */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('facing')} title="Add Face Milling Operation">
-                  <div style={{ width: '16px', height: '16px', background: '#3b82f6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>FM</div>
-                  <span className="btn-label">Face<br />Milling</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pocket')} title="Add 2D Dynamic Pocketing">
-                  <div style={{ width: '16px', height: '16px', background: '#10b981', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PK</div>
-                  <span className="btn-label">Dynamic<br />Pocket</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('waterline')} title="Add 3D Waterline Finishing">
-                  <div style={{ width: '16px', height: '16px', background: '#f59e0b', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>WL</div>
-                  <span className="btn-label">Waterline<br />3D</span>
-                </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={onOpenAdaptiveModal ? onOpenAdaptiveModal : () => onQuickAddOp('adaptive')}
-                  title="Open Adaptive Trochoidal High-Speed Roughing Studio (Constant Engagement & Chip Thinning)"
+                  title="3D OptiRough High-Speed Constant Engagement Roughing"
                 >
-                  <div style={{ width: '16px', height: '16px', background: '#06b6d4', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>AD</div>
-                  <span className="btn-label">Adaptive<br />Roughing</span>
+                  <div style={{ width: '18px', height: '18px', background: '#06b6d4', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>OR</div>
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>OptiRough</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenFiveAxisStudio ? onOpenFiveAxisStudio : () => onQuickAddOp('swarf')} title="Open 5-Axis Multiaxis Studio (Continuous Swarf, Flowline & TCPM Kinematics)">
-                  <div style={{ width: '16px', height: '16px', background: '#8b5cf6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>5X</div>
-                  <span className="btn-label">5-Axis<br />Swarf</span>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pocket')} title="3D Pocketing">
+                  <div style={{ width: '18px', height: '18px', background: '#3b82f6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PK</div>
+                  <span className="btn-label">Pocket</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('drilling')} title="Add Peck Drilling Cycle">
-                  <div style={{ width: '16px', height: '16px', background: '#ef4444', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>DR</div>
-                  <span className="btn-label">Peck<br />Drill</span>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('waterline')} title="3D Parallel / Waterline Finishing">
+                  <div style={{ width: '18px', height: '18px', background: '#f59e0b', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PL</div>
+                  <span className="btn-label">Parallel</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenThreadStudio}
-                  title="Open Helical Thread Milling &amp; Rigid Tapping Studio (G03/G02 &amp; G84 Cycle)"
-                >
-                  <div style={{ width: '16px', height: '16px', background: '#c084fc', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>TM</div>
-                  <span className="btn-label" style={{ color: '#c084fc', fontWeight: 600 }}>Thread<br />Mill</span>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pencil')} title="3D Curve & Pencil Milling">
+                  <div style={{ width: '18px', height: '18px', background: '#f97316', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CV</div>
+                  <span className="btn-label">Curve</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('chamfer')} title="Add 45-degree Chamfer & Deburr">
-                  <div style={{ width: '16px', height: '16px', background: '#ec4899', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CH</div>
-                  <span className="btn-label">Chamfer<br />Deburr</span>
+                <button className="ribbon-btn-large" onClick={onOpenFiveAxisStudio ? onOpenFiveAxisStudio : () => onQuickAddOp('swarf')} title="3D Swarf Milling Along Walls">
+                  <div style={{ width: '18px', height: '18px', background: '#8b5cf6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>SW</div>
+                  <span className="btn-label">Swarf Milling</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenEngravingStudio}
-                  title="Open CNC 2.5D &amp; 3D Engraving &amp; V-Carve Studio (Serial Numbers, Single-Line Stick Font, 3D Prism V-Carving)"
-                >
-                  <div style={{ width: '16px', height: '16px', background: '#06b6d4', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>VC</div>
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Engrave<br />V-Carve</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('rest_milling')} title="Add Rest Machining & Corner Cleanout">
-                  <div style={{ width: '16px', height: '16px', background: '#14b8a6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>RM</div>
-                  <span className="btn-label">Rest<br />Milling</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pencil')} title="Add 3D Pencil Fillet Valley Tracing">
-                  <div style={{ width: '16px', height: '16px', background: '#f97316', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PC</div>
-                  <span className="btn-label">3D<br />Pencil</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('probe')} title="Add In-Process Touch Probing Cycle (Renishaw / Haas WIPS)">
-                  <div style={{ width: '16px', height: '16px', background: '#d946ef', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PR</div>
-                  <span className="btn-label">Touch<br />Probe</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenLatheStudio}
-                  title="Open CNC Turning & Lathe / Mill-Turn Studio (OD Roughing G71, Profile Finishing G70, Threading G76, Grooving G75)"
-                >
-                  <div style={{ width: '16px', height: '16px', background: '#ec4899', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>LT</div>
-                  <span className="btn-label" style={{ color: '#ec4899', fontWeight: 600 }}>Lathe /<br />Turning</span>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('rest_milling')} title="3D Rest Machining Corner Cleanout">
+                  <div style={{ width: '18px', height: '18px', background: '#14b8a6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>RM</div>
+                  <span className="btn-label">Rest Mill</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">CAM Strategies</span>
+              <span className="ribbon-group-title">3D</span>
             </div>
 
-            {/* Probing & CMM Group */}
+            {/* Multiaxis */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={onOpenProbingStudio}
-                  title="Open Renishaw Inspection Plus & Haas WIPS Touch Probing Studio"
+                  onClick={onOpenFiveAxisStudio ? onOpenFiveAxisStudio : () => onQuickAddOp('swarf')}
+                  title="5-Axis Simultaneous Swarf Machining"
                 >
-                  <Crosshair size={22} color="#d946ef" />
-                  <span className="btn-label" style={{ color: '#d946ef', fontWeight: 600 }}>Probing<br />Studio</span>
+                  <Compass size={22} color="#8b5cf6" />
+                  <span className="btn-label" style={{ color: '#8b5cf6', fontWeight: 600 }}>5-Axis<br />Swarf</span>
                 </button>
-              </div>
-              <span className="ribbon-group-title">Probing &amp; CMM</span>
-            </div>
-
-            {/* Lead In / Lead Out & Compensation Designer Studio */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={onOpenLeadInOutModal}
-                  title="Open Toolpath Lead-In / Lead-Out Ramp & Tangent Arc Designer Studio (Mastercam Grade)"
+                  onClick={onOpenFiveAxisStudio}
+                  title="Open Complete 5-Axis Multiaxis Kinematic Studio"
                 >
-                  <Compass size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Lead In/Out<br />Studio</span>
+                  <Orbit size={22} color="#a855f7" />
+                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Multiaxis<br />Studio</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Lead In/Out &amp; Comp</span>
+              <span className="ribbon-group-title">Multiaxis</span>
             </div>
 
-            {/* Regeneration & Editing */}
+            {/* Stock */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onRegenerateAll} title="Regenerate All Operations">
-                  <RefreshCw size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Regenerate<br />All</span>
+                <button className="ribbon-btn-large" onClick={() => onToggleLayer && onToggleLayer('stock')} title="Toggle Stock Shading">
+                  <Box size={20} color="#f59e0b" />
+                  <span className="btn-label">Stock<br />Shading</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onDeleteActiveOp} title="Delete Selected Operation">
-                  <Trash2 size={20} color="#ef4444" />
-                  <span className="btn-label">Delete<br />Active Op</span>
+                <button className="ribbon-btn-large" onClick={() => onToggleLayer && onToggleLayer('stock')} title="Toggle Stock Wireframe Display">
+                  <Eye size={20} color="#10b981" />
+                  <span className="btn-label">Stock<br />Display</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenStockModal} title="Configure Stock Bounding Model">
+                  <Settings size={20} color="#38bdf8" />
+                  <span className="btn-label">Stock<br />Model</span>
                 </button>
               </div>
-              <span className="ribbon-group-title">Operation Controls</span>
+              <span className="ribbon-group-title">Stock</span>
+            </div>
+
+            {/* Utilities */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={onOpenProbingStudio} title="Touch Probing Studio">
+                  <Crosshair size={20} color="#d946ef" />
+                  <span className="btn-label">Probe</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onOpenTransformModal ? onOpenTransformModal('translate') : null} title="Toolpath Transform & Multi-Part Matrix">
+                  <Move size={20} color="#38bdf8" />
+                  <span className="btn-label">Toolpath<br />Transform</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Manager">
+                  <Wrench size={20} color="#10b981" />
+                  <span className="btn-label">Tool<br />Manager</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenThreadStudio} title="Thread Milling Studio">
+                  <Disc size={20} color="#c084fc" />
+                  <span className="btn-label">Thread<br />Mill</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenLeadInOutModal} title="Lead In / Out Ramp & Arc Studio">
+                  <Compass size={20} color="#06b6d4" />
+                  <span className="btn-label">Lead In/Out</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Utilities</span>
             </div>
 
             {/* Verify & Post */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onStartBackplot} title="Toolpath Wireframe Backplot (In-Viewport 3D Tool Tracing)">
+                <button className="ribbon-btn-large" onClick={onStartBackplot} title="Toolpath Wireframe Backplot">
                   <Play size={20} color="#06b6d4" />
                   <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Backplot</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenSolidVerifyModal ? onOpenSolidVerifyModal : onStartVerify} title="Open Solid Stock Material Removal Verification & Real-Time Voxel Simulator">
+                <button className="ribbon-btn-large" onClick={onOpenSolidVerifyModal ? onOpenSolidVerifyModal : onStartVerify} title="Verify Solid Stock Material Removal">
                   <Box size={20} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Verify<br />Solid</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onStartVerify ? onStartVerify(null, 'heatmap') : null} title="Inspect In-Process Tolerance Deviation Heatmap (Gouges vs Excess Stock)">
+                <button className="ribbon-btn-large" onClick={() => onStartVerify ? onStartVerify(null, 'heatmap') : null} title="Inspect Heatmap Tolerance Gouges vs Excess">
                   <Gauge size={20} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Tolerance<br />Heatmap</span>
+                  <span className="btn-label">Tolerance<br />Heatmap</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenFeedOptimizerModal}
-                  title="Open Feed Rate Optimization & Constant Chip Thickness Studio (Corner Deceleration & RCTF High-Feed)"
-                >
+                <button className="ribbon-btn-large" onClick={onOpenFeedOptimizerModal} title="Feed Rate Optimization & Constant Chip Thickness">
                   <Activity size={20} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Feed Rate<br />Optimizer</span>
+                  <span className="btn-label">Feed Rate<br />Optimizer</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={onOpenSimModal} title="Full 5-Axis Machine Kinematic Digital Twin Simulation">
-                  <Eye size={20} color="#38bdf8" />
+                  <Play size={20} color="#38bdf8" />
                   <span className="btn-label">Kinematic<br />Twin</span>
                 </button>
-                <button className="ribbon-btn-large ribbon-btn-highlight" onClick={onOpenPostModal} title="Generate G-Code &amp; NC2Check">
+                <button className="ribbon-btn-large ribbon-btn-highlight" onClick={onOpenPostModal} title="Generate G-Code & NC2Check">
                   <div className="post-badge">G1</div>
                   <FileCode size={24} color="#ffffff" />
                   <span className="btn-label" style={{ fontWeight: 700, color: '#ffffff' }}>G1 Post</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Verify &amp; Post</span>
+            </div>
+
+            {/* Operations Controls */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button className="ribbon-btn-large" onClick={onOpenOperationsWizard} title="Open Operations Wizard">
+                  <Layers size={20} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Ops<br />Wizard</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onRegenerateAll} title="Regenerate All Operations">
+                  <RefreshCw size={20} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Regenerate<br />All</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onDeleteActiveOp} title="Delete Selected Operation">
+                  <Trash2 size={20} color="#ef4444" />
+                  <span className="btn-label">Delete<br />Op</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Operation Controls</span>
             </div>
           </>
         )}
