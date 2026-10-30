@@ -1131,6 +1131,45 @@ export default function RibbonBar({
               </div>
               <span className="ribbon-group-title">Drawing &amp; Features</span>
             </div>
+
+            {/* Sample CAD Workpieces */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onSelectSampleModel && onSelectSampleModel('step_bracket')}
+                  title="Load Native ISO 10303-21 STEP Aerospace Bracket Solid"
+                >
+                  <FileCode size={20} color="#3b82f6" />
+                  <span className="btn-label" style={{ color: '#3b82f6', fontWeight: 600 }}>STEP<br />Bracket</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onSelectSampleModel && onSelectSampleModel('impeller')}
+                  title="Load 5-Axis Bladed Impeller Solid"
+                >
+                  <Compass size={20} color="#a855f7" />
+                  <span className="btn-label">5X Impeller<br />Solid</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onSelectSampleModel && onSelectSampleModel('bracket')}
+                  title="Load 3-Axis Aerospace Pocket Bracket"
+                >
+                  <Layers size={20} color="#06b6d4" />
+                  <span className="btn-label">Aero<br />Bracket</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onSelectSampleModel && onSelectSampleModel('mold')}
+                  title="Load Injection Mold Core Cavity Solid"
+                >
+                  <Box size={20} color="#f59e0b" />
+                  <span className="btn-label">Mold Core<br />Solid</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Sample Workpieces</span>
+            </div>
           </>
         )}
 
