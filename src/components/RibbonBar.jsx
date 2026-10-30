@@ -1706,11 +1706,11 @@ export default function RibbonBar({
             {/* Simulator */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onStartBackplot} title="Backplot Wireframe Tool Tracing">
+                <button className="ribbon-btn-large" onClick={() => onStartBackplot && onStartBackplot()} title="Backplot Wireframe Tool Tracing">
                   <Play size={20} color="#06b6d4" />
                   <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Backplot</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenSolidVerifyModal ? onOpenSolidVerifyModal : onStartVerify} title="Verify Solid Stock Removal">
+                <button className="ribbon-btn-large" onClick={() => onOpenSolidVerifyModal ? onOpenSolidVerifyModal() : (onStartVerify && onStartVerify(null, 'verify'))} title="Verify Solid Stock Removal">
                   <Box size={20} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Verify</span>
                 </button>
@@ -2090,11 +2090,11 @@ export default function RibbonBar({
             {/* Verify & Post */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onStartBackplot} title="Toolpath Wireframe Backplot">
+                <button className="ribbon-btn-large" onClick={() => onStartBackplot && onStartBackplot()} title="Toolpath Wireframe Backplot">
                   <Play size={20} color="#06b6d4" />
                   <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Backplot</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenSolidVerifyModal ? onOpenSolidVerifyModal : onStartVerify} title="Verify Solid Stock Material Removal">
+                <button className="ribbon-btn-large" onClick={() => onOpenSolidVerifyModal ? onOpenSolidVerifyModal() : (onStartVerify && onStartVerify(null, 'verify'))} title="Verify Solid Stock Material Removal">
                   <Box size={20} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Verify<br />Solid</span>
                 </button>

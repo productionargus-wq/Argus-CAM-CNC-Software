@@ -105,6 +105,7 @@ export default function Viewport3D({
   const [holderCollisionAlert, setHolderCollisionAlert] = useState(false);
   const [heatmapTolerance, setHeatmapTolerance] = useState(0.02);
   const [heatmapStats, setHeatmapStats] = useState(null);
+  const [backplotSelectedOpFilter, setBackplotSelectedOpFilter] = useState('all');
 
   const backplotToolRef = useRef(null);
   const backplotTrailRef = useRef(null);
@@ -113,6 +114,7 @@ export default function Viewport3D({
   const backplotAnimRef = useRef(null);
   const lastAnimTimeRef = useRef(performance.now());
   const waypointsRef = useRef([]);
+  const backplotProgressRef = useRef(0.0);
 
   useEffect(() => {
     setBackplotInternalMode(backplotMode || 'backplot');
@@ -882,7 +884,11 @@ export default function Viewport3D({
 
     // Compile trajectory
     const bounds = partMetrics.box;
-    const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, activeOpId);
+    const effectiveOpId = backplotSelectedOpFilter === 'all'
+      ? (activeOpId && operations.some(o => o.id === activeOpId) ? activeOpId : null)
+      : Number(backplotSelectedOpFilter);
+
+    const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, effectiveOpId);
     waypointsRef.current = trajectory.waypoints;
 
     if (trajectory.waypoints.length === 0) return;
@@ -947,6 +953,7 @@ export default function Viewport3D({
     }
 
     setBackplotProgress(0.0);
+    backplotProgressRef.current = 0.0;
     setIsBackplotPlaying(true);
     lastAnimTimeRef.current = performance.now();
 
@@ -955,7 +962,7 @@ export default function Viewport3D({
       if (backplotTrailRef.current) scene.remove(backplotTrailRef.current);
       if (backplotVerifyGroupRef.current) scene.remove(backplotVerifyGroupRef.current);
     };
-  }, [isBackplotActive, activeOpId, operations, tools, partMetrics, currentModel, backplotInternalMode, heatmapTolerance]);
+  }, [isBackplotActive, activeOpId, backplotSelectedOpFilter, operations, tools, partMetrics, currentModel, backplotInternalMode, heatmapTolerance]);
 
   // 13. Backplot Animation & Sampling Frame Loop
   useEffect(() => {
@@ -964,32 +971,35 @@ export default function Viewport3D({
       return;
     }
 
+    lastAnimTimeRef.current = performance.now();
+
     const animateLoop = (time) => {
       const delta = Math.min(0.1, (time - lastAnimTimeRef.current) / 1000);
       lastAnimTimeRef.current = time;
+
+      let currentP = backplotProgressRef.current;
 
       if (isBackplotPlaying && waypointsRef.current.length > 0) {
         const totalDist = waypointsRef.current[waypointsRef.current.length - 1].cumulativeDist;
         const currentSpeedMmPerSec = 75 * backplotSpeed;
         const progressDelta = totalDist > 0 ? (currentSpeedMmPerSec * delta) / totalDist : 0.005;
 
-        setBackplotProgress((prev) => {
-          let next = prev + progressDelta;
-          if (next >= 1.0) {
-            if (backplotLoop) {
-              next = 0.0;
-            } else {
-              next = 1.0;
-              setIsBackplotPlaying(false);
-            }
+        currentP += progressDelta;
+        if (currentP >= 1.0) {
+          if (backplotLoop) {
+            currentP = 0.0;
+          } else {
+            currentP = 1.0;
+            setIsBackplotPlaying(false);
           }
-          return next;
-        });
+        }
+        backplotProgressRef.current = currentP;
+        setBackplotProgress(currentP);
       }
 
       // Update 3D tool position, spin, and trail
       if (backplotToolRef.current && waypointsRef.current.length > 0) {
-        const sample = sampleTrajectoryAtT(waypointsRef.current, backplotProgress);
+        const sample = sampleTrajectoryAtT(waypointsRef.current, currentP);
         backplotToolRef.current.position.copy(sample.currentPos);
 
         // Spin tool spindle
@@ -1021,7 +1031,7 @@ export default function Viewport3D({
 
         // Dynamic material removal carving in verify mode
         if (backplotInternalMode === 'verify' && viewportSimulatorRef.current && backplotVerifyGroupRef.current) {
-          viewportSimulatorRef.current.simulateToProgress(waypointsRef.current, backplotProgress, tools);
+          viewportSimulatorRef.current.simulateToProgress(waypointsRef.current, currentP, tools);
           const updatedMesh = viewportSimulatorRef.current.buildMesh('tool');
           backplotVerifyGroupRef.current.clear();
           backplotVerifyGroupRef.current.add(updatedMesh);
@@ -1035,7 +1045,7 @@ export default function Viewport3D({
     return () => {
       if (backplotAnimRef.current) cancelAnimationFrame(backplotAnimRef.current);
     };
-  }, [isBackplotActive, isBackplotPlaying, backplotProgress, backplotSpeed, backplotLoop, partMetrics]);
+  }, [isBackplotActive, isBackplotPlaying, backplotSpeed, backplotLoop, backplotInternalMode, heatmapTolerance]);
 
   // 14. Backplot Keyboard Shortcuts
   useEffect(() => {
@@ -1319,6 +1329,37 @@ export default function Viewport3D({
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.5px' }}>
                 {backplotInternalMode === 'heatmap' ? 'IN-PROCESS TOLERANCE DEVIATION HEATMAP' : backplotInternalMode === 'verify' ? 'SOLID MATERIAL REMOVAL VERIFY' : '3D TOOLPATH WIREFRAME BACKPLOT'}
               </span>
+
+              {/* Operation Scope Selector */}
+              <select
+                value={backplotSelectedOpFilter}
+                onChange={(e) => {
+                  setBackplotSelectedOpFilter(e.target.value);
+                  setBackplotProgress(0.0);
+                  backplotProgressRef.current = 0.0;
+                  setIsBackplotPlaying(true);
+                }}
+                style={{
+                  background: '#090d14',
+                  color: '#38bdf8',
+                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                  borderRadius: '4px',
+                  padding: '2px 8px',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  maxWidth: '190px'
+                }}
+                title="Select operation to simulate"
+              >
+                <option value="all">All Operations ({operations.filter(o => o.visible !== false).length})</option>
+                {operations.map((op) => (
+                  <option key={op.id} value={op.id}>
+                    Op {op.id}: {op.name}
+                  </option>
+                ))}
+              </select>
+
               <span style={{
                 fontSize: '9.5px',
                 padding: '2px 7px',
@@ -1482,7 +1523,9 @@ export default function Viewport3D({
               value={Math.round(backplotProgress * 1000)}
               onChange={(e) => {
                 setIsBackplotPlaying(false);
-                setBackplotProgress(Number(e.target.value) / 1000);
+                const p = Number(e.target.value) / 1000;
+                backplotProgressRef.current = p;
+                setBackplotProgress(p);
               }}
               style={{ flex: 1, cursor: 'pointer', accentColor: '#38bdf8' }}
             />
@@ -1499,7 +1542,8 @@ export default function Viewport3D({
                 className="btn-secondary"
                 onClick={() => {
                   setIsBackplotPlaying(false);
-                  setBackplotProgress(0);
+                  backplotProgressRef.current = 0.0;
+                  setBackplotProgress(0.0);
                 }}
                 title="Rewind to Start (Home)"
                 style={{ padding: '5px 8px' }}
@@ -1511,7 +1555,9 @@ export default function Viewport3D({
                 className="btn-secondary"
                 onClick={() => {
                   setIsBackplotPlaying(false);
-                  setBackplotProgress((prev) => Math.max(0, prev - 0.02));
+                  const p = Math.max(0, backplotProgressRef.current - 0.02);
+                  backplotProgressRef.current = p;
+                  setBackplotProgress(p);
                 }}
                 title="Step Backward (Left Arrow)"
                 style={{ padding: '5px 8px' }}
@@ -1521,7 +1567,14 @@ export default function Viewport3D({
 
               <button
                 className="btn-primary"
-                onClick={() => setIsBackplotPlaying(!isBackplotPlaying)}
+                onClick={() => {
+                  if (!isBackplotPlaying && backplotProgressRef.current >= 0.99) {
+                    backplotProgressRef.current = 0.0;
+                    setBackplotProgress(0.0);
+                  }
+                  lastAnimTimeRef.current = performance.now();
+                  setIsBackplotPlaying(!isBackplotPlaying);
+                }}
                 style={{
                   padding: '5px 14px',
                   background: isBackplotPlaying ? '#e11d48' : '#0284c7',
@@ -1538,7 +1591,9 @@ export default function Viewport3D({
                 className="btn-secondary"
                 onClick={() => {
                   setIsBackplotPlaying(false);
-                  setBackplotProgress((prev) => Math.min(1, prev + 0.02));
+                  const p = Math.min(1, backplotProgressRef.current + 0.02);
+                  backplotProgressRef.current = p;
+                  setBackplotProgress(p);
                 }}
                 title="Step Forward (Right Arrow)"
                 style={{ padding: '5px 8px' }}

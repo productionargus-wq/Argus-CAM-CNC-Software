@@ -1172,11 +1172,14 @@ export function createToolAssembly3D(tool = {}) {
  */
 export function compileBackplotTrajectory(operations = [], tools = [], bounds, model = null, targetOpId = null) {
   const waypoints = [];
-  const activeOps = targetOpId
-    ? operations.filter((op) => op.id === targetOpId)
+  const validTargetId = (typeof targetOpId === 'number' || (typeof targetOpId === 'string' && targetOpId !== 'all')) ? targetOpId : null;
+  const activeOps = (validTargetId && operations.some((op) => String(op.id) === String(validTargetId)))
+    ? operations.filter((op) => String(op.id) === String(validTargetId))
     : operations.filter((op) => op.visible !== false);
 
-  if (activeOps.length === 0) {
+  const finalOps = activeOps.length > 0 ? activeOps : (operations.length > 0 ? [operations[0]] : []);
+
+  if (finalOps.length === 0) {
     return { waypoints: [], totalDistance: 0, totalDurationSec: 0 };
   }
 
@@ -1184,7 +1187,7 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
   let totalDist = 0;
   let lastPos = new THREE.Vector3(0, safeBounds.max.y + 20, 0);
 
-  activeOps.forEach((op) => {
+  finalOps.forEach((op) => {
     let assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10, rpm: 8000, feedRate: 1500 };
     let data = null;
 

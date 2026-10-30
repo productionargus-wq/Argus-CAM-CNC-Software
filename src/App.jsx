@@ -206,15 +206,17 @@ export default function App() {
   const [backplotMode, setBackplotMode] = useState('backplot'); // 'backplot' | 'verify'
 
   const handleStartBackplot = (opId = null) => {
-    if (opId) setActiveOpId(opId);
+    const validOpId = typeof opId === 'number' ? opId : null;
+    if (validOpId) setActiveOpId(validOpId);
     setBackplotMode('backplot');
     setIsBackplotActive(true);
     showToast("Backplot: In-Viewport 3D tool tracing initialized", "info");
   };
 
   const handleStartVerify = (opId = null, mode = 'verify') => {
-    if (opId && typeof opId === 'number') setActiveOpId(opId);
-    const targetMode = typeof opId === 'string' ? opId : mode;
+    const validOpId = typeof opId === 'number' ? opId : null;
+    if (validOpId) setActiveOpId(validOpId);
+    const targetMode = typeof opId === 'string' ? opId : (typeof mode === 'string' ? mode : 'verify');
     setBackplotMode(targetMode);
     setIsBackplotActive(true);
     showToast(targetMode === 'heatmap' ? "Tolerance Heatmap: Gouge & Excess inspection active" : "Solid Verify: Material removal simulation initialized", "info");
