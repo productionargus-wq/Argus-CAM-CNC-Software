@@ -885,7 +885,7 @@ export default function Viewport3D({
     // Compile trajectory
     const bounds = partMetrics.box;
     const effectiveOpId = backplotSelectedOpFilter === 'all'
-      ? (activeOpId && operations.some(o => o.id === activeOpId) ? activeOpId : null)
+      ? null
       : Number(backplotSelectedOpFilter);
 
     const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, effectiveOpId);
