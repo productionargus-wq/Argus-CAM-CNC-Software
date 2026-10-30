@@ -73,7 +73,8 @@ import {
 } from './utils/cadGeometry';
 import {
   exportProjectMCAM,
-  saveAutoSaveSnapshot
+  saveAutoSaveSnapshot,
+  getAutoSaveSnapshot
 } from './utils/projectStorage';
 
 export default function App() {
@@ -530,13 +531,30 @@ export default function App() {
   // ================= Toast Notification System =================
   const [toasts, setToasts] = useState([]);
 
-  const showToast = (message, type = 'info', duration = 3000) => {
+  const showToast = (message, type = 'info', duration = 3000, action = null) => {
     const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message, type }]);
+    setToasts((prev) => [...prev, { id, message, type, action }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, duration);
   };
+
+  // On startup: Check for Auto-Saved session recovery
+  useEffect(() => {
+    const snapshot = getAutoSaveSnapshot();
+    if (snapshot && snapshot.operations && snapshot.operations.length > 0) {
+      const timeStr = snapshot.timestamp ? new Date(snapshot.timestamp).toLocaleTimeString() : 'earlier';
+      showToast(
+        `Previous project session found from ${timeStr} (${snapshot.operations.length} operations).`,
+        'info',
+        12000,
+        {
+          label: 'Restore Work',
+          onClick: () => handleRestoreAutoSave(snapshot)
+        }
+      );
+    }
+  }, []);
 
   // Synchronize dynamic Theme attribute to root DOM element
   useEffect(() => {
@@ -2136,6 +2154,30 @@ export default function App() {
             }}
           >
             <span>{toast.message}</span>
+            {toast.action && (
+              <button
+                onClick={() => {
+                  toast.action.onClick();
+                  setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+                }}
+                style={{
+                  marginLeft: '8px',
+                  background: '#38bdf8',
+                  color: '#0f172a',
+                  border: 'none',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  fontWeight: '700',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                {toast.action.label}
+              </button>
+            )}
           </div>
         ))}
       </div>
