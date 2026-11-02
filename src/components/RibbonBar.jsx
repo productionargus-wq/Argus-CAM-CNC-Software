@@ -58,6 +58,8 @@ export default function RibbonBar({
   onOpenViewStudioModal,
   onOpenCPlanesModal,
   onOpenOperationsWizard,
+  workspaceViewMode = '3d',
+  onChangeViewMode = null,
   onOpenCollisionCheck,
   onStartBackplot,
   onStartVerify,
@@ -195,16 +197,86 @@ export default function RibbonBar({
       />
 
       {/* Ribbon Navigation Tabs */}
-      <div className="ribbon-tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => onSelectTab(tab)}
-            className={`ribbon-tab ${tab === 'File' ? 'file-tab' : ''} ${activeTab === tab ? 'active' : ''}`}
-          >
-            {tab}
-          </button>
-        ))}
+      <div className="ribbon-tabs" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => onSelectTab(tab)}
+              className={`ribbon-tab ${tab === 'File' ? 'file-tab' : ''} ${activeTab === tab ? 'active' : ''}`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Workspace Mode Switcher (2D Design Board | Split View | 3D Machine) */}
+        {onChangeViewMode && (
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', paddingRight: '8px' }}>
+            <button
+              onClick={() => onChangeViewMode('2d')}
+              style={{
+                background: workspaceViewMode === '2d' ? 'rgba(56, 189, 248, 0.22)' : 'rgba(30, 41, 59, 0.6)',
+                color: workspaceViewMode === '2d' ? '#38bdf8' : '#94a3b8',
+                fontWeight: 700,
+                fontSize: '11px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                border: workspaceViewMode === '2d' ? '1px solid #38bdf8' : '1px solid #334155',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Open full 2D CAD Design Board (Easel/Carbide style workpiece canvas)"
+            >
+              <span>🎨 2D Design Board</span>
+            </button>
+
+            <button
+              onClick={() => onChangeViewMode('split')}
+              style={{
+                background: workspaceViewMode === 'split' ? 'rgba(168, 85, 247, 0.22)' : 'rgba(30, 41, 59, 0.6)',
+                color: workspaceViewMode === 'split' ? '#c084fc' : '#94a3b8',
+                fontWeight: 700,
+                fontSize: '11px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                border: workspaceViewMode === 'split' ? '1px solid #c084fc' : '1px solid #334155',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Split View: 2D Design Board on Left, 3D Machine Simulation on Right"
+            >
+              <span>◫ Split 2D/3D</span>
+            </button>
+
+            <button
+              onClick={() => onChangeViewMode('3d')}
+              style={{
+                background: workspaceViewMode === '3d' ? 'rgba(56, 189, 248, 0.22)' : 'rgba(30, 41, 59, 0.6)',
+                color: workspaceViewMode === '3d' ? '#38bdf8' : '#94a3b8',
+                fontWeight: 700,
+                fontSize: '11px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                border: workspaceViewMode === '3d' ? '1px solid #38bdf8' : '1px solid #334155',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Full 3D Machine & Toolpath Viewport"
+            >
+              <span>🧊 3D Machine</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Ribbon Action Groups - Dynamically swaps based on activeTab */}
@@ -578,13 +650,28 @@ export default function RibbonBar({
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
+                  className={`ribbon-btn-large ${workspaceViewMode === '2d' ? 'ribbon-btn-highlight' : ''}`}
+                  onClick={() => onChangeViewMode && onChangeViewMode('2d')}
+                  style={{
+                    background: workspaceViewMode === '2d' ? 'rgba(56, 189, 248, 0.22)' : undefined,
+                    borderColor: workspaceViewMode === '2d' ? '#38bdf8' : undefined
+                  }}
+                  title="Open Dedicated 2D CAD Design Board / Canvas (Easel & Carbide style drafting table)"
+                >
+                  <span style={{ fontSize: '22px' }}>🎨</span>
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>
+                    2D Design<br />Board
+                  </span>
+                </button>
+
+                <button
                   className={`ribbon-btn-large ${isSketchModeActive ? 'ribbon-btn-highlight' : ''}`}
                   onClick={() => onStartInteractiveSketch && onStartInteractiveSketch('line')}
                   style={{
                     background: isSketchModeActive ? 'rgba(56, 189, 248, 0.22)' : undefined,
                     borderColor: isSketchModeActive ? '#38bdf8' : undefined
                   }}
-                  title="Enter Interactive 2D/3D CAD Drawing Mode - Click &amp; Drag Directly on 3D Viewport"
+                  title="Enter Interactive 2D/3D CAD Drawing Mode - Click & Drag Directly on 3D Viewport"
                 >
                   <PenTool size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>
@@ -1867,6 +1954,37 @@ export default function RibbonBar({
         {/* ==================== 11. VIEW TAB ==================== */}
         {activeTab === 'View' && (
           <>
+            {/* Workspace View Mode (2D Board | Split | 3D Viewport) */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className={`ribbon-btn-large ${workspaceViewMode === '2d' ? 'ribbon-btn-highlight' : ''}`}
+                  onClick={() => onChangeViewMode && onChangeViewMode('2d')}
+                  title="Switch to Full 2D CAD Design Board"
+                >
+                  <span style={{ fontSize: '20px' }}>🎨</span>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>2D Design<br />Board</span>
+                </button>
+                <button
+                  className={`ribbon-btn-large ${workspaceViewMode === 'split' ? 'ribbon-btn-highlight' : ''}`}
+                  onClick={() => onChangeViewMode && onChangeViewMode('split')}
+                  title="Switch to Side-by-Side Split View"
+                >
+                  <span style={{ fontSize: '20px' }}>◫</span>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Split<br />2D / 3D</span>
+                </button>
+                <button
+                  className={`ribbon-btn-large ${workspaceViewMode === '3d' ? 'ribbon-btn-highlight' : ''}`}
+                  onClick={() => onChangeViewMode && onChangeViewMode('3d')}
+                  title="Switch to Full 3D Machine Viewport"
+                >
+                  <Box size={20} color="#38bdf8" />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>3D<br />Machine</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Workspace View</span>
+            </div>
+
             {/* Zoom */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">

@@ -77,6 +77,8 @@ import {
   getAutoSaveSnapshot
 } from './utils/projectStorage';
 import { extractClosedChainsFromCAD } from './utils/cadDrawingEngine';
+import CNCDesignBoard from './components/CNCDesignBoard';
+import { convertBoardDiagramsToToolpaths, getCADTemplate } from './utils/cncBoardEngine';
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('argus_theme') || 'light');
@@ -106,6 +108,8 @@ export default function App() {
     scale: { x: 1, y: 1, z: 1 }
   });
   const [customGeometry, setCustomGeometry] = useState([]);
+  const [workspaceViewMode, setWorkspaceViewMode] = useState('3d'); // '3d' | '2d' | 'split'
+  const [boardShapes, setBoardShapes] = useState(() => getCADTemplate('mounting-plate', 200, 150));
 
   // Machine Definition
   const [machines] = useState([
@@ -1319,6 +1323,60 @@ export default function App() {
     showToast(`Generated CNC Dynamic Pocket from sketched ${chain.type.replace('_', ' ')}!`, 'success');
   };
 
+  const handleGenerateToolpathsFromBoard = (shapes, boardStock) => {
+    if (!shapes || shapes.length === 0) {
+      showToast("Draw some diagrams on the board first!", "warning");
+      return;
+    }
+
+    const generatedOps = convertBoardDiagramsToToolpaths(shapes, stockConfig, tools);
+    if (!generatedOps || generatedOps.length === 0) {
+      showToast("No valid diagrams found to generate toolpaths.", "warning");
+      return;
+    }
+
+    let startId = operations.length + 1;
+    const formattedOps = generatedOps.map((op, idx) => {
+      let badgeClass = 'pocket';
+      let badgeText = 'PK';
+      if (op.type.includes('Contour')) {
+        badgeClass = 'contour';
+        badgeText = 'CT';
+      } else if (op.type.includes('Drill')) {
+        badgeClass = 'drill';
+        badgeText = 'DR';
+      } else if (op.type.includes('Engrave') || op.type.includes('V-Carve')) {
+        badgeClass = 'engrave';
+        badgeText = 'EG';
+      }
+
+      return {
+        id: startId + idx,
+        name: op.name,
+        toolId: op.tool?.id || 1,
+        toolName: op.tool?.name || 'T1 - 6mm Endmill',
+        badgeClass,
+        badgeText,
+        visible: true,
+        stepdown: 2.0,
+        totalDepth: op.depth || 5.0,
+        rapidHeight: 15.0,
+        feedRate: op.feedRate || 1500,
+        spindleSpeed: op.spindleSpeed || 10000,
+        waypoints: op.waypoints
+      };
+    });
+
+    setOperations((prev) => [...prev, ...formattedOps]);
+    setActiveOpId(startId);
+    showToast(`⚡ Generated ${formattedOps.length} CNC Toolpaths from 2D Design Board!`, 'success');
+
+    if (workspaceViewMode === '2d') {
+      setWorkspaceViewMode('split');
+    }
+    setActiveRibbonTab('Toolpaths');
+  };
+
   const handleAddCustomEntity = (entity) => {
     setCustomGeometry((prev) => [...prev, entity]);
   };
@@ -1574,6 +1632,8 @@ export default function App() {
         onSelectMachine={setActiveMachineId}
         onSelectWcs={setActiveWcs}
         activeWcs={activeWcs}
+        workspaceViewMode={workspaceViewMode}
+        onChangeViewMode={setWorkspaceViewMode}
       />
 
       {/* 3. Main CAD/CAM Workspace */}
@@ -1610,46 +1670,115 @@ export default function App() {
           onStartVerify={handleStartVerify}
         />
 
-        {/* 3D Viewport with Integrated Backplot & Solid Verify */}
-        <Viewport3D
-          currentModel={currentModel}
-          stockConfig={stockConfig}
-          fixtureConfig={fixtureConfig}
-          operations={operations}
-          tools={tools}
-          activeOpId={activeOpId}
-          activePlane={activePlane}
-          planes={planesList}
-          theme={theme}
-          isBackplotActive={isBackplotActive}
-          backplotMode={backplotMode}
-          onCloseBackplot={() => setIsBackplotActive(false)}
-          onCoordinateUpdate={setCoords}
-          onMetricsCalculated={setPartMetrics}
-          onModelImported={handleModelImported}
-          workpieceColor={workpieceColor}
-          renderMode={renderMode}
-          cameraMode={cameraMode}
-          cameraFov={cameraFov}
-          clippingPlane={clippingPlane}
-          lightingMode={lightingMode}
-          layerVisibility={layerVisibility}
-          cameraCommand={cameraCommand}
-          partTransform={partTransform}
-          customGeometry={customGeometry}
-          isSketchModeActive={isSketchModeActive}
-          onToggleSketchMode={setIsSketchModeActive}
-          sketchTool={sketchTool}
-          onChangeSketchTool={setSketchTool}
-          onAddCustomEntity={handleAddCustomEntity}
-          onRemoveCustomEntity={handleRemoveCustomEntity}
-          onClearWireframes={handleClearWireframes}
-          onGenerateToolpathFromSketch={handleGenerateToolpathFromSketch}
-          onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
-          onToggleCameraMode={setCameraMode}
-          onUpdateClippingPlane={setClippingPlane}
-          onChangeRenderMode={setRenderMode}
-        />
+        {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
+        {workspaceViewMode === '2d' && (
+          <CNCDesignBoard
+            boardShapes={boardShapes}
+            onUpdateShapes={setBoardShapes}
+            onGenerateToolpaths={handleGenerateToolpathsFromBoard}
+            onSwitchTo3D={() => setWorkspaceViewMode('3d')}
+            stockConfig={stockConfig}
+            theme={theme}
+          />
+        )}
+
+        {workspaceViewMode === 'split' && (
+          <div style={{ display: 'flex', flex: 1, width: '100%', height: '100%', overflow: 'hidden' }}>
+            <div style={{ flex: 1, height: '100%', borderRight: '1px solid rgba(56, 189, 248, 0.3)' }}>
+              <CNCDesignBoard
+                boardShapes={boardShapes}
+                onUpdateShapes={setBoardShapes}
+                onGenerateToolpaths={handleGenerateToolpathsFromBoard}
+                onSwitchTo3D={() => setWorkspaceViewMode('3d')}
+                stockConfig={stockConfig}
+                theme={theme}
+              />
+            </div>
+            <div style={{ flex: 1, height: '100%' }}>
+              <Viewport3D
+                currentModel={currentModel}
+                stockConfig={stockConfig}
+                fixtureConfig={fixtureConfig}
+                operations={operations}
+                tools={tools}
+                activeOpId={activeOpId}
+                activePlane={activePlane}
+                planes={planesList}
+                theme={theme}
+                isBackplotActive={isBackplotActive}
+                backplotMode={backplotMode}
+                onCloseBackplot={() => setIsBackplotActive(false)}
+                onCoordinateUpdate={setCoords}
+                onMetricsCalculated={setPartMetrics}
+                onModelImported={handleModelImported}
+                workpieceColor={workpieceColor}
+                renderMode={renderMode}
+                cameraMode={cameraMode}
+                cameraFov={cameraFov}
+                clippingPlane={clippingPlane}
+                lightingMode={lightingMode}
+                layerVisibility={layerVisibility}
+                cameraCommand={cameraCommand}
+                partTransform={partTransform}
+                customGeometry={customGeometry}
+                isSketchModeActive={isSketchModeActive}
+                onToggleSketchMode={setIsSketchModeActive}
+                sketchTool={sketchTool}
+                onChangeSketchTool={setSketchTool}
+                onAddCustomEntity={handleAddCustomEntity}
+                onRemoveCustomEntity={handleRemoveCustomEntity}
+                onClearWireframes={handleClearWireframes}
+                onGenerateToolpathFromSketch={handleGenerateToolpathFromSketch}
+                onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
+                onToggleCameraMode={setCameraMode}
+                onUpdateClippingPlane={setClippingPlane}
+                onChangeRenderMode={setRenderMode}
+              />
+            </div>
+          </div>
+        )}
+
+        {workspaceViewMode === '3d' && (
+          <Viewport3D
+            currentModel={currentModel}
+            stockConfig={stockConfig}
+            fixtureConfig={fixtureConfig}
+            operations={operations}
+            tools={tools}
+            activeOpId={activeOpId}
+            activePlane={activePlane}
+            planes={planesList}
+            theme={theme}
+            isBackplotActive={isBackplotActive}
+            backplotMode={backplotMode}
+            onCloseBackplot={() => setIsBackplotActive(false)}
+            onCoordinateUpdate={setCoords}
+            onMetricsCalculated={setPartMetrics}
+            onModelImported={handleModelImported}
+            workpieceColor={workpieceColor}
+            renderMode={renderMode}
+            cameraMode={cameraMode}
+            cameraFov={cameraFov}
+            clippingPlane={clippingPlane}
+            lightingMode={lightingMode}
+            layerVisibility={layerVisibility}
+            cameraCommand={cameraCommand}
+            partTransform={partTransform}
+            customGeometry={customGeometry}
+            isSketchModeActive={isSketchModeActive}
+            onToggleSketchMode={setIsSketchModeActive}
+            sketchTool={sketchTool}
+            onChangeSketchTool={setSketchTool}
+            onAddCustomEntity={handleAddCustomEntity}
+            onRemoveCustomEntity={handleRemoveCustomEntity}
+            onClearWireframes={handleClearWireframes}
+            onGenerateToolpathFromSketch={handleGenerateToolpathFromSketch}
+            onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
+            onToggleCameraMode={setCameraMode}
+            onUpdateClippingPlane={setClippingPlane}
+            onChangeRenderMode={setRenderMode}
+          />
+        )}
       </div>
 
       {/* 4. Bottom Status Bar */}

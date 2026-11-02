@@ -290,3 +290,4 @@ export function extractClosedChainsFromCAD(entities = []) {
 
   return chains;
 }
+
