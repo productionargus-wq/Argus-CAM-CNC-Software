@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box } from 'lucide-react';
 import TitleBar from './components/TitleBar';
 import RibbonBar from './components/RibbonBar';
 import OperationsTree from './components/OperationsTree';
@@ -694,6 +695,93 @@ export default function App() {
 
   const handleDeleteActiveOp = () => {
     handleDeleteOpById(activeOpId);
+  };
+
+  const handleMoveOp = (opId, direction) => {
+    const idx = operations.findIndex((o) => o.id === opId);
+    if (idx === -1) return;
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= operations.length) return;
+
+    const copy = [...operations];
+    const [moved] = copy.splice(idx, 1);
+    copy.splice(targetIdx, 0, moved);
+    setOperations(copy);
+    showToast(`Moved ${moved.name} ${direction < 0 ? 'up' : 'down'}`, 'info');
+  };
+
+  const handleToggleLockOp = (opId) => {
+    setOperations((prev) =>
+      prev.map((o) => (o.id === opId ? { ...o, locked: !o.locked } : o))
+    );
+    const op = operations.find((o) => o.id === opId);
+    showToast(`${op?.locked ? 'Unlocked' : 'Locked'} operation ${op?.name}`, 'info');
+  };
+
+  const handleToggleGhostOp = (opId) => {
+    setOperations((prev) =>
+      prev.map((o) => (o.id === opId ? { ...o, ghosted: !o.ghosted } : o))
+    );
+    const op = operations.find((o) => o.id === opId);
+    showToast(`${op?.ghosted ? 'Un-ghosted' : 'Ghosted'} operation ${op?.name}`, 'info');
+  };
+
+  const handleSortOps = () => {
+    const sorted = [...operations].sort((a, b) => (a.toolId || 0) - (b.toolId || 0));
+    setOperations(sorted);
+    showToast("Operations sorted by tool number", "success");
+  };
+
+  const [recentFunctions, setRecentFunctions] = useState([
+    { id: 'rf_rect', name: 'Rectangle (Wireframe)', category: 'CAD Drawing', icon: Square, action: 'sketch_rect', time: 'Just now' },
+    { id: 'rf_dyn_pocket', name: 'Surface Rough Pocket', category: '2D Mill', icon: Layers, action: 'op_pocket', time: '2m ago' },
+    { id: 'rf_drill', name: 'Drilling Cycle (G83 Deep)', category: 'Holemaking', icon: CircleDot, action: 'op_drill', time: '5m ago' },
+    { id: 'rf_circle', name: 'Circle Center Point', category: 'CAD Drawing', icon: Circle, action: 'sketch_circle', time: '8m ago' },
+    { id: 'rf_backplot', name: '3D Wireframe Backplot', category: 'Simulation', icon: Play, action: 'backplot', time: '12m ago' },
+    { id: 'rf_post', name: 'Post Process (G1)', category: 'NC Output', icon: FileCode, action: 'post_g1', time: '15m ago' },
+    { id: 'rf_stock', name: 'Stock Setup Bounding Box', category: 'Job Setup', icon: Box, action: 'stock_setup', time: '18m ago' },
+    { id: 'rf_contour', name: '2D Contour Profile', category: '2D Mill', icon: Scissors, action: 'op_contour', time: '22m ago' },
+    { id: 'rf_tools', name: 'Tool Manager & Assembly', category: 'Tooling', icon: Wrench, action: 'tool_manager', time: '30m ago' }
+  ]);
+
+  const handleRunRecentFunction = (action) => {
+    switch (action) {
+      case 'sketch_rect':
+        handleStartInteractiveSketch('rect');
+        break;
+      case 'sketch_circle':
+        handleStartInteractiveSketch('circle');
+        break;
+      case 'sketch_line':
+        handleStartInteractiveSketch('line');
+        break;
+      case 'op_pocket':
+        handleQuickAddOp('pocket');
+        break;
+      case 'op_drill':
+        handleQuickAddOp('drill');
+        break;
+      case 'op_contour':
+        handleQuickAddOp('contour');
+        break;
+      case 'backplot':
+        handleStartBackplot(activeOpId);
+        break;
+      case 'verify':
+        handleStartVerify(activeOpId);
+        break;
+      case 'post_g1':
+        setIsPostModalOpen(true);
+        break;
+      case 'stock_setup':
+        setIsStockModalOpen(true);
+        break;
+      case 'tool_manager':
+        setIsToolManagerOpen(true);
+        break;
+      default:
+        showToast(`Running ${action}`, 'info');
+    }
   };
 
   const handleEditOp = (op) => {
@@ -1689,6 +1777,24 @@ export default function App() {
           onOpenSolidsModal={handleOpenSolidsModal}
           onStartBackplot={handleStartBackplot}
           onStartVerify={handleStartVerify}
+          activeMachine={activeMachine}
+          stockConfig={stockConfig}
+          currentProjectName={currentProjectName}
+          onOpenPostModal={() => setIsPostModalOpen(true)}
+          onOpenToolManager={() => setIsToolManagerOpen(true)}
+          onOpenHSMFilter={() => setIsHSMFilterModalOpen(true)}
+          onOpenHelpGuide={() => setIsHelpGuideOpen(true)}
+          onOpenWireframeModal={handleOpenWireframeModal}
+          onOpenMachineConfig={() => setIsMachineConfigModalOpen(true)}
+          onOpenFeedsSpeeds={handleOpenFeedsSpeeds}
+          onMoveOpUp={(id) => handleMoveOp(id, -1)}
+          onMoveOpDown={(id) => handleMoveOp(id, 1)}
+          onDeleteOp={handleDeleteOpById}
+          onToggleLockOp={handleToggleLockOp}
+          onToggleGhostOp={handleToggleGhostOp}
+          onSortOps={handleSortOps}
+          recentFunctions={recentFunctions}
+          onRunRecentFunction={handleRunRecentFunction}
         />
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
