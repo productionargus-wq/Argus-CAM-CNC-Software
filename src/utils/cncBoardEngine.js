@@ -702,3 +702,4 @@ export function exportBoardToSVG(shapes = [], boardW = 200, boardH = 150) {
   svg += `</svg>\n`;
   return svg;
 }
+

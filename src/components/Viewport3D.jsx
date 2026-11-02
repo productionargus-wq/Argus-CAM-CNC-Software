@@ -569,11 +569,22 @@ export default function Viewport3D({
 
   // 3. Update 3D Model in Viewport when currentModel changes
   useEffect(() => {
-    if (!partHolderGroupRef.current || !currentModel) return;
+    if (!partHolderGroupRef.current) return;
     const holder = partHolderGroupRef.current;
 
     while (holder.children.length > 0) {
       holder.remove(holder.children[0]);
+    }
+
+    if (!currentModel) {
+      const defaultMetrics = {
+        center: { x: 0, y: 0, z: 0 },
+        dimensions: { x: 100, y: 25, z: 80 },
+        box: { min: { x: -50, y: 0, z: -40 }, max: { x: 50, y: 0, z: 40 } }
+      };
+      setPartMetrics(defaultMetrics);
+      if (onMetricsCalculated) onMetricsCalculated(defaultMetrics);
+      return;
     }
 
     const clone = currentModel.clone(true);
@@ -1171,7 +1182,7 @@ export default function Viewport3D({
         new THREE.Vector3(bounds.max.x + (stockConfig?.allowanceSides || 4), bounds.min.y + sh, bounds.max.z + (stockConfig?.allowanceSides || 4))
       );
 
-      if (backplotInternalMode === 'heatmap') {
+      if (backplotInternalMode === 'heatmap' && currentModel) {
         const modelTriangles = extractModelTriangles(currentModel, 1500);
         const { mesh: heatmapMesh, stats } = buildDeviationHeatmapStock({
           stockBounds,

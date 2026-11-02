@@ -992,7 +992,28 @@ export default function App() {
     setCustomGeometry([]);
     handleResetTransform();
 
-    if (template === 'dmu50_impeller') {
+    if (template === 'blank_wireframe') {
+      // Mastercam clean 2D CAD Part drawing canvas
+      setCurrentModel(null);
+      setPartMetrics({
+        center: { x: 0, y: 0, z: 0 },
+        dimensions: { x: 100, y: 25, z: 80 },
+        box: {
+          min: { x: -50, y: 0, z: -40 },
+          max: { x: 50, y: 25, z: 40 }
+        }
+      });
+      setStockConfig((prev) => ({
+        ...prev,
+        dimensions: { x: 120, y: 30, z: 90 },
+        rawDimensions: { x: 120, y: 30, z: 90 }
+      }));
+      setOperations([]);
+      setActiveRibbonTab('Wireframe');
+      setIsSketchModeActive(true);
+      setSketchTool('rect');
+      showToast("✏️ Blank Mastercam Drawing Canvas Ready! Click & drag to draw Rectangle (R), Circle (C), Line (L).", "success");
+    } else if (template === 'dmu50_impeller') {
       setCurrentModel(createImpellerGeometry());
       setActiveMachineId('dmu50');
     } else if (template === 'haas_bracket') {

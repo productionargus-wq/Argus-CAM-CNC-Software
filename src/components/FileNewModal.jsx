@@ -8,8 +8,8 @@ export default function FileNewModal({
 }) {
   const dialogRef = useRef(null);
 
-  const [selectedTemplate, setSelectedTemplate] = useState('dmu50_impeller');
-  const [projectName, setProjectName] = useState('New_CAM_Job.mcam');
+  const [selectedTemplate, setSelectedTemplate] = useState('blank_wireframe');
+  const [projectName, setProjectName] = useState('Mastercam_Part1.mcam');
   const [unitSystem, setUnitSystem] = useState('metric');
   const [customDimensions, setCustomDimensions] = useState({ x: 80, y: 35, z: 60 });
 
@@ -93,6 +93,40 @@ export default function FileNewModal({
               Select Machine &amp; Part Template:
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginTop: '4px' }}>
+              {/* Template 0: Blank Mastercam 2D CAD Part */}
+              <div
+                onClick={() => setSelectedTemplate('blank_wireframe')}
+                style={{
+                  gridColumn: 'span 2',
+                  background: selectedTemplate === 'blank_wireframe' ? '#1e2d4a' : '#11151e',
+                  border: `2px solid ${selectedTemplate === 'blank_wireframe' ? '#38bdf8' : '#334155'}`,
+                  borderRadius: '6px',
+                  padding: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  gap: '12px',
+                  alignItems: 'center',
+                  boxShadow: selectedTemplate === 'blank_wireframe' ? '0 0 16px rgba(56, 189, 248, 0.25)' : 'none'
+                }}
+              >
+                <div style={{ background: '#0284c7', padding: '8px', borderRadius: '6px', fontSize: '20px' }}>
+                  ✏️
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ fontWeight: 800, color: '#38bdf8', fontSize: '13px' }}>
+                      Blank CAD Drawing Canvas (Mastercam 2D Workflow)
+                    </div>
+                    <span style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', fontSize: '9.5px', fontWeight: 700, padding: '1px 6px', borderRadius: '3px' }}>
+                      RECOMMENDED
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', lineHeight: 1.35 }}>
+                    Clean graphics viewport with WCS (X0, Y0, Z0) datum origin. Draw Rectangles, Circles, Corner Fillets & Drill Points from scratch, then create CNC Toolpaths & Verify (just like Mastercam 2019 tutorial video)!
+                  </div>
+                </div>
+              </div>
+
               {/* Template 1 */}
               <div
                 onClick={() => setSelectedTemplate('dmu50_impeller')}
