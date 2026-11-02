@@ -76,6 +76,7 @@ import {
   saveAutoSaveSnapshot,
   getAutoSaveSnapshot
 } from './utils/projectStorage';
+import { extractClosedChainsFromCAD } from './utils/cadDrawingEngine';
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('argus_theme') || 'light');
@@ -163,6 +164,8 @@ export default function App() {
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
+  const [isSketchModeActive, setIsSketchModeActive] = useState(false);
+  const [sketchTool, setSketchTool] = useState('line');
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
   const [surfacesModalTool, setSurfacesModalTool] = useState('plane');
   const [isSolidsModalOpen, setIsSolidsModalOpen] = useState(false);
@@ -1253,6 +1256,69 @@ export default function App() {
     setIsWireframeModalOpen(true);
   };
 
+  const handleStartInteractiveSketch = (tool = 'line') => {
+    setSketchTool(tool);
+    setIsSketchModeActive(true);
+    showToast(`✏️ CAD Sketcher Active: Click & drag on 3D Viewport to draw ${tool.toUpperCase()} (Esc to exit)`, 'info');
+  };
+
+  const handleGenerateToolpathFromSketch = () => {
+    const chains = extractClosedChainsFromCAD(customGeometry);
+    const drillPoints = customGeometry.filter(
+      (g) => g.name?.startsWith('Drill_') || g.userData?.type === 'datum_point'
+    );
+
+    if (chains.length === 0 && drillPoints.length === 0) {
+      showToast("Draw a rectangle, circle, or drill points first to generate a toolpath.", "warning");
+      return;
+    }
+
+    if (drillPoints.length > 0 && chains.length === 0) {
+      const nextId = operations.length + 1;
+      const newOp = {
+        id: nextId,
+        name: `Drill Cycle (${drillPoints.length} Holes) - Custom Sketch`,
+        toolId: 5,
+        toolName: 'T5 - 5mm Drill',
+        badgeClass: 'drill',
+        badgeText: 'DR',
+        visible: true,
+        stepdown: 4.0,
+        totalDepth: 20.0,
+        rapidHeight: 15.0
+      };
+      setOperations((prev) => [...prev, newOp]);
+      setActiveOpId(nextId);
+      setActiveRibbonTab('Toolpaths');
+      setIsSketchModeActive(false);
+      showToast(`Generated CNC Drill Cycle from ${drillPoints.length} sketched points!`, 'success');
+      return;
+    }
+
+    const chain = chains[chains.length - 1];
+    const nextId = operations.length + 1;
+    const newOp = {
+      id: nextId,
+      name: `Dynamic Pocket (${chain.name || 'Drawn Sketch'})`,
+      toolId: 2,
+      toolName: 'T2 - 8mm Endmill',
+      badgeClass: 'pocket',
+      badgeText: 'PK',
+      visible: true,
+      stepoverPct: 50,
+      stepdown: 4.0,
+      totalDepth: 12.0,
+      stockToLeaveXY: 0.0,
+      stockToLeaveZ: 0.0,
+      rapidHeight: 15.0
+    };
+    setOperations((prev) => [...prev, newOp]);
+    setActiveOpId(nextId);
+    setActiveRibbonTab('Toolpaths');
+    setIsSketchModeActive(false);
+    showToast(`Generated CNC Dynamic Pocket from sketched ${chain.type.replace('_', ' ')}!`, 'success');
+  };
+
   const handleAddCustomEntity = (entity) => {
     setCustomGeometry((prev) => [...prev, entity]);
   };
@@ -1429,6 +1495,8 @@ export default function App() {
         onOpenEntityAnalyzer={() => setIsEntityAnalyzerOpen(true)}
         onOpenDistanceCaliper={() => setIsDistanceCaliperOpen(true)}
         onOpenWireframeModal={handleOpenWireframeModal}
+        onStartInteractiveSketch={handleStartInteractiveSketch}
+        isSketchModeActive={isSketchModeActive}
         onOpenSurfacesModal={handleOpenSurfacesModal}
         onOpenSolidsModal={handleOpenSolidsModal}
         onOpenModelPrepModal={handleOpenModelPrepModal}
@@ -1569,6 +1637,14 @@ export default function App() {
           cameraCommand={cameraCommand}
           partTransform={partTransform}
           customGeometry={customGeometry}
+          isSketchModeActive={isSketchModeActive}
+          onToggleSketchMode={setIsSketchModeActive}
+          sketchTool={sketchTool}
+          onChangeSketchTool={setSketchTool}
+          onAddCustomEntity={handleAddCustomEntity}
+          onRemoveCustomEntity={handleRemoveCustomEntity}
+          onClearWireframes={handleClearWireframes}
+          onGenerateToolpathFromSketch={handleGenerateToolpathFromSketch}
           onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
           onToggleCameraMode={setCameraMode}
           onUpdateClippingPlane={setClippingPlane}

@@ -1008,7 +1008,14 @@ export function createWireframeCircle(
   const line = new THREE.Line(geo, mat);
   const arcType = sweepAngleDeg >= 360 ? 'Circle' : 'Arc';
   line.name = options.name || `Wireframe_${arcType}_R${radius.toFixed(1)}`;
-  line.userData = { type: arcType.toLowerCase(), radius, plane, center: [cx, y, cz] };
+  line.userData = {
+    type: arcType.toLowerCase(),
+    cadType: 'circle',
+    radius,
+    plane,
+    center: { x: cx, y, z: cz },
+    points
+  };
   return line;
 }
 
@@ -1125,7 +1132,15 @@ export function createWireframeRect(
   const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
   const line = new THREE.Line(geo, mat);
   line.name = options.name || `Wireframe_Rect_${Math.round(w)}x${Math.round(d)}${r > 0 ? `_R${r}` : ''}`;
-  line.userData = { type: 'rectangle', width: w, depth: d, filletRadius: r, center: [cx, y, cz] };
+  line.userData = {
+    type: 'rectangle',
+    cadType: 'rect',
+    width: w,
+    depth: d,
+    filletRadius: r,
+    center: { x: cx, y, z: cz },
+    points
+  };
   return line;
 }
 
@@ -1178,7 +1193,14 @@ export function createWireframeLine(
   const line = new THREE.Line(geo, mat);
   const length = points[0].distanceTo(points[1]).toFixed(1);
   line.name = options.name || `Wireframe_Line_L${length}`;
-  line.userData = { type: 'line', p1, p2, length: Number(length) };
+  line.userData = {
+    type: 'line',
+    cadType: 'line',
+    p1: { x: p1[0], y: p1[1], z: p1[2] },
+    p2: { x: p2[0], y: p2[1], z: p2[2] },
+    points,
+    length: Number(length)
+  };
   return line;
 }
 

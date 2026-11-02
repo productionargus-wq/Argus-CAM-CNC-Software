@@ -6,7 +6,7 @@ import {
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
   Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge,
-  Copy, Cpu, Activity, Type, DollarSign, Tablet
+  Copy, Cpu, Activity, Type, DollarSign, Tablet, PenTool, Edit3
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -46,6 +46,8 @@ export default function RibbonBar({
   onOpenEntityAnalyzer,
   onOpenDistanceCaliper,
   onOpenWireframeModal,
+  onStartInteractiveSketch,
+  isSketchModeActive = false,
   onOpenSurfacesModal,
   onOpenSolidsModal,
   onOpenModelPrepModal,
@@ -555,6 +557,14 @@ export default function RibbonBar({
                   <Grid size={20} color="#10b981" />
                   <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>CPlane<br />Studio</span>
                 </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onStartInteractiveSketch && onStartInteractiveSketch('line')}
+                  title="Draw 2D/3D Wireframe Curves &amp; Shapes Directly on Viewport"
+                >
+                  <PenTool size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>CAD<br />Sketch</span>
+                </button>
               </div>
               <span className="ribbon-group-title">Add-Ins</span>
             </div>
@@ -564,13 +574,34 @@ export default function RibbonBar({
         {/* ==================== 3. WIREFRAME TAB ==================== */}
         {activeTab === 'Wireframe' && (
           <>
+            {/* Interactive Viewport Sketcher Group */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className={`ribbon-btn-large ${isSketchModeActive ? 'ribbon-btn-highlight' : ''}`}
+                  onClick={() => onStartInteractiveSketch && onStartInteractiveSketch('line')}
+                  style={{
+                    background: isSketchModeActive ? 'rgba(56, 189, 248, 0.22)' : undefined,
+                    borderColor: isSketchModeActive ? '#38bdf8' : undefined
+                  }}
+                  title="Enter Interactive 2D/3D CAD Drawing Mode - Click &amp; Drag Directly on 3D Viewport"
+                >
+                  <PenTool size={22} color="#38bdf8" />
+                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>
+                    {isSketchModeActive ? 'Drawing...' : 'Draw on\nViewport'}
+                  </span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Interactive CAD</span>
+            </div>
+
             {/* Points */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('datum') : onAddWireframe('drillpoints')}
-                  title="Create 3D Point Position Reference"
+                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('drill') : (onOpenWireframeModal && onOpenWireframeModal('datum'))}
+                  title="Drop 3D Point / Drill Coordinates by Clicking Directly on Viewport (P)"
                 >
                   <Crosshair size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Point<br />Position</span>
@@ -592,8 +623,8 @@ export default function RibbonBar({
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('line') : onAddWireframe('line')}
-                  title="Create Line Between 2 Endpoints"
+                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('line') : (onOpenWireframeModal && onOpenWireframeModal('line'))}
+                  title="Draw Line with Mouse in Viewport (L) - Click start, drag, click end"
                 >
                   <div style={{ width: '22px', height: '2px', background: '#f43f5e', transform: 'rotate(-30deg)', margin: '10px 0' }} />
                   <span className="btn-label" style={{ color: '#f43f5e', fontWeight: 600 }}>Line<br />Endpoints</span>
@@ -633,8 +664,8 @@ export default function RibbonBar({
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('circle') : onAddWireframe('circle')}
-                  title="Create Circle by Center Point & Radius"
+                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('circle') : (onOpenWireframeModal && onOpenWireframeModal('circle'))}
+                  title="Draw Circle by Center &amp; Radius Directly with Mouse (C)"
                 >
                   <div style={{ width: '20px', height: '20px', border: '2px solid #38bdf8', borderRadius: '50%' }} />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Circle<br />Center Point</span>
@@ -671,8 +702,8 @@ export default function RibbonBar({
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('rect') : onAddWireframe('rect')}
-                  title="Create Parametric 2D / 3D Rectangle"
+                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('rect') : (onOpenWireframeModal && onOpenWireframeModal('rect'))}
+                  title="Draw Rectangle with Mouse in Viewport (R) - Click corner, drag to size"
                 >
                   <div style={{ width: '22px', height: '16px', border: '2px solid #4ade80', borderRadius: '3px' }} />
                   <span className="btn-label" style={{ color: '#4ade80', fontWeight: 600 }}>Rectangle</span>

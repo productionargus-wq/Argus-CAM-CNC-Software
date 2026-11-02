@@ -4,7 +4,15 @@ import {
   Eye, Layers, Rotate3D, UploadCloud, Box, Info, Scissors, Camera, Sun, Sliders,
   Play, Pause, SkipForward, SkipBack, RotateCcw, X, AlertTriangle, CheckCircle2, Gauge
 } from 'lucide-react';
-import { parseSTLFile, calculatePartMetrics } from '../utils/cadGeometry';
+import { parseSTLFile, calculatePartMetrics, createWireframeLine, createWireframeRect, createWireframeCircle, createPointMarker } from '../utils/cadGeometry';
+import DrawingToolbarHUD from './DrawingToolbarHUD';
+import {
+  createSketchPlane,
+  snapToGrid,
+  snapToEntityPoints,
+  createGhostPreview,
+  createSnapIndicator
+} from '../utils/cadDrawingEngine';
 import {
   generateFacingToolpath,
   generatePocketToolpath,
@@ -71,6 +79,14 @@ export default function Viewport3D({
     scale: { x: 1, y: 1, z: 1 }
   },
   customGeometry = [],
+  isSketchModeActive = false,
+  onToggleSketchMode = null,
+  sketchTool = 'line',
+  onChangeSketchTool = null,
+  onAddCustomEntity = null,
+  onRemoveCustomEntity = null,
+  onClearWireframes = null,
+  onGenerateToolpathFromSketch = null,
   onOpenViewStudioModal,
   onToggleCameraMode,
   onUpdateClippingPlane,
@@ -122,6 +138,74 @@ export default function Viewport3D({
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [partMetrics, setPartMetrics] = useState(null);
+
+  // CAD Interactive In-Viewport Sketcher State & Refs
+  const [activeSketchTool, setActiveSketchTool] = useState(sketchTool || 'line');
+  const [gridSnap, setGridSnap] = useState(true);
+  const [gridStep, setGridStep] = useState(5.0);
+  const [objectSnap, setObjectSnap] = useState(true);
+  const [orthoLock, setOrthoLock] = useState(false);
+  const [sketchAnchor, setSketchAnchor] = useState(null);
+  const [cursorCoords, setCursorCoords] = useState({ x: 0, y: 0, z: 0 });
+  const [dimensionFeedback, setDimensionFeedback] = useState(null);
+
+  const sketchGhostGroupRef = useRef(null);
+  const snapIndicatorGroupRef = useRef(null);
+  const sketchAnchorRef = useRef(null);
+  const isSketchModeRef = useRef(isSketchModeActive);
+  const activeSketchToolRef = useRef(sketchTool || 'line');
+  const gridSnapRef = useRef(true);
+  const gridStepRef = useRef(5.0);
+  const objectSnapRef = useRef(true);
+  const orthoLockRef = useRef(false);
+  const customGeometryRef = useRef(customGeometry);
+  const onAddCustomEntityRef = useRef(onAddCustomEntity);
+
+  useEffect(() => {
+    isSketchModeRef.current = isSketchModeActive;
+    if (isSketchModeActive) {
+      snapView('top');
+    } else {
+      if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+      if (snapIndicatorGroupRef.current) snapIndicatorGroupRef.current.clear();
+      sketchAnchorRef.current = null;
+      setSketchAnchor(null);
+      setDimensionFeedback(null);
+    }
+  }, [isSketchModeActive]);
+
+  useEffect(() => {
+    setActiveSketchTool(sketchTool);
+    activeSketchToolRef.current = sketchTool;
+    sketchAnchorRef.current = null;
+    setSketchAnchor(null);
+    if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+    setDimensionFeedback(null);
+  }, [sketchTool]);
+
+  useEffect(() => {
+    customGeometryRef.current = customGeometry;
+  }, [customGeometry]);
+
+  useEffect(() => {
+    onAddCustomEntityRef.current = onAddCustomEntity;
+  }, [onAddCustomEntity]);
+
+  useEffect(() => {
+    gridSnapRef.current = gridSnap;
+  }, [gridSnap]);
+
+  useEffect(() => {
+    gridStepRef.current = gridStep;
+  }, [gridStep]);
+
+  useEffect(() => {
+    objectSnapRef.current = objectSnap;
+  }, [objectSnap]);
+
+  useEffect(() => {
+    orthoLockRef.current = orthoLock;
+  }, [orthoLock]);
 
   // 1. Initial Scene Setup
   useEffect(() => {
@@ -208,11 +292,44 @@ export default function Viewport3D({
     scene.add(customGeoGroup);
     customGeoGroupRef.current = customGeoGroup;
 
+    // Interactive Sketch Ghost & Snap Indicator Groups
+    const sketchGhostGroup = new THREE.Group();
+    sketchGhostGroup.name = "Sketch_Ghost_Group";
+    customGeoGroup.add(sketchGhostGroup);
+    sketchGhostGroupRef.current = sketchGhostGroup;
+
+    const snapIndicatorGroup = new THREE.Group();
+    snapIndicatorGroup.name = "Snap_Indicator_Group";
+    customGeoGroup.add(snapIndicatorGroup);
+    snapIndicatorGroupRef.current = snapIndicatorGroup;
+
     // Drafting Dimension Callouts Group
     const dimensionGroup = new THREE.Group();
     dimensionGroup.position.set(0, 49, 0);
     scene.add(dimensionGroup);
     dimensionGroupRef.current = dimensionGroup;
+
+    // Raycasting for Interactive CAD Drawing
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const sketchPlane = new THREE.Plane();
+
+    const getSketchIntersection = (e) => {
+      const rect = dom.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const topY = partMetrics?.box?.max?.y ?? 35;
+      const worldY = 49 + topY;
+      sketchPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, worldY, 0));
+
+      const target = new THREE.Vector3();
+      const hit = raycaster.ray.intersectPlane(sketchPlane, target);
+      if (!hit) return null;
+
+      return new THREE.Vector3(Number(hit.x.toFixed(3)), Number(topY.toFixed(3)), Number(hit.z.toFixed(3)));
+    };
 
     // Mouse Drag Orbit & Pan
     let isDragging = false;
@@ -222,10 +339,85 @@ export default function Viewport3D({
     let spherical = new THREE.Spherical(340, Math.PI / 3.4, Math.PI / 4);
 
     const onMouseDown = (e) => {
-      if (e.button === 0) isDragging = true;
-      if (e.button === 2) isPanning = true;
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
+
+      if (isSketchModeRef.current) {
+        // Pan on right-click or orbit on middle-click / Shift+Click
+        if (e.button === 2) {
+          isPanning = true;
+          return;
+        }
+        if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+          isDragging = true;
+          return;
+        }
+
+        // Left-Click: CAD In-Viewport Drawing
+        if (e.button === 0) {
+          const localPt = getSketchIntersection(e);
+          if (!localPt) return;
+
+          let finalPt = localPt;
+          let snapResult = { snapped: false, point: localPt };
+          if (objectSnapRef.current) {
+            snapResult = snapToEntityPoints(localPt, customGeometryRef.current, 5.0);
+          }
+          if (snapResult.snapped) {
+            finalPt = snapResult.point;
+          } else if (gridSnapRef.current) {
+            finalPt = snapToGrid(localPt, gridStepRef.current, orthoLockRef.current, sketchAnchorRef.current);
+          }
+
+          const tool = activeSketchToolRef.current;
+
+          if (tool === 'drill') {
+            const marker = createPointMarker([finalPt.x, finalPt.y, finalPt.z], `Drill_Point_${Date.now()}`, 0xef4444);
+            if (onAddCustomEntityRef.current) onAddCustomEntityRef.current(marker);
+            return;
+          }
+
+          if (tool === 'line' || tool === 'rect' || tool === 'circle') {
+            if (!sketchAnchorRef.current) {
+              sketchAnchorRef.current = finalPt.clone();
+              setSketchAnchor(finalPt.clone());
+            } else {
+              const anchor = sketchAnchorRef.current;
+              let newEntity = null;
+
+              if (tool === 'line') {
+                newEntity = createWireframeLine(
+                  [anchor.x, anchor.y, anchor.z],
+                  [finalPt.x, finalPt.y, finalPt.z],
+                  { color: 0xf43f5e }
+                );
+              } else if (tool === 'rect') {
+                const w = Math.max(1, Math.abs(finalPt.x - anchor.x));
+                const d = Math.max(1, Math.abs(finalPt.z - anchor.z));
+                const cx = (anchor.x + finalPt.x) / 2;
+                const cz = (anchor.z + finalPt.z) / 2;
+                newEntity = createWireframeRect(w, d, anchor.y, 0, [cx, cz], { color: 0x4ade80 });
+              } else if (tool === 'circle') {
+                const radius = Math.max(1, anchor.distanceTo(finalPt));
+                newEntity = createWireframeCircle(radius, anchor.y, [anchor.x, anchor.z], 0, 360, 'G17', { color: 0x38bdf8 });
+              }
+
+              if (newEntity && onAddCustomEntityRef.current) {
+                onAddCustomEntityRef.current(newEntity);
+              }
+
+              sketchAnchorRef.current = null;
+              setSketchAnchor(null);
+              setDimensionFeedback(null);
+              if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+            }
+          }
+          return;
+        }
+      }
+
+      if (e.button === 0) isDragging = true;
+      if (e.button === 2) isPanning = true;
     };
 
     const onMouseMove = (e) => {
@@ -239,9 +431,59 @@ export default function Viewport3D({
         spherical.phi = Math.max(0.1, Math.min(Math.PI / 2.05, spherical.phi - deltaY * 0.008));
         camera.position.setFromSpherical(spherical);
         camera.lookAt(0, 45, 0);
+        return;
       } else if (isPanning) {
         camera.position.x -= deltaX * 0.4;
         camera.position.y += deltaY * 0.4;
+        return;
+      }
+
+      // Sketch Mode Hover & Ghost Preview
+      if (isSketchModeRef.current) {
+        const localPt = getSketchIntersection(e);
+        if (localPt) {
+          let finalPt = localPt;
+          let snapResult = { snapped: false, point: localPt, type: null };
+          if (objectSnapRef.current) {
+            snapResult = snapToEntityPoints(localPt, customGeometryRef.current, 5.0);
+          }
+          if (snapResult.snapped) {
+            finalPt = snapResult.point;
+          } else if (gridSnapRef.current) {
+            finalPt = snapToGrid(localPt, gridStepRef.current, orthoLockRef.current, sketchAnchorRef.current);
+          }
+
+          setCursorCoords({ x: finalPt.x, y: finalPt.y, z: finalPt.z });
+
+          // Update snap indicator marker
+          if (snapIndicatorGroupRef.current) {
+            snapIndicatorGroupRef.current.clear();
+            if (snapResult.snapped) {
+              snapIndicatorGroupRef.current.add(createSnapIndicator(finalPt, snapResult.type));
+            }
+          }
+
+          // Update rubber-band ghost preview if anchor set
+          if (sketchAnchorRef.current && sketchGhostGroupRef.current) {
+            const anchor = sketchAnchorRef.current;
+            const tool = activeSketchToolRef.current;
+            sketchGhostGroupRef.current.clear();
+            const ghost = createGhostPreview(tool, anchor, finalPt);
+            sketchGhostGroupRef.current.add(ghost);
+
+            if (tool === 'line') {
+              const len = anchor.distanceTo(finalPt).toFixed(1);
+              setDimensionFeedback(`L: ${len} mm`);
+            } else if (tool === 'rect') {
+              const w = Math.abs(finalPt.x - anchor.x).toFixed(1);
+              const d = Math.abs(finalPt.z - anchor.z).toFixed(1);
+              setDimensionFeedback(`W: ${w} mm, D: ${d} mm`);
+            } else if (tool === 'circle') {
+              const r = anchor.distanceTo(finalPt).toFixed(1);
+              setDimensionFeedback(`R: ${r} mm (Ø ${(r * 2).toFixed(1)} mm)`);
+            }
+          }
+        }
       }
 
       if (onCoordinateUpdate) {
@@ -1078,6 +1320,58 @@ export default function Viewport3D({
     return () => window.removeEventListener('keydown', handleBackplotKey);
   }, [isBackplotActive, onCloseBackplot]);
 
+  // 15. CAD Sketcher Keyboard Shortcuts
+  useEffect(() => {
+    if (!isSketchModeActive) return;
+
+    const handleSketchKey = (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+      const key = e.key.toLowerCase();
+      if (key === 'l') {
+        e.preventDefault();
+        setActiveSketchTool('line');
+        if (onChangeSketchTool) onChangeSketchTool('line');
+      } else if (key === 'r') {
+        e.preventDefault();
+        setActiveSketchTool('rect');
+        if (onChangeSketchTool) onChangeSketchTool('rect');
+      } else if (key === 'c') {
+        e.preventDefault();
+        setActiveSketchTool('circle');
+        if (onChangeSketchTool) onChangeSketchTool('circle');
+      } else if (key === 'p') {
+        e.preventDefault();
+        setActiveSketchTool('drill');
+        if (onChangeSketchTool) onChangeSketchTool('drill');
+      } else if (key === 'v') {
+        e.preventDefault();
+        setActiveSketchTool('select');
+        if (onChangeSketchTool) onChangeSketchTool('select');
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        if (sketchAnchorRef.current) {
+          sketchAnchorRef.current = null;
+          setSketchAnchor(null);
+          setDimensionFeedback(null);
+          if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+        } else if (onToggleSketchMode) {
+          onToggleSketchMode(false);
+        }
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (customGeometryRef.current && customGeometryRef.current.length > 0) {
+          const last = customGeometryRef.current[customGeometryRef.current.length - 1];
+          if (onRemoveCustomEntity && last) {
+            onRemoveCustomEntity(last.uuid || last.name);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleSketchKey);
+    return () => window.removeEventListener('keydown', handleSketchKey);
+  }, [isSketchModeActive, onChangeSketchTool, onToggleSketchMode, onRemoveCustomEntity]);
+
   // Active Tool Telemetry Sample for HUD
   const currentSample = useMemo(() => {
     if (!isBackplotActive || waypointsRef.current.length === 0) {
@@ -1228,6 +1522,37 @@ export default function Viewport3D({
           <span>Right</span>
         </button>
       </div>
+
+      {/* CAD Sketcher HUD Floating Toolbar */}
+      {isSketchModeActive && (
+        <DrawingToolbarHUD
+          activeTool={activeSketchTool}
+          onChangeTool={(tool) => {
+            setActiveSketchTool(tool);
+            if (onChangeSketchTool) onChangeSketchTool(tool);
+          }}
+          gridSnap={gridSnap}
+          onToggleGridSnap={() => setGridSnap(g => !g)}
+          gridStep={gridStep}
+          onChangeGridStep={(step) => setGridStep(step)}
+          objectSnap={objectSnap}
+          onToggleObjectSnap={() => setObjectSnap(o => !o)}
+          orthoLock={orthoLock}
+          onToggleOrthoLock={() => setOrthoLock(o => !o)}
+          drawnCount={customGeometry.length}
+          onClearDrawing={() => {
+            if (onClearWireframes) onClearWireframes();
+          }}
+          onFinishSketch={() => {
+            if (onToggleSketchMode) onToggleSketchMode(false);
+          }}
+          onGenerateToolpathFromSketch={() => {
+            if (onGenerateToolpathFromSketch) onGenerateToolpathFromSketch();
+          }}
+          cursorCoords={cursorCoords}
+          dimensionFeedback={dimensionFeedback}
+        />
+      )}
 
       {/* Floating Section Cut Indicator Badge */}
       {clippingPlane?.enabled && (
