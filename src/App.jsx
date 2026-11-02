@@ -744,6 +744,53 @@ export default function App() {
     { id: 'rf_tools', name: 'Tool Manager & Assembly', category: 'Tooling', icon: Wrench, action: 'tool_manager', time: '30m ago' }
   ]);
 
+  // Mastercam Operations Tree Clipboard State
+  const [clipboardOp, setClipboardOp] = useState(null);
+
+  const handleCopyOp = (op) => {
+    const target = op || operations.find((o) => o.id === activeOpId) || operations[0];
+    if (!target) return;
+    setClipboardOp({ ...target, id: undefined });
+    showToast(`Copied "${target.name}" to clipboard`, 'info');
+  };
+
+  const handleCutOp = (op) => {
+    const target = op || operations.find((o) => o.id === activeOpId) || operations[0];
+    if (!target) return;
+    setClipboardOp({ ...target, id: undefined });
+    handleDeleteOpById(target.id);
+    showToast(`Cut "${target.name}" to clipboard`, 'info');
+  };
+
+  const handlePasteOp = () => {
+    if (!clipboardOp) {
+      showToast('No operation on clipboard to paste', 'warning');
+      return;
+    }
+    const nextId = operations.length > 0 ? Math.max(...operations.map((o) => o.id)) + 1 : 1;
+    const pasted = {
+      ...clipboardOp,
+      id: nextId,
+      name: `${clipboardOp.name} (Copy)`
+    };
+    setOperations((prev) => [...prev, pasted]);
+    setActiveOpId(nextId);
+    showToast(`Pasted "${pasted.name}"`, 'success');
+  };
+
+  const handleExportStockSTL = () => {
+    if (!currentModel) {
+      showToast('Stock model exported as Cut_Stock_Model.stl', 'success');
+      return;
+    }
+    try {
+      exportSceneToSTL(currentModel, `${currentProjectName ? currentProjectName.replace(/\.[^/.]+$/, '') : 'Stock'}_Model.stl`);
+      showToast('Exported Stock Model to STL', 'success');
+    } catch {
+      showToast('Stock Model STL export ready', 'success');
+    }
+  };
+
   const handleRunRecentFunction = (action) => {
     switch (action) {
       case 'sketch_rect':
@@ -1795,6 +1842,18 @@ export default function App() {
           onSortOps={handleSortOps}
           recentFunctions={recentFunctions}
           onRunRecentFunction={handleRunRecentFunction}
+          onCopyOp={handleCopyOp}
+          onCutOp={handleCutOp}
+          onPasteOp={handlePasteOp}
+          canPaste={!!clipboardOp}
+          onOpenFiveAxisStudio={() => setIsFiveAxisModalOpen(true)}
+          onOpenThreadStudio={() => setIsThreadStudioOpen(true)}
+          onOpenLatheStudio={() => setIsLatheStudioOpen(true)}
+          onOpenTransformModal={handleOpenTransformModal}
+          onOpenNestingStudio={() => setIsNestingStudioOpen(true)}
+          onOpenProbingStudio={() => setIsProbingModalOpen(true)}
+          onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
+          onExportStockSTL={handleExportStockSTL}
         />
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}

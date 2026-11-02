@@ -6,6 +6,7 @@ import {
   Scissors, ArrowUp, ArrowDown, RotateCcw, ArrowUpDown, Crosshair,
   Wrench, CircleDot, Circle, Clock, Search, Ghost
 } from 'lucide-react';
+import ToolpathsContextMenu from './ToolpathsContextMenu';
 
 export default function OperationsTree({
   operations = [],
@@ -53,7 +54,19 @@ export default function OperationsTree({
   onToggleGhostOp,
   onSortOps,
   recentFunctions = [],
-  onRunRecentFunction
+  onRunRecentFunction,
+  onCopyOp,
+  onCutOp,
+  onPasteOp,
+  canPaste = false,
+  onOpenFiveAxisStudio,
+  onOpenThreadStudio,
+  onOpenLatheStudio,
+  onOpenTransformModal,
+  onOpenNestingStudio,
+  onOpenProbingStudio,
+  onOpenSetupSheet,
+  onExportStockSTL
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
   const currentTab = activeManagerTab || localTab;
@@ -85,6 +98,49 @@ export default function OperationsTree({
       ...prev,
       [opId]: !prev[opId]
     }));
+  };
+
+  // Expand / Collapse all operations
+  const handleExpandAll = () => {
+    setMachineGroupExpanded(true);
+    setPropertiesExpanded(true);
+    setToolpathGroupExpanded(true);
+    const map = {};
+    operations.forEach((op) => { map[op.id] = true; });
+    setExpandedOps(map);
+  };
+
+  const handleCollapseAll = () => {
+    setPropertiesExpanded(false);
+    const map = {};
+    operations.forEach((op) => { map[op.id] = false; });
+    setExpandedOps(map);
+  };
+
+  // Right-Click Context Menu State
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    targetOp: null
+  });
+
+  const handleContextMenu = (e, op = null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (op && op.id) {
+      onSelectOp(op.id);
+    }
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      targetOp: op || operations.find((o) => o.id === activeOpId) || null
+    });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu((prev) => ({ ...prev, visible: false }));
   };
 
   // Bottom Tabs matching user screenshot
@@ -395,6 +451,7 @@ export default function OperationsTree({
 
       {/* ================= 3. TREE VIEW SCROLLABLE CONTAINER ================= */}
       <div
+        onContextMenu={(e) => handleContextMenu(e, null)}
         style={{
           flex: 1,
           overflowY: 'auto',
@@ -492,6 +549,7 @@ export default function OperationsTree({
                           <div
                             onClick={() => onSelectOp(op.id)}
                             onDoubleClick={() => onEditOp(op)}
+                            onContextMenu={(e) => handleContextMenu(e, op)}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -872,6 +930,60 @@ export default function OperationsTree({
           );
         })}
       </div>
+
+      {/* ================= 6. MASTERCAM RIGHT-CLICK CONTEXT MENU ================= */}
+      {contextMenu.visible && (
+        <ToolpathsContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          targetOp={contextMenu.targetOp}
+          onClose={closeContextMenu}
+          onAddOperation={(strategy) => {
+            if (onAddOp) onAddOp(strategy);
+            closeContextMenu();
+          }}
+          onEditOp={(op) => {
+            if (onEditOp && op) onEditOp(op);
+            closeContextMenu();
+          }}
+          onDeleteOp={(opId) => {
+            if (onDeleteOp && opId) onDeleteOp(opId);
+            closeContextMenu();
+          }}
+          onCopyOp={(op) => {
+            if (onCopyOp) onCopyOp(op);
+            closeContextMenu();
+          }}
+          onCutOp={(op) => {
+            if (onCutOp) onCutOp(op);
+            closeContextMenu();
+          }}
+          onPasteOp={() => {
+            if (onPasteOp) onPasteOp();
+            closeContextMenu();
+          }}
+          canPaste={canPaste}
+          onExpandAll={handleExpandAll}
+          onCollapseAll={handleCollapseAll}
+          onOpenStockModal={onOpenStockModal}
+          onOpenToolManager={onOpenToolManager}
+          onOpenSetupSheet={onOpenSetupSheet}
+          onOpenPostModal={onOpenPostModal}
+          onOpenAFR={onOpenAFR}
+          onOpenFiveAxisStudio={onOpenFiveAxisStudio}
+          onOpenThreadStudio={onOpenThreadStudio}
+          onOpenLatheStudio={onOpenLatheStudio}
+          onOpenTransformModal={onOpenTransformModal}
+          onOpenNestingStudio={onOpenNestingStudio}
+          onOpenProbingStudio={onOpenProbingStudio}
+          onOpenHSMFilter={onOpenHSMFilter}
+          onExportStockSTL={onExportStockSTL}
+          onToggleLockOp={onToggleLockOp}
+          onToggleGhostOp={onToggleGhostOp}
+          onSortOps={onSortOps}
+          onSelectAllOps={() => {}}
+        />
+      )}
     </aside>
   );
 }
