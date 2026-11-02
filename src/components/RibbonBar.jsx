@@ -6,7 +6,7 @@ import {
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
   Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge,
-  Copy, Cpu, Activity, Type, DollarSign, Tablet, PenTool, Edit3
+  Copy, Cpu, Activity, Type, DollarSign, Tablet, PenTool, Edit3, Columns2
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -212,68 +212,65 @@ export default function RibbonBar({
 
         {/* Workspace Mode Switcher (2D Design Board | Split View | 3D Machine) */}
         {onChangeViewMode && (
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', paddingRight: '8px' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '5px', paddingRight: '8px' }}>
             <button
               onClick={() => onChangeViewMode('2d')}
               style={{
-                background: workspaceViewMode === '2d' ? 'rgba(56, 189, 248, 0.22)' : 'rgba(30, 41, 59, 0.6)',
+                width: '30px',
+                height: '26px',
+                background: workspaceViewMode === '2d' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(30, 41, 59, 0.6)',
                 color: workspaceViewMode === '2d' ? '#38bdf8' : '#94a3b8',
-                fontWeight: 700,
-                fontSize: '11px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
                 border: workspaceViewMode === '2d' ? '1px solid #38bdf8' : '1px solid #334155',
                 borderRadius: '4px',
-                padding: '3px 8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
-              title="Open full 2D CAD Design Board (Easel/Carbide style workpiece canvas)"
+              title="2D CAD Design Board"
             >
-              <span>🎨 2D Design Board</span>
+              <Palette size={15} />
             </button>
 
             <button
               onClick={() => onChangeViewMode('split')}
               style={{
-                background: workspaceViewMode === 'split' ? 'rgba(168, 85, 247, 0.22)' : 'rgba(30, 41, 59, 0.6)',
+                width: '30px',
+                height: '26px',
+                background: workspaceViewMode === 'split' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(30, 41, 59, 0.6)',
                 color: workspaceViewMode === 'split' ? '#c084fc' : '#94a3b8',
-                fontWeight: 700,
-                fontSize: '11px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
                 border: workspaceViewMode === 'split' ? '1px solid #c084fc' : '1px solid #334155',
                 borderRadius: '4px',
-                padding: '3px 8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
-              title="Split View: 2D Design Board on Left, 3D Machine Simulation on Right"
+              title="Split View: 2D Design Board & 3D Machine Simulation"
             >
-              <span>◫ Split 2D/3D</span>
+              <Columns2 size={15} />
             </button>
 
             <button
               onClick={() => onChangeViewMode('3d')}
               style={{
-                background: workspaceViewMode === '3d' ? 'rgba(56, 189, 248, 0.22)' : 'rgba(30, 41, 59, 0.6)',
+                width: '30px',
+                height: '26px',
+                background: workspaceViewMode === '3d' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(30, 41, 59, 0.6)',
                 color: workspaceViewMode === '3d' ? '#38bdf8' : '#94a3b8',
-                fontWeight: 700,
-                fontSize: '11px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
                 border: workspaceViewMode === '3d' ? '1px solid #38bdf8' : '1px solid #334155',
                 borderRadius: '4px',
-                padding: '3px 8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
               }}
-              title="Full 3D Machine & Toolpath Viewport"
+              title="3D Machine Viewport"
             >
-              <span>🧊 3D Machine</span>
+              <Box size={15} />
             </button>
           </div>
         )}
