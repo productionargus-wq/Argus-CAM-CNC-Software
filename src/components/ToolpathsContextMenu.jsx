@@ -115,6 +115,7 @@ export default function ToolpathsContextMenu({
   onOpenSetupSheet,
   onOpenPostModal,
   onOpenAFR,
+  onOpenWireframeModal,
   onOpenFiveAxisStudio,
   onOpenThreadStudio,
   onOpenLatheStudio,
@@ -146,10 +147,15 @@ export default function ToolpathsContextMenu({
       if (e.key === 'Escape') onClose();
     };
 
-    window.addEventListener('mousedown', handleOutsideClick);
-    window.addEventListener('keydown', handleKeyDown);
+    // Use a small timeout or click listener so mouseup/click finishes before outside-click logic
+    const timer = setTimeout(() => {
+      window.addEventListener('click', handleOutsideClick);
+      window.addEventListener('keydown', handleKeyDown);
+    }, 50);
+
     return () => {
-      window.removeEventListener('mousedown', handleOutsideClick);
+      clearTimeout(timer);
+      window.removeEventListener('click', handleOutsideClick);
       window.removeEventListener('keydown', handleKeyDown);
       if (submenuCloseTimerRef.current) clearTimeout(submenuCloseTimerRef.current);
     };
@@ -336,6 +342,10 @@ export default function ToolpathsContextMenu({
             <div
               style={{ position: 'relative' }}
               onMouseEnter={() => handleOpenLevel3('circle_tp')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenLevel3(activeLevel3 === 'circle_tp' ? null : 'circle_tp');
+              }}
             >
               <div className={`mcam-ctx-item ${activeLevel3 === 'circle_tp' ? 'is-active' : ''}`}>
                 <span>Circle toolpaths</span>
@@ -376,6 +386,7 @@ export default function ToolpathsContextMenu({
       <div
         className={`mcam-ctx-item ${activeSubmenu === 'wire' ? 'is-active' : ''}`}
         onMouseEnter={() => handleOpenSubmenu('wire')}
+        onClick={() => handleAction(() => onOpenWireframeModal?.('line'))}
       >
         <span>Wire toolpaths</span>
         <span className="mcam-ctx-arrow">▶</span>

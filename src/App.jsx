@@ -852,10 +852,12 @@ export default function App() {
   };
 
   const handleQuickAddOp = (strategy) => {
-    const nextId = operations.length + 1;
+    const nextId = operations.length > 0 ? Math.max(...operations.map((o) => o.id)) + 1 : 1;
     let newOp;
 
-    if (strategy === 'facing') {
+    const s = String(strategy || 'pocket').toLowerCase();
+
+    if (s === 'facing' || s === 'face') {
       newOp = {
         id: nextId,
         name: `Face Milling Pass ${nextId}`,
@@ -871,23 +873,71 @@ export default function App() {
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
-    } else if (strategy === 'pocket') {
+    } else if (s === 'contour' || s === 'wireframe_contour') {
       newOp = {
         id: nextId,
-        name: `Dynamic Pocket Pass ${nextId}`,
+        name: `2D Contour Profile ${nextId}`,
         toolId: 2,
         toolName: 'T2 - 8mm Endmill',
-        badgeClass: 'pocket',
-        badgeText: 'PK',
+        badgeClass: 'contour',
+        badgeText: 'CT',
         visible: true,
-        stepoverPct: 50,
-        stepdown: 4.0,
+        stepoverPct: 40,
+        stepdown: 3.0,
         totalDepth: 12.0,
-        stockToLeaveXY: 0.2,
+        stockToLeaveXY: 0.1,
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
-    } else if (strategy === 'waterline') {
+    } else if (s === 'drill' || s === 'drilling' || s === 'point') {
+      newOp = {
+        id: nextId,
+        name: `Deep Hole Peck Drill (G83) ${nextId}`,
+        toolId: 5,
+        toolName: 'T5 - 5mm Drill',
+        badgeClass: 'drill',
+        badgeText: 'DR',
+        visible: true,
+        stepoverPct: 0,
+        stepdown: 4.0,
+        totalDepth: 20.0,
+        stockToLeaveXY: 0.0,
+        stockToLeaveZ: 0.0,
+        rapidHeight: 10.0
+      };
+    } else if (s === 'engrave' || s === 'vcarve') {
+      newOp = {
+        id: nextId,
+        name: `Engraving & V-Carve ${nextId}`,
+        toolId: 4,
+        toolName: 'T4 - V-Bit Engraver',
+        badgeClass: 'engrave',
+        badgeText: 'EG',
+        visible: true,
+        stepoverPct: 15,
+        stepdown: 0.8,
+        totalDepth: 1.5,
+        stockToLeaveXY: 0.0,
+        stockToLeaveZ: 0.0,
+        rapidHeight: 10.0
+      };
+    } else if (s === 'parallel' || s === 'parallel_finish') {
+      newOp = {
+        id: nextId,
+        name: `3D Parallel Finishing Pass ${nextId}`,
+        toolId: 3,
+        toolName: 'T3 - 6mm Ballnose',
+        badgeClass: 'contour',
+        badgeText: 'PF',
+        visible: true,
+        stepoverPct: 12,
+        stepdown: 0.5,
+        totalDepth: 15.0,
+        stockToLeaveXY: 0.0,
+        stockToLeaveZ: 0.0,
+        rapidHeight: 15.0
+      };
+    } else if (s === 'waterline' || s === 'waterline_finish') {
       newOp = {
         id: nextId,
         name: `Waterline Finishing Pass ${nextId}`,
@@ -903,7 +953,7 @@ export default function App() {
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
-    } else if (strategy === 'swarf') {
+    } else if (s === 'swarf' || s === '5axis_swarf') {
       newOp = {
         id: nextId,
         name: `5-Axis Swarf Pass ${nextId}`,
@@ -919,26 +969,10 @@ export default function App() {
         stockToLeaveZ: 0.0,
         rapidHeight: 20.0
       };
-    } else if (strategy === 'drilling') {
+    } else if (s === 'adaptive' || s === 'optirough' || s === 'dynamic_mill') {
       newOp = {
         id: nextId,
-        name: `Deep Hole Peck Drill ${nextId}`,
-        toolId: 5,
-        toolName: 'T5 - 5mm Drill',
-        badgeClass: 'drill',
-        badgeText: 'DR',
-        visible: true,
-        stepoverPct: 0,
-        stepdown: 4.0,
-        totalDepth: 20.0,
-        stockToLeaveXY: 0.0,
-        stockToLeaveZ: 0.0,
-        rapidHeight: 10.0
-      };
-    } else if (strategy === 'adaptive') {
-      newOp = {
-        id: nextId,
-        name: `Adaptive Roughing Pass ${nextId}`,
+        name: `Adaptive OptiRough Pass ${nextId}`,
         toolId: 1,
         toolName: 'T1 - 10mm Endmill',
         badgeClass: 'adaptive',
@@ -951,7 +985,7 @@ export default function App() {
         stockToLeaveZ: 0.1,
         rapidHeight: 15.0
       };
-    } else if (strategy === 'chamfer') {
+    } else if (s === 'chamfer') {
       newOp = {
         id: nextId,
         name: `45-Deg Chamfer Deburr ${nextId}`,
@@ -967,7 +1001,7 @@ export default function App() {
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
-    } else if (strategy === 'rest' || strategy === 'rest_milling') {
+    } else if (s === 'rest' || s === 'rest_milling') {
       newOp = {
         id: nextId,
         name: `Rest Corner Pick ${nextId}`,
@@ -984,7 +1018,7 @@ export default function App() {
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
-    } else if (strategy === 'pencil') {
+    } else if (s === 'pencil') {
       newOp = {
         id: nextId,
         name: `3D Pencil Trace ${nextId}`,
@@ -1001,7 +1035,7 @@ export default function App() {
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
-    } else if (strategy === 'probe') {
+    } else if (s === 'probe') {
       newOp = {
         id: nextId,
         name: `Probing: Bore Centering ${nextId}`,
@@ -1019,11 +1053,29 @@ export default function App() {
         },
         rapidHeight: 15.0
       };
+    } else {
+      // Default: Dynamic Pocket Pass
+      newOp = {
+        id: nextId,
+        name: `Dynamic Pocket Pass ${nextId}`,
+        toolId: 2,
+        toolName: 'T2 - 8mm Endmill',
+        badgeClass: 'pocket',
+        badgeText: 'PK',
+        visible: true,
+        stepoverPct: 50,
+        stepdown: 4.0,
+        totalDepth: 12.0,
+        stockToLeaveXY: 0.2,
+        stockToLeaveZ: 0.0,
+        rapidHeight: 15.0
+      };
     }
 
     if (newOp) {
-      setOperations([...operations, newOp]);
+      setOperations((prev) => [...prev, newOp]);
       setActiveOpId(newOp.id);
+      showToast(`⚡ Generated Toolpath: ${newOp.name}`, 'success');
     }
   };
 
@@ -1801,7 +1853,7 @@ export default function App() {
           activeOpId={activeOpId}
           onSelectOp={setActiveOpId}
           onEditOp={handleEditOp}
-          onAddOp={() => handleQuickAddOp('pocket')}
+          onAddOp={handleQuickAddOp}
           onRegenerate={handleRegenerateAll}
           onOpenStockModal={() => setIsStockModalOpen(true)}
           onOpenAFR={() => setIsAFRModalOpen(true)}

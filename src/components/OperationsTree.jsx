@@ -970,6 +970,7 @@ export default function OperationsTree({
           onOpenSetupSheet={onOpenSetupSheet}
           onOpenPostModal={onOpenPostModal}
           onOpenAFR={onOpenAFR}
+          onOpenWireframeModal={onOpenWireframeModal}
           onOpenFiveAxisStudio={onOpenFiveAxisStudio}
           onOpenThreadStudio={onOpenThreadStudio}
           onOpenLatheStudio={onOpenLatheStudio}
