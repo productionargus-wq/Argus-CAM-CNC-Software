@@ -1,5 +1,101 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+// CSS injected once into document head for ultra-fast 120 FPS CSS-only hover
+const CONTEXT_MENU_STYLES = `
+  .mcam-ctx-menu {
+    position: fixed;
+    z-index: 99999;
+    background-color: #ffffff;
+    border: 1px solid #717b87;
+    box-shadow: 2px 4px 14px rgba(0, 0, 0, 0.25);
+    border-radius: 2px;
+    padding: 3px 0;
+    min-width: 215px;
+    user-select: none;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #0f172a;
+    font-size: 11px;
+    animation: mcamFadeIn 0.08s ease-out;
+  }
+
+  @keyframes mcamFadeIn {
+    from { opacity: 0.4; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .mcam-ctx-item {
+    padding: 3.5px 16px 3.5px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    background-color: transparent;
+    color: #0f172a;
+    position: relative;
+    white-space: nowrap;
+    transition: none; /* instant response */
+  }
+
+  .mcam-ctx-item:hover,
+  .mcam-ctx-item.is-active {
+    background-color: #3399ff !important;
+    color: #ffffff !important;
+  }
+
+  .mcam-ctx-item.is-disabled {
+    color: #94a3b8 !important;
+    cursor: default;
+    background-color: transparent !important;
+  }
+
+  .mcam-ctx-item:hover .mcam-ctx-shortcut,
+  .mcam-ctx-item.is-active .mcam-ctx-shortcut,
+  .mcam-ctx-item:hover .mcam-ctx-arrow,
+  .mcam-ctx-item.is-active .mcam-ctx-arrow {
+    color: #ffffff !important;
+  }
+
+  .mcam-ctx-shortcut {
+    font-size: 10px;
+    margin-left: 20px;
+    color: #64748b;
+  }
+
+  .mcam-ctx-arrow {
+    font-size: 8px;
+    margin-left: 12px;
+    color: #475569;
+  }
+
+  .mcam-ctx-sep {
+    height: 1px;
+    background-color: #e2e8f0;
+    margin: 3px 6px;
+  }
+
+  .mcam-ctx-sub {
+    position: absolute;
+    top: -4px;
+    background-color: #ffffff;
+    border: 1px solid #717b87;
+    box-shadow: 2px 4px 14px rgba(0, 0, 0, 0.25);
+    border-radius: 2px;
+    padding: 3px 0;
+    min-width: 205px;
+    z-index: 100000;
+  }
+`;
+
+let stylesInjected = false;
+function ensureStylesInjected() {
+  if (typeof document === 'undefined' || stylesInjected) return;
+  const styleEl = document.createElement('style');
+  styleEl.setAttribute('id', 'mcam-context-menu-styles');
+  styleEl.textContent = CONTEXT_MENU_STYLES;
+  document.head.appendChild(styleEl);
+  stylesInjected = true;
+}
+
 export default function ToolpathsContextMenu({
   x,
   y,
@@ -32,9 +128,12 @@ export default function ToolpathsContextMenu({
   onSortOps,
   onSelectAllOps
 }) {
-  const [activeSubmenu, setActiveSubmenu] = useState(null); // 'mill' | 'lathe' | 'wire' | 'router' | 'edit_selected' | 'groups' | 'sort'
-  const [activeLevel3, setActiveLevel3] = useState(null); // 'surface_finish' | 'surface_rough' | 'high_speed_2d' | 'multiaxis' | 'circle_tp'
+  ensureStylesInjected();
+
+  const [activeSubmenu, setActiveSubmenu] = useState(null);
+  const [activeLevel3, setActiveLevel3] = useState(null);
   const menuRef = useRef(null);
+  const submenuCloseTimerRef = useRef(null);
 
   // Close when clicking outside or pressing Escape
   useEffect(() => {
@@ -52,357 +151,415 @@ export default function ToolpathsContextMenu({
     return () => {
       window.removeEventListener('mousedown', handleOutsideClick);
       window.removeEventListener('keydown', handleKeyDown);
+      if (submenuCloseTimerRef.current) clearTimeout(submenuCloseTimerRef.current);
     };
   }, [onClose]);
 
   // Adjust menu position so it stays inside window bounds
-  const menuWidth = 230;
-  const menuHeight = 520;
-  const screenW = window.innerWidth;
-  const screenH = window.innerHeight;
+  const menuWidth = 220;
+  const menuHeight = 540;
+  const screenW = typeof window !== 'undefined' ? window.innerWidth : 1920;
+  const screenH = typeof window !== 'undefined' ? window.innerHeight : 1080;
 
   const posX = x + menuWidth > screenW ? Math.max(10, x - menuWidth) : x;
   const posY = y + menuHeight > screenH ? Math.max(10, screenH - menuHeight - 10) : y;
+
+  // Decide if submenus should open to the right (default) or to the left (if near right viewport edge)
+  const openSubToLeft = posX + menuWidth + 210 > screenW;
+  const subStyle = openSubToLeft ? { right: '100%' } : { left: '100%' };
 
   const handleAction = (callback) => {
     if (callback) callback();
     onClose();
   };
 
-  // Reusable Menu Item Component with Mastercam blue hover highlight
-  const MenuItem = ({ label, shortcut, hasSubmenu, active, onMouseEnter, onClick, disabled = false }) => {
-    const [hovered, setHovered] = useState(false);
-    const isHighlighted = hovered || active;
-
-    return (
-      <div
-        onMouseEnter={() => {
-          setHovered(true);
-          if (onMouseEnter) onMouseEnter();
-        }}
-        onMouseLeave={() => setHovered(false)}
-        onClick={() => {
-          if (!disabled && onClick) onClick();
-        }}
-        style={{
-          padding: '3px 18px 3px 22px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          cursor: disabled ? 'default' : 'pointer',
-          backgroundColor: isHighlighted ? '#3399ff' : 'transparent',
-          color: disabled ? '#94a3b8' : (isHighlighted ? '#ffffff' : '#0f172a'),
-          fontSize: '11px',
-          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-          position: 'relative',
-          userSelect: 'none',
-          whiteSpace: 'nowrap'
-        }}
-      >
-        <span>{label}</span>
-        {shortcut && (
-          <span style={{ fontSize: '10px', marginLeft: '20px', color: isHighlighted ? '#ffffff' : '#64748b' }}>
-            {shortcut}
-          </span>
-        )}
-        {hasSubmenu && (
-          <span style={{ fontSize: '9px', marginLeft: '12px', color: isHighlighted ? '#ffffff' : '#475569' }}>
-            ▶
-          </span>
-        )}
-      </div>
-    );
+  const handleOpenSubmenu = (menuName) => {
+    if (submenuCloseTimerRef.current) {
+      clearTimeout(submenuCloseTimerRef.current);
+      submenuCloseTimerRef.current = null;
+    }
+    setActiveSubmenu(menuName);
+    setActiveLevel3(null);
   };
 
-  const Separator = () => (
-    <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '3px 6px' }} />
-  );
+  const handleOpenLevel3 = (level3Name) => {
+    if (submenuCloseTimerRef.current) {
+      clearTimeout(submenuCloseTimerRef.current);
+      submenuCloseTimerRef.current = null;
+    }
+    setActiveLevel3(level3Name);
+  };
+
+  const handleScheduleSubmenuClose = () => {
+    if (submenuCloseTimerRef.current) clearTimeout(submenuCloseTimerRef.current);
+    submenuCloseTimerRef.current = setTimeout(() => {
+      setActiveSubmenu(null);
+      setActiveLevel3(null);
+    }, 180);
+  };
+
+  const handleCancelSubmenuClose = () => {
+    if (submenuCloseTimerRef.current) {
+      clearTimeout(submenuCloseTimerRef.current);
+      submenuCloseTimerRef.current = null;
+    }
+  };
 
   return (
     <div
       ref={menuRef}
-      style={{
-        position: 'fixed',
-        left: `${posX}px`,
-        top: `${posY}px`,
-        zIndex: 99999,
-        backgroundColor: '#ffffff',
-        border: '1px solid #94a3b8',
-        boxShadow: '2px 4px 16px rgba(0,0,0,0.22)',
-        borderRadius: '2px',
-        padding: '3px 0',
-        minWidth: '220px',
-        userSelect: 'none'
-      }}
+      className="mcam-ctx-menu"
+      style={{ left: `${posX}px`, top: `${posY}px` }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       {/* 1. Mill toolpaths > */}
-      <div style={{ position: 'relative' }}>
-        <MenuItem
-          label="Mill toolpaths"
-          hasSubmenu
-          active={activeSubmenu === 'mill'}
-          onMouseEnter={() => {
-            setActiveSubmenu('mill');
-            setActiveLevel3(null);
-          }}
-        />
+      <div
+        style={{ position: 'relative' }}
+        onMouseEnter={() => handleOpenSubmenu('mill')}
+        onMouseLeave={handleScheduleSubmenuClose}
+      >
+        <div className={`mcam-ctx-item ${activeSubmenu === 'mill' ? 'is-active' : ''}`}>
+          <span>Mill toolpaths</span>
+          <span className="mcam-ctx-arrow">▶</span>
+        </div>
 
         {/* ================= LEVEL 2 CASCADE MENU: Mill toolpaths ================= */}
         {activeSubmenu === 'mill' && (
           <div
-            style={{
-              position: 'absolute',
-              left: '100%',
-              top: '-3px',
-              backgroundColor: '#ffffff',
-              border: '1px solid #94a3b8',
-              boxShadow: '2px 4px 16px rgba(0,0,0,0.22)',
-              borderRadius: '2px',
-              padding: '3px 0',
-              minWidth: '210px',
-              zIndex: 100000,
-              maxHeight: '90vh',
-              overflowY: 'auto'
-            }}
+            className="mcam-ctx-sub"
+            style={{ ...subStyle, maxHeight: '90vh', overflowY: 'auto' }}
+            onMouseEnter={handleCancelSubmenuClose}
+            onMouseLeave={handleScheduleSubmenuClose}
           >
-            <MenuItem label="New" onClick={() => handleAction(() => onAddOperation?.('pocket'))} />
-            <Separator />
-            <MenuItem label="Contour" onClick={() => handleAction(() => onAddOperation?.('contour'))} />
-            <MenuItem label="Drill" onClick={() => handleAction(() => onAddOperation?.('drill'))} />
-            <MenuItem label="Pocket" onClick={() => handleAction(() => onAddOperation?.('pocket'))} />
-            <MenuItem label="Face" onClick={() => handleAction(() => onAddOperation?.('facing'))} />
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pocket'))}>New</div>
+            <div className="mcam-ctx-sep" />
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('contour'))}>Contour</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('drill'))}>Drill</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pocket'))}>Pocket</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('facing'))}>Face</div>
 
             {/* 2D High Speed > */}
-            <div style={{ position: 'relative' }}>
-              <MenuItem
-                label="2D High Speed"
-                hasSubmenu
-                active={activeLevel3 === 'high_speed_2d'}
-                onMouseEnter={() => setActiveLevel3('high_speed_2d')}
-              />
+            <div
+              style={{ position: 'relative' }}
+              onMouseEnter={() => handleOpenLevel3('high_speed_2d')}
+            >
+              <div className={`mcam-ctx-item ${activeLevel3 === 'high_speed_2d' ? 'is-active' : ''}`}>
+                <span>2D High Speed</span>
+                <span className="mcam-ctx-arrow">▶</span>
+              </div>
               {activeLevel3 === 'high_speed_2d' && (
-                <div style={{ position: 'absolute', left: '100%', top: '-3px', backgroundColor: '#ffffff', border: '1px solid #94a3b8', boxShadow: '2px 4px 16px rgba(0,0,0,0.22)', borderRadius: '2px', padding: '3px 0', minWidth: '160px' }}>
-                  <MenuItem label="Dynamic Mill" onClick={() => handleAction(() => onAddOperation?.('adaptive'))} />
-                  <MenuItem label="Peel Mill" onClick={() => handleAction(() => onAddOperation?.('contour'))} />
-                  <MenuItem label="Blend Mill" onClick={() => handleAction(() => onAddOperation?.('pocket'))} />
+                <div className="mcam-ctx-sub" style={{ ...subStyle, minWidth: '160px' }}>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('adaptive'))}>Dynamic Mill</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('contour'))}>Peel Mill</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pocket'))}>Blend Mill</div>
                 </div>
               )}
             </div>
 
-            <MenuItem label="Engrave" onClick={() => handleAction(() => onAddOperation?.('engrave'))} />
-            <Separator />
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('engrave'))}>Engrave</div>
+            <div className="mcam-ctx-sep" />
 
             {/* Surface rough > */}
-            <div style={{ position: 'relative' }}>
-              <MenuItem
-                label="Surface rough"
-                hasSubmenu
-                active={activeLevel3 === 'surface_rough'}
-                onMouseEnter={() => setActiveLevel3('surface_rough')}
-              />
+            <div
+              style={{ position: 'relative' }}
+              onMouseEnter={() => handleOpenLevel3('surface_rough')}
+            >
+              <div className={`mcam-ctx-item ${activeLevel3 === 'surface_rough' ? 'is-active' : ''}`}>
+                <span>Surface rough</span>
+                <span className="mcam-ctx-arrow">▶</span>
+              </div>
               {activeLevel3 === 'surface_rough' && (
-                <div style={{ position: 'absolute', left: '100%', top: '-3px', backgroundColor: '#ffffff', border: '1px solid #94a3b8', boxShadow: '2px 4px 16px rgba(0,0,0,0.22)', borderRadius: '2px', padding: '3px 0', minWidth: '170px' }}>
-                  <MenuItem label="OptiRough" onClick={() => handleAction(() => onAddOperation?.('adaptive'))} />
-                  <MenuItem label="Pocket Rough" onClick={() => handleAction(() => onAddOperation?.('pocket'))} />
-                  <MenuItem label="Parallel Rough" onClick={() => handleAction(() => onAddOperation?.('parallel'))} />
-                  <MenuItem label="Waterline Rough" onClick={() => handleAction(() => onAddOperation?.('waterline'))} />
+                <div className="mcam-ctx-sub" style={{ ...subStyle, minWidth: '170px' }}>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('adaptive'))}>OptiRough</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pocket'))}>Pocket Rough</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Parallel Rough</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('waterline'))}>Waterline Rough</div>
                 </div>
               )}
             </div>
 
             {/* Surface finish > (MATCHING USER SCREENSHOT EXACTLY!) */}
-            <div style={{ position: 'relative' }}>
-              <MenuItem
-                label="Surface finish"
-                hasSubmenu
-                active={activeLevel3 === 'surface_finish'}
-                onMouseEnter={() => setActiveLevel3('surface_finish')}
-              />
+            <div
+              style={{ position: 'relative' }}
+              onMouseEnter={() => handleOpenLevel3('surface_finish')}
+            >
+              <div className={`mcam-ctx-item ${activeLevel3 === 'surface_finish' ? 'is-active' : ''}`}>
+                <span>Surface finish</span>
+                <span className="mcam-ctx-arrow">▶</span>
+              </div>
               {activeLevel3 === 'surface_finish' && (
-                <div style={{ position: 'absolute', left: '100%', top: '-3px', backgroundColor: '#ffffff', border: '1px solid #94a3b8', boxShadow: '2px 4px 16px rgba(0,0,0,0.22)', borderRadius: '2px', padding: '3px 0', minWidth: '170px' }}>
-                  <MenuItem label="Parallel Finish" onClick={() => handleAction(() => onAddOperation?.('parallel'))} />
-                  <MenuItem label="Waterline Finish" onClick={() => handleAction(() => onAddOperation?.('waterline'))} />
-                  <MenuItem label="Equal Scallop" onClick={() => handleAction(() => onAddOperation?.('pencil'))} />
-                  <MenuItem label="Radial Finish" onClick={() => handleAction(() => onAddOperation?.('parallel'))} />
-                  <MenuItem label="Spiral Finish" onClick={() => handleAction(() => onAddOperation?.('pocket'))} />
-                  <MenuItem label="Pencil Tracing" onClick={() => handleAction(() => onAddOperation?.('pencil'))} />
+                <div className="mcam-ctx-sub" style={{ ...subStyle, minWidth: '170px' }}>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Parallel Finish</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('waterline'))}>Waterline Finish</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pencil'))}>Equal Scallop</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Radial Finish</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pocket'))}>Spiral Finish</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pencil'))}>Pencil Tracing</div>
                 </div>
               )}
             </div>
 
-            <MenuItem label="Surface high speed toolpath" hasSubmenu onClick={() => handleAction(() => onOpenHSMFilter?.())} />
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenHSMFilter?.())}>Surface high speed toolpath</div>
 
             {/* Multiaxis > */}
-            <div style={{ position: 'relative' }}>
-              <MenuItem
-                label="Multiaxis"
-                hasSubmenu
-                active={activeLevel3 === 'multiaxis'}
-                onMouseEnter={() => setActiveLevel3('multiaxis')}
-              />
+            <div
+              style={{ position: 'relative' }}
+              onMouseEnter={() => handleOpenLevel3('multiaxis')}
+            >
+              <div className={`mcam-ctx-item ${activeLevel3 === 'multiaxis' ? 'is-active' : ''}`}>
+                <span>Multiaxis</span>
+                <span className="mcam-ctx-arrow">▶</span>
+              </div>
               {activeLevel3 === 'multiaxis' && (
-                <div style={{ position: 'absolute', left: '100%', top: '-3px', backgroundColor: '#ffffff', border: '1px solid #94a3b8', boxShadow: '2px 4px 16px rgba(0,0,0,0.22)', borderRadius: '2px', padding: '3px 0', minWidth: '170px' }}>
-                  <MenuItem label="5-Axis Swarf Milling" onClick={() => handleAction(() => onAddOperation?.('swarf'))} />
-                  <MenuItem label="5-Axis Morph Between 2 Curves" onClick={() => handleAction(() => onOpenFiveAxisStudio?.())} />
-                  <MenuItem label="5-Axis Parallel" onClick={() => handleAction(() => onOpenFiveAxisStudio?.())} />
-                  <MenuItem label="Rotary 4-Axis" onClick={() => handleAction(() => onOpenFiveAxisStudio?.())} />
+                <div className="mcam-ctx-sub" style={{ ...subStyle, minWidth: '170px' }}>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('swarf'))}>5-Axis Swarf Milling</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenFiveAxisStudio?.())}>5-Axis Morph Between 2 Curves</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenFiveAxisStudio?.())}>5-Axis Parallel</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenFiveAxisStudio?.())}>Rotary 4-Axis</div>
                 </div>
               )}
             </div>
 
-            <MenuItem label="Multiaxis Link..." onClick={() => handleAction(() => onOpenFiveAxisStudio?.())} />
-            <Separator />
-            <MenuItem label="FBM Drill" onClick={() => handleAction(() => onOpenAFR?.())} />
-            <MenuItem label="FBM Mill" onClick={() => handleAction(() => onOpenAFR?.())} />
-            <Separator />
-            <MenuItem label="Stock Model" onClick={() => handleAction(() => onOpenStockModal?.())} />
-            <MenuItem label="View Stock Model" onClick={() => handleAction(() => onOpenStockModal?.())} />
-            <MenuItem label="Stock Model Export to STL" onClick={() => handleAction(() => onExportStockSTL?.())} />
-            <MenuItem label="Stock Model Convert to PMesh" onClick={() => handleAction(() => onOpenStockModal?.())} />
-            <Separator />
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenFiveAxisStudio?.())}>Multiaxis Link...</div>
+            <div className="mcam-ctx-sep" />
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenAFR?.())}>FBM Drill</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenAFR?.())}>FBM Mill</div>
+            <div className="mcam-ctx-sep" />
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenStockModal?.())}>Stock Model</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenStockModal?.())}>View Stock Model</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onExportStockSTL?.())}>Stock Model Export to STL</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenStockModal?.())}>Stock Model Convert to PMesh</div>
+            <div className="mcam-ctx-sep" />
 
             {/* Circle toolpaths > */}
-            <div style={{ position: 'relative' }}>
-              <MenuItem
-                label="Circle toolpaths"
-                hasSubmenu
-                active={activeLevel3 === 'circle_tp'}
-                onMouseEnter={() => setActiveLevel3('circle_tp')}
-              />
+            <div
+              style={{ position: 'relative' }}
+              onMouseEnter={() => handleOpenLevel3('circle_tp')}
+            >
+              <div className={`mcam-ctx-item ${activeLevel3 === 'circle_tp' ? 'is-active' : ''}`}>
+                <span>Circle toolpaths</span>
+                <span className="mcam-ctx-arrow">▶</span>
+              </div>
               {activeLevel3 === 'circle_tp' && (
-                <div style={{ position: 'absolute', left: '100%', top: '-3px', backgroundColor: '#ffffff', border: '1px solid #94a3b8', boxShadow: '2px 4px 16px rgba(0,0,0,0.22)', borderRadius: '2px', padding: '3px 0', minWidth: '160px' }}>
-                  <MenuItem label="Circle Mill" onClick={() => handleAction(() => onAddOperation?.('pocket'))} />
-                  <MenuItem label="Thread Mill" onClick={() => handleAction(() => onOpenThreadStudio?.())} />
-                  <MenuItem label="Helix Bore" onClick={() => handleAction(() => onAddOperation?.('drill'))} />
+                <div className="mcam-ctx-sub" style={{ ...subStyle, minWidth: '160px' }}>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pocket'))}>Circle Mill</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenThreadStudio?.())}>Thread Mill</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('drill'))}>Helix Bore</div>
                 </div>
               )}
             </div>
 
-            <MenuItem label="Transform" onClick={() => handleAction(() => onOpenTransformModal?.())} />
-            <MenuItem label="Nest" onClick={() => handleAction(() => onOpenNestingStudio?.())} />
-            <MenuItem label="Manual entry" onClick={() => handleAction(() => onOpenPostModal?.())} />
-            <MenuItem label="Point" onClick={() => handleAction(() => onAddOperation?.('drill'))} />
-            <MenuItem label="Trim" onClick={() => handleAction(() => onOpenHSMFilter?.())} />
-            <MenuItem label="Wire frame" hasSubmenu onClick={() => handleAction(() => onAddOperation?.('contour'))} />
-            <Separator />
-            <MenuItem label="Probe" onClick={() => handleAction(() => onOpenProbingStudio?.())} />
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenTransformModal?.())}>Transform</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenNestingStudio?.())}>Nest</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenPostModal?.())}>Manual entry</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('drill'))}>Point</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenHSMFilter?.())}>Trim</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('contour'))}>Wire frame</div>
+            <div className="mcam-ctx-sep" />
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenProbingStudio?.())}>Probe</div>
           </div>
         )}
       </div>
 
       {/* 2. Lathe toolpaths > */}
-      <MenuItem
-        label="Lathe toolpaths"
-        hasSubmenu
-        active={activeSubmenu === 'lathe'}
-        onMouseEnter={() => { setActiveSubmenu('lathe'); setActiveLevel3(null); }}
+      <div
+        className={`mcam-ctx-item ${activeSubmenu === 'lathe' ? 'is-active' : ''}`}
+        onMouseEnter={() => handleOpenSubmenu('lathe')}
         onClick={() => handleAction(() => onOpenLatheStudio?.())}
-      />
+      >
+        <span>Lathe toolpaths</span>
+        <span className="mcam-ctx-arrow">▶</span>
+      </div>
 
       {/* 3. Wire toolpaths > */}
-      <MenuItem
-        label="Wire toolpaths"
-        hasSubmenu
-        active={activeSubmenu === 'wire'}
-        onMouseEnter={() => { setActiveSubmenu('wire'); setActiveLevel3(null); }}
-      />
+      <div
+        className={`mcam-ctx-item ${activeSubmenu === 'wire' ? 'is-active' : ''}`}
+        onMouseEnter={() => handleOpenSubmenu('wire')}
+      >
+        <span>Wire toolpaths</span>
+        <span className="mcam-ctx-arrow">▶</span>
+      </div>
 
       {/* 4. Router toolpaths > */}
-      <MenuItem
-        label="Router toolpaths"
-        hasSubmenu
-        active={activeSubmenu === 'router'}
-        onMouseEnter={() => { setActiveSubmenu('router'); setActiveLevel3(null); }}
+      <div
+        className={`mcam-ctx-item ${activeSubmenu === 'router' ? 'is-active' : ''}`}
+        onMouseEnter={() => handleOpenSubmenu('router')}
         onClick={() => handleAction(() => onOpenNestingStudio?.())}
-      />
+      >
+        <span>Router toolpaths</span>
+        <span className="mcam-ctx-arrow">▶</span>
+      </div>
 
       {/* 5. Edit selected operations > */}
-      <div style={{ position: 'relative' }}>
-        <MenuItem
-          label="Edit selected operations"
-          hasSubmenu
-          active={activeSubmenu === 'edit_selected'}
-          onMouseEnter={() => { setActiveSubmenu('edit_selected'); setActiveLevel3(null); }}
-        />
+      <div
+        style={{ position: 'relative' }}
+        onMouseEnter={() => handleOpenSubmenu('edit_selected')}
+        onMouseLeave={handleScheduleSubmenuClose}
+      >
+        <div className={`mcam-ctx-item ${activeSubmenu === 'edit_selected' ? 'is-active' : ''}`}>
+          <span>Edit selected operations</span>
+          <span className="mcam-ctx-arrow">▶</span>
+        </div>
         {activeSubmenu === 'edit_selected' && (
-          <div style={{ position: 'absolute', left: '100%', top: '-3px', backgroundColor: '#ffffff', border: '1px solid #94a3b8', boxShadow: '2px 4px 16px rgba(0,0,0,0.22)', borderRadius: '2px', padding: '3px 0', minWidth: '180px' }}>
-            <MenuItem label="Edit Parameters..." onClick={() => handleAction(() => targetOp && onEditOp?.(targetOp))} />
-            <MenuItem label="Change Tool..." onClick={() => handleAction(() => onOpenToolManager?.())} />
-            <MenuItem label="Lock Operation" onClick={() => handleAction(() => targetOp && onToggleLockOp?.(targetOp.id))} />
-            <MenuItem label="Ghost Operation" onClick={() => handleAction(() => targetOp && onToggleGhostOp?.(targetOp.id))} />
-            <MenuItem label="Post Process (G1)" onClick={() => handleAction(() => onOpenPostModal?.())} />
+          <div
+            className="mcam-ctx-sub"
+            style={{ ...subStyle, minWidth: '180px' }}
+            onMouseEnter={handleCancelSubmenuClose}
+            onMouseLeave={handleScheduleSubmenuClose}
+          >
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => targetOp && onEditOp?.(targetOp))}>Edit Parameters...</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenToolManager?.())}>Change Tool...</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => targetOp && onToggleLockOp?.(targetOp.id))}>Lock Operation</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => targetOp && onToggleGhostOp?.(targetOp.id))}>Ghost Operation</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenPostModal?.())}>Post Process (G1)</div>
           </div>
         )}
       </div>
 
       {/* 6. Groups > */}
-      <div style={{ position: 'relative' }}>
-        <MenuItem
-          label="Groups"
-          hasSubmenu
-          active={activeSubmenu === 'groups'}
-          onMouseEnter={() => { setActiveSubmenu('groups'); setActiveLevel3(null); }}
-        />
+      <div
+        style={{ position: 'relative' }}
+        onMouseEnter={() => handleOpenSubmenu('groups')}
+        onMouseLeave={handleScheduleSubmenuClose}
+      >
+        <div className={`mcam-ctx-item ${activeSubmenu === 'groups' ? 'is-active' : ''}`}>
+          <span>Groups</span>
+          <span className="mcam-ctx-arrow">▶</span>
+        </div>
         {activeSubmenu === 'groups' && (
-          <div style={{ position: 'absolute', left: '100%', top: '-3px', backgroundColor: '#ffffff', border: '1px solid #94a3b8', boxShadow: '2px 4px 16px rgba(0,0,0,0.22)', borderRadius: '2px', padding: '3px 0', minWidth: '170px' }}>
-            <MenuItem label="New Machine Group" onClick={() => handleAction(() => onAddOperation?.('facing'))} />
-            <MenuItem label="New Toolpath Group" onClick={() => handleAction(() => onAddOperation?.('pocket'))} />
+          <div
+            className="mcam-ctx-sub"
+            style={{ ...subStyle, minWidth: '170px' }}
+            onMouseEnter={handleCancelSubmenuClose}
+            onMouseLeave={handleScheduleSubmenuClose}
+          >
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('facing'))}>New Machine Group</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pocket'))}>New Toolpath Group</div>
           </div>
         )}
       </div>
 
-      <Separator />
+      <div className="mcam-ctx-sep" />
 
       {/* Clipboard actions */}
-      <MenuItem label="Cut" shortcut="Ctrl+X" onClick={() => handleAction(() => targetOp && onCutOp?.(targetOp))} disabled={!targetOp} />
-      <MenuItem label="Copy" shortcut="Ctrl+C" onClick={() => handleAction(() => targetOp && onCopyOp?.(targetOp))} disabled={!targetOp} />
-      <MenuItem label="Paste" shortcut="Ctrl+V" onClick={() => handleAction(() => onPasteOp?.())} disabled={!canPaste} />
-      <MenuItem label="Delete" shortcut="Del" onClick={() => handleAction(() => targetOp && onDeleteOp?.(targetOp.id))} disabled={!targetOp} />
-      <MenuItem label="Undelete" onClick={() => handleAction(() => onPasteOp?.())} disabled={!canPaste} />
-      <MenuItem label="Undo" hasSubmenu shortcut="Ctrl+Z" />
+      <div
+        className={`mcam-ctx-item ${!targetOp ? 'is-disabled' : ''}`}
+        onClick={() => { if (targetOp) handleAction(() => onCutOp?.(targetOp)); }}
+      >
+        <span>Cut</span>
+        <span className="mcam-ctx-shortcut">Ctrl+X</span>
+      </div>
 
-      <Separator />
+      <div
+        className={`mcam-ctx-item ${!targetOp ? 'is-disabled' : ''}`}
+        onClick={() => { if (targetOp) handleAction(() => onCopyOp?.(targetOp)); }}
+      >
+        <span>Copy</span>
+        <span className="mcam-ctx-shortcut">Ctrl+C</span>
+      </div>
+
+      <div
+        className={`mcam-ctx-item ${!canPaste ? 'is-disabled' : ''}`}
+        onClick={() => { if (canPaste) handleAction(() => onPasteOp?.()); }}
+      >
+        <span>Paste</span>
+        <span className="mcam-ctx-shortcut">Ctrl+V</span>
+      </div>
+
+      <div
+        className={`mcam-ctx-item ${!targetOp ? 'is-disabled' : ''}`}
+        onClick={() => { if (targetOp) handleAction(() => onDeleteOp?.(targetOp.id)); }}
+      >
+        <span>Delete</span>
+        <span className="mcam-ctx-shortcut">Del</span>
+      </div>
+
+      <div
+        className={`mcam-ctx-item ${!canPaste ? 'is-disabled' : ''}`}
+        onClick={() => { if (canPaste) handleAction(() => onPasteOp?.()); }}
+      >
+        <span>Undelete</span>
+      </div>
+
+      <div className="mcam-ctx-item">
+        <span>Undo</span>
+        <span className="mcam-ctx-shortcut">Ctrl+Z</span>
+      </div>
+
+      <div className="mcam-ctx-sep" />
 
       {/* Tree controls */}
-      <MenuItem label="Expand" onClick={() => handleAction(() => onExpandAll?.())} />
-      <MenuItem label="Collapse" onClick={() => handleAction(() => onCollapseAll?.())} />
-      <MenuItem label="Doc file..." onClick={() => handleAction(() => onOpenSetupSheet?.())} />
-      <MenuItem label="Select..." onClick={() => handleAction(() => onSelectAllOps?.())} />
+      <div className="mcam-ctx-item" onClick={() => handleAction(() => onExpandAll?.())}>
+        <span>Expand</span>
+      </div>
+
+      <div className="mcam-ctx-item" onClick={() => handleAction(() => onCollapseAll?.())}>
+        <span>Collapse</span>
+      </div>
+
+      <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSetupSheet?.())}>
+        <span>Doc file...</span>
+      </div>
+
+      <div className="mcam-ctx-item" onClick={() => handleAction(() => onSelectAllOps?.())}>
+        <span>Select...</span>
+      </div>
 
       {/* Sort > */}
-      <div style={{ position: 'relative' }}>
-        <MenuItem
-          label="Sort"
-          hasSubmenu
-          active={activeSubmenu === 'sort'}
-          onMouseEnter={() => { setActiveSubmenu('sort'); setActiveLevel3(null); }}
-        />
+      <div
+        style={{ position: 'relative' }}
+        onMouseEnter={() => handleOpenSubmenu('sort')}
+        onMouseLeave={handleScheduleSubmenuClose}
+      >
+        <div className={`mcam-ctx-item ${activeSubmenu === 'sort' ? 'is-active' : ''}`}>
+          <span>Sort</span>
+          <span className="mcam-ctx-arrow">▶</span>
+        </div>
         {activeSubmenu === 'sort' && (
-          <div style={{ position: 'absolute', left: '100%', top: '-3px', backgroundColor: '#ffffff', border: '1px solid #94a3b8', boxShadow: '2px 4px 16px rgba(0,0,0,0.22)', borderRadius: '2px', padding: '3px 0', minWidth: '170px' }}>
-            <MenuItem label="Sort by Tool Number" onClick={() => handleAction(() => onSortOps?.('tool'))} />
-            <MenuItem label="Sort by Operation Type" onClick={() => handleAction(() => onSortOps?.('type'))} />
+          <div
+            className="mcam-ctx-sub"
+            style={{ ...subStyle, minWidth: '170px' }}
+            onMouseEnter={handleCancelSubmenuClose}
+            onMouseLeave={handleScheduleSubmenuClose}
+          >
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onSortOps?.('tool'))}>Sort by Tool Number</div>
+            <div className="mcam-ctx-item" onClick={() => handleAction(() => onSortOps?.('type'))}>Sort by Operation Type</div>
           </div>
         )}
       </div>
 
-      <Separator />
+      <div className="mcam-ctx-sep" />
 
       {/* File I/O */}
-      <MenuItem label="Import..." onClick={() => handleAction(() => onOpenPostModal?.())} />
-      <MenuItem label="Export..." onClick={() => handleAction(() => onExportStockSTL?.())} />
-      <MenuItem label="Batch..." onClick={() => handleAction(() => onOpenPostModal?.())} />
+      <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenPostModal?.())}>
+        <span>Import...</span>
+      </div>
+      <div className="mcam-ctx-item" onClick={() => handleAction(() => onExportStockSTL?.())}>
+        <span>Export...</span>
+      </div>
+      <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenPostModal?.())}>
+        <span>Batch...</span>
+      </div>
 
-      <Separator />
+      <div className="mcam-ctx-sep" />
 
       {/* Utilities */}
-      <MenuItem label="Display options..." onClick={() => handleAction(() => onOpenHSMFilter?.())} />
-      <MenuItem label="Setup sheet..." onClick={() => handleAction(() => onOpenSetupSheet?.())} />
-      <MenuItem label="Tool list..." onClick={() => handleAction(() => onOpenToolManager?.())} />
+      <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenHSMFilter?.())}>
+        <span>Display options...</span>
+      </div>
+      <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSetupSheet?.())}>
+        <span>Setup sheet...</span>
+      </div>
+      <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenToolManager?.())}>
+        <span>Tool list...</span>
+      </div>
 
-      <Separator />
+      <div className="mcam-ctx-sep" />
 
-      <MenuItem label="Toolpath Editor" onClick={() => handleAction(() => onOpenHSMFilter?.())} />
+      <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenHSMFilter?.())}>
+        <span>Toolpath Editor</span>
+      </div>
     </div>
   );
 }
-
