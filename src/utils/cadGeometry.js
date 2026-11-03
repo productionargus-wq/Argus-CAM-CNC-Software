@@ -120,6 +120,159 @@ export function createMoldCoreGeometry() {
 }
 
 /**
+ * Creates the Mastercam "Base Structure-ALU" turned & milled multi-body CAD part (Image 2)
+ * Features purple cylindrical flange with radial holes, blue sculpted body, and yellow toolpath passes
+ */
+export function createMastercamBaseStructureALU() {
+  const group = new THREE.Group();
+  group.name = "Base Structure-ALU.mcam";
+
+  // 1. Purple Cylindrical Flange Boss (Right Section)
+  const purpleMat = new THREE.MeshStandardMaterial({
+    color: 0xc026d3,
+    roughness: 0.25,
+    metalness: 0.45
+  });
+
+  // Hollow turned cylinder
+  const cylOuterR = 34;
+  const cylInnerR = 25;
+  const cylLength = 65;
+
+  const cylGeom = new THREE.CylinderGeometry(cylOuterR, cylOuterR, cylLength, 48, 1, true);
+  cylGeom.rotateZ(Math.PI / 2);
+  const cylMesh = new THREE.Mesh(cylGeom, purpleMat);
+  cylMesh.position.set(60, 20, 0);
+  group.add(cylMesh);
+
+  // Inner bore wall
+  const boreGeom = new THREE.CylinderGeometry(cylInnerR, cylInnerR, cylLength + 0.5, 48, 1, true);
+  boreGeom.rotateZ(Math.PI / 2);
+  const boreMat = new THREE.MeshStandardMaterial({ color: 0x86198f, roughness: 0.35, metalness: 0.5, side: THREE.BackSide });
+  const boreMesh = new THREE.Mesh(boreGeom, boreMat);
+  boreMesh.position.set(60, 20, 0);
+  group.add(boreMesh);
+
+  // End cap rim ring
+  const rimShape = new THREE.Shape();
+  rimShape.absarc(0, 0, cylOuterR, 0, Math.PI * 2, false);
+  const holePath = new THREE.Path();
+  holePath.absarc(0, 0, cylInnerR, 0, Math.PI * 2, true);
+  rimShape.holes.push(holePath);
+
+  const rimGeom = new THREE.ShapeGeometry(rimShape);
+  rimGeom.rotateY(Math.PI / 2);
+  const rimMesh = new THREE.Mesh(rimGeom, purpleMat);
+  rimMesh.position.set(60 + cylLength / 2, 20, 0);
+  group.add(rimMesh);
+
+  // Radial drilled holes around the purple boss
+  const holeMat = new THREE.MeshBasicMaterial({ color: 0x1e1b4b });
+  for (let h = 0; h < 8; h++) {
+    const ang = (h / 8) * Math.PI * 2;
+    const holeCyl = new THREE.CylinderGeometry(2.5, 2.5, 6, 16);
+    const hm = new THREE.Mesh(holeCyl, holeMat);
+    hm.position.set(45 + (h % 2) * 15, 20 + Math.sin(ang) * (cylOuterR - 1), Math.cos(ang) * (cylOuterR - 1));
+    hm.rotation.x = ang;
+    group.add(hm);
+  }
+
+  // Edge wireframe for purple section
+  const purpleEdges = new THREE.EdgesGeometry(new THREE.CylinderGeometry(cylOuterR, cylOuterR, cylLength, 48), 25);
+  purpleEdges.rotateZ(Math.PI / 2);
+  const purpleLine = new THREE.LineSegments(purpleEdges, new THREE.LineBasicMaterial({ color: 0x4a044e, linewidth: 1.5 }));
+  purpleLine.position.set(60, 20, 0);
+  group.add(purpleLine);
+
+  // 2. Bright Blue Sculptured Prismatic Workpiece (Left Section)
+  const blueMat = new THREE.MeshStandardMaterial({
+    color: 0x0284c7,
+    roughness: 0.3,
+    metalness: 0.4
+  });
+
+  const baseWidth = 110;
+  const baseHeight = 42;
+  const baseDepth = 68;
+
+  const baseBody = new THREE.BoxGeometry(baseWidth, baseHeight, baseDepth);
+  const baseMesh = new THREE.Mesh(baseBody, blueMat);
+  baseMesh.position.set(-25, 21, 0);
+  group.add(baseMesh);
+
+  // Stepped shoulder/pocket cut into blue body
+  const pocketCut = new THREE.BoxGeometry(45, 18, 50);
+  const pocketMat = new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.35, metalness: 0.5 });
+  const pocketMesh = new THREE.Mesh(pocketCut, pocketMat);
+  pocketMesh.position.set(-45, 33, 0);
+  group.add(pocketMesh);
+
+  // Front slot cut
+  const slotGeom = new THREE.BoxGeometry(30, 20, 16);
+  const slotMesh = new THREE.Mesh(slotGeom, pocketMat);
+  slotMesh.position.set(-10, 10, 28);
+  group.add(slotMesh);
+
+  // Edge wireframe for blue section
+  const blueEdges = new THREE.EdgesGeometry(baseBody, 25);
+  const blueLine = new THREE.LineSegments(blueEdges, new THREE.LineBasicMaterial({ color: 0x082f49, linewidth: 1.5 }));
+  blueLine.position.set(-25, 21, 0);
+  group.add(blueLine);
+
+  // 3. Yellow 3D Surface Finish Contour Toolpaths with Vertical Retract Lines (Matching Image 2)
+  const toolpathLines = [];
+  const yellowColor = 0xfacc15; // Mastercam bright yellow toolpath
+  const zClearance = 60;
+
+  // Surface contour passes over blue body
+  for (let pass = 0; pass < 12; pass++) {
+    const yLevel = 42 - pass * 2.8;
+    const xStart = -75;
+    const xEnd = 25;
+    const zOffset = 32 - pass * 1.5;
+
+    // Cutting pass line
+    toolpathLines.push(
+      new THREE.Vector3(xStart, yLevel, zOffset),
+      new THREE.Vector3(xEnd, yLevel, zOffset)
+    );
+
+    // Cross pass
+    toolpathLines.push(
+      new THREE.Vector3(xEnd, yLevel, zOffset),
+      new THREE.Vector3(xEnd, yLevel, -zOffset)
+    );
+    toolpathLines.push(
+      new THREE.Vector3(xEnd, yLevel, -zOffset),
+      new THREE.Vector3(xStart, yLevel, -zOffset)
+    );
+
+    // Occasional vertical lead-in/retract lines
+    if (pass % 3 === 0) {
+      toolpathLines.push(
+        new THREE.Vector3(xEnd, yLevel, zOffset),
+        new THREE.Vector3(xEnd, yLevel + zClearance, zOffset)
+      );
+    }
+  }
+
+  const tpGeom = new THREE.BufferGeometry().setFromPoints(toolpathLines);
+  const tpMat = new THREE.LineBasicMaterial({ color: yellowColor, linewidth: 2 });
+  const tpObj = new THREE.LineSegments(tpGeom, tpMat);
+  group.add(tpObj);
+
+  group.userData = {
+    filename: "Base Structure-ALU.mcam",
+    format: "Mastercam Part File (*.mcam)",
+    partName: "Base Structure-ALU",
+    material: "Alu 6061-T6 (Turned & Milled)",
+    dimensions: { x: 175.0, y: 70.0, z: 65.0 }
+  };
+
+  return group;
+}
+
+/**
  * Parses user-uploaded STL file (binary or ASCII)
  */
 export async function parseSTLFile(file) {

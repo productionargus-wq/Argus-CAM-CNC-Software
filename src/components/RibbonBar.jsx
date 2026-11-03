@@ -110,7 +110,9 @@ export default function RibbonBar({
   onSelectWcs,
   activeWcs,
   onOpenFileBackstage,
-  onOpenMastercamOpenDialog
+  onOpenMastercamOpenDialog,
+  onOpenDefineToolModal,
+  onOpenSurfaceFinishContour
 }) {
   const fileInputRef = useRef(null);
   const mcamFileInputRef = useRef(null);
@@ -203,7 +205,29 @@ export default function RibbonBar({
                 }
               }}
               className={`ribbon-tab ${tab === 'File' ? 'file-tab' : ''} ${activeTab === tab ? 'active' : ''}`}
+              style={{ position: 'relative' }}
             >
+              {tab === 'Toolpaths' && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-7px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: '#d32f2f',
+                    color: '#ffffff',
+                    fontSize: '8px',
+                    fontWeight: 'bold',
+                    padding: '0 4px',
+                    borderRadius: '2px',
+                    lineHeight: '11px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                    letterSpacing: '0.5px'
+                  }}
+                >
+                  MILL
+                </span>
+              )}
               {tab}
             </button>
           ))}
@@ -2163,11 +2187,15 @@ export default function RibbonBar({
                 </button>
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('adaptive')} title="2D Dynamic High-Speed Trochoidal Roughing">
                   <div style={{ width: '18px', height: '18px', background: '#10b981', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>DY</div>
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Dynamic</span>
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Dynamic...</span>
                 </button>
                 <button className="ribbon-btn-large" onClick={() => onQuickAddOp('facing')} title="Face Milling Planar Pass">
                   <div style={{ width: '18px', height: '18px', background: '#f59e0b', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>FC</div>
                   <span className="btn-label">Face</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pocket')} title="2D Pocket Milling">
+                  <div style={{ width: '18px', height: '18px', background: '#8b5cf6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PK</div>
+                  <span className="btn-label">Pocket</span>
                 </button>
               </div>
               <span className="ribbon-group-title">2D</span>
@@ -2188,21 +2216,17 @@ export default function RibbonBar({
                   <div style={{ width: '18px', height: '18px', background: '#3b82f6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PK</div>
                   <span className="btn-label">Pocket</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('waterline')} title="3D Parallel / Waterline Finishing">
+                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pencil')} title="3D Project Toolpath">
+                  <div style={{ width: '18px', height: '18px', background: '#f97316', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PR</div>
+                  <span className="btn-label">Project</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenSurfaceFinishContour ? onOpenSurfaceFinishContour : () => onQuickAddOp('waterline')}
+                  title="3D Parallel / Surface Finish Contour"
+                >
                   <div style={{ width: '18px', height: '18px', background: '#f59e0b', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PL</div>
                   <span className="btn-label">Parallel</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pencil')} title="3D Curve & Pencil Milling">
-                  <div style={{ width: '18px', height: '18px', background: '#f97316', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CV</div>
-                  <span className="btn-label">Curve</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenFiveAxisStudio ? onOpenFiveAxisStudio : () => onQuickAddOp('swarf')} title="3D Swarf Milling Along Walls">
-                  <div style={{ width: '18px', height: '18px', background: '#8b5cf6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>SW</div>
-                  <span className="btn-label">Swarf Milling</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('rest_milling')} title="3D Rest Machining Corner Cleanout">
-                  <div style={{ width: '18px', height: '18px', background: '#14b8a6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>RM</div>
-                  <span className="btn-label">Rest Mill</span>
                 </button>
               </div>
               <span className="ribbon-group-title">3D</span>
@@ -2213,19 +2237,35 @@ export default function RibbonBar({
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={onOpenFiveAxisStudio ? onOpenFiveAxisStudio : () => onQuickAddOp('swarf')}
-                  title="5-Axis Simultaneous Swarf Machining"
+                  onClick={() => onQuickAddOp('pencil')}
+                  title="Multiaxis Curve"
                 >
-                  <Compass size={22} color="#8b5cf6" />
-                  <span className="btn-label" style={{ color: '#8b5cf6', fontWeight: 600 }}>5-Axis<br />Swarf</span>
+                  <div style={{ width: '18px', height: '18px', background: '#a855f7', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CV</div>
+                  <span className="btn-label">Curve</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
-                  onClick={onOpenFiveAxisStudio}
-                  title="Open Complete 5-Axis Multiaxis Kinematic Studio"
+                  onClick={onOpenFiveAxisStudio ? onOpenFiveAxisStudio : () => onQuickAddOp('swarf')}
+                  title="5-Axis Swarf Milling"
                 >
-                  <Orbit size={22} color="#a855f7" />
-                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Multiaxis<br />Studio</span>
+                  <div style={{ width: '18px', height: '18px', background: '#8b5cf6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>SW</div>
+                  <span className="btn-label">Swarf Mill...</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onQuickAddOp('waterline')}
+                  title="Multiaxis Parallel"
+                >
+                  <div style={{ width: '18px', height: '18px', background: '#38bdf8', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PL</div>
+                  <span className="btn-label">Parallel</span>
+                </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onQuickAddOp('drilling')}
+                  title="Multiaxis Drill"
+                >
+                  <div style={{ width: '18px', height: '18px', background: '#ef4444', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>DR</div>
+                  <span className="btn-label">Drill</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Multiaxis</span>
@@ -2253,25 +2293,33 @@ export default function RibbonBar({
             {/* Utilities */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenDefineToolModal ? onOpenDefineToolModal : onOpenToolManager}
+                  title="Define Tool Wizard (Create End Mill, Bull Mill, Drill, etc.)"
+                >
+                  <Plus size={20} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Define<br />Tool</span>
+                </button>
+                <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Manager">
+                  <Wrench size={20} color="#38bdf8" />
+                  <span className="btn-label">Tool<br />Manager</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={onOpenProbingStudio} title="Touch Probing Studio">
                   <Crosshair size={20} color="#d946ef" />
                   <span className="btn-label">Probe</span>
                 </button>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenFiveAxisStudio}
+                  title="Multiaxis Linking Studio"
+                >
+                  <Orbit size={20} color="#a855f7" />
+                  <span className="btn-label">Multiaxis<br />Linking</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={() => onOpenTransformModal ? onOpenTransformModal('translate') : null} title="Toolpath Transform & Multi-Part Matrix">
                   <Move size={20} color="#38bdf8" />
                   <span className="btn-label">Toolpath<br />Transform</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Manager">
-                  <Wrench size={20} color="#10b981" />
-                  <span className="btn-label">Tool<br />Manager</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenThreadStudio} title="Thread Milling Studio">
-                  <Disc size={20} color="#c084fc" />
-                  <span className="btn-label">Thread<br />Mill</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenLeadInOutModal} title="Lead In / Out Ramp & Arc Studio">
-                  <Compass size={20} color="#06b6d4" />
-                  <span className="btn-label">Lead In/Out</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Utilities</span>

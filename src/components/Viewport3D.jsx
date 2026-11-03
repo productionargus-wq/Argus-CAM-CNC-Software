@@ -215,8 +215,9 @@ export default function Viewport3D({
     // Scene setup
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    scene.background = new THREE.Color(0x131722);
-    scene.fog = new THREE.FogExp2(0x131722, 0.002);
+    const isLightInit = theme === 'light';
+    scene.background = new THREE.Color(isLightInit ? 0xffffff : 0x131722);
+    scene.fog = isLightInit ? null : new THREE.FogExp2(0x131722, 0.002);
 
     // Camera setup
     const width = container.clientWidth;
@@ -712,26 +713,27 @@ export default function Viewport3D({
     const l1 = dirLight1Ref.current;
     const l2 = dirLight2Ref.current;
 
+    const isLight = theme === 'light';
     if (lightingMode === 'shop') {
-      scene.background = new THREE.Color(0x0f172a);
+      scene.background = new THREE.Color(isLight ? 0xf8fafc : 0x0f172a);
       ambient.intensity = 1.0;
       l1.intensity = 1.6;
       l2.intensity = 0.8;
       l1.position.set(0, 400, 0);
     } else if (lightingMode === 'inspect') {
-      scene.background = new THREE.Color(0x090d16);
+      scene.background = new THREE.Color(isLight ? 0xf1f5f9 : 0x090d16);
       ambient.intensity = 0.35;
       l1.intensity = 2.2;
       l2.intensity = 1.2;
       l1.position.set(150, 200, 300);
     } else {
-      scene.background = new THREE.Color(0x131722);
+      scene.background = new THREE.Color(isLight ? 0xffffff : 0x131722);
       ambient.intensity = 0.75;
       l1.intensity = 1.3;
       l2.intensity = 0.5;
       l1.position.set(200, 300, 150);
     }
-  }, [lightingMode]);
+  }, [lightingMode, theme]);
 
   // Camera Field of View Updates
   useEffect(() => {
@@ -1092,16 +1094,21 @@ export default function Viewport3D({
     };
   }, [activePlane, planes, layerVisibility?.wcs, theme]);
 
-  // 11c. Dynamic Theme Machine Bed Grid Update
+  // 11c. Dynamic Theme Machine Bed Grid & Canvas Background Update
   useEffect(() => {
     if (!sceneRef.current) return;
     const scene = sceneRef.current;
+    const isLight = theme === 'light';
+
+    // Canvas background & fog
+    scene.background = new THREE.Color(isLight ? 0xffffff : 0x131722);
+    scene.fog = isLight ? null : new THREE.FogExp2(0x131722, 0.002);
+
     if (gridHelperRef.current) {
       scene.remove(gridHelperRef.current);
       gridHelperRef.current.geometry.dispose();
       gridHelperRef.current = null;
     }
-    const isLight = theme === 'light';
     const gridHelper = new THREE.GridHelper(
       400,
       40,

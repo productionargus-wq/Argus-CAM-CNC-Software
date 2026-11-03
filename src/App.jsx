@@ -54,12 +54,15 @@ import KioskOperatorModal from './components/KioskOperatorModal';
 import TombstoneStudioModal from './components/TombstoneStudioModal';
 import CustomPostStudioModal from './components/CustomPostStudioModal';
 import AnomalyScannerModal from './components/AnomalyScannerModal';
+import DefineToolModal from './components/DefineToolModal';
+import SurfaceFinishContourModal from './components/SurfaceFinishContourModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import {
   createImpellerGeometry,
   createAerospaceBracket,
   createMoldCoreGeometry,
+  createMastercamBaseStructureALU,
   createBoxGeometry,
   createCylinderGeometry,
   createSphereGeometry,
@@ -85,9 +88,9 @@ import { convertBoardDiagramsToToolpaths, getCADTemplate } from './utils/cncBoar
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('argus_theme') || 'light');
-  const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
-  const [currentModel, setCurrentModel] = useState(() => createImpellerGeometry());
-  const [currentProjectName, setCurrentProjectName] = useState('DMU50_5Axis_Impeller.mcam');
+  const [activeRibbonTab, setActiveRibbonTab] = useState('Toolpaths');
+  const [currentModel, setCurrentModel] = useState(() => createMastercamBaseStructureALU());
+  const [currentProjectName, setCurrentProjectName] = useState('Base Structure-ALU.mcam');
   const [isFileBackstageOpen, setIsFileBackstageOpen] = useState(false);
   const [isMastercamOpenDialogOpen, setIsMastercamOpenDialogOpen] = useState(false);
   const [projectDescriptor, setProjectDescriptor] = useState('Mastercam 5-Axis Multi-Surface Machining Project for DMU 50 VMC');
@@ -173,6 +176,8 @@ export default function App() {
   const [isTombstoneModalOpen, setIsTombstoneModalOpen] = useState(false);
   const [isCustomPostModalOpen, setIsCustomPostModalOpen] = useState(false);
   const [isAnomalyScannerOpen, setIsAnomalyScannerOpen] = useState(false);
+  const [isDefineToolModalOpen, setIsDefineToolModalOpen] = useState(false);
+  const [isSurfaceFinishContourOpen, setIsSurfaceFinishContourOpen] = useState(false);
   const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
   const [selectedAssemblyToolId, setSelectedAssemblyToolId] = useState(null);
   const [isWireframeModalOpen, setIsWireframeModalOpen] = useState(false);
@@ -1157,6 +1162,12 @@ export default function App() {
       } catch (err) {
         showToast(`Failed to parse STEP: ${err.message}`, 'danger');
       }
+    } else if (type === 'base_structure_alu' || type === 'base_structure') {
+      setCurrentModel(createMastercamBaseStructureALU());
+      setCurrentProjectName('Base Structure-ALU.mcam');
+      setActiveMachineId('haas_vf2');
+      setActiveRibbonTab('Toolpaths');
+      showToast('Loaded Mastercam Base Structure-ALU Part with 3D Contour Toolpaths', 'success');
     } else if (type === 'impeller') {
       setCurrentModel(createImpellerGeometry());
       setCurrentProjectName('DMU50_5Axis_Impeller.mcam');
@@ -1179,6 +1190,36 @@ export default function App() {
     handleResetTransform();
     const fmt = modelGroup?.userData?.format || filename.split('.').pop().toUpperCase();
     showToast(`Loaded ${filename} (${fmt} 3D Solid Model)`, 'success');
+  };
+
+  const handleAddDefinedTool = (newTool) => {
+    setTools((prev) => [...prev, newTool]);
+    showToast(`Created Tool: ${newTool.name} (T${newTool.number})`, 'success');
+  };
+
+  const handleApplySurfaceFinishContour = (contourParams) => {
+    const newOp = {
+      id: Date.now(),
+      name: `Surface Finish Contour - [${activePlane}]`,
+      type: 'Surface Finish Contour',
+      badgeClass: 'contour',
+      enabled: true,
+      locked: false,
+      ghosted: false,
+      toolId: 1,
+      toolName: contourParams?.toolName || '51 Flat Endmill',
+      totalDepth: 25.0,
+      stepdown: parseFloat(contourParams?.maxStepdown) || 1.0,
+      rapidHeight: parseFloat(contourParams?.clearance) || 50.0,
+      feedRate: parseFloat(contourParams?.feedRate) || 50.0,
+      plungeRate: parseFloat(contourParams?.plungeRate) || 250.0,
+      spindleSpeed: parseInt(contourParams?.spindleSpeed) || 3500,
+      coolant: contourParams?.coolant || 'Flood',
+      details: `CS: ${contourParams?.cs || 560.79} | FPT: ${contourParams?.fpt || 0.0036} | Roll: ${contourParams?.rollAroundCorners || 'All'}`
+    };
+    setOperations((prev) => [...prev, newOp]);
+    setActiveOpId(newOp.id);
+    showToast('Surface Finish Contour Toolpath Applied & Recomputed', 'success');
   };
 
   // Create New Project Wizard Handler
@@ -1754,6 +1795,8 @@ export default function App() {
         onSelectTab={setActiveRibbonTab}
         onOpenFileBackstage={() => setIsFileBackstageOpen(true)}
         onOpenMastercamOpenDialog={() => setIsMastercamOpenDialogOpen(true)}
+        onOpenDefineToolModal={() => setIsDefineToolModalOpen(true)}
+        onOpenSurfaceFinishContour={() => setIsSurfaceFinishContourOpen(true)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onOpenPostModal={() => setIsPostModalOpen(true)}
@@ -1915,6 +1958,7 @@ export default function App() {
           onOpenNestingStudio={() => setIsNestingStudioOpen(true)}
           onOpenProbingStudio={() => setIsProbingModalOpen(true)}
           onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
+          onOpenSurfaceFinishContour={() => setIsSurfaceFinishContourOpen(true)}
           onExportStockSTL={handleExportStockSTL}
         />
 
@@ -2613,6 +2657,27 @@ export default function App() {
       <HelpGuideModal
         isOpen={isHelpGuideOpen}
         onClose={() => setIsHelpGuideOpen(false)}
+      />
+
+      {/* 16. Mastercam Define Tool Creation Wizard Modal */}
+      <DefineToolModal
+        isOpen={isDefineToolModalOpen}
+        onClose={() => setIsDefineToolModalOpen(false)}
+        onAddTool={handleAddDefinedTool}
+        onNotify={showToast}
+      />
+
+      {/* 17. Mastercam Surface Finish Contour Parameters Modal */}
+      <SurfaceFinishContourModal
+        isOpen={isSurfaceFinishContourOpen}
+        onClose={() => setIsSurfaceFinishContourOpen(false)}
+        tools={tools}
+        onSaveOperation={handleApplySurfaceFinishContour}
+        onOpenDefineToolModal={() => {
+          setIsSurfaceFinishContourOpen(false);
+          setIsDefineToolModalOpen(true);
+        }}
+        onNotify={showToast}
       />
 
       {/* Floating Modern Toast Notification Stack */}

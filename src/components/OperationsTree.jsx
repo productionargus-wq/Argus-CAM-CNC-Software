@@ -66,6 +66,7 @@ export default function OperationsTree({
   onOpenNestingStudio,
   onOpenProbingStudio,
   onOpenSetupSheet,
+  onOpenSurfaceFinishContour,
   onExportStockSTL
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
@@ -978,6 +979,7 @@ export default function OperationsTree({
           onOpenNestingStudio={onOpenNestingStudio}
           onOpenProbingStudio={onOpenProbingStudio}
           onOpenHSMFilter={onOpenHSMFilter}
+          onOpenSurfaceFinishContour={onOpenSurfaceFinishContour}
           onExportStockSTL={onExportStockSTL}
           onToggleLockOp={onToggleLockOp}
           onToggleGhostOp={onToggleGhostOp}

@@ -123,6 +123,7 @@ export default function ToolpathsContextMenu({
   onOpenNestingStudio,
   onOpenProbingStudio,
   onOpenHSMFilter,
+  onOpenSurfaceFinishContour,
   onExportStockSTL,
   onToggleLockOp,
   onToggleGhostOp,
@@ -296,12 +297,17 @@ export default function ToolpathsContextMenu({
               </div>
               {activeLevel3 === 'surface_finish' && (
                 <div className="mcam-ctx-sub" style={{ ...subStyle, minWidth: '170px' }}>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Parallel Finish</div>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('waterline'))}>Waterline Finish</div>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pencil'))}>Equal Scallop</div>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Radial Finish</div>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pocket'))}>Spiral Finish</div>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pencil'))}>Pencil Tracing</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Parallel</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Parallel steep</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('radial'))}>Radial</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('project'))}>Project</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('flowline'))}>Flowline</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishContour ? onOpenSurfaceFinishContour() : onAddOperation?.('waterline'))}>Contour</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('shallow'))}>Shallow</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pencil'))}>Pencil</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('rest_milling'))}>Leftover</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('waterline'))}>Scallop</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('blend'))}>Blend</div>
                 </div>
               )}
             </div>
