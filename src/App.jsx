@@ -19,6 +19,7 @@ import SaveAsModal from './components/SaveAsModal';
 import RecentProjectsModal from './components/RecentProjectsModal';
 import ExportCADModal from './components/ExportCADModal';
 import FileBackstageView from './components/FileBackstageView';
+import MastercamOpenFileDialog from './components/MastercamOpenFileDialog';
 import WireframeSketcherModal from './components/WireframeSketcherModal';
 import FeedsSpeedsModal from './components/FeedsSpeedsModal';
 import CPlanesCADModal from './components/CPlanesCADModal';
@@ -88,6 +89,7 @@ export default function App() {
   const [currentModel, setCurrentModel] = useState(() => createImpellerGeometry());
   const [currentProjectName, setCurrentProjectName] = useState('DMU50_5Axis_Impeller.mcam');
   const [isFileBackstageOpen, setIsFileBackstageOpen] = useState(false);
+  const [isMastercamOpenDialogOpen, setIsMastercamOpenDialogOpen] = useState(false);
   const [projectDescriptor, setProjectDescriptor] = useState('Mastercam 5-Axis Multi-Surface Machining Project for DMU 50 VMC');
   const [projectCreatedDate, setProjectCreatedDate] = useState(() => new Date(Date.now() - 3600000 * 24 * 2));
   const [projectLastModifiedDate, setProjectLastModifiedDate] = useState(() => new Date());
@@ -1751,6 +1753,7 @@ export default function App() {
         activeTab={activeRibbonTab}
         onSelectTab={setActiveRibbonTab}
         onOpenFileBackstage={() => setIsFileBackstageOpen(true)}
+        onOpenMastercamOpenDialog={() => setIsMastercamOpenDialogOpen(true)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onOpenPostModal={() => setIsPostModalOpen(true)}
@@ -2057,6 +2060,18 @@ export default function App() {
         onLoadProject={handleProjectLoaded}
         onModelImported={handleModelImported}
         onSaveAs={handleSaveAs}
+        onOpenMastercamOpenDialog={() => setIsMastercamOpenDialogOpen(true)}
+        onNotify={showToast}
+      />
+
+      {/* 25-Format Mastercam Open File Dialog (Windows Explorer View) */}
+      <MastercamOpenFileDialog
+        isOpen={isMastercamOpenDialogOpen}
+        onClose={() => setIsMastercamOpenDialogOpen(false)}
+        onFileSelected={(modelGroup, filename) => {
+          handleModelImported(modelGroup, filename);
+          setIsFileBackstageOpen(false);
+        }}
         onNotify={showToast}
       />
 

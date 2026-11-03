@@ -13,13 +13,12 @@ import {
   saveAutoSaveSnapshot,
   getAutoSaveSnapshot
 } from '../utils/projectStorage';
-import {
-  parseSTLFile,
-  parseOBJFile,
-  parseSTEPFile,
-  parseIGESFile
-} from '../utils/cadGeometry';
 import { generateNCProgram } from '../utils/postProcessor';
+import {
+  CAD_FILE_FORMATS,
+  parseAnyCADFile,
+  ALL_SUPPORTED_EXTENSIONS_STRING
+} from '../utils/universalCadParser';
 
 export default function FileBackstageView({
   isOpen,
@@ -48,6 +47,7 @@ export default function FileBackstageView({
   onLoadProject,
   onModelImported,
   onSaveAs,
+  onOpenMastercamOpenDialog,
   onNotify
 }) {
   const [activeTab, setActiveTab] = useState('Info');
@@ -295,18 +295,8 @@ export default function FileBackstageView({
   const handleOpenCADFile = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      const ext = file.name.split('.').pop().toLowerCase();
       try {
-        let modelGroup;
-        if (ext === 'step' || ext === 'stp') {
-          modelGroup = await parseSTEPFile(file);
-        } else if (ext === 'iges' || ext === 'igs') {
-          modelGroup = await parseIGESFile(file);
-        } else if (ext === 'obj') {
-          modelGroup = await parseOBJFile(file);
-        } else {
-          modelGroup = await parseSTLFile(file);
-        }
+        const modelGroup = await parseAnyCADFile(file);
         if (onModelImported) {
           onModelImported(modelGroup, file.name);
         }
@@ -321,18 +311,8 @@ export default function FileBackstageView({
   const handleMergeCADFile = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      const ext = file.name.split('.').pop().toLowerCase();
       try {
-        let modelGroup;
-        if (ext === 'step' || ext === 'stp') {
-          modelGroup = await parseSTEPFile(file);
-        } else if (ext === 'iges' || ext === 'igs') {
-          modelGroup = await parseIGESFile(file);
-        } else if (ext === 'obj') {
-          modelGroup = await parseOBJFile(file);
-        } else {
-          modelGroup = await parseSTLFile(file);
-        }
+        const modelGroup = await parseAnyCADFile(file);
         // Offset merged model
         if (modelGroup) {
           modelGroup.position.set(
@@ -425,18 +405,18 @@ export default function FileBackstageView({
         overflow: 'hidden'
       }}
     >
-      {/* Hidden File Pickers */}
+      {/* Hidden File Pickers accepting all 25 Mastercam formats */}
       <input
         ref={openCadInputRef}
         type="file"
-        accept=".step,.stp,.iges,.igs,.stl,.obj,.mcam,.json"
+        accept={ALL_SUPPORTED_EXTENSIONS_STRING}
         style={{ display: 'none' }}
         onChange={handleOpenCADFile}
       />
       <input
         ref={mergeCadInputRef}
         type="file"
-        accept=".step,.stp,.iges,.igs,.stl,.obj"
+        accept={ALL_SUPPORTED_EXTENSIONS_STRING}
         style={{ display: 'none' }}
         onChange={handleMergeCADFile}
       />
@@ -1125,7 +1105,34 @@ export default function FileBackstageView({
               </h1>
 
               {/* Browse Buttons Bar */}
-              <div style={{ display: 'flex', gap: '16px', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => {
+                    if (onOpenMastercamOpenDialog) {
+                      onOpenMastercamOpenDialog();
+                    } else {
+                      openCadInputRef.current?.click();
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 22px',
+                    background: '#0f5a9e',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontWeight: 600,
+                    fontSize: '13.5px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(15, 90, 158, 0.3)'
+                  }}
+                >
+                  <FolderOpen size={18} />
+                  Mastercam Open Dialog (All 25 Formats)...
+                </button>
+
                 <button
                   onClick={() => openCadInputRef.current?.click()}
                   style={{
@@ -1133,18 +1140,44 @@ export default function FileBackstageView({
                     alignItems: 'center',
                     gap: '10px',
                     padding: '12px 20px',
-                    background: '#0f5a9e',
-                    color: '#ffffff',
-                    border: 'none',
+                    background: '#f1f5f9',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '4px',
                     fontWeight: 600,
                     fontSize: '13.5px',
                     cursor: 'pointer'
                   }}
                 >
-                  <FolderOpen size={18} />
-                  Browse Computer (.mcam, .step, .iges, .stl, .obj)...
+                  <Upload size={16} color="#0f5a9e" />
+                  Direct File Picker (All Formats)
                 </button>
+              </div>
+
+              {/* Supported Formats Banner */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '12px 16px', marginBottom: '28px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Supported CAD/CAM Formats ({CAD_FILE_FORMATS.length} Formats):
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {CAD_FILE_FORMATS.slice(0, 24).map((fmt) => (
+                    <span
+                      key={fmt.id}
+                      style={{
+                        fontSize: '10.5px',
+                        padding: '2px 8px',
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '3px',
+                        color: '#475569',
+                        fontFamily: 'monospace'
+                      }}
+                      title={fmt.description}
+                    >
+                      {fmt.label.split('(')[0].trim()} ({fmt.extensions.slice(0, 2).map(e => `.${e}`).join(', ')})
+                    </span>
+                  ))}
+                </div>
               </div>
 
               {/* Recent Files Section */}

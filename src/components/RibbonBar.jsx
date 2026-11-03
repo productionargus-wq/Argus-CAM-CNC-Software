@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
+import { parseAnyCADFile, ALL_SUPPORTED_EXTENSIONS_STRING } from '../utils/universalCadParser';
 
 export default function RibbonBar({
   activeTab,
@@ -108,7 +109,8 @@ export default function RibbonBar({
   onSelectMachine,
   onSelectWcs,
   activeWcs,
-  onOpenFileBackstage
+  onOpenFileBackstage,
+  onOpenMastercamOpenDialog
 }) {
   const fileInputRef = useRef(null);
   const mcamFileInputRef = useRef(null);
@@ -122,24 +124,14 @@ export default function RibbonBar({
   const handleCADFileChange = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      const ext = file.name.split('.').pop().toLowerCase();
       try {
-        let modelGroup;
-        if (ext === 'step' || ext === 'stp') {
-          modelGroup = await parseSTEPFile(file);
-        } else if (ext === 'iges' || ext === 'igs') {
-          modelGroup = await parseIGESFile(file);
-        } else if (ext === 'obj') {
-          modelGroup = await parseOBJFile(file);
-        } else {
-          modelGroup = await parseSTLFile(file);
-        }
+        const modelGroup = await parseAnyCADFile(file);
         if (onModelImported) {
           onModelImported(modelGroup, file.name);
         }
       } catch (err) {
         console.error("Failed to parse CAD file:", err);
-        alert(`Failed to load ${file.name}. Ensure it is a valid .STEP, .IGES, .STL, or .OBJ file.`);
+        alert(`Failed to load ${file.name}: ${err.message}`);
       }
     }
   };
@@ -170,11 +162,11 @@ export default function RibbonBar({
 
   return (
     <nav className="ribbon-container" aria-label="Application Ribbon Navigation">
-      {/* Hidden file input for 3D CAD models (.step, .stp, .iges, .igs, .stl, .obj) */}
+      {/* Hidden file input for 3D CAD models (All 25 supported formats) */}
       <input
         ref={fileInputRef}
         type="file"
-        accept=".step,.stp,.iges,.igs,.stl,.obj"
+        accept={ALL_SUPPORTED_EXTENSIONS_STRING}
         style={{ display: 'none' }}
         onChange={handleCADFileChange}
       />
@@ -338,11 +330,17 @@ export default function RibbonBar({
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Import 3D CAD Solid Part (STEP / IGES / STL / OBJ)"
+                  onClick={() => {
+                    if (onOpenMastercamOpenDialog) {
+                      onOpenMastercamOpenDialog();
+                    } else {
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  title="Open / Import CAD File (Supports All 25 Mastercam Formats)"
                 >
                   <Upload size={22} color="#06b6d4" />
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Import<br />STEP / CAD</span>
+                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Open / Import<br />CAD (25 Fmt)</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
