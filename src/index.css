@@ -391,6 +391,96 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Mastercam Ribbon 3-Row Vertical Micro-Stack */
+.ribbon-col-stacked {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 64px;
+  gap: 2px;
+}
+
+.ribbon-btn-small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 19px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.ribbon-btn-small:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+  color: var(--text-bright);
+}
+
+.ribbon-btn-small.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0369a1;
+  font-weight: 600;
+}
+
+[data-theme="light"] .ribbon-btn-small.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0369a1;
+}
+
+[data-theme="dark"] .ribbon-btn-small.active {
+  background: rgba(56, 189, 248, 0.25);
+  color: #38bdf8;
+  border-color: #38bdf8;
+}
+
+.ribbon-combo-input {
+  display: flex;
+  align-items: center;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.ribbon-combo-select {
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--text-primary);
+  cursor: pointer;
+  height: 22px;
+}
+
+.ribbon-dialog-launcher {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.ribbon-dialog-launcher:hover {
+  opacity: 1;
+  color: var(--accent-blue);
+}
+
 /* Main Workspace Layout */
 .workspace-body {
   display: flex;

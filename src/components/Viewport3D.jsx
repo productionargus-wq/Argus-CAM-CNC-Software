@@ -90,7 +90,9 @@ export default function Viewport3D({
   onOpenViewStudioModal,
   onToggleCameraMode,
   onUpdateClippingPlane,
-  onChangeRenderMode
+  onChangeRenderMode,
+  showArcCenters = true,
+  showEndpoints = false
 }) {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
@@ -104,6 +106,7 @@ export default function Viewport3D({
   const stockMeshRef = useRef(null);
   const stockWireframeRef = useRef(null);
   const customGeoGroupRef = useRef(null);
+  const arcCentersGroupRef = useRef(null);
   const dimensionGroupRef = useRef(null);
   const ambientLightRef = useRef(null);
   const dirLight1Ref = useRef(null);
@@ -309,6 +312,12 @@ export default function Viewport3D({
     dimensionGroup.position.set(0, 49, 0);
     scene.add(dimensionGroup);
     dimensionGroupRef.current = dimensionGroup;
+
+    // Arc Center Points & Endpoints Indicators Group
+    const arcCentersGroup = new THREE.Group();
+    arcCentersGroup.name = 'arc_center_indicators';
+    scene.add(arcCentersGroup);
+    arcCentersGroupRef.current = arcCentersGroup;
 
     // Raycasting for Interactive CAD Drawing
     const raycaster = new THREE.Raycaster();
@@ -758,6 +767,64 @@ export default function Viewport3D({
       });
     }
   }, [customGeometry]);
+
+  // 6b. Arc Center Points & Curve Endpoints Indicators
+  useEffect(() => {
+    if (!arcCentersGroupRef.current) return;
+    const group = arcCentersGroupRef.current;
+    while (group.children.length > 0) {
+      group.remove(group.children[0]);
+    }
+
+    if (showArcCenters) {
+      const centerMat = new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 });
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide });
+      const ringGeo = new THREE.RingGeometry(1.2, 1.8, 16);
+
+      const centers = [
+        new THREE.Vector3(65, 49, 0),
+        new THREE.Vector3(75, 49 + 25, 0),
+        new THREE.Vector3(75, 49 - 25, 0),
+        new THREE.Vector3(75, 49, 25),
+        new THREE.Vector3(75, 49, -25),
+        new THREE.Vector3(75, 49 + 17.7, 17.7),
+        new THREE.Vector3(75, 49 - 17.7, 17.7),
+        new THREE.Vector3(75, 49 + 17.7, -17.7),
+        new THREE.Vector3(75, 49 - 17.7, -17.7)
+      ];
+
+      centers.forEach((pt) => {
+        const marker = new THREE.Group();
+        marker.position.copy(pt);
+
+        const crossGeo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-3.5, 0, 0), new THREE.Vector3(3.5, 0, 0),
+          new THREE.Vector3(0, -3.5, 0), new THREE.Vector3(0, 3.5, 0),
+          new THREE.Vector3(0, 0, -3.5), new THREE.Vector3(0, 0, 3.5)
+        ]);
+        const cross = new THREE.LineSegments(crossGeo, centerMat);
+        marker.add(cross);
+
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        marker.add(ring);
+
+        group.add(marker);
+      });
+    }
+
+    if (showEndpoints) {
+      const ptMat = new THREE.PointsMaterial({ color: 0xf59e0b, size: 5, sizeAttenuation: false });
+      const ptGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-40, 49, -35),
+        new THREE.Vector3(40, 49, -35),
+        new THREE.Vector3(40, 49, 35),
+        new THREE.Vector3(-40, 49, 35)
+      ]);
+      const pts = new THREE.Points(ptGeo, ptMat);
+      group.add(pts);
+    }
+  }, [showArcCenters, showEndpoints, currentModel]);
 
   // 7. Layer Visibility Updates (Part Solid, Wireframe, Fixture, Bed, WCS, Stock, Rapids)
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Layers, Settings, Play, ShieldAlert, FileText, CheckCircle2,
   Box, Scissors, Compass, Sliders, Eye, RefreshCw, Zap,
@@ -6,7 +6,8 @@ import {
   Printer, Palette, Move, RotateCcw, Maximize2, Minimize2,
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
   Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge,
-  Copy, Cpu, Activity, Type, DollarSign, Tablet, PenTool, Edit3, Columns2
+  Copy, Cpu, Activity, Type, DollarSign, Tablet, PenTool, Edit3, Columns2,
+  Clipboard, Ruler, Search, ChevronDown, CornerDownRight, X
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -112,11 +113,46 @@ export default function RibbonBar({
   onOpenFileBackstage,
   onOpenMastercamOpenDialog,
   onOpenDefineToolModal,
-  onOpenSurfaceFinishContour
+  onOpenSurfaceFinishContour,
+  onCopyViewportImage,
+  onPasteOp,
+  onCutOp,
+  onCopyOp,
+  canPaste = false,
+  constructionZ = 0.0,
+  onChangeConstructionZ,
+  constructionMode = '3d',
+  onToggleConstructionMode,
+  levels = [],
+  activeLevelId = 1,
+  onSelectLevel,
+  onDeleteNonAssociative,
+  onDeleteDuplicates,
+  onUndeleteEntity,
+  showArcCenters = true,
+  onToggleArcCenters,
+  showEndpoints = false,
+  onToggleEndpoints,
+  onToggleBlank,
+  onOpenToolpathAnalyzer,
+  onOpenDynamicAnalyzer,
+  onOpenAngleAnalyzer,
+  onOpenChainAnalyzer,
+  onOpenCheckSolid,
+  onOpen2DArea,
+  onOpenStatistics,
+  onOpenAddInsManager,
+  onOpenCommandFinder,
+  onOpenAttributesModal
 }) {
   const fileInputRef = useRef(null);
   const mcamFileInputRef = useRef(null);
   const ncFileInputRef = useRef(null);
+
+  const [pointStyleSymbol, setPointStyleSymbol] = useState('*');
+  const [showPointStyleMenu, setShowPointStyleMenu] = useState(false);
+  const [lineStyleText, setLineStyleText] = useState('───');
+  const [showLineStyleMenu, setShowLineStyleMenu] = useState(false);
 
   const tabs = [
     'File', 'Home', 'Wireframe', 'Surfaces', 'Solids',
@@ -494,174 +530,367 @@ export default function RibbonBar({
         {/* ==================== 2. HOME TAB ==================== */}
         {activeTab === 'Home' && (
           <>
-            {/* Clipboard */}
+            {/* 1. Clipboard */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Cut')} title="Cut Selection to Clipboard">
-                  <Scissors size={20} color="#f43f5e" />
-                  <span className="btn-label">Cut</span>
+                {/* Large Paste Button */}
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onPasteOp}
+                  disabled={!canPaste}
+                  style={{ opacity: canPaste ? 1 : 0.85 }}
+                  title="Paste (Ctrl+V) - Paste entities or operations from clipboard"
+                >
+                  <div style={{ position: 'relative' }}>
+                    <Clipboard size={22} color="#0284c7" />
+                    <Plus size={10} color="#10b981" style={{ position: 'absolute', bottom: -2, right: -2 }} />
+                  </div>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Paste</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Copy')} title="Copy Selection">
-                  <Copy size={20} color="#38bdf8" />
-                  <span className="btn-label">Copy</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Copy Image')} title="Copy Viewport Image to Clipboard">
-                  <Camera size={20} color="#10b981" />
-                  <span className="btn-label">Copy<br />Image</span>
-                </button>
+
+                {/* 3-Row Micro-Stack: Cut, Copy, Copy Image */}
+                <div className="ribbon-col-stacked">
+                  <button className="ribbon-btn-small" onClick={onCutOp} title="Cut Selection (Ctrl+X)">
+                    <Scissors size={13} color="#f43f5e" />
+                    <span>Cut</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={onCopyOp} title="Copy Selection (Ctrl+C)">
+                    <Copy size={13} color="#38bdf8" />
+                    <span>Copy</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={onCopyViewportImage} title="Copy Viewport Canvas Image to Clipboard">
+                    <Camera size={13} color="#10b981" />
+                    <span>Copy Image</span>
+                  </button>
+                </div>
               </div>
               <span className="ribbon-group-title">Clipboard</span>
             </div>
 
-            {/* Attributes */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px' }}>
-                  <button style={{ width: '20px', height: '20px', background: '#3b82f6', border: '1px solid #60a5fa', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#3b82f6')} title="Billet Blue" />
-                  <button style={{ width: '20px', height: '20px', background: '#94a3b8', border: '1px solid #cbd5e1', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#94a3b8')} title="Steel Silver" />
-                  <button style={{ width: '20px', height: '20px', background: '#f59e0b', border: '1px solid #fcd34d', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#f59e0b')} title="Gold Brass" />
-                  <button style={{ width: '20px', height: '20px', background: '#10b981', border: '1px solid #34d399', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#10b981')} title="Emerald Green" />
-                  <button style={{ width: '20px', height: '20px', background: '#8b5cf6', border: '1px solid #c084fc', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#8b5cf6')} title="Anodized Violet" />
-                  <button style={{ width: '20px', height: '20px', background: '#ef4444', border: '1px solid #f87171', borderRadius: '3px', cursor: 'pointer' }} onClick={() => onChangeWorkpieceColor('#ef4444')} title="High-Vis Red" />
+            {/* 2. Attributes */}
+            <div className="ribbon-group" style={{ position: 'relative' }}>
+              <div className="ribbon-group-items" style={{ flexDirection: 'column', gap: '4px', height: '64px', justifyContent: 'center' }}>
+                {/* Row 1: Point Style, Line Style, Color Picker, 3D/2D toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {/* Point Style Dropdown */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setShowPointStyleMenu((prev) => !prev)}
+                      className="ribbon-combo-select"
+                      style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 5px', height: '22px' }}
+                      title="Point Style (*, +, o, .)"
+                    >
+                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#0284c7', lineHeight: 1 }}>{pointStyleSymbol}</span>
+                      <ChevronDown size={11} color="#64748b" />
+                    </button>
+                    {showPointStyleMenu && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 1000, background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '70px' }}>
+                        {['*', '+', 'o', '•'].map((sym) => (
+                          <button
+                            key={sym}
+                            onClick={() => { setPointStyleSymbol(sym); setShowPointStyleMenu(false); }}
+                            style={{ background: pointStyleSymbol === sym ? '#e0f2fe' : 'none', border: 'none', padding: '3px 8px', textAlign: 'center', fontSize: '12px', fontWeight: 700, cursor: 'pointer', borderRadius: '3px' }}
+                          >
+                            {sym}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Line Style & Thickness Dropdown */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setShowLineStyleMenu((prev) => !prev)}
+                      className="ribbon-combo-select"
+                      style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 5px', height: '22px' }}
+                      title="Line Style & Weight (Solid, Hidden, Center, Phantom)"
+                    >
+                      <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#334155', fontWeight: 700 }}>{lineStyleText}</span>
+                      <ChevronDown size={11} color="#64748b" />
+                    </button>
+                    {showLineStyleMenu && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 1000, background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '95px' }}>
+                        {[
+                          { label: '───', name: 'Solid' },
+                          { label: '- - -', name: 'Hidden' },
+                          { label: '─ · ─', name: 'Center' },
+                          { label: '─ ·· ─', name: 'Phantom' }
+                        ].map((st) => (
+                          <button
+                            key={st.name}
+                            onClick={() => { setLineStyleText(st.label); setShowLineStyleMenu(false); }}
+                            style={{ background: lineStyleText === st.label ? '#e0f2fe' : 'none', border: 'none', padding: '3px 8px', textAlign: 'left', fontSize: '11px', cursor: 'pointer', borderRadius: '3px' }}
+                          >
+                            {st.label} {st.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Color Picker Swatch Box */}
+                  <input
+                    type="color"
+                    value={workpieceColor || '#3b82f6'}
+                    onChange={(e) => onChangeWorkpieceColor(e.target.value)}
+                    title="Active Entity & Workpiece Color"
+                    style={{ width: '22px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '3px', padding: 0, cursor: 'pointer', background: 'none' }}
+                  />
+
+                  {/* 3D / 2D Toggle Button */}
+                  <button
+                    onClick={onToggleConstructionMode}
+                    className="ribbon-btn-small"
+                    style={{
+                      height: '22px',
+                      padding: '1px 7px',
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '3px',
+                      backgroundColor: constructionMode === '3d' ? '#e0f2fe' : '#fef3c7',
+                      color: constructionMode === '3d' ? '#0284c7' : '#d97706'
+                    }}
+                    title="Toggle Construction Mode between 3D Space and 2D Plane at Z depth"
+                  >
+                    {constructionMode === '3d' ? '3D' : '2D'}
+                  </button>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '10px', color: '#94a3b8' }}>
-                  <span style={{ fontWeight: 600 }}>Z: 0.0</span>
-                  <span style={{ color: '#38bdf8' }}>3D / 2D</span>
+
+                {/* Row 2: Quick Palette Swatches */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  {['#3b82f6', '#94a3b8', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444'].map((col) => (
+                    <button
+                      key={col}
+                      onClick={() => onChangeWorkpieceColor(col)}
+                      style={{
+                        width: '18px',
+                        height: '14px',
+                        backgroundColor: col,
+                        border: workpieceColor === col ? '1.5px solid #000' : '1px solid rgba(0,0,0,0.2)',
+                        borderRadius: '2px',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  ))}
                 </div>
               </div>
+              <button
+                className="ribbon-dialog-launcher"
+                onClick={onOpenAttributesModal}
+                title="Open Attributes Manager (Color, Level, Line Style, Mask)"
+              >
+                <CornerDownRight size={10} />
+              </button>
               <span className="ribbon-group-title">Attributes</span>
             </div>
 
-            {/* Organize */}
+            {/* 3. Organize */}
             <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onSelectManagerTab && onSelectManagerTab('Levels')}
-                  title="Open Mastercam Levels / Layers Manager Table"
-                >
-                  <Layers size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Levels<br />Manager</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Non-Associative')} title="Non-Associative Geometry Selection">
-                  <CheckSquare size={20} color="#94a3b8" />
-                  <span className="btn-label">Non-<br />Associative</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Duplicates')} title="Find & Select Duplicate Entities">
-                  <Copy size={20} color="#f59e0b" />
-                  <span className="btn-label">Duplicates</span>
-                </button>
+              <div className="ribbon-group-items" style={{ flexDirection: 'column', gap: '4px', height: '64px', justifyContent: 'center' }}>
+                {/* Z Depth Input Field */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', minWidth: '12px' }}>Z</span>
+                  <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', padding: '0 2px', height: '22px' }}>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={constructionZ}
+                      onChange={(e) => onChangeConstructionZ && onChangeConstructionZ(parseFloat(e.target.value) || 0)}
+                      style={{ width: '48px', border: 'none', outline: 'none', fontSize: '11px', fontFamily: 'monospace', padding: '1px 3px', color: '#0f172a' }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #e2e8f0' }}>
+                      <button
+                        onClick={() => onChangeConstructionZ && onChangeConstructionZ((prev) => (parseFloat(prev) || 0) + 1.0)}
+                        style={{ border: 'none', background: 'none', padding: '0 2px', lineHeight: 0.5, cursor: 'pointer', color: '#64748b' }}
+                      >
+                        ▴
+                      </button>
+                      <button
+                        onClick={() => onChangeConstructionZ && onChangeConstructionZ((prev) => (parseFloat(prev) || 0) - 1.0)}
+                        style={{ border: 'none', background: 'none', padding: '0 2px', lineHeight: 0.5, cursor: 'pointer', color: '#64748b' }}
+                      >
+                        ▾
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Level Selector Combo Box */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Layers size={13} color="#0284c7" />
+                  <select
+                    value={activeLevelId}
+                    onChange={(e) => onSelectLevel && onSelectLevel(parseInt(e.target.value))}
+                    className="ribbon-combo-select"
+                    style={{ width: '96px', fontSize: '10.5px' }}
+                    title="Active Construction Level (Layers)"
+                  >
+                    {levels.map((lvl) => (
+                      <option key={lvl.id} value={lvl.id}>
+                        {lvl.number} : {lvl.name || 'Level'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <span className="ribbon-group-title">Organize</span>
             </div>
 
-            {/* Delete */}
+            {/* 4. Delete */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onDeleteActiveOp} title="Delete Selected Entities / Op">
-                  <Trash2 size={20} color="#ef4444" />
-                  <span className="btn-label" style={{ color: '#ef4444', fontWeight: 600 }}>Delete<br />Entities</span>
+                {/* Large Delete Entities Button */}
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onDeleteActiveOp}
+                  title="Delete Selected Entities or Operations (Delete key)"
+                >
+                  <div style={{ width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <X size={22} color="#dc2626" strokeWidth={3} />
+                  </div>
+                  <span className="btn-label" style={{ color: '#dc2626', fontWeight: 600 }}>Delete<br />Entities</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Undelete Entity')} title="Undelete Last Deleted Entity">
-                  <RotateCcw size={20} color="#10b981" />
-                  <span className="btn-label">Undelete<br />Entity</span>
-                </button>
+
+                {/* 3-Row Micro-Stack: Non-Associative, Duplicates, Undelete Entity */}
+                <div className="ribbon-col-stacked">
+                  <button className="ribbon-btn-small" onClick={onDeleteNonAssociative} title="Select and delete non-associative geometry">
+                    <X size={12} color="#f59e0b" strokeWidth={2.5} />
+                    <span>Non-Associative</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={onDeleteDuplicates} title="Find and delete duplicate overlapping entities">
+                    <Copy size={12} color="#f59e0b" />
+                    <span>Duplicates</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={onUndeleteEntity} title="Undelete last deleted entity (Ctrl+Z)">
+                    <RotateCcw size={12} color="#10b981" />
+                    <span>Undelete Entity</span>
+                  </button>
+                </div>
               </div>
               <span className="ribbon-group-title">Delete</span>
             </div>
 
-            {/* Display */}
+            {/* 5. Display */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Arc Center Points')} title="Display Arc Center Points">
-                  <Disc size={20} color="#38bdf8" />
-                  <span className="btn-label">Arc Center<br />Points</span>
+                {/* Large Hide/Unhide Button */}
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onInvertVisibility}
+                  title="Hide / Unhide (Alt+E) - Toggle isolated display of selection"
+                >
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', width: '20px', height: '20px' }}>
+                    <div style={{ background: '#38bdf8', borderRadius: '1px' }}></div>
+                    <div style={{ background: '#f59e0b', borderRadius: '1px' }}></div>
+                    <div style={{ background: '#94a3b8', borderRadius: '1px' }}></div>
+                    <div style={{ background: '#10b981', borderRadius: '1px' }}></div>
+                  </div>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Hide/Unhide</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Endpoints')} title="Display Curve Endpoints">
-                  <Crosshair size={20} color="#f59e0b" />
-                  <span className="btn-label">Endpoints</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onToggleLayer && onToggleLayer('stock')} title="Blank / Hide Selected Entity">
-                  <Eye size={20} color="#a855f7" />
-                  <span className="btn-label">Blank</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onUnblankAll} title="Unblank All Entities">
-                  <Eye size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Unblank<br />All</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onInvertVisibility} title="Hide / Unhide Toggle">
-                  <RefreshCw size={20} color="#38bdf8" />
-                  <span className="btn-label">Hide /<br />Unhide</span>
-                </button>
+
+                {/* 3-Row Micro-Stack: Arc Center Points, Endpoints, Blank */}
+                <div className="ribbon-col-stacked">
+                  <button
+                    className={`ribbon-btn-small ${showArcCenters ? 'active' : ''}`}
+                    onClick={onToggleArcCenters}
+                    title="Toggle display of arc and circle center points"
+                  >
+                    <Disc size={12} color={showArcCenters ? '#ffffff' : '#0284c7'} />
+                    <span>Arc Center Points</span>
+                  </button>
+                  <button
+                    className={`ribbon-btn-small ${showEndpoints ? 'active' : ''}`}
+                    onClick={onToggleEndpoints}
+                    title="Toggle curve endpoints indicator vertices"
+                  >
+                    <Crosshair size={12} color={showEndpoints ? '#ffffff' : '#64748b'} />
+                    <span>Endpoints</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={onToggleBlank}
+                    title="Blank / Unblank selected entities"
+                  >
+                    <Eye size={12} color="#64748b" />
+                    <span>Blank</span>
+                  </button>
+                </div>
               </div>
               <span className="ribbon-group-title">Display</span>
             </div>
 
-            {/* Analyze */}
+            {/* 6. Analyze */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenEntityAnalyzer}
-                  title="Analyze Entity Dimensions, Volume, Surface Area & Mass"
-                >
-                  <Crosshair size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Analyze<br />Entity</span>
+                {/* 3 Large Buttons */}
+                <button className="ribbon-btn-large" onClick={onOpenEntityAnalyzer} title="Analyze Entity (F4) - Inspect geometry properties and dimensions">
+                  <div style={{ position: 'relative' }}>
+                    <Crosshair size={22} color="#0284c7" />
+                    <span style={{ position: 'absolute', top: -3, right: -4, fontSize: '10px', fontWeight: 800, color: '#0284c7' }}>?</span>
+                  </div>
+                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 600 }}>Analyze<br />Entity</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenDistanceCaliper}
-                  title="Analyze Distance & Angle (3D Caliper)"
-                >
-                  <Scissors size={22} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Analyze<br />Distance</span>
+
+                <button className="ribbon-btn-large" onClick={onOpenDistanceCaliper} title="Analyze Distance - Measure distance and delta XYZ between entities">
+                  <div style={{ position: 'relative' }}>
+                    <Ruler size={22} color="#d97706" />
+                    <span style={{ position: 'absolute', top: -3, right: -4, fontSize: '10px', fontWeight: 800, color: '#d97706' }}>?</span>
+                  </div>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Analyze<br />Distance</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Analyze Toolpath')} title="Analyze Toolpath Motion">
-                  <Activity size={20} color="#10b981" />
-                  <span className="btn-label">Analyze<br />Toolpath</span>
+
+                <button className="ribbon-btn-large" onClick={onOpenToolpathAnalyzer} title="Analyze Toolpath - Inspect toolpath feed rate, motion and cycle time">
+                  <Activity size={22} color="#10b981" />
+                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Analyze<br />Toolpath</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Analyze Chain')} title="Analyze Wireframe Chain">
-                  <Compass size={20} color="#60a5fa" />
-                  <span className="btn-label">Analyze<br />Chain</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('2D Area')} title="Calculate 2D Planar Area">
-                  <Grid size={20} color="#c084fc" />
-                  <span className="btn-label">2D Area</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Statistics')} title="Display File & Geometry Statistics">
-                  <FileText size={20} color="#e2e8f0" />
-                  <span className="btn-label">Statistics</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Check Solid')} title="Check Solid Integrity">
-                  <Box size={20} color="#34d399" />
-                  <span className="btn-label">Check<br />Solid</span>
-                </button>
+
+                {/* Sub-column 1: ? Dynamic, ? Angle, ? Chain */}
+                <div className="ribbon-col-stacked">
+                  <button className="ribbon-btn-small" onClick={onOpenDynamicAnalyzer} title="Dynamic entity & radius inspector">
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#0284c7' }}>?</span>
+                    <span>Dynamic</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={onOpenAngleAnalyzer} title="Measure angle between entities">
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#0284c7' }}>?</span>
+                    <span>Angle</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={onOpenChainAnalyzer} title="Analyze wireframe chain continuity and leaks">
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#0284c7' }}>?</span>
+                    <span>Chain</span>
+                  </button>
+                </div>
+
+                {/* Sub-column 2: Check Solid ▾, 2D Area ▾, ∑ Statistics */}
+                <div className="ribbon-col-stacked">
+                  <button className="ribbon-btn-small" onClick={onOpenCheckSolid} title="Check Solid watertight integrity and topology">
+                    <CheckSquare size={12} color="#10b981" />
+                    <span>Check Solid ▾</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={onOpen2DArea} title="Calculate 2D planar projected area">
+                    <Grid size={12} color="#a855f7" />
+                    <span>2D Area ▾</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={onOpenStatistics} title="File and geometry statistics">
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#334155' }}>∑</span>
+                    <span>Statistics</span>
+                  </button>
+                </div>
               </div>
               <span className="ribbon-group-title">Analyze</span>
             </div>
 
-            {/* Add-Ins */}
+            {/* 7. Add-Ins */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Run Add-In')} title="Run Mastercam C-Hook / NET-Hook Add-In">
-                  <Cpu size={22} color="#38bdf8" />
-                  <span className="btn-label">Run<br />Add-In</span>
+                <button className="ribbon-btn-large" onClick={onOpenAddInsManager} title="Run Mastercam C-Hook / NET-Hook User Application (Alt+C)">
+                  <Cpu size={22} color="#0284c7" />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Run<br />Add-In</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Command Finder')} title="Search All Mastercam Commands">
-                  <HelpCircle size={22} color="#f59e0b" />
-                  <span className="btn-label">Command<br />Finder</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenCPlanesModal} title="Open CPlanes & Dynamic WCS Origin Studio">
-                  <Grid size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>CPlane<br />Studio</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onStartInteractiveSketch && onStartInteractiveSketch('line')}
-                  title="Draw 2D/3D Wireframe Curves &amp; Shapes Directly on Viewport"
-                >
-                  <PenTool size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>CAD<br />Sketch</span>
+                <button className="ribbon-btn-large" onClick={onOpenCommandFinder} title="Search and launch any Mastercam Ribbon command">
+                  <Search size={22} color="#0284c7" />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Command<br />Finder</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Add-Ins</span>
