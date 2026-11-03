@@ -2038,6 +2038,7 @@ export default function App() {
         onOpenAnomalyScanner={() => setIsAnomalyScannerOpen(true)}
         onProjectLoaded={handleProjectLoaded}
         onExportSTL={handleExportSTL}
+        workpieceColor={workpieceColor}
         onChangeWorkpieceColor={setWorkpieceColor}
         onChangeRenderMode={setRenderMode}
         renderMode={renderMode}

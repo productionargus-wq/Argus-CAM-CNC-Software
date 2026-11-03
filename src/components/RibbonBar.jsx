@@ -87,6 +87,7 @@ export default function RibbonBar({
   onOpenExportCADModal,
   onProjectLoaded,
   onExportSTL,
+  workpieceColor = '#3b82f6',
   onChangeWorkpieceColor,
   onChangeRenderMode,
   renderMode,
