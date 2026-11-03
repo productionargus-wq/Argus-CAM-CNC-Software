@@ -7,7 +7,7 @@ import {
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
   Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge,
   Copy, Cpu, Activity, Type, DollarSign, Tablet, PenTool, Edit3, Columns2,
-  Clipboard, Ruler, Search, ChevronDown, CornerDownRight, X
+  Clipboard, Ruler, Search, ChevronDown, CornerDownRight, X, Circle, Square
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';

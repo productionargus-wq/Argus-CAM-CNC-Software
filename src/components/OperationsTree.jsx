@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   CheckSquare, Square, Eye, RefreshCw, 
   Trash2, Lock, FileCode, PlusCircle, ChevronDown, ChevronRight, Sliders,
@@ -89,6 +89,54 @@ export default function OperationsTree({
 
   // Red Insertion Arrow Position (index in operations array)
   const [insertIndex, setInsertIndex] = useState(operations.length);
+
+  // Mouse-Resizable Sidebar Width State
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mastercam_sidebar_width');
+      const parsed = saved ? parseInt(saved, 10) : 320;
+      return !isNaN(parsed) && parsed >= 220 && parsed <= 850 ? parsed : 320;
+    } catch {
+      return 320;
+    }
+  });
+  const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      const newWidth = Math.min(Math.max(e.clientX, 220), Math.min(window.innerWidth * 0.7, 850));
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      if (isResizing) {
+        setIsResizing(false);
+        try {
+          localStorage.setItem('mastercam_sidebar_width', sidebarWidth.toString());
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, sidebarWidth]);
 
   // Recent Functions Search Filter
   const [recentSearch, setRecentSearch] = useState('');
@@ -181,14 +229,18 @@ export default function OperationsTree({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        width: '320px',
+        width: `${sidebarWidth}px`,
+        minWidth: '220px',
+        maxWidth: '850px',
+        flexShrink: 0,
         backgroundColor: '#ffffff',
-        borderRight: '1px solid #cbd5e1',
+        borderRight: isResizing ? '2px solid #0284c7' : '1px solid #cbd5e1',
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
         color: '#1e293b',
         userSelect: 'none',
         overflow: 'hidden',
-        position: 'relative'
+        position: 'relative',
+        transition: isResizing ? 'none' : 'width 0.05s ease'
       }}
       aria-label="Mastercam Toolpaths Manager"
     >
@@ -987,6 +1039,34 @@ export default function OperationsTree({
           onSelectAllOps={() => {}}
         />
       )}
+
+      {/* 7. Mouse-Draggable Horizontal Resizer Divider */}
+      <div
+        className="sidebar-resizer"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsResizing(true);
+        }}
+        onDoubleClick={() => {
+          setSidebarWidth(320);
+          try {
+            localStorage.setItem('mastercam_sidebar_width', '320');
+          } catch {}
+        }}
+        title="Click & drag to resize sidebar (Double-click to reset)"
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '6px',
+          height: '100%',
+          cursor: 'col-resize',
+          zIndex: 40,
+          backgroundColor: isResizing ? '#0284c7' : 'transparent',
+          userSelect: 'none'
+        }}
+      />
     </aside>
   );
 }

@@ -491,14 +491,28 @@ body {
 
 /* Left Operations Manager Tree */
 .ops-manager {
-  width: 290px;
-  min-width: 240px;
-  max-width: 450px;
+  min-width: 220px;
   background-color: var(--tree-bg);
   border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   z-index: 5;
+  position: relative;
+}
+
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 40;
+  transition: background-color 0.15s ease;
+}
+
+.sidebar-resizer:hover {
+  background-color: rgba(2, 132, 199, 0.6) !important;
 }
 
 .ops-manager-header {
