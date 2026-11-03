@@ -372,14 +372,14 @@ export default function WireframeSketcherModal({
           width: '940px',
           maxWidth: '96vw',
           maxHeight: '90vh',
-          backgroundColor: '#12161f',
-          border: '1px solid #283548',
+          backgroundColor: '#ffffff',
+          border: '1px solid #cbd5e1',
           borderRadius: '8px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          color: '#f8fafc'
+          color: '#0f172a'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -387,8 +387,8 @@ export default function WireframeSketcherModal({
         <div
           style={{
             padding: '14px 20px',
-            backgroundColor: '#171c28',
-            borderBottom: '1px solid #283548',
+            backgroundColor: '#f1f5f9',
+            borderBottom: '1px solid #cbd5e1',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between'
@@ -403,7 +403,7 @@ export default function WireframeSketcherModal({
               <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', gap: '12px', marginTop: '2px' }}>
                 <span>Mastercam 2024 Style Parametric CAD Tools</span>
                 <span>•</span>
-                <span style={{ color: '#38bdf8', fontWeight: 600 }}>Target: Level 10 (Wireframe Curves)</span>
+                <span style={{ color: '#0284c7', fontWeight: 600 }}>Target: Level 10 (Wireframe Curves)</span>
                 <span>•</span>
                 <span style={{ color: '#10b981' }}>{wireframeEntities.length} Active Entities</span>
               </div>
@@ -449,8 +449,8 @@ export default function WireframeSketcherModal({
           <div
             style={{
               width: '230px',
-              backgroundColor: '#0e1219',
-              borderRight: '1px solid #232c3d',
+              backgroundColor: '#f8fafc',
+              borderRight: '1px solid #e2e8f0',
               padding: '12px 8px',
               display: 'flex',
               flexDirection: 'column',
@@ -473,9 +473,9 @@ export default function WireframeSketcherModal({
                     justifyContent: 'space-between',
                     padding: '8px 10px',
                     borderRadius: '5px',
-                    border: `1px solid ${isActive ? '#2563eb' : 'transparent'}`,
-                    backgroundColor: isActive ? '#1e293b' : 'transparent',
-                    color: isActive ? '#38bdf8' : '#cbd5e1',
+                    border: `1px solid ${isActive ? '#0284c7' : 'transparent'}`,
+                    backgroundColor: isActive ? '#e0f2fe' : 'transparent',
+                    color: isActive ? '#0284c7' : '#334155',
                     cursor: 'pointer',
                     fontSize: '12px',
                     fontWeight: isActive ? 600 : 500,
@@ -484,7 +484,7 @@ export default function WireframeSketcherModal({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Icon size={16} color={isActive ? '#38bdf8' : '#94a3b8'} />
+                    <Icon size={16} color={isActive ? '#0284c7' : '#64748b'} />
                     <span>{tool.label}</span>
                   </div>
                   <span
@@ -492,8 +492,8 @@ export default function WireframeSketcherModal({
                       fontSize: '9px',
                       padding: '1px 5px',
                       borderRadius: '3px',
-                      backgroundColor: isActive ? '#2563eb33' : '#1e2430',
-                      color: isActive ? '#38bdf8' : '#64748b',
+                      backgroundColor: isActive ? '#bae6fd' : '#e2e8f0',
+                      color: isActive ? '#0284c7' : '#64748b',
                       fontFamily: 'var(--font-mono)'
                     }}
                   >
@@ -504,7 +504,7 @@ export default function WireframeSketcherModal({
             })}
 
             {/* Quick Actions at bottom of sidebar */}
-            <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #1f2737', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <button
                 onClick={() => {
                   if (confirm("Clear all added wireframe curves from Level 10?")) {
@@ -518,8 +518,8 @@ export default function WireframeSketcherModal({
                   gap: '6px',
                   justifyContent: 'center',
                   padding: '7px',
-                  backgroundColor: '#1f1519',
-                  border: '1px solid #4a1d24',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
                   borderRadius: '4px',
                   color: wireframeEntities.length === 0 ? '#64748b' : '#f87171',
                   fontSize: '11px',
@@ -538,7 +538,7 @@ export default function WireframeSketcherModal({
               flex: 1,
               padding: '20px 24px',
               overflowY: 'auto',
-              backgroundColor: '#12161f',
+              backgroundColor: '#ffffff',
               display: 'flex',
               flexDirection: 'column'
             }}
@@ -546,8 +546,8 @@ export default function WireframeSketcherModal({
             {/* 1. LINE 2 POINTS */}
             {activeTool === 'line' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8' }}>3D Line (2 Endpoints)</div>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#0284c7' }}>3D Line (2 Endpoints)</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Construct a 3D Euclidean wireframe segment between Cartesian coordinates $(X_1, Y_1, Z_1)$ and $(X_2, Y_2, Z_2)$.
                   </div>
@@ -595,8 +595,8 @@ export default function WireframeSketcherModal({
                 </div>
 
                 {/* Start Point P1 */}
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#38bdf8', marginBottom: '8px' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#0284c7', marginBottom: '8px' }}>
                     Start Endpoint (P1)
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
@@ -634,8 +634,8 @@ export default function WireframeSketcherModal({
                 </div>
 
                 {/* End Point P2 */}
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#38bdf8', marginBottom: '8px' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#0284c7', marginBottom: '8px' }}>
                     End Endpoint (P2)
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
@@ -673,7 +673,7 @@ export default function WireframeSketcherModal({
                 </div>
 
                 {/* Metrics & Options */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#0e1219', borderRadius: '6px', border: '1px solid #1f2737' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '12px' }}>
                     Computed Vector Length: <strong style={{ color: '#10b981', fontFamily: 'var(--font-mono)' }}>{lineLength} mm</strong>
                   </div>
@@ -698,7 +698,7 @@ export default function WireframeSketcherModal({
             {/* 2. PARALLEL LINE */}
             {activeTool === 'parallel' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#f59e0b' }}>Parallel / Offset Line</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Generate an equidistant parallel wireframe offset line at a normal distance $\pm D$ from the reference line.
@@ -706,7 +706,7 @@ export default function WireframeSketcherModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Offset Distance (mm)</label>
                     <input
                       type="number"
@@ -720,7 +720,7 @@ export default function WireframeSketcherModal({
                     </div>
                   </div>
 
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Active Projection Plane</label>
                     <select
                       value={parallelPlane}
@@ -733,7 +733,7 @@ export default function WireframeSketcherModal({
                   </div>
                 </div>
 
-                <div style={{ padding: '12px', background: '#0e1219', borderRadius: '6px', border: '1px solid #1f2737', fontSize: '11.5px', color: '#cbd5e1' }}>
+                <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '11.5px', color: '#334155' }}>
                   <div>Reference Line: <strong>P1 [{lineP1.x}, {lineP1.y}, {lineP1.z}]</strong> &rarr; <strong>P2 [{lineP2.x}, {lineP2.y}, {lineP2.z}]</strong></div>
                   <div style={{ marginTop: '4px', color: '#94a3b8' }}>To change reference points, configure them in the "Line 2 Points" tab.</div>
                 </div>
@@ -748,8 +748,8 @@ export default function WireframeSketcherModal({
             {/* 3. CIRCLE / ARC */}
             {activeTool === 'circle' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8' }}>Circle / Arc CAD Entity</div>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#0284c7' }}>Circle / Arc CAD Entity</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Create full circles ($360^\circ$) or partial arcs on Top G17, Front G18, or Right G19 WCS planes.
                   </div>
@@ -762,8 +762,8 @@ export default function WireframeSketcherModal({
                     style={{
                       flex: 1,
                       padding: '8px',
-                      backgroundColor: !isArcMode ? '#1e293b' : '#141822',
-                      border: `1px solid ${!isArcMode ? '#38bdf8' : '#232c3d'}`,
+                      backgroundColor: !isArcMode ? '#1e293b' : '#ffffff',
+                      border: `1px solid ${!isArcMode ? '#38bdf8' : '#e2e8f0'}`,
                       borderRadius: '4px',
                       color: !isArcMode ? '#38bdf8' : '#94a3b8',
                       cursor: 'pointer',
@@ -778,8 +778,8 @@ export default function WireframeSketcherModal({
                     style={{
                       flex: 1,
                       padding: '8px',
-                      backgroundColor: isArcMode ? '#1e293b' : '#141822',
-                      border: `1px solid ${isArcMode ? '#38bdf8' : '#232c3d'}`,
+                      backgroundColor: isArcMode ? '#1e293b' : '#ffffff',
+                      border: `1px solid ${isArcMode ? '#38bdf8' : '#e2e8f0'}`,
                       borderRadius: '4px',
                       color: isArcMode ? '#38bdf8' : '#94a3b8',
                       cursor: 'pointer',
@@ -792,9 +792,9 @@ export default function WireframeSketcherModal({
                 </div>
 
                 {/* Center Coordinates */}
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#38bdf8' }}>Center Position</span>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#0284c7' }}>Center Position</span>
                     <button
                       className="modal-preset-btn"
                       onClick={() => setCircleCenter({ x: defaultCenter.x, y: topY, z: defaultCenter.z })}
@@ -838,14 +838,14 @@ export default function WireframeSketcherModal({
 
                 {/* Radius / Diameter & Plane */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                       <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
                         {circleIsDiameter ? 'Diameter Ø (mm)' : 'Radius R (mm)'}
                       </label>
                       <button
                         onClick={() => setCircleIsDiameter(!circleIsDiameter)}
-                        style={{ background: 'transparent', border: 'none', color: '#38bdf8', fontSize: '10px', cursor: 'pointer', textDecoration: 'underline' }}
+                        style={{ background: 'transparent', border: 'none', color: '#0284c7', fontSize: '10px', cursor: 'pointer', textDecoration: 'underline' }}
                       >
                         Switch to {circleIsDiameter ? 'Radius' : 'Diameter'}
                       </button>
@@ -863,7 +863,7 @@ export default function WireframeSketcherModal({
                     </div>
                   </div>
 
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Construction Plane</label>
                     <select
                       value={circlePlane}
@@ -879,7 +879,7 @@ export default function WireframeSketcherModal({
 
                 {/* Arc Angle Controls (if Arc mode active) */}
                 {isArcMode && (
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
                       <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Start Angle (Deg)</label>
                       <input
@@ -915,7 +915,7 @@ export default function WireframeSketcherModal({
             {/* 4. BOLT HOLE CIRCLE (PCD) */}
             {activeTool === 'pcd' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#f59e0b' }}>Bolt Hole Circle Pattern (PCD)</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Mastercam standard pitch circle pattern generator for drill cycles, peck drilling, and tap coordinates.
@@ -924,7 +924,7 @@ export default function WireframeSketcherModal({
 
                 {/* PCD Parameters */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>PCD Diameter (mm)</label>
                     <input
                       type="number"
@@ -934,7 +934,7 @@ export default function WireframeSketcherModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Number of Holes</label>
                     <input
                       type="number"
@@ -946,7 +946,7 @@ export default function WireframeSketcherModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Hole Radius (mm)</label>
                     <input
                       type="number"
@@ -959,7 +959,7 @@ export default function WireframeSketcherModal({
                       Ø{(pcdHoleRadius * 2).toFixed(1)} mm
                     </div>
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Start Angle (Deg)</label>
                     <input
                       type="number"
@@ -972,7 +972,7 @@ export default function WireframeSketcherModal({
                 </div>
 
                 {/* PCD Center */}
-                <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                   <div>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Center X (mm)</label>
                     <input
@@ -1006,14 +1006,14 @@ export default function WireframeSketcherModal({
                 </div>
 
                 {/* Coordinate Preview Table */}
-                <div style={{ background: '#0e1219', borderRadius: '6px', border: '1px solid #1f2737', overflow: 'hidden' }}>
-                  <div style={{ padding: '6px 10px', backgroundColor: '#161b26', borderBottom: '1px solid #1f2737', fontSize: '11px', fontWeight: 600, color: '#38bdf8' }}>
+                <div style={{ background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                  <div style={{ padding: '6px 10px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '11px', fontWeight: 600, color: '#0284c7' }}>
                     Generated Drill Coordinates ({pcdHoleList.length} Holes)
                   </div>
                   <div style={{ maxHeight: '110px', overflowY: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px', fontFamily: 'var(--font-mono)' }}>
                       <thead>
-                        <tr style={{ color: '#64748b', borderBottom: '1px solid #1f2737' }}>
+                        <tr style={{ color: '#64748b', borderBottom: '1px solid #e2e8f0' }}>
                           <th style={{ padding: '4px 8px', textAlign: 'left' }}>#</th>
                           <th style={{ padding: '4px 8px', textAlign: 'left' }}>Angle</th>
                           <th style={{ padding: '4px 8px', textAlign: 'left' }}>X Coordinate</th>
@@ -1023,7 +1023,7 @@ export default function WireframeSketcherModal({
                       </thead>
                       <tbody>
                         {pcdHoleList.map((h) => (
-                          <tr key={h.id} style={{ borderBottom: '1px solid #141822', color: '#cbd5e1' }}>
+                          <tr key={h.id} style={{ borderBottom: '1px solid #ffffff', color: '#334155' }}>
                             <td style={{ padding: '3px 8px', color: '#f59e0b' }}>Hole {h.id}</td>
                             <td style={{ padding: '3px 8px' }}>{h.angle}°</td>
                             <td style={{ padding: '3px 8px' }}>X{h.x}</td>
@@ -1046,7 +1046,7 @@ export default function WireframeSketcherModal({
             {/* 5. RECTANGLE / POCKET BOUNDARY */}
             {activeTool === 'rect' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#4ade80' }}>Rectangle &amp; Pocket Boundary</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Create 2D/3D rectangular pocket contours with optional corner fillet radii for CNC endmill pocketing.
@@ -1055,7 +1055,7 @@ export default function WireframeSketcherModal({
 
                 {/* Dimensions */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Width X (mm)</label>
                     <input
                       type="number"
@@ -1065,7 +1065,7 @@ export default function WireframeSketcherModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Depth Z (mm)</label>
                     <input
                       type="number"
@@ -1075,7 +1075,7 @@ export default function WireframeSketcherModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Elevation Y (mm)</label>
                     <input
                       type="number"
@@ -1085,7 +1085,7 @@ export default function WireframeSketcherModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Corner Fillet R (mm)</label>
                     <input
                       type="number"
@@ -1102,7 +1102,7 @@ export default function WireframeSketcherModal({
                 </div>
 
                 {/* Center Coordinates & Snaps */}
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <span style={{ fontSize: '12px', fontWeight: 600, color: '#4ade80' }}>Center Offset &amp; Presets</span>
                     <div style={{ display: 'flex', gap: '6px' }}>
@@ -1161,7 +1161,7 @@ export default function WireframeSketcherModal({
             {/* 6. POLYGON (HEXAGON / N-GON) */}
             {activeTool === 'polygon' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#a855f7' }}>Regular Polygon (Hexagon, Octagon)</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Create regular inscribed/circumscribed polygons for bolt heads, wrench flats, and prismatic pockets.
@@ -1169,7 +1169,7 @@ export default function WireframeSketcherModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Number of Sides</label>
                     <input
                       type="number"
@@ -1184,7 +1184,7 @@ export default function WireframeSketcherModal({
                       {polySides === 6 ? 'Hexagon' : polySides === 8 ? 'Octagon' : `${polySides}-gon`}
                     </div>
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Outer Radius R (mm)</label>
                     <input
                       type="number"
@@ -1194,7 +1194,7 @@ export default function WireframeSketcherModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Rotation (Deg)</label>
                     <input
                       type="number"
@@ -1204,7 +1204,7 @@ export default function WireframeSketcherModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Elevation Y (mm)</label>
                     <input
                       type="number"
@@ -1226,19 +1226,19 @@ export default function WireframeSketcherModal({
             {/* 7. EXTRACT 3D EDGES FROM SOLID */}
             {activeTool === 'edges' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8' }}>Curve on All Edges (From 3D Solid)</div>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#0284c7' }}>Curve on All Edges (From 3D Solid)</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Traverses active 3D CAD solid model topology and extracts sharp feature curve edges into Level 10 wireframe curves for toolpath chaining.
                   </div>
                 </div>
 
-                <div style={{ background: '#161b26', padding: '14px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#f8fafc' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
                       Feature Edge Detection Angle ({edgeThreshold}°)
                     </label>
-                    <span style={{ fontSize: '11px', color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>
+                    <span style={{ fontSize: '11px', color: '#0284c7', fontFamily: 'var(--font-mono)' }}>
                       Threshold: {edgeThreshold}°
                     </span>
                   </div>
@@ -1275,7 +1275,7 @@ export default function WireframeSketcherModal({
             {/* 8. DATUM & BOUNDING CAGE */}
             {activeTool === 'datum' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#facc15' }}>Datum Points &amp; Bounding Cage</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Generate WCS coordinate datum references, drill target coordinates, and bounding stock cages.
@@ -1283,7 +1283,7 @@ export default function WireframeSketcherModal({
                 </div>
 
                 {/* Bounding Cage */}
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '12px', fontWeight: 600, color: '#facc15', marginBottom: '8px' }}>
                     3D Bounding Wireframe Cage
                   </div>
@@ -1307,7 +1307,7 @@ export default function WireframeSketcherModal({
                 </div>
 
                 {/* 4-Corner Drill Grid */}
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '12px', fontWeight: 600, color: '#ef4444', marginBottom: '8px' }}>
                     4-Corner WCS Drill Grid
                   </div>
@@ -1330,8 +1330,8 @@ export default function WireframeSketcherModal({
                 </div>
 
                 {/* Single Datum Coordinate Point */}
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#38bdf8', marginBottom: '8px' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#0284c7', marginBottom: '8px' }}>
                     Single Datum Point Marker
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '10px' }}>
@@ -1377,15 +1377,15 @@ export default function WireframeSketcherModal({
             {/* SPLINE MANUAL */}
             {activeTool === 'spline' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#a855f7' }}>Spline Manual (NURBS / Catmull-Rom)</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Construct a smooth continuous 3D parametric spline passing through an arbitrary sequence of Cartesian control knots.
                   </div>
                 </div>
 
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#38bdf8', marginBottom: '8px' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#0284c7', marginBottom: '8px' }}>
                     Spline Control Knots (X, Y, Z per line)
                   </div>
                   <textarea
@@ -1414,14 +1414,14 @@ export default function WireframeSketcherModal({
             {/* CREATE LETTERS */}
             {activeTool === 'letters' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#0284c7' }}>Create Letters (CNC Vector Text)</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Generate stick and TrueType vector font strokes for engraving and surface lettering.
                   </div>
                 </div>
 
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ marginBottom: '10px' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Text String</label>
                     <input
@@ -1482,7 +1482,7 @@ export default function WireframeSketcherModal({
             {/* FILLET / CHAMFER */}
             {activeTool === 'fillet' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: isChamferMode ? '#f59e0b' : '#10b981' }}>
                     {isChamferMode ? 'Chamfer Entities' : 'Fillet Entities'}
                   </div>
@@ -1508,7 +1508,7 @@ export default function WireframeSketcherModal({
                   </button>
                 </div>
 
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                     <div>
                       <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>{isChamferMode ? 'Distance (mm)' : 'Radius R (mm)'}</label>
@@ -1559,14 +1559,14 @@ export default function WireframeSketcherModal({
             {/* OFFSET WIREFRAME */}
             {activeTool === 'offset' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8' }}>Offset Contour</div>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#0284c7' }}>Offset Contour</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Create parallel offset wireframe contour boundaries at a uniform normal offset distance.
                   </div>
                 </div>
 
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Offset Distance (mm)</label>
                     <input
@@ -1588,15 +1588,15 @@ export default function WireframeSketcherModal({
             {/* TURN PROFILE */}
             {activeTool === 'turn' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#ec4899' }}>Lathe Turning Profile Envelope</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Extract the 2D planar revolved silhouette envelope for lathe turning operations from the active 3D model.
                   </div>
                 </div>
 
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
-                  <div style={{ fontSize: '12px', color: '#cbd5e1' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', color: '#334155' }}>
                     Extracts radial upper half profile aligned along the turning spindle centerline (Z-axis).
                   </div>
                 </div>
@@ -1611,9 +1611,9 @@ export default function WireframeSketcherModal({
             {/* 9. LEVEL 10 ENTITY MANAGER */}
             {activeTool === 'list' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8' }}>Level 10 Wireframe Entities</div>
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#0284c7' }}>Level 10 Wireframe Entities</div>
                     <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                       Inspect, isolate, or delete individual wireframe curve entities residing on Level 10.
                     </div>
@@ -1628,8 +1628,8 @@ export default function WireframeSketcherModal({
                       alignItems: 'center',
                       gap: '6px',
                       padding: '6px 10px',
-                      backgroundColor: '#1f1519',
-                      border: '1px solid #ef4444',
+                      backgroundColor: '#fef2f2',
+                      border: '1px solid #fca5a5',
                       borderRadius: '4px',
                       color: '#ef4444',
                       fontSize: '11px',
@@ -1659,8 +1659,8 @@ export default function WireframeSketcherModal({
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           padding: '8px 12px',
-                          backgroundColor: '#161b26',
-                          border: '1px solid #232c3d',
+                          backgroundColor: '#f8fafc',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '5px',
                           fontSize: '12px'
                         }}
@@ -1668,7 +1668,7 @@ export default function WireframeSketcherModal({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#38bdf8' }} />
                           <div>
-                            <div style={{ fontWeight: 600, color: '#f8fafc' }}>{ent.name || `Wireframe_Entity_${idx + 1}`}</div>
+                            <div style={{ fontWeight: 600, color: '#0f172a' }}>{ent.name || `Wireframe_Entity_${idx + 1}`}</div>
                             <div style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
                               Type: {ent.userData?.type || '3D Curve'} {ent.userData?.length ? `| L: ${ent.userData.length}mm` : ''}
                             </div>
@@ -1702,8 +1702,8 @@ export default function WireframeSketcherModal({
         <div
           style={{
             padding: '12px 20px',
-            backgroundColor: '#171c28',
-            borderTop: '1px solid #283548',
+            backgroundColor: '#f1f5f9',
+            borderTop: '1px solid #cbd5e1',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between'
@@ -1736,10 +1736,10 @@ export default function WireframeSketcherModal({
 const inputStyle = {
   width: '100%',
   padding: '6px 8px',
-  backgroundColor: '#0e1219',
-  border: '1px solid #2a3548',
+  backgroundColor: '#ffffff',
+  border: '1px solid #cbd5e1',
   borderRadius: '4px',
-  color: '#f8fafc',
+  color: '#0f172a',
   fontSize: '11.5px',
   fontFamily: 'var(--font-mono)',
   marginTop: '4px',

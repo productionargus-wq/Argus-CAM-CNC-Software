@@ -83,13 +83,13 @@
   --tree-bg: #161a22;
   --status-bar-bg: #0f1217;
 
-  --dialog-bg: #181d27;
-  --dialog-header-bg: linear-gradient(90deg, #1e293b 0%, #171d27 100%);
-  --dialog-border: #333d4e;
+  --dialog-bg: #ffffff;
+  --dialog-header-bg: #f1f5f9;
+  --dialog-border: #cbd5e1;
 
-  --input-bg: #141822;
-  --input-border: #333d4e;
-  --input-text: #f8fafc;
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-text: #0f172a;
 
   --viewport-bg: radial-gradient(circle at 50% 50%, #202736 0%, #0e1218 100%);
   --hud-bg: rgba(15, 23, 42, 0.75);

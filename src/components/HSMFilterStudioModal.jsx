@@ -337,7 +337,7 @@ export default function HSMFilterStudioModal({
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(3, 7, 18, 0.88)',
+        background: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(10px)',
         display: 'flex',
         alignItems: 'center',
@@ -350,14 +350,14 @@ export default function HSMFilterStudioModal({
           width: isFullscreen ? '100vw' : '96vw',
           maxWidth: isFullscreen ? '100vw' : '1680px',
           height: isFullscreen ? '100vh' : '92vh',
-          background: '#0d1527',
+          background: '#ffffff',
           borderRadius: isFullscreen ? '0px' : '14px',
-          border: '1px solid #1e293b',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8)',
+          border: '1px solid #cbd5e1',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          color: '#e2e8f0'
+          color: '#0f172a'
         }}
       >
         {/* ================================================================== */}
@@ -366,8 +366,8 @@ export default function HSMFilterStudioModal({
         <div
           style={{
             height: '56px',
-            borderBottom: '1px solid #1e293b',
-            background: 'linear-gradient(90deg, #090f1d 0%, #0e172a 100%)',
+            borderBottom: '1px solid #cbd5e1',
+            background: '#f1f5f9',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -392,7 +392,7 @@ export default function HSMFilterStudioModal({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.3px', color: '#f8fafc' }}>
+                <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.3px', color: '#0f172a' }}>
                   High-Speed Machining (HSM) Tolerance Filter &amp; Arc Spline Studio
                 </span>
                 <span
@@ -433,7 +433,7 @@ export default function HSMFilterStudioModal({
                 <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>Block Compression</div>
                 <div style={{ fontSize: '14px', fontWeight: 800, color: '#10b981' }}>
                   {metrics.reductionPercent}% Reduced{' '}
-                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#cbd5e1' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#334155' }}>
                     ({metrics.origLines} &rarr; {metrics.filteredSegments})
                   </span>
                 </div>
@@ -504,8 +504,8 @@ export default function HSMFilterStudioModal({
           <div
             style={{
               width: '410px',
-              borderRight: '1px solid #1e293b',
-              background: '#090f1d',
+              borderRight: '1px solid #cbd5e1',
+              background: '#f8fafc',
               display: 'flex',
               flexDirection: 'column',
               flexShrink: 0
@@ -515,10 +515,10 @@ export default function HSMFilterStudioModal({
               {/* SECTION 1: FILTER PRESET SELECTION */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b',
+                  border: '1px solid #cbd5e1',
                   marginBottom: '16px'
                 }}
               >
@@ -537,9 +537,9 @@ export default function HSMFilterStudioModal({
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       fontSize: '12px'
                     }}
@@ -552,7 +552,7 @@ export default function HSMFilterStudioModal({
                   </select>
                 </div>
 
-                <div style={{ fontSize: '11px', color: '#94a3b8', background: '#090f1d', padding: '8px 10px', borderRadius: '6px', border: '1px solid #1e293b', marginBottom: '10px' }}>
+                <div style={{ fontSize: '11px', color: '#94a3b8', background: '#f8fafc', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', marginBottom: '10px' }}>
                   {HSM_FILTER_PRESETS[selectedPresetKey]?.description}
                 </div>
 
@@ -568,9 +568,9 @@ export default function HSMFilterStudioModal({
                       style={{
                         flex: 1,
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px',
                         fontWeight: 700
@@ -586,10 +586,10 @@ export default function HSMFilterStudioModal({
               {/* SECTION 2: ARC SPLINE FITTING LIMITS */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b',
+                  border: '1px solid #cbd5e1',
                   marginBottom: '16px'
                 }}
               >
@@ -609,9 +609,9 @@ export default function HSMFilterStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -627,9 +627,9 @@ export default function HSMFilterStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -645,9 +645,9 @@ export default function HSMFilterStudioModal({
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '6px',
                       fontSize: '12px'
                     }}
@@ -662,10 +662,10 @@ export default function HSMFilterStudioModal({
               {/* SECTION 3: CONTROLLER HIGH-SPEED LOOK-AHEAD INJECTION */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b'
+                  border: '1px solid #cbd5e1'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '10px' }}>
@@ -683,9 +683,9 @@ export default function HSMFilterStudioModal({
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       fontSize: '12px'
                     }}
@@ -707,9 +707,9 @@ export default function HSMFilterStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px',
                         fontSize: '12px'
                       }}
@@ -732,8 +732,8 @@ export default function HSMFilterStudioModal({
             <div
               style={{
                 height: '42px',
-                borderBottom: '1px solid #1e293b',
-                background: '#090f1d',
+                borderBottom: '1px solid #cbd5e1',
+                background: '#f8fafc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -836,11 +836,11 @@ export default function HSMFilterStudioModal({
                     right: '16px',
                     background: 'rgba(15, 23, 42, 0.92)',
                     backdropFilter: 'blur(8px)',
-                    border: '1px solid #334155',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
                     padding: '12px 16px',
                     fontSize: '11px',
-                    color: '#f8fafc',
+                    color: '#0f172a',
                     boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
                     pointerEvents: 'none',
                     minWidth: '220px'
@@ -854,7 +854,7 @@ export default function HSMFilterStudioModal({
                     <div>Raw Blocks: <strong style={{ color: '#f59e0b' }}>{metrics.origLines} G01 lines</strong></div>
                     <div>Filtered Output: <strong style={{ color: '#10b981' }}>{metrics.filteredSegments} segments</strong></div>
                     <div>Fitted Arcs: <strong style={{ color: '#38bdf8' }}>{metrics.arcCount} G02/G03</strong></div>
-                    <div>Linear Moves: <strong style={{ color: '#cbd5e1' }}>{metrics.lineCount} G01</strong></div>
+                    <div>Linear Moves: <strong style={{ color: '#334155' }}>{metrics.lineCount} G01</strong></div>
                     <div>Peak Deviation: <strong style={{ color: '#10b981' }}>{metrics.maxObservedDeviationUm} &mu;m</strong></div>
                   </div>
                 </div>
@@ -863,8 +863,8 @@ export default function HSMFilterStudioModal({
 
             {/* TAB CONTENT 2: G-CODE EDITOR */}
             {activeTab === 'gcode' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#090f1d' }}>
-                <div style={{ padding: '10px 16px', background: '#0e172a', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+                <div style={{ padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: '12px', color: '#94a3b8' }}>
                     Compressed ISO G-Code &bull; Look-Ahead Accel / Decel Preamble Injected
                   </div>
@@ -876,7 +876,7 @@ export default function HSMFilterStudioModal({
                         alignItems: 'center',
                         gap: '6px',
                         background: copiedGCode ? '#10b981' : '#1e293b',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         color: '#ffffff',
                         padding: '5px 12px',
                         borderRadius: '6px',
@@ -934,7 +934,7 @@ export default function HSMFilterStudioModal({
             {activeTab === 'analytics' && (
               <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Line Reduction</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#10b981', marginTop: '4px' }}>
                       {metrics.reductionPercent}%
@@ -944,7 +944,7 @@ export default function HSMFilterStudioModal({
                     </div>
                   </div>
 
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>File Size Savings</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#38bdf8', marginTop: '4px' }}>
                       {metrics.savedFileSizeKb} KB
@@ -954,7 +954,7 @@ export default function HSMFilterStudioModal({
                     </div>
                   </div>
 
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Max Deviation</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#c084fc', marginTop: '4px' }}>
                       {metrics.maxObservedDeviationUm} &mu;m
@@ -964,7 +964,7 @@ export default function HSMFilterStudioModal({
                     </div>
                   </div>
 
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Target Roughness</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#f59e0b', marginTop: '4px' }}>
                       Ra {metrics.theoreticalSurfaceRa} &mu;m
@@ -976,8 +976,8 @@ export default function HSMFilterStudioModal({
                 </div>
 
                 {/* Technical Report */}
-                <div style={{ background: '#0e172a', borderRadius: '10px', padding: '20px', border: '1px solid #1e293b' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px', border: '1px solid #cbd5e1' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Cpu size={16} color="#38bdf8" />
                     CNC Servo Buffer &amp; Look-Ahead Starvation Assessment
                   </h3>
@@ -993,8 +993,8 @@ export default function HSMFilterStudioModal({
             <div
               style={{
                 height: '40px',
-                borderTop: '1px solid #1e293b',
-                background: '#090f1d',
+                borderTop: '1px solid #cbd5e1',
+                background: '#f8fafc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1024,8 +1024,8 @@ export default function HSMFilterStudioModal({
         <div
           style={{
             height: '56px',
-            borderTop: '1px solid #1e293b',
-            background: '#090f1d',
+            borderTop: '1px solid #cbd5e1',
+            background: '#f8fafc',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1040,9 +1040,9 @@ export default function HSMFilterStudioModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: '#1e293b',
-                border: '1px solid #334155',
-                color: '#e2e8f0',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                color: '#0f172a',
                 padding: '8px 14px',
                 borderRadius: '6px',
                 fontSize: '12px',
@@ -1080,8 +1080,8 @@ export default function HSMFilterStudioModal({
               onClick={onClose}
               style={{
                 background: 'transparent',
-                border: '1px solid #334155',
-                color: '#cbd5e1',
+                border: '1px solid #cbd5e1',
+                color: '#334155',
                 padding: '8px 16px',
                 borderRadius: '6px',
                 fontSize: '12px',

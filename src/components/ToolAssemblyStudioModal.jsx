@@ -543,7 +543,7 @@ export default function ToolAssemblyStudioModal({
 
                 {/* Overhang / Stick-out Slider */}
                 <div style={{ marginTop: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#cbd5e1', marginBottom: '2px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#334155', marginBottom: '2px' }}>
                     <span>Tool Stick-Out / Overhang (Lo):</span>
                     <strong style={{ color: '#38bdf8' }}>{overhang} mm</strong>
                   </div>
@@ -584,7 +584,7 @@ export default function ToolAssemblyStudioModal({
                       padding: '2px 8px',
                       borderRadius: '4px',
                       background: audit.status === 'safe' ? '#10b981' : audit.status === 'caution' ? '#f59e0b' : '#ef4444',
-                      color: '#fff'
+                      color: '#0f172a'
                     }}
                   >
                     {audit.status === 'safe' ? 'SAFE CLEARANCE' : audit.status === 'caution' ? 'LOW CLEARANCE' : 'HOLDER COLLISION GOUGE'}
@@ -632,7 +632,7 @@ export default function ToolAssemblyStudioModal({
 
             {/* Right Column: 3D Interactive Assembly Viewport */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ flex: 1, minHeight: '360px', position: 'relative', borderRadius: '6px', overflow: 'hidden', border: '1px solid #1e293b' }}>
+              <div style={{ flex: 1, minHeight: '360px', position: 'relative', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
                 <div ref={mountRef} style={{ width: '100%', height: '100%' }} />
 
                 {/* 3D Viewport Badges */}

@@ -58,7 +58,7 @@ export default function EntityAnalyzerModal({
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Active File Banner */}
           <div style={{
-            background: '#141822',
+            background: '#ffffff',
             border: '1px solid #2d3545',
             borderRadius: '6px',
             padding: '10px 14px',
@@ -89,15 +89,15 @@ export default function EntityAnalyzerModal({
 
           {/* Metric Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-            <div style={{ background: '#0e1218', border: '1px solid #242c3d', borderRadius: '6px', padding: '10px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #242c3d', borderRadius: '6px', padding: '10px' }}>
               <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase' }}>Dimensions (X x Y x Z)</div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
                 {dim.x} &times; {dim.y} &times; {dim.z}
               </div>
               <div style={{ fontSize: '10px', color: '#38bdf8', marginTop: '2px' }}>Millimeters (G21)</div>
             </div>
 
-            <div style={{ background: '#0e1218', border: '1px solid #242c3d', borderRadius: '6px', padding: '10px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #242c3d', borderRadius: '6px', padding: '10px' }}>
               <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase' }}>Displacement Volume</div>
               <div style={{ fontSize: '14px', fontWeight: 700, color: '#10b981', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
                 {volume.toLocaleString()} cm³
@@ -105,7 +105,7 @@ export default function EntityAnalyzerModal({
               <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Area: {area.toLocaleString()} mm²</div>
             </div>
 
-            <div style={{ background: '#0e1218', border: '1px solid #242c3d', borderRadius: '6px', padding: '10px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #242c3d', borderRadius: '6px', padding: '10px' }}>
               <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase' }}>Surface Tessellation</div>
               <div style={{ fontSize: '14px', fontWeight: 700, color: '#a855f7', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
                 {triangles.toLocaleString()}
@@ -124,15 +124,15 @@ export default function EntityAnalyzerModal({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#94a3b8' }}>X Centroid:</span>
-                  <span style={{ color: '#f8fafc', fontWeight: 600 }}>{center.x} mm</span>
+                  <span style={{ color: '#0f172a', fontWeight: 600 }}>{center.x} mm</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#94a3b8' }}>Y Centroid:</span>
-                  <span style={{ color: '#f8fafc', fontWeight: 600 }}>{center.y} mm</span>
+                  <span style={{ color: '#0f172a', fontWeight: 600 }}>{center.y} mm</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#94a3b8' }}>Z Centroid:</span>
-                  <span style={{ color: '#f8fafc', fontWeight: 600 }}>{center.z} mm</span>
+                  <span style={{ color: '#0f172a', fontWeight: 600 }}>{center.z} mm</span>
                 </div>
               </div>
             </div>

@@ -371,8 +371,8 @@ export default function MachineSimModal({
               value={selectedMachineId}
               onChange={(e) => setSelectedMachineId(e.target.value)}
               style={{
-                background: '#141822',
-                border: '1px solid #334155',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
                 color: '#38bdf8',
                 padding: '3px 8px',
                 borderRadius: '4px',
@@ -401,7 +401,7 @@ export default function MachineSimModal({
               {/* Collision & Overtravel Overlay */}
               <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {overtravelAxis ? (
-                  <div className="collision-badge danger" style={{ background: 'rgba(239,68,68,0.95)', color: '#fff', padding: '6px 12px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold', boxShadow: '0 2px 10px rgba(239, 68, 68, 0.4)' }}>
+                  <div className="collision-badge danger" style={{ background: 'rgba(239,68,68,0.95)', color: '#0f172a', padding: '6px 12px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold', boxShadow: '0 2px 10px rgba(239, 68, 68, 0.4)' }}>
                     <AlertTriangle size={16} />
                     <span>OVERTRAVEL LIMIT EXCEEDED ON {overtravelAxis}-AXIS!</span>
                   </div>
@@ -411,7 +411,7 @@ export default function MachineSimModal({
                     <span>PRE-FLIGHT: {auditResult.violationsCount} KINEMATIC VIOLATIONS DETECTED</span>
                   </div>
                 ) : (
-                  <div className="collision-badge safe" style={{ background: 'rgba(16,185,129,0.9)', color: '#fff', padding: '6px 12px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }}>
+                  <div className="collision-badge safe" style={{ background: 'rgba(16,185,129,0.9)', color: '#0f172a', padding: '6px 12px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }}>
                     <ShieldCheck size={16} />
                     <span>REAL-TIME KINEMATIC CLEARANCE: SAFE (&gt; 5.2mm)</span>
                   </div>
@@ -442,7 +442,7 @@ export default function MachineSimModal({
                   <span>Envelope</span>
                 </button>
 
-                <div style={{ background: 'rgba(15,23,42,0.85)', padding: '5px 9px', borderRadius: '4px', border: '1px solid #334155', color: '#f59e0b', fontSize: '11px', fontFamily: 'monospace' }}>
+                <div style={{ background: 'rgba(15,23,42,0.85)', padding: '5px 9px', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#f59e0b', fontSize: '11px', fontFamily: 'monospace' }}>
                   ⚡ SPINDLE: {currentBlock.rpm || 8000} RPM | FEED: {currentBlock.feed || 1500} mm/min {currentBlock.isRapid ? '(RAPID)' : ''}
                 </div>
               </div>
@@ -452,7 +452,7 @@ export default function MachineSimModal({
             <div className="sim-controls-panel" style={{ width: '360px' }}>
 
               {/* Diagnostic Tab Switcher */}
-              <div style={{ display: 'flex', borderBottom: '1px solid #334155', background: '#0f172a' }}>
+              <div style={{ display: 'flex', borderBottom: '1px solid #334155', background: '#ffffff' }}>
                 <button
                   type="button"
                   onClick={() => setActiveDiagTab('stream')}
@@ -581,14 +581,14 @@ export default function MachineSimModal({
                     const barColor = isOver ? '#ef4444' : isNear ? '#f59e0b' : '#10b981';
 
                     return (
-                      <div key={axisKey} style={{ background: '#161e2e', padding: '8px 10px', borderRadius: '6px', border: '1px solid #283347' }}>
+                      <div key={axisKey} style={{ background: '#ffffff', padding: '8px 10px', borderRadius: '6px', border: '1px solid #283347' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, color: '#f8fafc' }}>{axisKey}-Axis Travel</span>
+                          <span style={{ fontWeight: 700, color: '#0f172a' }}>{axisKey}-Axis Travel</span>
                           <span style={{ fontWeight: 800, color: barColor }}>{u.strokeUsedPct}% Used</span>
                         </div>
 
                         {/* Progress Bar */}
-                        <div style={{ height: '6px', background: '#0f172a', borderRadius: '3px', overflow: 'hidden', marginBottom: '6px' }}>
+                        <div style={{ height: '6px', background: '#ffffff', borderRadius: '3px', overflow: 'hidden', marginBottom: '6px' }}>
                           <div style={{ width: `${Math.min(100, u.strokeUsedPct)}%`, height: '100%', background: barColor, transition: 'width 0.3s' }} />
                         </div>
 
@@ -633,7 +633,7 @@ export default function MachineSimModal({
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '9px', fontWeight: 800, padding: '1px 5px', borderRadius: '3px', background: '#ef4444', color: '#fff' }}>
+                          <span style={{ fontSize: '9px', fontWeight: 800, padding: '1px 5px', borderRadius: '3px', background: '#ef4444', color: '#0f172a' }}>
                             {v.type} &bull; {v.axis}-AXIS
                           </span>
                           <button
@@ -641,7 +641,7 @@ export default function MachineSimModal({
                             onClick={() => handleJumpToClash(v.lineIdx)}
                             style={{
                               background: '#ef4444',
-                              color: '#fff',
+                              color: '#0f172a',
                               border: 'none',
                               borderRadius: '3px',
                               padding: '2px 6px',
@@ -653,7 +653,7 @@ export default function MachineSimModal({
                             Jump to Clash
                           </button>
                         </div>
-                        <div style={{ fontSize: '11px', color: '#f8fafc', fontWeight: 600 }}>
+                        <div style={{ fontSize: '11px', color: '#0f172a', fontWeight: 600 }}>
                           {v.message}
                         </div>
                         <div style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>

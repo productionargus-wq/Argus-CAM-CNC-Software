@@ -283,8 +283,8 @@ export default function ModelPrepModal({
         {/* Tab Navigation */}
         <div style={{
           display: 'flex',
-          borderBottom: '1px solid #1f2737',
-          backgroundColor: '#0c0f14',
+          borderBottom: '1px solid #e2e8f0',
+          backgroundColor: '#ffffff',
           padding: '0 8px'
         }}>
           {[
@@ -324,8 +324,8 @@ export default function ModelPrepModal({
           {activeTab === 'pushpull' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -336,7 +336,7 @@ export default function ModelPrepModal({
 
               {/* Select Face Direction */}
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#f8fafc', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#0f172a', marginBottom: '8px' }}>
                   Select Target Face Direction:
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
@@ -354,8 +354,8 @@ export default function ModelPrepModal({
                       onClick={() => setFaceDirection(face.id)}
                       style={{
                         padding: '8px',
-                        background: faceDirection === face.id ? '#1e293b' : '#0e1218',
-                        border: `1px solid ${faceDirection === face.id ? '#38bdf8' : '#232c3d'}`,
+                        background: faceDirection === face.id ? '#1e293b' : '#f8fafc',
+                        border: `1px solid ${faceDirection === face.id ? '#38bdf8' : '#e2e8f0'}`,
                         borderRadius: '4px',
                         textAlign: 'left',
                         cursor: 'pointer'
@@ -374,7 +374,7 @@ export default function ModelPrepModal({
 
               {/* Offset Input with Quick Buttons */}
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#f8fafc', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
                   Offset Distance (mm):
                 </label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -385,10 +385,10 @@ export default function ModelPrepModal({
                     onChange={(e) => setOffsetMm(e.target.value)}
                     style={{
                       padding: '8px 12px',
-                      background: '#0e1218',
-                      border: '1px solid #334155',
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '4px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       fontSize: '13px',
                       fontWeight: 600,
                       width: '120px'
@@ -402,7 +402,7 @@ export default function ModelPrepModal({
                         style={{
                           padding: '4px 8px',
                           background: '#1e293b',
-                          border: '1px solid #334155',
+                          border: '1px solid #cbd5e1',
                           borderRadius: '3px',
                           color: val > 0 ? '#38bdf8' : '#f43f5e',
                           fontSize: '10px',
@@ -418,9 +418,9 @@ export default function ModelPrepModal({
               </div>
 
               {/* Live Preview Delta Box */}
-              <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '10px 14px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px 14px' }}>
                 <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase' }}>Active Part Dimensions:</div>
-                <div style={{ fontSize: '12px', color: '#f8fafc', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+                <div style={{ fontSize: '12px', color: '#0f172a', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
                   X: {dim.x} mm &bull; Y: {dim.y} mm &bull; Z: {dim.z} mm
                 </div>
               </div>
@@ -440,8 +440,8 @@ export default function ModelPrepModal({
           {activeTab === 'align' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -456,7 +456,7 @@ export default function ModelPrepModal({
                   onClick={handleAlignTopToZ0}
                   style={{
                     padding: '12px',
-                    background: '#0e1218',
+                    background: '#f8fafc',
                     border: '1px solid #38bdf8',
                     borderRadius: '6px',
                     textAlign: 'left',
@@ -464,7 +464,7 @@ export default function ModelPrepModal({
                   }}
                 >
                   <Crosshair size={18} color="#38bdf8" />
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>Top Face to Z=0</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>Top Face to Z=0</div>
                   <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Sets top of workpiece flush with G54 Z origin</div>
                 </button>
 
@@ -472,7 +472,7 @@ export default function ModelPrepModal({
                   onClick={handleAlignBottomToTable}
                   style={{
                     padding: '12px',
-                    background: '#0e1218',
+                    background: '#f8fafc',
                     border: '1px solid #10b981',
                     borderRadius: '6px',
                     textAlign: 'left',
@@ -480,7 +480,7 @@ export default function ModelPrepModal({
                   }}
                 >
                   <Grid size={18} color="#10b981" />
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>Drop to Machine Table</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>Drop to Machine Table</div>
                   <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Rests bottom face on fixture plate / vise</div>
                 </button>
 
@@ -488,7 +488,7 @@ export default function ModelPrepModal({
                   onClick={handleCenterXY}
                   style={{
                     padding: '12px',
-                    background: '#0e1218',
+                    background: '#f8fafc',
                     border: '1px solid #f59e0b',
                     borderRadius: '6px',
                     textAlign: 'left',
@@ -496,14 +496,14 @@ export default function ModelPrepModal({
                   }}
                 >
                   <Move size={18} color="#f59e0b" />
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>Center on Spindle</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>Center on Spindle</div>
                   <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Centers part in X and Y over spindle axis</div>
                 </button>
               </div>
 
               {/* Manual WCS Coordinates Form */}
-              <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', marginBottom: '8px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', marginBottom: '8px' }}>
                   Manual WCS Datum Offset (G54 XYZ mm):
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
@@ -513,7 +513,7 @@ export default function ModelPrepModal({
                       type="number"
                       value={customX}
                       onChange={(e) => setCustomX(e.target.value)}
-                      style={{ width: '100%', padding: '6px 8px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '11px' }}
+                      style={{ width: '100%', padding: '6px 8px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }}
                     />
                   </div>
                   <div>
@@ -522,7 +522,7 @@ export default function ModelPrepModal({
                       type="number"
                       value={customY}
                       onChange={(e) => setCustomY(e.target.value)}
-                      style={{ width: '100%', padding: '6px 8px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '11px' }}
+                      style={{ width: '100%', padding: '6px 8px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }}
                     />
                   </div>
                   <div>
@@ -531,7 +531,7 @@ export default function ModelPrepModal({
                       type="number"
                       value={customZ}
                       onChange={(e) => setCustomZ(e.target.value)}
-                      style={{ width: '100%', padding: '6px 8px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '11px' }}
+                      style={{ width: '100%', padding: '6px 8px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }}
                     />
                   </div>
                 </div>
@@ -559,8 +559,8 @@ export default function ModelPrepModal({
           {activeTab === 'orient' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -570,8 +570,8 @@ export default function ModelPrepModal({
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>X-Axis Rotation (A)</div>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a' }}>X-Axis Rotation (A)</div>
                   <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Rotate around table width</div>
                   <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
                     <button
@@ -591,8 +591,8 @@ export default function ModelPrepModal({
                   </div>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Y-Axis Rotation (B)</div>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a' }}>Y-Axis Rotation (B)</div>
                   <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Rotate around spindle</div>
                   <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
                     <button
@@ -612,7 +612,7 @@ export default function ModelPrepModal({
                   </div>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
                   <div style={{ fontSize: '11px', fontWeight: 600, color: '#38bdf8' }}>Z-Axis / Op 2 Flip (C)</div>
                   <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>180&deg; Flip for 2nd Setup</div>
                   <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
@@ -640,8 +640,8 @@ export default function ModelPrepModal({
           {activeTab === 'defeature' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -651,9 +651,9 @@ export default function ModelPrepModal({
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
                   <ShieldAlert size={20} color="#06b6d4" />
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>Auto-Cap Top Face Bolt Holes</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>Auto-Cap Top Face Bolt Holes</div>
                   <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px' }}>
                     Creates planar capping patch discs on Level 15 (Check Surfaces). Toolpaths will skim over the holes without plunging.
                   </div>
@@ -666,9 +666,9 @@ export default function ModelPrepModal({
                   </button>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
                   <Maximize2 size={20} color="#f59e0b" />
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>Add Machining Allowance Skin</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>Add Machining Allowance Skin</div>
                   <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px' }}>
                     Expands the solid envelope by +1.5mm uniform offset for casting/forging roughing passes.
                   </div>
@@ -730,28 +730,28 @@ export default function ModelPrepModal({
 
               {/* Integrity Metrics Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '4px', padding: '10px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
                   <div style={{ fontSize: '9.5px', color: '#64748b' }}>TOTAL TRIANGLES</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', marginTop: '2px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
                     {diagnosticResult?.totalTriangles?.toLocaleString() || partMetrics?.triangles || 0}
                   </div>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '4px', padding: '10px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
                   <div style={{ fontSize: '9.5px', color: '#64748b' }}>TOTAL VERTICES</div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: '#38bdf8', marginTop: '2px' }}>
                     {diagnosticResult?.totalVertices?.toLocaleString() || 0}
                   </div>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '4px', padding: '10px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
                   <div style={{ fontSize: '9.5px', color: '#64748b' }}>BOUNDARY EDGES</div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: (diagnosticResult?.boundaryEdges || 0) === 0 ? '#10b981' : '#f59e0b', marginTop: '2px' }}>
                     {diagnosticResult?.boundaryEdges || 0}
                   </div>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '4px', padding: '10px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
                   <div style={{ fontSize: '9.5px', color: '#64748b' }}>NON-MANIFOLD EDGES</div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: (diagnosticResult?.nonManifoldEdges || 0) === 0 ? '#10b981' : '#ef4444', marginTop: '2px' }}>
                     {diagnosticResult?.nonManifoldEdges || 0}
@@ -760,8 +760,8 @@ export default function ModelPrepModal({
               </div>
 
               {/* Repair Operations */}
-              <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', marginBottom: '8px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', marginBottom: '8px' }}>
                   Mesh Normal Healing Operations:
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -789,7 +789,7 @@ export default function ModelPrepModal({
         </div>
 
         {/* Footer */}
-        <div className="modal-footer" style={{ borderTop: '1px solid #1f2737', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '10px', color: '#94a3b8' }}>
             Model Prep modifications update toolpath drive geometry and stock boundary in real-time.
           </div>

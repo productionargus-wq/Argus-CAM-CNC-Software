@@ -247,8 +247,8 @@ export default function DraftingCADModal({
         {/* Tab Navigation */}
         <div style={{
           display: 'flex',
-          borderBottom: '1px solid #1f2737',
-          backgroundColor: '#0c0f14',
+          borderBottom: '1px solid #e2e8f0',
+          backgroundColor: '#ffffff',
           padding: '0 8px'
         }}>
           {[
@@ -288,8 +288,8 @@ export default function DraftingCADModal({
           {activeTab === 'linear' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -300,7 +300,7 @@ export default function DraftingCADModal({
 
               {/* Preset Selection */}
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '8px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '8px' }}>
                   Select Dimension Axis / Preset:
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
@@ -315,8 +315,8 @@ export default function DraftingCADModal({
                       onClick={() => setLinearPreset(p.id)}
                       style={{
                         padding: '10px',
-                        background: linearPreset === p.id ? '#1e293b' : '#0e1218',
-                        border: `1px solid ${linearPreset === p.id ? '#38bdf8' : '#232c3d'}`,
+                        background: linearPreset === p.id ? '#1e293b' : '#f8fafc',
+                        border: `1px solid ${linearPreset === p.id ? '#38bdf8' : '#e2e8f0'}`,
                         borderRadius: '4px',
                         textAlign: 'left',
                         cursor: 'pointer'
@@ -336,7 +336,7 @@ export default function DraftingCADModal({
 
               {/* Tolerance Selector */}
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
                   Machining Tolerance Callout:
                 </label>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -352,7 +352,7 @@ export default function DraftingCADModal({
                       onClick={() => setTolerance(tol.id)}
                       style={{
                         padding: '5px 10px',
-                        background: tolerance === tol.id ? '#1e293b' : '#0e1218',
+                        background: tolerance === tol.id ? '#1e293b' : '#f8fafc',
                         border: `1px solid ${tolerance === tol.id ? '#38bdf8' : '#334155'}`,
                         borderRadius: '3px',
                         color: tolerance === tol.id ? '#38bdf8' : '#94a3b8',
@@ -369,23 +369,23 @@ export default function DraftingCADModal({
 
               {/* Custom Points Form if custom selected */}
               {linearPreset === 'custom' && (
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', marginBottom: '8px' }}>Custom Point Coordinates (XYZ mm):</div>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', marginBottom: '8px' }}>Custom Point Coordinates (XYZ mm):</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
                       <div style={{ fontSize: '10px', color: '#38bdf8', marginBottom: '4px' }}>Point 1 (Start):</div>
                       <div style={{ display: 'flex', gap: '4px' }}>
-                        <input type="number" placeholder="X" value={customP1.x} onChange={(e) => setCustomP1({ ...customP1, x: e.target.value })} style={{ width: '33%', padding: '4px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '10px' }} />
-                        <input type="number" placeholder="Y" value={customP1.y} onChange={(e) => setCustomP1({ ...customP1, y: e.target.value })} style={{ width: '33%', padding: '4px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '10px' }} />
-                        <input type="number" placeholder="Z" value={customP1.z} onChange={(e) => setCustomP1({ ...customP1, z: e.target.value })} style={{ width: '33%', padding: '4px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '10px' }} />
+                        <input type="number" placeholder="X" value={customP1.x} onChange={(e) => setCustomP1({ ...customP1, x: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
+                        <input type="number" placeholder="Y" value={customP1.y} onChange={(e) => setCustomP1({ ...customP1, y: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
+                        <input type="number" placeholder="Z" value={customP1.z} onChange={(e) => setCustomP1({ ...customP1, z: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
                       </div>
                     </div>
                     <div>
                       <div style={{ fontSize: '10px', color: '#10b981', marginBottom: '4px' }}>Point 2 (End):</div>
                       <div style={{ display: 'flex', gap: '4px' }}>
-                        <input type="number" placeholder="X" value={customP2.x} onChange={(e) => setCustomP2({ ...customP2, x: e.target.value })} style={{ width: '33%', padding: '4px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '10px' }} />
-                        <input type="number" placeholder="Y" value={customP2.y} onChange={(e) => setCustomP2({ ...customP2, y: e.target.value })} style={{ width: '33%', padding: '4px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '10px' }} />
-                        <input type="number" placeholder="Z" value={customP2.z} onChange={(e) => setCustomP2({ ...customP2, z: e.target.value })} style={{ width: '33%', padding: '4px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '10px' }} />
+                        <input type="number" placeholder="X" value={customP2.x} onChange={(e) => setCustomP2({ ...customP2, x: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
+                        <input type="number" placeholder="Y" value={customP2.y} onChange={(e) => setCustomP2({ ...customP2, y: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
+                        <input type="number" placeholder="Z" value={customP2.z} onChange={(e) => setCustomP2({ ...customP2, z: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
                       </div>
                     </div>
                   </div>
@@ -407,8 +407,8 @@ export default function DraftingCADModal({
           {activeTab === 'radial' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -418,8 +418,8 @@ export default function DraftingCADModal({
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '6px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
                     Callout Type:
                   </label>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -428,7 +428,7 @@ export default function DraftingCADModal({
                       style={{
                         flex: 1,
                         padding: '8px',
-                        background: radialType === 'radius' ? '#1e293b' : '#141822',
+                        background: radialType === 'radius' ? '#1e293b' : '#ffffff',
                         border: `1px solid ${radialType === 'radius' ? '#f59e0b' : '#334155'}`,
                         borderRadius: '4px',
                         color: radialType === 'radius' ? '#f59e0b' : '#94a3b8',
@@ -444,7 +444,7 @@ export default function DraftingCADModal({
                       style={{
                         flex: 1,
                         padding: '8px',
-                        background: radialType === 'diameter' ? '#1e293b' : '#141822',
+                        background: radialType === 'diameter' ? '#1e293b' : '#ffffff',
                         border: `1px solid ${radialType === 'diameter' ? '#f59e0b' : '#334155'}`,
                         borderRadius: '4px',
                         color: radialType === 'diameter' ? '#f59e0b' : '#94a3b8',
@@ -466,19 +466,19 @@ export default function DraftingCADModal({
                       step="0.5"
                       value={radialValue}
                       onChange={(e) => setRadialValue(e.target.value)}
-                      style={{ width: '100%', padding: '7px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px' }}
+                      style={{ width: '100%', padding: '7px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '12px' }}
                     />
                   </div>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '6px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
                     Center Point Coordinates (XYZ mm):
                   </label>
                   <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
-                    <input type="number" placeholder="X" value={radialCenter.x} onChange={(e) => setRadialCenter({ ...radialCenter, x: e.target.value })} style={{ width: '33%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
-                    <input type="number" placeholder="Y" value={radialCenter.y} onChange={(e) => setRadialCenter({ ...radialCenter, y: e.target.value })} style={{ width: '33%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
-                    <input type="number" placeholder="Z" value={radialCenter.z} onChange={(e) => setRadialCenter({ ...radialCenter, z: e.target.value })} style={{ width: '33%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
+                    <input type="number" placeholder="X" value={radialCenter.x} onChange={(e) => setRadialCenter({ ...radialCenter, x: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
+                    <input type="number" placeholder="Y" value={radialCenter.y} onChange={(e) => setRadialCenter({ ...radialCenter, y: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
+                    <input type="number" placeholder="Z" value={radialCenter.z} onChange={(e) => setRadialCenter({ ...radialCenter, z: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
                   </div>
 
                   <div style={{ marginTop: '14px', fontSize: '10px', color: '#94a3b8' }}>
@@ -502,8 +502,8 @@ export default function DraftingCADModal({
           {activeTab === 'datum' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -514,13 +514,13 @@ export default function DraftingCADModal({
 
               <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
                     Datum Code:
                   </label>
                   <select
                     value={datumTag}
                     onChange={(e) => setDatumTag(e.target.value)}
-                    style={{ width: '100%', padding: '7px', background: '#0e1218', border: '1px solid #334155', borderRadius: '4px', color: '#38bdf8', fontSize: '12px', fontWeight: 700 }}
+                    style={{ width: '100%', padding: '7px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#38bdf8', fontSize: '12px', fontWeight: 700 }}
                   >
                     <option value="G54">G54 (Primary)</option>
                     <option value="G55">G55 (Fixture 2)</option>
@@ -531,26 +531,26 @@ export default function DraftingCADModal({
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
                     Datum Description / Coordinate Note:
                   </label>
                   <input
                     type="text"
                     value={datumNote}
                     onChange={(e) => setDatumNote(e.target.value)}
-                    style={{ width: '100%', padding: '7px 10px', background: '#0e1218', border: '1px solid #334155', borderRadius: '4px', color: '#f8fafc', fontSize: '12px' }}
+                    style={{ width: '100%', padding: '7px 10px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#0f172a', fontSize: '12px' }}
                   />
                 </div>
               </div>
 
-              <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '6px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
                   Datum Target Coordinates (XYZ mm):
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input type="number" placeholder="X" value={datumPoint.x} onChange={(e) => setDatumPoint({ ...datumPoint, x: e.target.value })} style={{ width: '33%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
-                  <input type="number" placeholder="Y" value={datumPoint.y} onChange={(e) => setDatumPoint({ ...datumPoint, y: e.target.value })} style={{ width: '33%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
-                  <input type="number" placeholder="Z" value={datumPoint.z} onChange={(e) => setDatumPoint({ ...datumPoint, z: e.target.value })} style={{ width: '33%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
+                  <input type="number" placeholder="X" value={datumPoint.x} onChange={(e) => setDatumPoint({ ...datumPoint, x: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
+                  <input type="number" placeholder="Y" value={datumPoint.y} onChange={(e) => setDatumPoint({ ...datumPoint, y: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
+                  <input type="number" placeholder="Z" value={datumPoint.z} onChange={(e) => setDatumPoint({ ...datumPoint, z: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
                 </div>
               </div>
 
@@ -569,8 +569,8 @@ export default function DraftingCADModal({
           {activeTab === 'leader' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -580,14 +580,14 @@ export default function DraftingCADModal({
               </div>
 
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
                   Leader Note Text:
                 </label>
                 <input
                   type="text"
                   value={leaderText}
                   onChange={(e) => setLeaderText(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', background: '#0e1218', border: '1px solid #334155', borderRadius: '4px', color: '#f8fafc', fontSize: '12px' }}
+                  style={{ width: '100%', padding: '8px 10px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#0f172a', fontSize: '12px' }}
                 />
                 <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
                   {[
@@ -599,7 +599,7 @@ export default function DraftingCADModal({
                     <button
                       key={preset}
                       onClick={() => setLeaderText(preset)}
-                      style={{ padding: '3px 8px', background: '#1e293b', border: '1px solid #334155', borderRadius: '3px', color: '#38bdf8', fontSize: '9.5px', cursor: 'pointer' }}
+                      style={{ padding: '3px 8px', background: '#1e293b', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#38bdf8', fontSize: '9.5px', cursor: 'pointer' }}
                     >
                       {preset}
                     </button>
@@ -607,14 +607,14 @@ export default function DraftingCADModal({
                 </div>
               </div>
 
-              <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '6px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
                   Leader Arrow Anchor Point (XYZ mm):
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input type="number" placeholder="X" value={leaderPoint.x} onChange={(e) => setLeaderPoint({ ...leaderPoint, x: e.target.value })} style={{ width: '33%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
-                  <input type="number" placeholder="Y" value={leaderPoint.y} onChange={(e) => setLeaderPoint({ ...leaderPoint, y: e.target.value })} style={{ width: '33%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
-                  <input type="number" placeholder="Z" value={leaderPoint.z} onChange={(e) => setLeaderPoint({ ...leaderPoint, z: e.target.value })} style={{ width: '33%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
+                  <input type="number" placeholder="X" value={leaderPoint.x} onChange={(e) => setLeaderPoint({ ...leaderPoint, x: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
+                  <input type="number" placeholder="Y" value={leaderPoint.y} onChange={(e) => setLeaderPoint({ ...leaderPoint, y: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
+                  <input type="number" placeholder="Z" value={leaderPoint.z} onChange={(e) => setLeaderPoint({ ...leaderPoint, z: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
                 </div>
               </div>
 
@@ -633,7 +633,7 @@ export default function DraftingCADModal({
           {activeTab === 'manager' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: '#f8fafc' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
                   Active Drafting Entities on Level 100 ({draftingEntities.length}):
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -657,7 +657,7 @@ export default function DraftingCADModal({
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '280px', overflowY: 'auto' }}>
                 {draftingEntities.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '11px', background: '#0e1218', borderRadius: '6px', border: '1px dashed #232c3d' }}>
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '11px', background: '#f8fafc', borderRadius: '6px', border: '1px dashed #e2e8f0' }}>
                     No 3D drafting dimensions or annotations on Level 100 yet. Use the tabs above to add linear dimensions, radial callouts, or WCS datum notes.
                   </div>
                 ) : (
@@ -669,15 +669,15 @@ export default function DraftingCADModal({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '8px 12px',
-                        background: '#0e1218',
-                        border: '1px solid #1f2737',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
                         borderRadius: '4px'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Scissors size={14} color="#38bdf8" />
                         <div>
-                          <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a' }}>
                             {ent.userData?.text || ent.userData?.noteText || ent.name}
                           </div>
                           <div style={{ fontSize: '9.5px', color: '#94a3b8' }}>
@@ -702,7 +702,7 @@ export default function DraftingCADModal({
         </div>
 
         {/* Footer */}
-        <div className="modal-footer" style={{ borderTop: '1px solid #1f2737', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '10px', color: '#94a3b8' }}>
             Level 100 dimensions are saved into your Mastercam .mcam project file.
           </div>

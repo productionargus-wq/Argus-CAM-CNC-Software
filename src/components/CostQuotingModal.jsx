@@ -158,7 +158,7 @@ COMMERCIAL SUMMARY:
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(3, 7, 18, 0.88)',
+        background: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(10px)',
         display: 'flex',
         alignItems: 'center',
@@ -171,14 +171,14 @@ COMMERCIAL SUMMARY:
           width: isFullscreen ? '100vw' : '96vw',
           maxWidth: isFullscreen ? '100vw' : '1680px',
           height: isFullscreen ? '100vh' : '92vh',
-          background: '#0d1527',
+          background: '#ffffff',
           borderRadius: isFullscreen ? '0px' : '14px',
-          border: '1px solid #1e293b',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8)',
+          border: '1px solid #cbd5e1',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          color: '#e2e8f0'
+          color: '#0f172a'
         }}
       >
         {/* ================================================================== */}
@@ -187,8 +187,8 @@ COMMERCIAL SUMMARY:
         <div
           style={{
             height: '56px',
-            borderBottom: '1px solid #1e293b',
-            background: 'linear-gradient(90deg, #090f1d 0%, #0e172a 100%)',
+            borderBottom: '1px solid #cbd5e1',
+            background: '#f1f5f9',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -213,7 +213,7 @@ COMMERCIAL SUMMARY:
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.3px', color: '#f8fafc' }}>
+                <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.3px', color: '#0f172a' }}>
                   CNC Machining Cost, Tool Wear &amp; Production Quoting Calculator
                 </span>
                 <span
@@ -254,7 +254,7 @@ COMMERCIAL SUMMARY:
                 <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>Quoted Unit Price</div>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: '#10b981' }}>
                   ${m.quotedPricePerPart}{' '}
-                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#cbd5e1' }}>/ Part</span>
+                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#334155' }}>/ Part</span>
                 </div>
               </div>
             </div>
@@ -275,7 +275,7 @@ COMMERCIAL SUMMARY:
                 <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>Total Job Value</div>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: '#38bdf8' }}>
                   ${m.totalJobQuoteUsd}{' '}
-                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#cbd5e1' }}>(Q={batchQuantity})</span>
+                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#334155' }}>(Q={batchQuantity})</span>
                 </div>
               </div>
             </div>
@@ -296,7 +296,7 @@ COMMERCIAL SUMMARY:
                 <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8' }}>Gross Margin</div>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: '#c084fc' }}>
                   {targetMarginPct}%{' '}
-                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#cbd5e1' }}>(${m.profitPerPart}/part)</span>
+                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#334155' }}>(${m.profitPerPart}/part)</span>
                 </div>
               </div>
             </div>
@@ -345,8 +345,8 @@ COMMERCIAL SUMMARY:
           <div
             style={{
               width: '410px',
-              borderRight: '1px solid #1e293b',
-              background: '#090f1d',
+              borderRight: '1px solid #cbd5e1',
+              background: '#f8fafc',
               display: 'flex',
               flexDirection: 'column',
               flexShrink: 0
@@ -356,10 +356,10 @@ COMMERCIAL SUMMARY:
               {/* SECTION 1: BATCH QUANTITY & MACHINE */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b',
+                  border: '1px solid #cbd5e1',
                   marginBottom: '16px'
                 }}
               >
@@ -380,9 +380,9 @@ COMMERCIAL SUMMARY:
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       fontSize: '13px',
                       fontWeight: 700,
@@ -423,9 +423,9 @@ COMMERCIAL SUMMARY:
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       fontSize: '12px'
                     }}
@@ -449,9 +449,9 @@ COMMERCIAL SUMMARY:
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       fontSize: '12px'
                     }}
@@ -468,10 +468,10 @@ COMMERCIAL SUMMARY:
               {/* SECTION 2: LABOR, SETUP & UTILITIES */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b',
+                  border: '1px solid #cbd5e1',
                   marginBottom: '16px'
                 }}
               >
@@ -490,9 +490,9 @@ COMMERCIAL SUMMARY:
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -507,9 +507,9 @@ COMMERCIAL SUMMARY:
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -527,9 +527,9 @@ COMMERCIAL SUMMARY:
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -544,9 +544,9 @@ COMMERCIAL SUMMARY:
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -558,10 +558,10 @@ COMMERCIAL SUMMARY:
               {/* SECTION 3: PROFIT MARGIN & OVERHEAD */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b'
+                  border: '1px solid #cbd5e1'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: '#c084fc', marginBottom: '10px' }}>
@@ -610,8 +610,8 @@ COMMERCIAL SUMMARY:
             <div
               style={{
                 height: '42px',
-                borderBottom: '1px solid #1e293b',
-                background: '#090f1d',
+                borderBottom: '1px solid #cbd5e1',
+                background: '#f8fafc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -708,7 +708,7 @@ COMMERCIAL SUMMARY:
               <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
                 {/* 4 Summary Cards */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Machine Run Cost</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#38bdf8', marginTop: '4px' }}>
                       ${m.machineRunningCostPerPart}
@@ -718,7 +718,7 @@ COMMERCIAL SUMMARY:
                     </div>
                   </div>
 
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Net Material Cost</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#10b981', marginTop: '4px' }}>
                       ${m.netMaterialCostPerPart}
@@ -728,7 +728,7 @@ COMMERCIAL SUMMARY:
                     </div>
                   </div>
 
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Tool Wear Cost</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#f59e0b', marginTop: '4px' }}>
                       ${m.toolWearCostPerPart}
@@ -738,7 +738,7 @@ COMMERCIAL SUMMARY:
                     </div>
                   </div>
 
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Setup &amp; Handling</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#c084fc', marginTop: '4px' }}>
                       ${(m.partHandlingCostPerPart + m.amortizedSetupPerPart).toFixed(2)}
@@ -750,8 +750,8 @@ COMMERCIAL SUMMARY:
                 </div>
 
                 {/* Itemized Cost Drivers Table */}
-                <div style={{ background: '#0e172a', borderRadius: '10px', padding: '20px', border: '1px solid #1e293b', marginBottom: '24px' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px', border: '1px solid #cbd5e1', marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <BarChart2 size={16} color="#10b981" />
                     Itemized Cost Distribution per Part (Q={batchQuantity})
                   </h3>
@@ -769,7 +769,7 @@ COMMERCIAL SUMMARY:
                       return (
                         <div key={idx}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                            <span style={{ color: '#cbd5e1' }}>{item.label}</span>
+                            <span style={{ color: '#334155' }}>{item.label}</span>
                             <strong>${item.val.toFixed(2)} ({pct.toFixed(1)}%)</strong>
                           </div>
                           <div style={{ height: '6px', background: '#0b1320', borderRadius: '3px', overflow: 'hidden' }}>
@@ -782,12 +782,12 @@ COMMERCIAL SUMMARY:
                 </div>
 
                 {/* Quantity Discount Schedule */}
-                <div style={{ background: '#0e172a', borderRadius: '10px', padding: '20px', border: '1px solid #1e293b' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px', border: '1px solid #cbd5e1' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <TrendingDown size={16} color="#38bdf8" />
                     Quantity Discount Break Schedule (Fixed Setup Amortization)
                   </h3>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', color: '#e2e8f0' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', color: '#0f172a' }}>
                     <thead>
                       <tr style={{ background: '#0b1320', borderBottom: '1px solid #334155', textAlign: 'left' }}>
                         <th style={{ padding: '8px 12px' }}>Batch Quantity</th>
@@ -805,7 +805,7 @@ COMMERCIAL SUMMARY:
                           : 0;
 
                         return (
-                          <tr key={qb.quantity} style={{ borderBottom: '1px solid #1e293b', background: qb.quantity === batchQuantity ? 'rgba(16, 185, 129, 0.1)' : 'transparent' }}>
+                          <tr key={qb.quantity} style={{ borderBottom: '1px solid #cbd5e1', background: qb.quantity === batchQuantity ? 'rgba(16, 185, 129, 0.1)' : 'transparent' }}>
                             <td style={{ padding: '8px 12px', fontWeight: 700 }}>
                               {qb.quantity} {qb.quantity === batchQuantity && <span style={{ color: '#10b981', fontSize: '10px' }}>(ACTIVE)</span>}
                             </td>
@@ -828,15 +828,15 @@ COMMERCIAL SUMMARY:
             {/* TAB CONTENT 2: TAYLOR TOOL LIFE */}
             {activeTab === 'toolwear' && (
               <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
-                <div style={{ background: '#0e172a', borderRadius: '10px', padding: '20px', border: '1px solid #1e293b', marginBottom: '20px' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px', border: '1px solid #cbd5e1', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Cpu size={16} color="#38bdf8" />
                     Taylor Tool Life Equation Wear Analysis (Vc &bull; T^n = C)
                   </h3>
                   <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.6, marginBottom: '16px' }}>
                     Using Taylor's empirical tool wear equation for <strong>{quoteResult?.material.name}</strong> (Exponent n = {quoteResult?.material.taylorExponentN}, Constant C = {quoteResult?.material.taylorConstantC}), cutter degradation is calculated per operation.
                   </p>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', color: '#e2e8f0' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', color: '#0f172a' }}>
                     <thead>
                       <tr style={{ background: '#0b1320', borderBottom: '1px solid #334155', textAlign: 'left' }}>
                         <th style={{ padding: '8px 12px' }}>Tool Name</th>
@@ -851,7 +851,7 @@ COMMERCIAL SUMMARY:
                     </thead>
                     <tbody>
                       {quoteResult?.toolWearReports.map((t, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #1e293b' }}>
+                        <tr key={idx} style={{ borderBottom: '1px solid #cbd5e1' }}>
                           <td style={{ padding: '8px 12px', fontWeight: 600 }}>{t.toolName}</td>
                           <td style={{ padding: '8px 12px', color: '#94a3b8' }}>&Oslash;{t.diameter} mm</td>
                           <td style={{ padding: '8px 12px' }}>{t.cuttingSpeedVc} m/min</td>
@@ -873,15 +873,15 @@ COMMERCIAL SUMMARY:
             {/* TAB CONTENT 3: STOCK & BUY-TO-FLY */}
             {activeTab === 'stock' && (
               <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
-                <div style={{ background: '#0e172a', borderRadius: '10px', padding: '20px', border: '1px solid #1e293b', marginBottom: '20px' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px', border: '1px solid #cbd5e1', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <HardDrive size={16} color="#f59e0b" />
                     Stock Material Envelope &amp; Buy-to-Fly Ratio
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
                     <div>
                       <div style={{ fontSize: '11px', color: '#94a3b8' }}>Raw Stock Bounding Block:</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#e2e8f0', marginTop: '2px' }}>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
                         {m.rawDimensions.x} &times; {m.rawDimensions.y} &times; {m.rawDimensions.z} mm
                       </div>
                       <div style={{ fontSize: '11px', color: '#64748b' }}>Includes 4mm side &amp; 5mm vise grip stock</div>
@@ -1000,8 +1000,8 @@ COMMERCIAL SUMMARY:
             <div
               style={{
                 height: '40px',
-                borderTop: '1px solid #1e293b',
-                background: '#090f1d',
+                borderTop: '1px solid #cbd5e1',
+                background: '#f8fafc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1031,8 +1031,8 @@ COMMERCIAL SUMMARY:
         <div
           style={{
             height: '56px',
-            borderTop: '1px solid #1e293b',
-            background: '#090f1d',
+            borderTop: '1px solid #cbd5e1',
+            background: '#f8fafc',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1048,7 +1048,7 @@ COMMERCIAL SUMMARY:
                 alignItems: 'center',
                 gap: '6px',
                 background: copiedQuote ? '#10b981' : '#1e293b',
-                border: '1px solid #334155',
+                border: '1px solid #cbd5e1',
                 color: '#ffffff',
                 padding: '8px 14px',
                 borderRadius: '6px',
@@ -1066,9 +1066,9 @@ COMMERCIAL SUMMARY:
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: '#1e293b',
-                border: '1px solid #334155',
-                color: '#e2e8f0',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                color: '#0f172a',
                 padding: '8px 14px',
                 borderRadius: '6px',
                 fontSize: '12px',
@@ -1086,8 +1086,8 @@ COMMERCIAL SUMMARY:
               onClick={onClose}
               style={{
                 background: 'transparent',
-                border: '1px solid #334155',
-                color: '#cbd5e1',
+                border: '1px solid #cbd5e1',
+                color: '#334155',
                 padding: '8px 16px',
                 borderRadius: '6px',
                 fontSize: '12px',

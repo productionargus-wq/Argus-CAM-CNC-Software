@@ -20,7 +20,7 @@ const MATERIALS = [
   { id: 'titanium_6al4v', name: 'Ti-6Al-4V Titanium', density: 4.43, color: '#a855f7' },
   { id: 'brass_c360', name: 'C360 Free-Cutting Brass', density: 8.50, color: '#f59e0b' },
   { id: 'delrin_pom', name: 'Delrin / Acetal POM', density: 1.41, color: '#ffffff' },
-  { id: 'stainless_304', name: '304 Stainless Steel', density: 8.00, color: '#cbd5e1' }
+  { id: 'stainless_304', name: '304 Stainless Steel', density: 8.00, color: '#334155' }
 ];
 
 export default function SolidsCADModal({
@@ -255,14 +255,14 @@ export default function SolidsCADModal({
           width: '950px',
           maxWidth: '96vw',
           maxHeight: '90vh',
-          backgroundColor: '#12161f',
-          border: '1px solid #283548',
+          backgroundColor: '#ffffff',
+          border: '1px solid #cbd5e1',
           borderRadius: '8px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          color: '#f8fafc'
+          color: '#0f172a'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -270,8 +270,8 @@ export default function SolidsCADModal({
         <div
           style={{
             padding: '14px 20px',
-            backgroundColor: '#171c28',
-            borderBottom: '1px solid #283548',
+            backgroundColor: '#f1f5f9',
+            borderBottom: '1px solid #cbd5e1',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between'
@@ -313,7 +313,7 @@ export default function SolidsCADModal({
             background: feedback.type === 'warning' ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)',
             border: `1px solid ${feedback.type === 'warning' ? '#f59e0b' : '#10b981'}`,
             borderRadius: '4px',
-            color: '#fff',
+            color: '#0f172a',
             fontSize: '12px',
             display: 'flex',
             alignItems: 'center',
@@ -330,8 +330,8 @@ export default function SolidsCADModal({
           <div
             style={{
               width: '235px',
-              backgroundColor: '#0e1219',
-              borderRight: '1px solid #232c3d',
+              backgroundColor: '#f8fafc',
+              borderRight: '1px solid #e2e8f0',
               padding: '12px 8px',
               display: 'flex',
               flexDirection: 'column',
@@ -354,9 +354,9 @@ export default function SolidsCADModal({
                     justifyContent: 'space-between',
                     padding: '8px 10px',
                     borderRadius: '5px',
-                    border: `1px solid ${isActive ? '#2563eb' : 'transparent'}`,
-                    backgroundColor: isActive ? '#1e293b' : 'transparent',
-                    color: isActive ? '#38bdf8' : '#cbd5e1',
+                    border: `1px solid ${isActive ? '#0284c7' : 'transparent'}`,
+                    backgroundColor: isActive ? '#e0f2fe' : 'transparent',
+                    color: isActive ? '#0284c7' : '#334155',
                     cursor: 'pointer',
                     fontSize: '12px',
                     fontWeight: isActive ? 600 : 500,
@@ -365,7 +365,7 @@ export default function SolidsCADModal({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Icon size={16} color={isActive ? '#38bdf8' : '#94a3b8'} />
+                    <Icon size={16} color={isActive ? '#0284c7' : '#64748b'} />
                     <span>{tool.label}</span>
                   </div>
                   <span
@@ -373,8 +373,8 @@ export default function SolidsCADModal({
                       fontSize: '9px',
                       padding: '1px 5px',
                       borderRadius: '3px',
-                      backgroundColor: isActive ? '#2563eb33' : '#1e2430',
-                      color: isActive ? '#38bdf8' : '#64748b',
+                      backgroundColor: isActive ? '#bae6fd' : '#e2e8f0',
+                      color: isActive ? '#0284c7' : '#64748b',
                       fontFamily: 'var(--font-mono)'
                     }}
                   >
@@ -385,7 +385,7 @@ export default function SolidsCADModal({
             })}
 
             {/* Material Selector in Sidebar */}
-            <div style={{ marginTop: 'auto', paddingTop: '10px', borderTop: '1px solid #1f2737' }}>
+            <div style={{ marginTop: 'auto', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
               <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
                 <Scale size={12} color="#f59e0b" />
                 <span>Workpiece Material</span>
@@ -410,7 +410,7 @@ export default function SolidsCADModal({
               flex: 1,
               padding: '20px 24px',
               overflowY: 'auto',
-              backgroundColor: '#12161f',
+              backgroundColor: '#ffffff',
               display: 'flex',
               flexDirection: 'column'
             }}
@@ -418,7 +418,7 @@ export default function SolidsCADModal({
             {/* 1. RECTANGULAR BILLET (BOX) */}
             {activeTool === 'box' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8' }}>Rectangular Solid Billet</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Generate a parametric prismatic stock billet with precise Cartesian extents $(W \times H \times D)$.
@@ -426,7 +426,7 @@ export default function SolidsCADModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Width X (mm)</label>
                     <input
                       type="number"
@@ -436,7 +436,7 @@ export default function SolidsCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Height Y (mm)</label>
                     <input
                       type="number"
@@ -446,7 +446,7 @@ export default function SolidsCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Depth Z (mm)</label>
                     <input
                       type="number"
@@ -459,7 +459,7 @@ export default function SolidsCADModal({
                 </div>
 
                 {/* Alignment Origin */}
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '6px', display: 'block' }}>
                     WCS Datum Alignment
                   </label>
@@ -469,8 +469,8 @@ export default function SolidsCADModal({
                       style={{
                         flex: 1,
                         padding: '8px',
-                        backgroundColor: boxOrigin === 'center' ? '#1e293b' : '#141822',
-                        border: `1px solid ${boxOrigin === 'center' ? '#38bdf8' : '#232c3d'}`,
+                        backgroundColor: boxOrigin === 'center' ? '#1e293b' : '#ffffff',
+                        border: `1px solid ${boxOrigin === 'center' ? '#38bdf8' : '#e2e8f0'}`,
                         borderRadius: '4px',
                         color: boxOrigin === 'center' ? '#38bdf8' : '#94a3b8',
                         cursor: 'pointer',
@@ -485,8 +485,8 @@ export default function SolidsCADModal({
                       style={{
                         flex: 1,
                         padding: '8px',
-                        backgroundColor: boxOrigin === 'corner' ? '#1e293b' : '#141822',
-                        border: `1px solid ${boxOrigin === 'corner' ? '#38bdf8' : '#232c3d'}`,
+                        backgroundColor: boxOrigin === 'corner' ? '#1e293b' : '#ffffff',
+                        border: `1px solid ${boxOrigin === 'corner' ? '#38bdf8' : '#e2e8f0'}`,
                         borderRadius: '4px',
                         color: boxOrigin === 'corner' ? '#38bdf8' : '#94a3b8',
                         cursor: 'pointer',
@@ -500,10 +500,10 @@ export default function SolidsCADModal({
                 </div>
 
                 {/* Mass & Volume metrics card */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#0e1219', borderRadius: '6px', border: '1px solid #1f2737' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div>
                     <div style={{ fontSize: '10.5px', color: '#64748b' }}>Displaced Volume</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
                       {boxVol.toFixed(1)} cm³
                     </div>
                   </div>
@@ -531,7 +531,7 @@ export default function SolidsCADModal({
             {/* 2. CYLINDRICAL BLANK */}
             {activeTool === 'cylinder' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#60a5fa' }}>Cylindrical Solid Blank</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Parametric cylindrical blank for turning, 4-axis rotary milling, or circular billet stock.
@@ -539,7 +539,7 @@ export default function SolidsCADModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Outer Radius R (mm)</label>
                     <input
                       type="number"
@@ -552,7 +552,7 @@ export default function SolidsCADModal({
                       Outer Ø{(cylRadius * 2).toFixed(1)} mm
                     </div>
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Height / Length (mm)</label>
                     <input
                       type="number"
@@ -562,7 +562,7 @@ export default function SolidsCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Inner Bore Radius (mm)</label>
                     <input
                       type="number"
@@ -577,7 +577,7 @@ export default function SolidsCADModal({
                       {cylInnerR > 0 ? `Bore ID: Ø${(cylInnerR * 2).toFixed(1)} mm` : 'Solid Bar'}
                     </div>
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Spindle Axis</label>
                     <select
                       value={cylAxis}
@@ -591,10 +591,10 @@ export default function SolidsCADModal({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#0e1219', borderRadius: '6px', border: '1px solid #1f2737' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div>
                     <div style={{ fontSize: '10.5px', color: '#64748b' }}>Displaced Volume</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
                       {cylVol.toFixed(1)} cm³
                     </div>
                   </div>
@@ -622,7 +622,7 @@ export default function SolidsCADModal({
             {/* 3. CONE / FRUSTUM */}
             {activeTool === 'cone' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#f59e0b' }}>Conical Frustum Solid</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Parametric tapered cone or draft frustum with independent base and top radii.
@@ -630,7 +630,7 @@ export default function SolidsCADModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Bottom Radius R1 (mm)</label>
                     <input
                       type="number"
@@ -640,7 +640,7 @@ export default function SolidsCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Top Radius R2 (mm)</label>
                     <input
                       type="number"
@@ -650,7 +650,7 @@ export default function SolidsCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Frustum Height (mm)</label>
                     <input
                       type="number"
@@ -678,7 +678,7 @@ export default function SolidsCADModal({
             {/* 4. TORUS / RING */}
             {activeTool === 'torus' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#a855f7' }}>Torus Solid Ring</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Generates a toroidal ring, circular boss, or annular seal flange solid.
@@ -686,7 +686,7 @@ export default function SolidsCADModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Major Center Radius R (mm)</label>
                     <input
                       type="number"
@@ -696,7 +696,7 @@ export default function SolidsCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Tube Cross-Section Radius r (mm)</label>
                     <input
                       type="number"
@@ -724,7 +724,7 @@ export default function SolidsCADModal({
             {/* 5. EXTRUDED SOLID WITH DRAFT */}
             {activeTool === 'extrude' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#10b981' }}>Extruded Solid with Draft Angle</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Extrudes a rectangular profile with mold release draft angles for casting dies and injection mold cores.
@@ -732,7 +732,7 @@ export default function SolidsCADModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Width X (mm)</label>
                     <input
                       type="number"
@@ -742,7 +742,7 @@ export default function SolidsCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Depth Z (mm)</label>
                     <input
                       type="number"
@@ -752,7 +752,7 @@ export default function SolidsCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Height (mm)</label>
                     <input
                       type="number"
@@ -762,7 +762,7 @@ export default function SolidsCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Draft Angle (Deg)</label>
                     <input
                       type="number"
@@ -790,7 +790,7 @@ export default function SolidsCADModal({
             {/* 6. POCKETED CAVITY BILLET */}
             {activeTool === 'pocket' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8' }}>CNC Milled Pocket Workpiece</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Generates a solid billet containing an internal CNC milled pocket cavity with tangent corner fillets.
@@ -798,7 +798,7 @@ export default function SolidsCADModal({
                 </div>
 
                 {/* Base Billet Dimensions */}
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '11px', fontWeight: 600, color: '#f59e0b', marginBottom: '8px' }}>
                     Base Billet Stock Dimensions
                   </div>
@@ -837,7 +837,7 @@ export default function SolidsCADModal({
                 </div>
 
                 {/* Internal Pocket Cavity */}
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '11px', fontWeight: 600, color: '#10b981', marginBottom: '8px' }}>
                     Milled Pocket Cavity Dimensions
                   </div>
@@ -901,7 +901,7 @@ export default function SolidsCADModal({
             {/* 7. SOLIDS MANAGER */}
             {activeTool === 'manager' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8' }}>Solids Entity Manager</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Inspect active B-Rep solid bodies, manage material densities, and toggle visibility.
@@ -912,7 +912,7 @@ export default function SolidsCADModal({
                   {/* Primary Workpiece Solid Card */}
                   <div
                     style={{
-                      background: '#161b26',
+                      background: '#f8fafc',
                       border: '1px solid #2563eb',
                       borderRadius: '6px',
                       padding: '12px',
@@ -924,7 +924,7 @@ export default function SolidsCADModal({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <Box size={20} color="#38bdf8" />
                       <div>
-                        <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#f8fafc' }}>
+                        <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#0f172a' }}>
                           {currentModel?.name || 'Active_Workpiece_Solid'}
                         </div>
                         <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>
@@ -942,8 +942,8 @@ export default function SolidsCADModal({
                     <div
                       key={idx}
                       style={{
-                        background: '#161b26',
-                        border: '1px solid #232c3d',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
                         borderRadius: '6px',
                         padding: '12px',
                         display: 'flex',
@@ -954,7 +954,7 @@ export default function SolidsCADModal({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <Box size={20} color="#10b981" />
                         <div>
-                          <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#f8fafc' }}>{solid.name}</div>
+                          <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#0f172a' }}>{solid.name}</div>
                           <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>
                             Type: {solid.userData?.type || 'Solid Body'} {solid.userData?.volumeCm3 ? `| Vol: ${solid.userData.volumeCm3} cm³` : ''}
                           </div>
@@ -982,8 +982,8 @@ export default function SolidsCADModal({
         <div
           style={{
             padding: '12px 20px',
-            backgroundColor: '#171c28',
-            borderTop: '1px solid #283548',
+            backgroundColor: '#f1f5f9',
+            borderTop: '1px solid #cbd5e1',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between'
@@ -1016,10 +1016,10 @@ export default function SolidsCADModal({
 const inputStyle = {
   width: '100%',
   padding: '6px 8px',
-  backgroundColor: '#0e1219',
-  border: '1px solid #2a3548',
+  backgroundColor: '#f8fafc',
+  border: '1px solid #cbd5e1',
   borderRadius: '4px',
-  color: '#f8fafc',
+  color: '#0f172a',
   fontSize: '11.5px',
   fontFamily: 'var(--font-mono)',
   marginTop: '4px',
@@ -1050,10 +1050,10 @@ const secondaryBtnStyle = {
   justifyContent: 'center',
   gap: '6px',
   padding: '10px 14px',
-  backgroundColor: '#1e293b',
-  border: '1px solid #334155',
+  backgroundColor: '#f1f5f9',
+  border: '1px solid #cbd5e1',
   borderRadius: '5px',
-  color: '#cbd5e1',
+  color: '#334155',
   fontSize: '12px',
   fontWeight: 600,
   cursor: 'pointer'

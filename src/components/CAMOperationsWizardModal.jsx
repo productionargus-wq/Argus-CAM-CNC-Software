@@ -326,13 +326,13 @@ export default function CAMOperationsWizardModal({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '14px 20px',
-        borderBottom: '1px solid #232c3d',
-        background: '#0f131d'
+        borderBottom: '1px solid #e2e8f0',
+        background: '#ffffff'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Layers size={22} color="#10b981" />
           <div>
-            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.3px' }}>
+            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a', letterSpacing: '0.3px' }}>
               Mastercam CAM Operations Manager &bull; Toolpath Suite
             </h2>
             <div style={{ fontSize: '11px', color: '#94a3b8' }}>
@@ -359,7 +359,7 @@ export default function CAMOperationsWizardModal({
       {/* Tabs */}
       <div style={{
         display: 'flex',
-        borderBottom: '1px solid #232c3d',
+        borderBottom: '1px solid #e2e8f0',
         background: '#111522',
         padding: '0 16px'
       }}>
@@ -527,9 +527,9 @@ export default function CAMOperationsWizardModal({
                     onChange={(e) => setOpName(e.target.value)}
                     style={{
                       width: '100%',
-                      background: '#161b29',
+                      background: '#ffffff',
                       border: '1px solid #283347',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       borderRadius: '4px',
                       fontSize: '12px'
@@ -546,9 +546,9 @@ export default function CAMOperationsWizardModal({
                     onChange={(e) => setToolId(Number(e.target.value))}
                     style={{
                       width: '100%',
-                      background: '#161b29',
+                      background: '#ffffff',
                       border: '1px solid #283347',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       borderRadius: '4px',
                       fontSize: '12px'
@@ -573,9 +573,9 @@ export default function CAMOperationsWizardModal({
                       onChange={(e) => setFeedRate(Number(e.target.value))}
                       style={{
                         width: '100%',
-                        background: '#161b29',
+                        background: '#ffffff',
                         border: '1px solid #283347',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 10px',
                         borderRadius: '4px',
                         fontSize: '11px'
@@ -592,9 +592,9 @@ export default function CAMOperationsWizardModal({
                       onChange={(e) => setSpindleRpm(Number(e.target.value))}
                       style={{
                         width: '100%',
-                        background: '#161b29',
+                        background: '#ffffff',
                         border: '1px solid #283347',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 10px',
                         borderRadius: '4px',
                         fontSize: '11px'
@@ -621,9 +621,9 @@ export default function CAMOperationsWizardModal({
                       onChange={(e) => setStepoverPct(Number(e.target.value))}
                       style={{
                         width: '100%',
-                        background: '#161b29',
+                        background: '#ffffff',
                         border: '1px solid #283347',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 10px',
                         borderRadius: '4px',
                         fontSize: '11px'
@@ -640,9 +640,9 @@ export default function CAMOperationsWizardModal({
                       onChange={(e) => setStepdown(Number(e.target.value))}
                       style={{
                         width: '100%',
-                        background: '#161b29',
+                        background: '#ffffff',
                         border: '1px solid #283347',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 10px',
                         borderRadius: '4px',
                         fontSize: '11px'
@@ -662,9 +662,9 @@ export default function CAMOperationsWizardModal({
                       onChange={(e) => setTotalDepth(Number(e.target.value))}
                       style={{
                         width: '100%',
-                        background: '#161b29',
+                        background: '#ffffff',
                         border: '1px solid #283347',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 10px',
                         borderRadius: '4px',
                         fontSize: '11px'
@@ -681,9 +681,9 @@ export default function CAMOperationsWizardModal({
                       onChange={(e) => setRapidHeight(Number(e.target.value))}
                       style={{
                         width: '100%',
-                        background: '#161b29',
+                        background: '#ffffff',
                         border: '1px solid #283347',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 10px',
                         borderRadius: '4px',
                         fontSize: '11px'
@@ -704,9 +704,9 @@ export default function CAMOperationsWizardModal({
                       onChange={(e) => setStockToLeaveXY(Number(e.target.value))}
                       style={{
                         width: '100%',
-                        background: '#161b29',
+                        background: '#ffffff',
                         border: '1px solid #283347',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 10px',
                         borderRadius: '4px',
                         fontSize: '11px'
@@ -724,9 +724,9 @@ export default function CAMOperationsWizardModal({
                       onChange={(e) => setStockToLeaveZ(Number(e.target.value))}
                       style={{
                         width: '100%',
-                        background: '#161b29',
+                        background: '#ffffff',
                         border: '1px solid #283347',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 10px',
                         borderRadius: '4px',
                         fontSize: '11px'
@@ -780,8 +780,8 @@ export default function CAMOperationsWizardModal({
                     alignItems: 'center',
                     gap: '6px',
                     padding: '6px 12px',
-                    background: '#1e293b',
-                    border: '1px solid #334155',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
                     color: '#34d399',
                     borderRadius: '4px',
                     fontSize: '11px',
@@ -839,8 +839,8 @@ export default function CAMOperationsWizardModal({
                       <div style={{
                         padding: '2px 6px',
                         borderRadius: '3px',
-                        background: '#1e293b',
-                        border: '1px solid #334155',
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
                         fontWeight: 800,
                         fontSize: '10px',
                         color: '#38bdf8'
@@ -848,7 +848,7 @@ export default function CAMOperationsWizardModal({
                         {op.badgeText || 'OP'}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: '12px', color: '#f8fafc' }}>
+                        <div style={{ fontWeight: 600, fontSize: '12px', color: '#0f172a' }}>
                           {op.name}
                         </div>
                         <div style={{ fontSize: '10px', color: '#94a3b8' }}>
@@ -945,7 +945,7 @@ export default function CAMOperationsWizardModal({
                   <div
                     key={idx}
                     style={{
-                      background: '#161b29',
+                      background: '#ffffff',
                       border: isCritical ? '1px solid #ef4444' : '1px solid #f59e0b',
                       borderRadius: '6px',
                       padding: '12px 16px',
@@ -971,12 +971,12 @@ export default function CAMOperationsWizardModal({
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 700, fontSize: '12px', color: '#f8fafc' }}>
+                          <span style={{ fontWeight: 700, fontSize: '12px', color: '#0f172a' }}>
                             {issue.title}
                           </span>
                           <span style={{ color: '#94a3b8', fontSize: '11px' }}>&bull; {issue.opName}</span>
                           {issue.toolName && (
-                            <span style={{ color: '#38bdf8', fontSize: '10px', background: '#0f172a', padding: '1px 6px', borderRadius: '3px', border: '1px solid #1e293b' }}>
+                            <span style={{ color: '#38bdf8', fontSize: '10px', background: '#ffffff', padding: '1px 6px', borderRadius: '3px', border: '1px solid #cbd5e1' }}>
                               {issue.toolName}
                             </span>
                           )}
@@ -986,7 +986,7 @@ export default function CAMOperationsWizardModal({
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#cbd5e1', marginTop: '4px', lineHeight: 1.4 }}>
+                        <div style={{ fontSize: '11px', color: '#334155', marginTop: '4px', lineHeight: 1.4 }}>
                           {issue.message}
                         </div>
                         {issue.penetrationMm > 0 && (
@@ -1004,7 +1004,7 @@ export default function CAMOperationsWizardModal({
                           display: 'flex',
                           alignItems: 'center',
                           gap: '5px',
-                          background: '#1e293b',
+                          background: '#f1f5f9',
                           border: '1px solid #38bdf8',
                           color: '#38bdf8',
                           padding: '6px 10px',
@@ -1059,7 +1059,7 @@ export default function CAMOperationsWizardModal({
             <div style={{ background: '#10141f', borderRadius: '8px', border: '1px solid #1f2738', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ background: '#161b29', borderBottom: '1px solid #283347', color: '#94a3b8' }}>
+                  <tr style={{ background: '#ffffff', borderBottom: '1px solid #283347', color: '#94a3b8' }}>
                     <th style={{ padding: '8px 12px' }}>#</th>
                     <th style={{ padding: '8px 12px' }}>Operation</th>
                     <th style={{ padding: '8px 12px' }}>Tool</th>
@@ -1073,9 +1073,9 @@ export default function CAMOperationsWizardModal({
                   {operations.map((op, idx) => {
                     const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0];
                     return (
-                      <tr key={op.id} style={{ borderBottom: '1px solid #1c2332', color: '#cbd5e1' }}>
+                      <tr key={op.id} style={{ borderBottom: '1px solid #1c2332', color: '#334155' }}>
                         <td style={{ padding: '8px 12px', color: '#64748b' }}>{idx + 1}</td>
-                        <td style={{ padding: '8px 12px', fontWeight: 600, color: '#f8fafc' }}>{op.name}</td>
+                        <td style={{ padding: '8px 12px', fontWeight: 600, color: '#0f172a' }}>{op.name}</td>
                         <td style={{ padding: '8px 12px' }}>{assignedTool ? `T${assignedTool.number} (\u00D8${assignedTool.diameter})` : 'T1'}</td>
                         <td style={{ padding: '8px 12px' }}>{op.stepdown || 2} mm</td>
                         <td style={{ padding: '8px 12px' }}>{op.stepoverPct || 50}%</td>
@@ -1099,8 +1099,8 @@ export default function CAMOperationsWizardModal({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '12px 20px',
-        borderTop: '1px solid #232c3d',
-        background: '#0f131d'
+        borderTop: '1px solid #e2e8f0',
+        background: '#ffffff'
       }}>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
@@ -1110,8 +1110,8 @@ export default function CAMOperationsWizardModal({
               alignItems: 'center',
               gap: '6px',
               padding: '6px 14px',
-              background: '#1e293b',
-              border: '1px solid #334155',
+              background: '#f1f5f9',
+              border: '1px solid #cbd5e1',
               color: '#38bdf8',
               borderRadius: '4px',
               fontSize: '11px',

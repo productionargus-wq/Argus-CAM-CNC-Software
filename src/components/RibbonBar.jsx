@@ -2117,7 +2117,7 @@ export default function RibbonBar({
                     value={activeMachine?.id || 'dmu50'}
                     onChange={(e) => onSelectMachine(e.target.value)}
                     style={{
-                      background: '#141822',
+                      background: '#ffffff',
                       border: '1px solid #333d4e',
                       color: '#38bdf8',
                       padding: '4px 8px',

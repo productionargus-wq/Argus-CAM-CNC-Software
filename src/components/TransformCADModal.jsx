@@ -315,8 +315,8 @@ export default function TransformCADModal({
         {/* Tab Navigation */}
         <div style={{
           display: 'flex',
-          borderBottom: '1px solid #1f2737',
-          backgroundColor: '#0c0f14',
+          borderBottom: '1px solid #e2e8f0',
+          backgroundColor: '#ffffff',
           padding: '0 8px'
         }}>
           {[
@@ -353,7 +353,7 @@ export default function TransformCADModal({
         <div className="modal-body" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
           {/* Active Transform Readout Bar */}
-          <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontSize: '11px', color: '#94a3b8' }}>
               Position: <strong style={{ color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>X: {partTransform?.position?.x?.toFixed(1) || 0}, Y: {partTransform?.position?.y?.toFixed(1) || 0}, Z: {partTransform?.position?.z?.toFixed(1) || 0}</strong> &bull;
               Rotation: <strong style={{ color: '#f59e0b', fontFamily: 'var(--font-mono)', marginLeft: '6px' }}>{Math.round(((partTransform?.rotation?.z || 0) * 180) / Math.PI)}&deg;</strong>
@@ -372,8 +372,8 @@ export default function TransformCADModal({
           {activeTab === 'translate' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -384,13 +384,13 @@ export default function TransformCADModal({
 
               {/* Mode Toggle */}
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Operation Mode:</label>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a' }}>Operation Mode:</label>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <button
                     onClick={() => setTransMode('move')}
                     style={{
                       padding: '5px 12px',
-                      background: transMode === 'move' ? '#1e293b' : '#0e1218',
+                      background: transMode === 'move' ? '#1e293b' : '#f8fafc',
                       border: `1px solid ${transMode === 'move' ? '#38bdf8' : '#334155'}`,
                       borderRadius: '3px',
                       color: transMode === 'move' ? '#38bdf8' : '#94a3b8',
@@ -405,7 +405,7 @@ export default function TransformCADModal({
                     onClick={() => setTransMode('copy')}
                     style={{
                       padding: '5px 12px',
-                      background: transMode === 'copy' ? '#1e293b' : '#0e1218',
+                      background: transMode === 'copy' ? '#1e293b' : '#f8fafc',
                       border: `1px solid ${transMode === 'copy' ? '#38bdf8' : '#334155'}`,
                       borderRadius: '3px',
                       color: transMode === 'copy' ? '#38bdf8' : '#94a3b8',
@@ -427,7 +427,7 @@ export default function TransformCADModal({
                       max="10"
                       value={copyCount}
                       onChange={(e) => setCopyCount(e.target.value)}
-                      style={{ width: '60px', padding: '4px 6px', background: '#0e1218', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }}
+                      style={{ width: '60px', padding: '4px 6px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }}
                     />
                   </div>
                 )}
@@ -435,51 +435,51 @@ export default function TransformCADModal({
 
               {/* Delta Coordinates */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
                   <label style={{ fontSize: '11px', fontWeight: 600, color: '#38bdf8', display: 'block', marginBottom: '6px' }}>Delta X (mm):</label>
                   <input
                     type="number"
                     value={transX}
                     onChange={(e) => setTransX(e.target.value)}
-                    style={{ width: '100%', padding: '6px 8px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px' }}
+                    style={{ width: '100%', padding: '6px 8px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '12px' }}
                   />
                   <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
                     {[-50, -10, 10, 50].map((val) => (
-                      <button key={val} onClick={() => setTransX(val)} style={{ flex: 1, padding: '2px', background: '#1e293b', border: '1px solid #334155', borderRadius: '2px', color: val > 0 ? '#38bdf8' : '#f43f5e', fontSize: '9px', cursor: 'pointer' }}>
+                      <button key={val} onClick={() => setTransX(val)} style={{ flex: 1, padding: '2px', background: '#1e293b', border: '1px solid #cbd5e1', borderRadius: '2px', color: val > 0 ? '#38bdf8' : '#f43f5e', fontSize: '9px', cursor: 'pointer' }}>
                         {val > 0 ? `+${val}` : val}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
                   <label style={{ fontSize: '11px', fontWeight: 600, color: '#10b981', display: 'block', marginBottom: '6px' }}>Delta Y (mm):</label>
                   <input
                     type="number"
                     value={transY}
                     onChange={(e) => setTransY(e.target.value)}
-                    style={{ width: '100%', padding: '6px 8px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px' }}
+                    style={{ width: '100%', padding: '6px 8px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '12px' }}
                   />
                   <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
                     {[-20, -5, 5, 20].map((val) => (
-                      <button key={val} onClick={() => setTransY(val)} style={{ flex: 1, padding: '2px', background: '#1e293b', border: '1px solid #334155', borderRadius: '2px', color: val > 0 ? '#10b981' : '#f43f5e', fontSize: '9px', cursor: 'pointer' }}>
+                      <button key={val} onClick={() => setTransY(val)} style={{ flex: 1, padding: '2px', background: '#1e293b', border: '1px solid #cbd5e1', borderRadius: '2px', color: val > 0 ? '#10b981' : '#f43f5e', fontSize: '9px', cursor: 'pointer' }}>
                         {val > 0 ? `+${val}` : val}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
                   <label style={{ fontSize: '11px', fontWeight: 600, color: '#f59e0b', display: 'block', marginBottom: '6px' }}>Delta Z (mm):</label>
                   <input
                     type="number"
                     value={transZ}
                     onChange={(e) => setTransZ(e.target.value)}
-                    style={{ width: '100%', padding: '6px 8px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px' }}
+                    style={{ width: '100%', padding: '6px 8px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '12px' }}
                   />
                   <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
                     {[-50, -10, 10, 50].map((val) => (
-                      <button key={val} onClick={() => setTransZ(val)} style={{ flex: 1, padding: '2px', background: '#1e293b', border: '1px solid #334155', borderRadius: '2px', color: val > 0 ? '#f59e0b' : '#f43f5e', fontSize: '9px', cursor: 'pointer' }}>
+                      <button key={val} onClick={() => setTransZ(val)} style={{ flex: 1, padding: '2px', background: '#1e293b', border: '1px solid #cbd5e1', borderRadius: '2px', color: val > 0 ? '#f59e0b' : '#f43f5e', fontSize: '9px', cursor: 'pointer' }}>
                         {val > 0 ? `+${val}` : val}
                       </button>
                     ))}
@@ -502,8 +502,8 @@ export default function TransformCADModal({
           {activeTab === 'rotate' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -513,8 +513,8 @@ export default function TransformCADModal({
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '8px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '8px' }}>
                     Select Rotary Axis:
                   </label>
                   <div style={{ display: 'flex', gap: '6px' }}>
@@ -529,7 +529,7 @@ export default function TransformCADModal({
                         style={{
                           flex: 1,
                           padding: '8px',
-                          background: rotAxis === axis.id ? '#1e293b' : '#141822',
+                          background: rotAxis === axis.id ? '#1e293b' : '#ffffff',
                           border: `1px solid ${rotAxis === axis.id ? '#38bdf8' : '#334155'}`,
                           borderRadius: '4px',
                           color: rotAxis === axis.id ? '#38bdf8' : '#94a3b8',
@@ -551,11 +551,11 @@ export default function TransformCADModal({
                       type="number"
                       value={rotAngle}
                       onChange={(e) => setRotAngle(e.target.value)}
-                      style={{ width: '100%', padding: '6px 8px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px' }}
+                      style={{ width: '100%', padding: '6px 8px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '12px' }}
                     />
                     <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
                       {[45, 90, 180, -90].map((deg) => (
-                        <button key={deg} onClick={() => setRotAngle(deg)} style={{ flex: 1, padding: '3px', background: '#1e293b', border: '1px solid #334155', borderRadius: '2px', color: '#38bdf8', fontSize: '10px', cursor: 'pointer' }}>
+                        <button key={deg} onClick={() => setRotAngle(deg)} style={{ flex: 1, padding: '3px', background: '#1e293b', border: '1px solid #cbd5e1', borderRadius: '2px', color: '#38bdf8', fontSize: '10px', cursor: 'pointer' }}>
                           {deg}&deg;
                         </button>
                       ))}
@@ -563,21 +563,21 @@ export default function TransformCADModal({
                   </div>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div>
-                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '8px' }}>
                       Action Mode:
                     </label>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <button
                         onClick={() => setRotMode('move')}
-                        style={{ flex: 1, padding: '7px', background: rotMode === 'move' ? '#1e293b' : '#141822', border: `1px solid ${rotMode === 'move' ? '#38bdf8' : '#334155'}`, borderRadius: '3px', color: rotMode === 'move' ? '#38bdf8' : '#94a3b8', fontSize: '11px', cursor: 'pointer' }}
+                        style={{ flex: 1, padding: '7px', background: rotMode === 'move' ? '#1e293b' : '#ffffff', border: `1px solid ${rotMode === 'move' ? '#38bdf8' : '#334155'}`, borderRadius: '3px', color: rotMode === 'move' ? '#38bdf8' : '#94a3b8', fontSize: '11px', cursor: 'pointer' }}
                       >
                         Rotate Original
                       </button>
                       <button
                         onClick={() => setRotMode('copy')}
-                        style={{ flex: 1, padding: '7px', background: rotMode === 'copy' ? '#1e293b' : '#141822', border: `1px solid ${rotMode === 'copy' ? '#38bdf8' : '#334155'}`, borderRadius: '3px', color: rotMode === 'copy' ? '#38bdf8' : '#94a3b8', fontSize: '11px', cursor: 'pointer' }}
+                        style={{ flex: 1, padding: '7px', background: rotMode === 'copy' ? '#1e293b' : '#ffffff', border: `1px solid ${rotMode === 'copy' ? '#38bdf8' : '#334155'}`, borderRadius: '3px', color: rotMode === 'copy' ? '#38bdf8' : '#94a3b8', fontSize: '11px', cursor: 'pointer' }}
                       >
                         Create Rotated Copy
                       </button>
@@ -601,8 +601,8 @@ export default function TransformCADModal({
           {activeTab === 'scale' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -618,7 +618,7 @@ export default function TransformCADModal({
                   style={{
                     flex: 1,
                     padding: '8px',
-                    background: scaleType === 'uniform' ? '#1e293b' : '#0e1218',
+                    background: scaleType === 'uniform' ? '#1e293b' : '#f8fafc',
                     border: `1px solid ${scaleType === 'uniform' ? '#38bdf8' : '#334155'}`,
                     borderRadius: '4px',
                     color: scaleType === 'uniform' ? '#38bdf8' : '#94a3b8',
@@ -634,7 +634,7 @@ export default function TransformCADModal({
                   style={{
                     flex: 1,
                     padding: '8px',
-                    background: scaleType === 'axes' ? '#1e293b' : '#0e1218',
+                    background: scaleType === 'axes' ? '#1e293b' : '#f8fafc',
                     border: `1px solid ${scaleType === 'axes' ? '#38bdf8' : '#334155'}`,
                     borderRadius: '4px',
                     color: scaleType === 'axes' ? '#38bdf8' : '#94a3b8',
@@ -648,8 +648,8 @@ export default function TransformCADModal({
               </div>
 
               {scaleType === 'uniform' ? (
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '6px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
                     Uniform Scaling Factor:
                   </label>
                   <input
@@ -657,7 +657,7 @@ export default function TransformCADModal({
                     step="0.001"
                     value={uniformScale}
                     onChange={(e) => setUniformScale(e.target.value)}
-                    style={{ width: '100%', padding: '8px 12px', background: '#141822', border: '1px solid #334155', borderRadius: '4px', color: '#38bdf8', fontSize: '14px', fontWeight: 700 }}
+                    style={{ width: '100%', padding: '8px 12px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#38bdf8', fontSize: '14px', fontWeight: 700 }}
                   />
 
                   <div style={{ display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
@@ -672,7 +672,7 @@ export default function TransformCADModal({
                       <button
                         key={p.label}
                         onClick={() => setUniformScale(p.val)}
-                        style={{ padding: '4px 8px', background: '#1e293b', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '10px', cursor: 'pointer' }}
+                        style={{ padding: '4px 8px', background: '#1e293b', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px', cursor: 'pointer' }}
                       >
                         {p.label}
                       </button>
@@ -681,17 +681,17 @@ export default function TransformCADModal({
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '4px', padding: '10px' }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
                     <label style={{ fontSize: '10px', color: '#38bdf8', display: 'block' }}>Scale X Factor:</label>
-                    <input type="number" step="0.01" value={scaleX} onChange={(e) => setScaleX(e.target.value)} style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px', marginTop: '4px' }} />
+                    <input type="number" step="0.01" value={scaleX} onChange={(e) => setScaleX(e.target.value)} style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px', marginTop: '4px' }} />
                   </div>
-                  <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '4px', padding: '10px' }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
                     <label style={{ fontSize: '10px', color: '#10b981', display: 'block' }}>Scale Y Factor:</label>
-                    <input type="number" step="0.01" value={scaleY} onChange={(e) => setScaleY(e.target.value)} style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px', marginTop: '4px' }} />
+                    <input type="number" step="0.01" value={scaleY} onChange={(e) => setScaleY(e.target.value)} style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px', marginTop: '4px' }} />
                   </div>
-                  <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '4px', padding: '10px' }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
                     <label style={{ fontSize: '10px', color: '#f59e0b', display: 'block' }}>Scale Z Factor:</label>
-                    <input type="number" step="0.01" value={scaleZ} onChange={(e) => setScaleZ(e.target.value)} style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px', marginTop: '4px' }} />
+                    <input type="number" step="0.01" value={scaleZ} onChange={(e) => setScaleZ(e.target.value)} style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px', marginTop: '4px' }} />
                   </div>
                 </div>
               )}
@@ -711,8 +711,8 @@ export default function TransformCADModal({
           {activeTab === 'mirror' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -732,8 +732,8 @@ export default function TransformCADModal({
                     onClick={() => setMirrorPlane(plane.id)}
                     style={{
                       padding: '12px',
-                      background: mirrorPlane === plane.id ? '#1e293b' : '#0e1218',
-                      border: `1px solid ${mirrorPlane === plane.id ? '#38bdf8' : '#232c3d'}`,
+                      background: mirrorPlane === plane.id ? '#1e293b' : '#f8fafc',
+                      border: `1px solid ${mirrorPlane === plane.id ? '#38bdf8' : '#e2e8f0'}`,
                       borderRadius: '6px',
                       textAlign: 'left',
                       cursor: 'pointer'
@@ -749,16 +749,16 @@ export default function TransformCADModal({
               </div>
 
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Mirror Mode:</label>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a' }}>Mirror Mode:</label>
                 <button
                   onClick={() => setMirrorMode('copy')}
-                  style={{ padding: '5px 12px', background: mirrorMode === 'copy' ? '#1e293b' : '#0e1218', border: `1px solid ${mirrorMode === 'copy' ? '#38bdf8' : '#334155'}`, borderRadius: '3px', color: mirrorMode === 'copy' ? '#38bdf8' : '#94a3b8', fontSize: '11px', cursor: 'pointer' }}
+                  style={{ padding: '5px 12px', background: mirrorMode === 'copy' ? '#1e293b' : '#f8fafc', border: `1px solid ${mirrorMode === 'copy' ? '#38bdf8' : '#334155'}`, borderRadius: '3px', color: mirrorMode === 'copy' ? '#38bdf8' : '#94a3b8', fontSize: '11px', cursor: 'pointer' }}
                 >
                   Create Mirrored Copy (Keep Both)
                 </button>
                 <button
                   onClick={() => setMirrorMode('move')}
-                  style={{ padding: '5px 12px', background: mirrorMode === 'move' ? '#1e293b' : '#0e1218', border: `1px solid ${mirrorMode === 'move' ? '#38bdf8' : '#334155'}`, borderRadius: '3px', color: mirrorMode === 'move' ? '#38bdf8' : '#94a3b8', fontSize: '11px', cursor: 'pointer' }}
+                  style={{ padding: '5px 12px', background: mirrorMode === 'move' ? '#1e293b' : '#f8fafc', border: `1px solid ${mirrorMode === 'move' ? '#38bdf8' : '#334155'}`, borderRadius: '3px', color: mirrorMode === 'move' ? '#38bdf8' : '#94a3b8', fontSize: '11px', cursor: 'pointer' }}
                 >
                   Mirror In-Place
                 </button>
@@ -779,8 +779,8 @@ export default function TransformCADModal({
           {activeTab === 'pattern' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -796,7 +796,7 @@ export default function TransformCADModal({
                   style={{
                     flex: 1,
                     padding: '8px',
-                    background: patternType === 'rect' ? '#1e293b' : '#0e1218',
+                    background: patternType === 'rect' ? '#1e293b' : '#f8fafc',
                     border: `1px solid ${patternType === 'rect' ? '#38bdf8' : '#334155'}`,
                     borderRadius: '4px',
                     color: patternType === 'rect' ? '#38bdf8' : '#94a3b8',
@@ -812,7 +812,7 @@ export default function TransformCADModal({
                   style={{
                     flex: 1,
                     padding: '8px',
-                    background: patternType === 'circular' ? '#1e293b' : '#0e1218',
+                    background: patternType === 'circular' ? '#1e293b' : '#f8fafc',
                     border: `1px solid ${patternType === 'circular' ? '#38bdf8' : '#334155'}`,
                     borderRadius: '4px',
                     color: patternType === 'circular' ? '#38bdf8' : '#94a3b8',
@@ -827,32 +827,32 @@ export default function TransformCADModal({
 
               {patternType === 'rect' ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '4px', padding: '10px' }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
                     <label style={{ fontSize: '10px', color: '#94a3b8', display: 'block' }}>Cols (X Count):</label>
-                    <input type="number" min="1" max="10" value={gridCols} onChange={(e) => setGridCols(e.target.value)} style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px', marginTop: '4px' }} />
+                    <input type="number" min="1" max="10" value={gridCols} onChange={(e) => setGridCols(e.target.value)} style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px', marginTop: '4px' }} />
                   </div>
-                  <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '4px', padding: '10px' }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
                     <label style={{ fontSize: '10px', color: '#94a3b8', display: 'block' }}>Rows (Z Count):</label>
-                    <input type="number" min="1" max="10" value={gridRows} onChange={(e) => setGridRows(e.target.value)} style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px', marginTop: '4px' }} />
+                    <input type="number" min="1" max="10" value={gridRows} onChange={(e) => setGridRows(e.target.value)} style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px', marginTop: '4px' }} />
                   </div>
-                  <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '4px', padding: '10px' }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
                     <label style={{ fontSize: '10px', color: '#38bdf8', display: 'block' }}>Spacing X (mm):</label>
-                    <input type="number" value={spacingX} onChange={(e) => setSpacingX(e.target.value)} style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px', marginTop: '4px' }} />
+                    <input type="number" value={spacingX} onChange={(e) => setSpacingX(e.target.value)} style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px', marginTop: '4px' }} />
                   </div>
-                  <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '4px', padding: '10px' }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
                     <label style={{ fontSize: '10px', color: '#f59e0b', display: 'block' }}>Spacing Z (mm):</label>
-                    <input type="number" value={spacingZ} onChange={(e) => setSpacingZ(e.target.value)} style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px', marginTop: '4px' }} />
+                    <input type="number" value={spacingZ} onChange={(e) => setSpacingZ(e.target.value)} style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px', marginTop: '4px' }} />
                   </div>
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
                     <label style={{ fontSize: '10px', color: '#94a3b8', display: 'block' }}>Total Instances along PCD:</label>
-                    <input type="number" min="2" max="24" value={circCount} onChange={(e) => setCircCount(e.target.value)} style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#38bdf8', fontSize: '13px', fontWeight: 700, marginTop: '4px' }} />
+                    <input type="number" min="2" max="24" value={circCount} onChange={(e) => setCircCount(e.target.value)} style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#38bdf8', fontSize: '13px', fontWeight: 700, marginTop: '4px' }} />
                   </div>
-                  <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
                     <label style={{ fontSize: '10px', color: '#94a3b8', display: 'block' }}>Pattern Radius (mm):</label>
-                    <input type="number" value={circRadius} onChange={(e) => setCircRadius(e.target.value)} style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#10b981', fontSize: '13px', fontWeight: 700, marginTop: '4px' }} />
+                    <input type="number" value={circRadius} onChange={(e) => setCircRadius(e.target.value)} style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#10b981', fontSize: '13px', fontWeight: 700, marginTop: '4px' }} />
                   </div>
                 </div>
               )}
@@ -871,7 +871,7 @@ export default function TransformCADModal({
         </div>
 
         {/* Footer */}
-        <div className="modal-footer" style={{ borderTop: '1px solid #1f2737', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '10px', color: '#94a3b8' }}>
             Transform operations immediately reposition workpieces for multi-axis CNC toolpath generation.
           </div>

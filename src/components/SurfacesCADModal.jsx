@@ -231,14 +231,14 @@ export default function SurfacesCADModal({
           width: '950px',
           maxWidth: '96vw',
           maxHeight: '90vh',
-          backgroundColor: '#12161f',
-          border: '1px solid #283548',
+          backgroundColor: '#ffffff',
+          border: '1px solid #cbd5e1',
           borderRadius: '8px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          color: '#f8fafc'
+          color: '#0f172a'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -246,8 +246,8 @@ export default function SurfacesCADModal({
         <div
           style={{
             padding: '14px 20px',
-            backgroundColor: '#171c28',
-            borderBottom: '1px solid #283548',
+            backgroundColor: '#f1f5f9',
+            borderBottom: '1px solid #cbd5e1',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between'
@@ -291,7 +291,7 @@ export default function SurfacesCADModal({
             background: feedback.type === 'warning' ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)',
             border: `1px solid ${feedback.type === 'warning' ? '#f59e0b' : '#10b981'}`,
             borderRadius: '4px',
-            color: '#fff',
+            color: '#0f172a',
             fontSize: '12px',
             display: 'flex',
             alignItems: 'center',
@@ -308,8 +308,8 @@ export default function SurfacesCADModal({
           <div
             style={{
               width: '235px',
-              backgroundColor: '#0e1219',
-              borderRight: '1px solid #232c3d',
+              backgroundColor: '#f8fafc',
+              borderRight: '1px solid #e2e8f0',
               padding: '12px 8px',
               display: 'flex',
               flexDirection: 'column',
@@ -333,8 +333,8 @@ export default function SurfacesCADModal({
                     padding: '8px 10px',
                     borderRadius: '5px',
                     border: `1px solid ${isActive ? '#0284c7' : 'transparent'}`,
-                    backgroundColor: isActive ? '#162232' : 'transparent',
-                    color: isActive ? '#38bdf8' : '#cbd5e1',
+                    backgroundColor: isActive ? '#e0f2fe' : 'transparent',
+                    color: isActive ? '#0284c7' : '#334155',
                     cursor: 'pointer',
                     fontSize: '12px',
                     fontWeight: isActive ? 600 : 500,
@@ -343,7 +343,7 @@ export default function SurfacesCADModal({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Icon size={16} color={isActive ? '#38bdf8' : '#94a3b8'} />
+                    <Icon size={16} color={isActive ? '#0284c7' : '#64748b'} />
                     <span>{tool.label}</span>
                   </div>
                   <span
@@ -351,8 +351,8 @@ export default function SurfacesCADModal({
                       fontSize: '9px',
                       padding: '1px 5px',
                       borderRadius: '3px',
-                      backgroundColor: isActive ? '#0284c733' : '#1e2430',
-                      color: isActive ? '#38bdf8' : '#64748b',
+                      backgroundColor: isActive ? '#bae6fd' : '#e2e8f0',
+                      color: isActive ? '#0284c7' : '#64748b',
                       fontFamily: 'var(--font-mono)'
                     }}
                   >
@@ -363,7 +363,7 @@ export default function SurfacesCADModal({
             })}
 
             {/* Quick Actions at bottom of sidebar */}
-            <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #1f2737' }}>
+            <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
               <button
                 onClick={() => {
                   if (confirm("Clear all added 3D surface sheets from Level 15?")) {
@@ -398,7 +398,7 @@ export default function SurfacesCADModal({
               flex: 1,
               padding: '20px 24px',
               overflowY: 'auto',
-              backgroundColor: '#12161f',
+              backgroundColor: '#ffffff',
               display: 'flex',
               flexDirection: 'column'
             }}
@@ -406,7 +406,7 @@ export default function SurfacesCADModal({
             {/* 1. PLANAR SURFACE SHEET */}
             {activeTool === 'plane' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#06b6d4' }}>Planar Surface Sheet</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Generate a 2D/3D planar sheet entity for face boundaries, table patches, or collision check surfaces.
@@ -420,8 +420,8 @@ export default function SurfacesCADModal({
                     style={{
                       flex: 1,
                       padding: '8px',
-                      backgroundColor: planeRole === 'drive' ? '#083344' : '#141822',
-                      border: `1px solid ${planeRole === 'drive' ? '#06b6d4' : '#232c3d'}`,
+                      backgroundColor: planeRole === 'drive' ? '#083344' : '#ffffff',
+                      border: `1px solid ${planeRole === 'drive' ? '#06b6d4' : '#e2e8f0'}`,
                       borderRadius: '5px',
                       color: planeRole === 'drive' ? '#38bdf8' : '#94a3b8',
                       cursor: 'pointer',
@@ -441,8 +441,8 @@ export default function SurfacesCADModal({
                     style={{
                       flex: 1,
                       padding: '8px',
-                      backgroundColor: planeRole === 'check' ? '#3b2308' : '#141822',
-                      border: `1px solid ${planeRole === 'check' ? '#f59e0b' : '#232c3d'}`,
+                      backgroundColor: planeRole === 'check' ? '#3b2308' : '#ffffff',
+                      border: `1px solid ${planeRole === 'check' ? '#f59e0b' : '#e2e8f0'}`,
                       borderRadius: '5px',
                       color: planeRole === 'check' ? '#f59e0b' : '#94a3b8',
                       cursor: 'pointer',
@@ -461,7 +461,7 @@ export default function SurfacesCADModal({
 
                 {/* Dimensions */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Width X (mm)</label>
                     <input
                       type="number"
@@ -471,7 +471,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Depth Z (mm)</label>
                     <input
                       type="number"
@@ -481,7 +481,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Elevation Y (mm)</label>
                     <input
                       type="number"
@@ -491,7 +491,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Orientation Plane</label>
                     <select
                       value={planePlane}
@@ -506,7 +506,7 @@ export default function SurfacesCADModal({
                 </div>
 
                 {/* Center Coordinates & Snaps */}
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <span style={{ fontSize: '12px', fontWeight: 600, color: '#06b6d4' }}>Center Offset &amp; Presets</span>
                     <div style={{ display: 'flex', gap: '6px' }}>
@@ -559,8 +559,8 @@ export default function SurfacesCADModal({
                 </div>
 
                 {/* Opacity slider */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#0e1219', borderRadius: '6px', border: '1px solid #1f2737' }}>
-                  <span style={{ fontSize: '12px', color: '#cbd5e1' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ fontSize: '12px', color: '#334155' }}>
                     Surface Transparency: <strong>{Math.round(planeOpacity * 100)}% Opacity</strong>
                   </span>
                   <input
@@ -587,7 +587,7 @@ export default function SurfacesCADModal({
             {/* 2. CYLINDRICAL SURFACE */}
             {activeTool === 'cylinder' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#10b981' }}>Cylindrical Surface Sleeve</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Create open-ended cylindrical surface wraps, boss envelopes, or rotary avoidance barriers.
@@ -595,7 +595,7 @@ export default function SurfacesCADModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Radius R (mm)</label>
                     <input
                       type="number"
@@ -608,7 +608,7 @@ export default function SurfacesCADModal({
                       Ø{(cylRadius * 2).toFixed(1)} mm
                     </div>
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Height (mm)</label>
                     <input
                       type="number"
@@ -618,7 +618,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Base Elevation Y</label>
                     <input
                       type="number"
@@ -628,7 +628,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>CAM Role</label>
                     <select
                       value={cylRole}
@@ -641,7 +641,7 @@ export default function SurfacesCADModal({
                   </div>
                 </div>
 
-                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Center X (mm)</label>
                     <input
@@ -674,7 +674,7 @@ export default function SurfacesCADModal({
             {/* 3. EXTRUDED WALL SURFACE */}
             {activeTool === 'extrude' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#8b5cf6' }}>Extruded Surface Shell</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Extrudes a rectangular boundary upward along the vertical vector to form open side walls and pocket draft faces.
@@ -682,7 +682,7 @@ export default function SurfacesCADModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Width X (mm)</label>
                     <input
                       type="number"
@@ -692,7 +692,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Depth Z (mm)</label>
                     <input
                       type="number"
@@ -702,7 +702,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Extrusion Height</label>
                     <input
                       type="number"
@@ -712,7 +712,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Base Elevation Y</label>
                     <input
                       type="number"
@@ -734,7 +734,7 @@ export default function SurfacesCADModal({
             {/* 4. REVOLVED SURFACE */}
             {activeTool === 'revolve' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#ec4899' }}>Revolved / Conical Surface</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Revolve a profile curve around the vertical spindle axis (turned surfaces, taper cones, and draft cones).
@@ -742,7 +742,7 @@ export default function SurfacesCADModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Bottom Radius R1</label>
                     <input
                       type="number"
@@ -752,7 +752,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Top Radius R2</label>
                     <input
                       type="number"
@@ -762,7 +762,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Height (mm)</label>
                     <input
                       type="number"
@@ -772,7 +772,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Sweep Angle (Deg)</label>
                     <input
                       type="number"
@@ -796,7 +796,7 @@ export default function SurfacesCADModal({
             {/* 5. RULED LOFT SURFACE */}
             {activeTool === 'loft' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#3b82f6' }}>Ruled Loft Surface</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Generates a ruled loft surface linearly blending between a lower profile frame and an upper profile frame.
@@ -804,7 +804,7 @@ export default function SurfacesCADModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <div style={{ fontSize: '11px', fontWeight: 600, color: '#38bdf8', marginBottom: '6px' }}>Bottom Profile (Stage 1)</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       <div>
@@ -830,7 +830,7 @@ export default function SurfacesCADModal({
                     </div>
                   </div>
 
-                  <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <div style={{ fontSize: '11px', fontWeight: 600, color: '#a855f7', marginBottom: '6px' }}>Top Profile (Stage 2)</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       <div>
@@ -867,7 +867,7 @@ export default function SurfacesCADModal({
             {/* 6. CAP HOLES / PATCH */}
             {activeTool === 'cap' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8' }}>Cap Holes / Surface Patch (CAM Feature)</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Mastercam standard hole capping patch: prevents 3D surface finishing endmills from plunging or dipping into holes.
@@ -875,7 +875,7 @@ export default function SurfacesCADModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Hole Radius R (mm)</label>
                     <input
                       type="number"
@@ -888,7 +888,7 @@ export default function SurfacesCADModal({
                       Covers Hole Ø{(capRadius * 2).toFixed(1)} mm
                     </div>
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Elevation Y (mm)</label>
                     <input
                       type="number"
@@ -898,7 +898,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Preset Holes</label>
                     <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
                       <button className="modal-preset-btn" onClick={() => setCapRadius(3.4)}>M8 (Ø6.8)</button>
@@ -918,7 +918,7 @@ export default function SurfacesCADModal({
             {/* 7. FILLET BLEND SHEET */}
             {activeTool === 'fillet' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#14b8a6' }}>Surface Fillet Blend Sheet</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
                     Create smooth radial blend transition sheets between adjacent planar or perpendicular surfaces.
@@ -926,7 +926,7 @@ export default function SurfacesCADModal({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Fillet Radius R (mm)</label>
                     <input
                       type="number"
@@ -936,7 +936,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Span Length (mm)</label>
                     <input
                       type="number"
@@ -946,7 +946,7 @@ export default function SurfacesCADModal({
                       style={inputStyle}
                     />
                   </div>
-                  <div style={{ background: '#161b26', padding: '10px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <label style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 600 }}>Blend Arc Angle</label>
                     <input
                       type="number"
@@ -968,7 +968,7 @@ export default function SurfacesCADModal({
             {/* 8. DRIVE & CHECK SURFACE MANAGER */}
             {activeTool === 'list' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8' }}>Level 15 Surface Manager</div>
                     <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
@@ -1018,8 +1018,8 @@ export default function SurfacesCADModal({
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             padding: '8px 12px',
-                            backgroundColor: '#161b26',
-                            border: '1px solid #232c3d',
+                            backgroundColor: '#f8fafc',
+                            border: '1px solid #e2e8f0',
                             borderRadius: '5px',
                             fontSize: '12px'
                           }}
@@ -1027,7 +1027,7 @@ export default function SurfacesCADModal({
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <div style={{ width: '9px', height: '9px', borderRadius: '2px', backgroundColor: isCheck ? '#f59e0b' : '#06b6d4' }} />
                             <div>
-                              <div style={{ fontWeight: 600, color: '#f8fafc' }}>{ent.name || `Surface_${idx + 1}`}</div>
+                              <div style={{ fontWeight: 600, color: '#0f172a' }}>{ent.name || `Surface_${idx + 1}`}</div>
                               <div style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
                                 Type: {ent.userData?.type || 'Surface'} | Role: <strong style={{ color: isCheck ? '#f59e0b' : '#38bdf8' }}>{isCheck ? 'CHECK (Avoid)' : 'DRIVE (Machine)'}</strong>
                               </div>
@@ -1067,8 +1067,8 @@ export default function SurfacesCADModal({
         <div
           style={{
             padding: '12px 20px',
-            backgroundColor: '#171c28',
-            borderTop: '1px solid #283548',
+            backgroundColor: '#f1f5f9',
+            borderTop: '1px solid #cbd5e1',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between'
@@ -1101,10 +1101,10 @@ export default function SurfacesCADModal({
 const inputStyle = {
   width: '100%',
   padding: '6px 8px',
-  backgroundColor: '#0e1219',
-  border: '1px solid #2a3548',
+  backgroundColor: '#f8fafc',
+  border: '1px solid #cbd5e1',
   borderRadius: '4px',
-  color: '#f8fafc',
+  color: '#0f172a',
   fontSize: '11.5px',
   fontFamily: 'var(--font-mono)',
   marginTop: '4px',

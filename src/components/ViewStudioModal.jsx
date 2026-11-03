@@ -134,13 +134,13 @@ export default function ViewStudioModal({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '14px 20px',
-        borderBottom: '1px solid #232c3d',
-        background: '#0f131d'
+        borderBottom: '1px solid #e2e8f0',
+        background: '#ffffff'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Eye size={22} color="#38bdf8" />
           <div>
-            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.3px' }}>
+            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a', letterSpacing: '0.3px' }}>
               3D View &amp; Display Studio (Mastercam View Manager)
             </h2>
             <div style={{ fontSize: '11px', color: '#94a3b8' }}>
@@ -167,7 +167,7 @@ export default function ViewStudioModal({
       {/* Tabs Bar */}
       <div style={{
         display: 'flex',
-        borderBottom: '1px solid #232c3d',
+        borderBottom: '1px solid #e2e8f0',
         background: '#111522',
         padding: '0 16px'
       }}>
@@ -317,7 +317,7 @@ export default function ViewStudioModal({
 
               {/* Standard View Angles */}
               <div style={{ background: '#10141f', padding: '16px', borderRadius: '8px', border: '1px solid #1f2738' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#f8fafc', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Rotate3D size={16} color="#f59e0b" />
                   <span>Standard Machine View Angles</span>
                 </div>
@@ -340,9 +340,9 @@ export default function ViewStudioModal({
                       }}
                       style={{
                         padding: '8px 12px',
-                        background: '#161b29',
+                        background: '#ffffff',
                         border: '1px solid #283347',
-                        color: '#cbd5e1',
+                        color: '#334155',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         fontSize: '11px',
@@ -374,7 +374,7 @@ export default function ViewStudioModal({
               justifyContent: 'space-between'
             }}>
               <div>
-                <strong style={{ color: '#38bdf8' }}>Pro-Tip for CAM Machinists:</strong> Press <kbd style={{ background: '#1e293b', padding: '2px 5px', borderRadius: '3px', color: '#f8fafc' }}>Top (G17)</kbd> before drafting wireframes or calculating 2D contours, and switch to <kbd style={{ background: '#1e293b', padding: '2px 5px', borderRadius: '3px', color: '#f8fafc' }}>Isometric</kbd> to inspect 5-axis swarf toolpath clearance.
+                <strong style={{ color: '#38bdf8' }}>Pro-Tip for CAM Machinists:</strong> Press <kbd style={{ background: '#f1f5f9', padding: '2px 5px', borderRadius: '3px', color: '#0f172a' }}>Top (G17)</kbd> before drafting wireframes or calculating 2D contours, and switch to <kbd style={{ background: '#f1f5f9', padding: '2px 5px', borderRadius: '3px', color: '#0f172a' }}>Isometric</kbd> to inspect 5-axis swarf toolpath clearance.
               </div>
               <button
                 onClick={() => {
@@ -385,8 +385,8 @@ export default function ViewStudioModal({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  background: '#1e293b',
-                  border: '1px solid #334155',
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
                   color: '#38bdf8',
                   padding: '6px 12px',
                   borderRadius: '4px',
@@ -408,7 +408,7 @@ export default function ViewStudioModal({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Scissors size={18} color="#ec4899" />
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#f8fafc' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
                     Dynamic 3D Section Plane (Slice Inspection)
                   </span>
                 </div>
@@ -435,8 +435,8 @@ export default function ViewStudioModal({
                       onClick={handleResetClipping}
                       style={{
                         padding: '6px 12px',
-                        background: '#1e293b',
-                        border: '1px solid #334155',
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
                         color: '#94a3b8',
                         borderRadius: '5px',
                         cursor: 'pointer',
@@ -513,7 +513,7 @@ export default function ViewStudioModal({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid #1c2332' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <FlipHorizontal size={16} color="#94a3b8" />
-                  <span style={{ fontSize: '12px', color: '#cbd5e1' }}>Invert Cut Normal (Slice Opposite Side)</span>
+                  <span style={{ fontSize: '12px', color: '#334155' }}>Invert Cut Normal (Slice Opposite Side)</span>
                 </div>
                 <input
                   type="checkbox"
@@ -584,7 +584,7 @@ export default function ViewStudioModal({
 
             {/* Workpiece Color Presets */}
             <div style={{ background: '#10141f', padding: '16px', borderRadius: '8px', border: '1px solid #1f2738' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#f8fafc', marginBottom: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '12px' }}>
                 Solid Part Material Color Tint
               </div>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -602,7 +602,7 @@ export default function ViewStudioModal({
                       padding: '8px 14px',
                       background: workpieceColor === preset.hex ? 'rgba(255,255,255,0.1)' : '#161b29',
                       border: workpieceColor === preset.hex ? `2px solid ${preset.hex}` : '1px solid #283347',
-                      color: '#cbd5e1',
+                      color: '#334155',
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '11px'
@@ -621,7 +621,7 @@ export default function ViewStudioModal({
         {activeTab === 'lighting' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <div style={{ background: '#10141f', padding: '18px', borderRadius: '8px', border: '1px solid #1f2738' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#f8fafc', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Sun size={17} color="#f59e0b" />
                 <span>Shop Floor &amp; CAD Studio Lighting Environment</span>
               </div>
@@ -659,7 +659,7 @@ export default function ViewStudioModal({
                       padding: '16px',
                       background: lightingMode === env.id ? 'rgba(245, 158, 11, 0.15)' : '#161b29',
                       border: lightingMode === env.id ? '1px solid #f59e0b' : '1px solid #283347',
-                      color: '#cbd5e1',
+                      color: '#334155',
                       borderRadius: '8px',
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -672,7 +672,7 @@ export default function ViewStudioModal({
                       <span style={{ fontWeight: 600, fontSize: '12px', color: lightingMode === env.id ? '#fbbf24' : '#f8fafc' }}>
                         {env.label}
                       </span>
-                      <span style={{ fontSize: '9px', background: '#1e293b', padding: '2px 6px', borderRadius: '4px', color: '#94a3b8' }}>
+                      <span style={{ fontSize: '9px', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#94a3b8' }}>
                         {env.badge}
                       </span>
                     </div>
@@ -703,7 +703,7 @@ export default function ViewStudioModal({
                   { key: 'fixture', label: 'Level 30: Machine Vise & Fixture Clamps', color: '#94a3b8' },
                   { key: 'toolpaths', label: 'Level 50: CNC Toolpath Feed Cutting Moves', color: '#10b981' },
                   { key: 'rapids', label: 'Level 60: Rapid Clearance G0 Moves', color: '#06b6d4' },
-                  { key: 'dimensions', label: 'Level 100: Drafting Dimensions & Tolerances', color: '#e2e8f0' },
+                  { key: 'dimensions', label: 'Level 100: Drafting Dimensions & Tolerances', color: '#0f172a' },
                   { key: 'bed', label: 'CNC Machine Table Bed Grid', color: '#64748b' },
                   { key: 'wcs', label: 'Active Work Coordinate (G54 Origin Triad)', color: '#ef4444' }
                 ].map((layer) => {
@@ -719,7 +719,7 @@ export default function ViewStudioModal({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '10px 14px',
-                        background: '#161b29',
+                        background: '#ffffff',
                         border: '1px solid #283347',
                         borderRadius: '6px',
                         cursor: 'pointer'
@@ -752,8 +752,8 @@ export default function ViewStudioModal({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '12px 20px',
-        borderTop: '1px solid #232c3d',
-        background: '#0f131d'
+        borderTop: '1px solid #e2e8f0',
+        background: '#ffffff'
       }}>
         <div style={{ fontSize: '11px', color: '#94a3b8' }}>
           Real-time OpenGL/WebGL 3D Rendering &bull; Three.js r128 &bull; 60 FPS

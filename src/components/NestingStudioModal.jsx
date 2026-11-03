@@ -317,7 +317,7 @@ export default function NestingStudioModal({
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(3, 7, 18, 0.88)',
+        background: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(10px)',
         display: 'flex',
         alignItems: 'center',
@@ -330,14 +330,14 @@ export default function NestingStudioModal({
           width: isFullscreen ? '100vw' : '96vw',
           maxWidth: isFullscreen ? '100vw' : '1720px',
           height: isFullscreen ? '100vh' : '94vh',
-          background: '#0d1527',
+          background: '#ffffff',
           borderRadius: isFullscreen ? '0px' : '14px',
-          border: '1px solid #1e293b',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8)',
+          border: '1px solid #cbd5e1',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          color: '#e2e8f0'
+          color: '#0f172a'
         }}
       >
         {/* ================================================================== */}
@@ -346,8 +346,8 @@ export default function NestingStudioModal({
         <div
           style={{
             height: '56px',
-            borderBottom: '1px solid #1e293b',
-            background: 'linear-gradient(90deg, #090f1d 0%, #0e172a 100%)',
+            borderBottom: '1px solid #cbd5e1',
+            background: '#f1f5f9',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -372,7 +372,7 @@ export default function NestingStudioModal({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.3px', color: '#f8fafc' }}>
+                <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.3px', color: '#0f172a' }}>
                   True-Shape CNC Sheet Nesting &amp; Multi-Part Studio
                 </span>
                 <span
@@ -416,7 +416,7 @@ export default function NestingStudioModal({
                 </div>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: utilBadge.text, lineHeight: 1.1 }}>
                   {metrics.utilizationPercent}%{' '}
-                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#cbd5e1' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 500, color: '#334155' }}>
                     ({metrics.totalPartsPlaced} of {metrics.totalPartsRequested} nested)
                   </span>
                 </div>
@@ -489,8 +489,8 @@ export default function NestingStudioModal({
           <div
             style={{
               width: '390px',
-              borderRight: '1px solid #1e293b',
-              background: '#090f1d',
+              borderRight: '1px solid #cbd5e1',
+              background: '#f8fafc',
               display: 'flex',
               flexDirection: 'column',
               flexShrink: 0
@@ -500,10 +500,10 @@ export default function NestingStudioModal({
               {/* SECTION 1: STOCK SHEET SPECIFICATIONS */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b',
+                  border: '1px solid #cbd5e1',
                   marginBottom: '16px'
                 }}
               >
@@ -526,9 +526,9 @@ export default function NestingStudioModal({
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       fontSize: '12px'
                     }}
@@ -555,9 +555,9 @@ export default function NestingStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -575,9 +575,9 @@ export default function NestingStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -593,9 +593,9 @@ export default function NestingStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -614,9 +614,9 @@ export default function NestingStudioModal({
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       fontSize: '12px'
                     }}
@@ -633,10 +633,10 @@ export default function NestingStudioModal({
               {/* SECTION 2: MULTI-PART PRODUCTION QUEUE */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b',
+                  border: '1px solid #cbd5e1',
                   marginBottom: '16px'
                 }}
               >
@@ -710,9 +710,9 @@ export default function NestingStudioModal({
                     <div
                       key={part.id}
                       style={{
-                        background: '#090f1d',
+                        background: '#f8fafc',
                         borderRadius: '6px',
-                        border: '1px solid #1e293b',
+                        border: '1px solid #cbd5e1',
                         padding: '8px 10px',
                         display: 'flex',
                         alignItems: 'center',
@@ -747,10 +747,10 @@ export default function NestingStudioModal({
                           style={{
                             width: '22px',
                             height: '22px',
-                            background: '#1e293b',
-                            border: '1px solid #334155',
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
                             borderRadius: '4px',
-                            color: '#e2e8f0',
+                            color: '#0f172a',
                             fontSize: '12px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -768,10 +768,10 @@ export default function NestingStudioModal({
                           style={{
                             width: '22px',
                             height: '22px',
-                            background: '#1e293b',
-                            border: '1px solid #334155',
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
                             borderRadius: '4px',
-                            color: '#e2e8f0',
+                            color: '#0f172a',
                             fontSize: '12px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -804,10 +804,10 @@ export default function NestingStudioModal({
               {/* SECTION 3: NESTING CONSTRAINTS & TOOLING */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b'
+                  border: '1px solid #cbd5e1'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '10px' }}>
@@ -828,9 +828,9 @@ export default function NestingStudioModal({
                         style={{
                           width: '100%',
                           background: '#0b1320',
-                          border: '1px solid #334155',
+                          border: '1px solid #cbd5e1',
                           borderRadius: '6px',
-                          color: '#f8fafc',
+                          color: '#0f172a',
                           padding: '6px 8px',
                           fontSize: '12px'
                         }}
@@ -849,9 +849,9 @@ export default function NestingStudioModal({
                         style={{
                           width: '100%',
                           background: '#0b1320',
-                          border: '1px solid #334155',
+                          border: '1px solid #cbd5e1',
                           borderRadius: '6px',
-                          color: '#f8fafc',
+                          color: '#0f172a',
                           padding: '6px 8px',
                           fontSize: '12px'
                         }}
@@ -893,9 +893,9 @@ export default function NestingStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px',
                         fontSize: '12px'
                       }}
@@ -913,9 +913,9 @@ export default function NestingStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px',
                         fontSize: '12px'
                       }}
@@ -937,8 +937,8 @@ export default function NestingStudioModal({
             <div
               style={{
                 height: '42px',
-                borderBottom: '1px solid #1e293b',
-                background: '#090f1d',
+                borderBottom: '1px solid #cbd5e1',
+                background: '#f8fafc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1031,21 +1031,21 @@ export default function NestingStudioModal({
                   <button
                     onClick={() => setZoomLevel(prev => Math.min(6.0, prev * 1.25))}
                     title="Zoom in"
-                    style={{ background: '#1e293b', border: 'none', color: '#cbd5e1', padding: '5px', borderRadius: '4px', cursor: 'pointer' }}
+                    style={{ background: '#f1f5f9', border: 'none', color: '#334155', padding: '5px', borderRadius: '4px', cursor: 'pointer' }}
                   >
                     <ZoomIn size={14} />
                   </button>
                   <button
                     onClick={() => setZoomLevel(prev => Math.max(0.2, prev * 0.8))}
                     title="Zoom out"
-                    style={{ background: '#1e293b', border: 'none', color: '#cbd5e1', padding: '5px', borderRadius: '4px', cursor: 'pointer' }}
+                    style={{ background: '#f1f5f9', border: 'none', color: '#334155', padding: '5px', borderRadius: '4px', cursor: 'pointer' }}
                   >
                     <ZoomOut size={14} />
                   </button>
                   <button
                     onClick={handleResetZoom}
                     title="Fit to sheet"
-                    style={{ background: '#1e293b', border: 'none', color: '#cbd5e1', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                    style={{ background: '#f1f5f9', border: 'none', color: '#334155', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
                   >
                     Fit {Math.round(zoomLevel * 100)}%
                   </button>
@@ -1240,11 +1240,11 @@ export default function NestingStudioModal({
                       right: '16px',
                       background: 'rgba(15, 23, 42, 0.95)',
                       backdropFilter: 'blur(8px)',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '8px',
                       padding: '12px 14px',
                       fontSize: '12px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
                       pointerEvents: 'none',
                       minWidth: '220px'
@@ -1279,7 +1279,7 @@ export default function NestingStudioModal({
             {activeTab === 'analytics' && (
               <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Sheet Utilization</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#38bdf8', marginTop: '4px' }}>
                       {metrics.utilizationPercent}%
@@ -1289,7 +1289,7 @@ export default function NestingStudioModal({
                     </div>
                   </div>
 
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Reusable Remnant</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#10b981', marginTop: '4px' }}>
                       {metrics.remnantPercent}%
@@ -1299,7 +1299,7 @@ export default function NestingStudioModal({
                     </div>
                   </div>
 
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Skeleton Scrap</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#f43f5e', marginTop: '4px' }}>
                       {metrics.skeletonScrapPercent}%
@@ -1309,7 +1309,7 @@ export default function NestingStudioModal({
                     </div>
                   </div>
 
-                  <div style={{ background: '#0e172a', padding: '16px', borderRadius: '10px', border: '1px solid #1e293b' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Estimated Cut Cycle</div>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#f59e0b', marginTop: '4px' }}>
                       {metrics.estimatedCutTimeFormatted}
@@ -1321,15 +1321,15 @@ export default function NestingStudioModal({
                 </div>
 
                 {/* Material Weight & Cost Analysis */}
-                <div style={{ background: '#0e172a', borderRadius: '10px', padding: '20px', border: '1px solid #1e293b', marginBottom: '24px' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px', border: '1px solid #cbd5e1', marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <HardDrive size={16} color="#38bdf8" />
                     Material Consumption &amp; Stock Weight Analytics
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                     <div>
                       <div style={{ fontSize: '12px', color: '#94a3b8' }}>Total Raw Sheet Weight:</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#e2e8f0', marginTop: '2px' }}>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
                         {metrics.sheetWeightKg} kg
                       </div>
                       <div style={{ fontSize: '11px', color: '#64748b' }}>
@@ -1357,8 +1357,8 @@ export default function NestingStudioModal({
 
             {/* TAB CONTENT 3: G-CODE PREVIEW */}
             {activeTab === 'gcode' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#090f1d' }}>
-                <div style={{ padding: '10px 16px', background: '#0e172a', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+                <div style={{ padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: '12px', color: '#94a3b8' }}>
                     Production Ready ISO G-Code &bull; Lead-In Arcs &bull; Holding Tab Micro-Joints
                   </div>
@@ -1370,7 +1370,7 @@ export default function NestingStudioModal({
                         alignItems: 'center',
                         gap: '6px',
                         background: copiedGCode ? '#10b981' : '#1e293b',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         color: '#ffffff',
                         padding: '5px 12px',
                         borderRadius: '6px',
@@ -1427,9 +1427,9 @@ export default function NestingStudioModal({
             {/* TAB CONTENT 4: BOM & PRODUCTION SCHEDULE */}
             {activeTab === 'bom' && (
               <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', color: '#e2e8f0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', color: '#0f172a' }}>
                   <thead>
-                    <tr style={{ background: '#0e172a', borderBottom: '1px solid #334155', textAlign: 'left' }}>
+                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #334155', textAlign: 'left' }}>
                       <th style={{ padding: '10px 12px' }}>Color</th>
                       <th style={{ padding: '10px 12px' }}>Part Name</th>
                       <th style={{ padding: '10px 12px' }}>Dimensions</th>
@@ -1446,7 +1446,7 @@ export default function NestingStudioModal({
                       const isComplete = nestedCount >= p.quantity;
 
                       return (
-                        <tr key={p.id} style={{ borderBottom: '1px solid #1e293b' }}>
+                        <tr key={p.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
                           <td style={{ padding: '10px 12px' }}>
                             <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: p.color }} />
                           </td>
@@ -1459,7 +1459,7 @@ export default function NestingStudioModal({
                             {nestedCount}
                           </td>
                           <td style={{ padding: '10px 12px' }}>
-                            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: '#1e293b' }}>
+                            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9' }}>
                               Priority {p.priority}
                             </span>
                           </td>
@@ -1487,8 +1487,8 @@ export default function NestingStudioModal({
             <div
               style={{
                 height: '40px',
-                borderTop: '1px solid #1e293b',
-                background: '#090f1d',
+                borderTop: '1px solid #cbd5e1',
+                background: '#f8fafc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1518,8 +1518,8 @@ export default function NestingStudioModal({
         <div
           style={{
             height: '56px',
-            borderTop: '1px solid #1e293b',
-            background: '#090f1d',
+            borderTop: '1px solid #cbd5e1',
+            background: '#f8fafc',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1534,9 +1534,9 @@ export default function NestingStudioModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: '#1e293b',
-                border: '1px solid #334155',
-                color: '#e2e8f0',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                color: '#0f172a',
                 padding: '8px 14px',
                 borderRadius: '6px',
                 fontSize: '12px',
@@ -1553,9 +1553,9 @@ export default function NestingStudioModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: '#1e293b',
-                border: '1px solid #334155',
-                color: '#e2e8f0',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                color: '#0f172a',
                 padding: '8px 14px',
                 borderRadius: '6px',
                 fontSize: '12px',
@@ -1593,8 +1593,8 @@ export default function NestingStudioModal({
               onClick={onClose}
               style={{
                 background: 'transparent',
-                border: '1px solid #334155',
-                color: '#cbd5e1',
+                border: '1px solid #cbd5e1',
+                color: '#334155',
                 padding: '8px 16px',
                 borderRadius: '6px',
                 fontSize: '12px',

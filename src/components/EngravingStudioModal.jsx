@@ -376,7 +376,7 @@ export default function EngravingStudioModal({
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(3, 7, 18, 0.88)',
+        background: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(10px)',
         display: 'flex',
         alignItems: 'center',
@@ -389,14 +389,14 @@ export default function EngravingStudioModal({
           width: isFullscreen ? '100vw' : '96vw',
           maxWidth: isFullscreen ? '100vw' : '1680px',
           height: isFullscreen ? '100vh' : '92vh',
-          background: '#0d1527',
+          background: '#ffffff',
           borderRadius: isFullscreen ? '0px' : '14px',
-          border: '1px solid #1e293b',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8)',
+          border: '1px solid #cbd5e1',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          color: '#e2e8f0'
+          color: '#0f172a'
         }}
       >
         {/* ================================================================== */}
@@ -405,8 +405,8 @@ export default function EngravingStudioModal({
         <div
           style={{
             height: '56px',
-            borderBottom: '1px solid #1e293b',
-            background: 'linear-gradient(90deg, #090f1d 0%, #0e172a 100%)',
+            borderBottom: '1px solid #cbd5e1',
+            background: '#f1f5f9',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -431,7 +431,7 @@ export default function EngravingStudioModal({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.3px', color: '#f8fafc' }}>
+                <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.3px', color: '#0f172a' }}>
                   CNC 2.5D &amp; 3D Engraving &amp; V-Carve Studio
                 </span>
                 <span
@@ -540,8 +540,8 @@ export default function EngravingStudioModal({
           <div
             style={{
               width: '410px',
-              borderRight: '1px solid #1e293b',
-              background: '#090f1d',
+              borderRight: '1px solid #cbd5e1',
+              background: '#f8fafc',
               display: 'flex',
               flexDirection: 'column',
               flexShrink: 0
@@ -551,10 +551,10 @@ export default function EngravingStudioModal({
               {/* SECTION 1: TEXT STRING & DYNAMIC TOKENS */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b',
+                  border: '1px solid #cbd5e1',
                   marginBottom: '16px'
                 }}
               >
@@ -574,9 +574,9 @@ export default function EngravingStudioModal({
                   style={{
                     width: '100%',
                     background: '#0b1320',
-                    border: '1px solid #334155',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '6px',
-                    color: '#f8fafc',
+                    color: '#0f172a',
                     padding: '8px 10px',
                     fontSize: '13px',
                     fontWeight: 600,
@@ -591,25 +591,25 @@ export default function EngravingStudioModal({
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
                   <button
                     onClick={() => handleInsertToken('{SERIAL}')}
-                    style={{ background: '#1e293b', border: '1px solid #334155', color: '#c084fc', padding: '3px 7px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 600 }}
+                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#c084fc', padding: '3px 7px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 600 }}
                   >
                     +{'{SERIAL}'}
                   </button>
                   <button
                     onClick={() => handleInsertToken('{DATE}')}
-                    style={{ background: '#1e293b', border: '1px solid #334155', color: '#38bdf8', padding: '3px 7px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 600 }}
+                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#38bdf8', padding: '3px 7px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 600 }}
                   >
                     +{'{DATE}'}
                   </button>
                   <button
                     onClick={() => handleInsertToken('{TIME}')}
-                    style={{ background: '#1e293b', border: '1px solid #334155', color: '#10b981', padding: '3px 7px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 600 }}
+                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#10b981', padding: '3px 7px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 600 }}
                   >
                     +{'{TIME}'}
                   </button>
                   <button
                     onClick={() => handleInsertToken('{PART_ID}')}
-                    style={{ background: '#1e293b', border: '1px solid #334155', color: '#f59e0b', padding: '3px 7px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 600 }}
+                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#f59e0b', padding: '3px 7px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 600 }}
                   >
                     +{'{PART_ID}'}
                   </button>
@@ -626,9 +626,9 @@ export default function EngravingStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -642,9 +642,9 @@ export default function EngravingStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px',
                         fontSize: '12px'
                       }}
@@ -661,10 +661,10 @@ export default function EngravingStudioModal({
               {/* SECTION 2: TYPOGRAPHY & LAYOUT GEOMETRY */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b',
+                  border: '1px solid #cbd5e1',
                   marginBottom: '16px'
                 }}
               >
@@ -724,9 +724,9 @@ export default function EngravingStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -742,9 +742,9 @@ export default function EngravingStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -765,9 +765,9 @@ export default function EngravingStudioModal({
                         style={{
                           width: '100%',
                           background: '#0b1320',
-                          border: '1px solid #334155',
+                          border: '1px solid #cbd5e1',
                           borderRadius: '6px',
-                          color: '#f8fafc',
+                          color: '#0f172a',
                           padding: '6px 8px',
                           fontSize: '12px'
                         }}
@@ -783,9 +783,9 @@ export default function EngravingStudioModal({
                         style={{
                           width: '100%',
                           background: '#0b1320',
-                          border: '1px solid #334155',
+                          border: '1px solid #cbd5e1',
                           borderRadius: '6px',
-                          color: '#f8fafc',
+                          color: '#0f172a',
                           padding: '6px 8px',
                           fontSize: '12px'
                         }}
@@ -804,9 +804,9 @@ export default function EngravingStudioModal({
                         style={{
                           width: '100%',
                           background: '#0b1320',
-                          border: '1px solid #334155',
+                          border: '1px solid #cbd5e1',
                           borderRadius: '6px',
-                          color: '#f8fafc',
+                          color: '#0f172a',
                           padding: '6px 8px',
                           fontSize: '12px'
                         }}
@@ -822,9 +822,9 @@ export default function EngravingStudioModal({
                         style={{
                           width: '100%',
                           background: '#0b1320',
-                          border: '1px solid #334155',
+                          border: '1px solid #cbd5e1',
                           borderRadius: '6px',
-                          color: '#f8fafc',
+                          color: '#0f172a',
                           padding: '6px 8px',
                           fontSize: '12px'
                         }}
@@ -842,9 +842,9 @@ export default function EngravingStudioModal({
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '6px',
                       fontSize: '12px'
                     }}
@@ -859,10 +859,10 @@ export default function EngravingStudioModal({
               {/* SECTION 3: TOOLING & 3D V-CARVE BEVEL */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b'
+                  border: '1px solid #cbd5e1'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '12px' }}>
@@ -881,9 +881,9 @@ export default function EngravingStudioModal({
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       fontSize: '12px'
                     }}
@@ -922,7 +922,7 @@ export default function EngravingStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
                         color: activeTool.type === 'Diamond Drag Scribe' ? '#64748b' : '#f8fafc',
                         padding: '6px 8px',
@@ -940,9 +940,9 @@ export default function EngravingStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -961,8 +961,8 @@ export default function EngravingStudioModal({
             <div
               style={{
                 height: '42px',
-                borderBottom: '1px solid #1e293b',
-                background: '#090f1d',
+                borderBottom: '1px solid #cbd5e1',
+                background: '#f8fafc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1048,11 +1048,11 @@ export default function EngravingStudioModal({
                     right: '16px',
                     background: 'rgba(15, 23, 42, 0.92)',
                     backdropFilter: 'blur(8px)',
-                    border: '1px solid #334155',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
                     padding: '12px 16px',
                     fontSize: '11px',
-                    color: '#f8fafc',
+                    color: '#0f172a',
                     boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
                     pointerEvents: 'none',
                     minWidth: '220px'
@@ -1063,10 +1063,10 @@ export default function EngravingStudioModal({
                     Engraving Metrics
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: '#94a3b8' }}>
-                    <div>Text: <strong style={{ color: '#e2e8f0' }}>"{toolpathResult?.text}"</strong></div>
+                    <div>Text: <strong style={{ color: '#0f172a' }}>"{toolpathResult?.text}"</strong></div>
                     <div>Strokes: <strong style={{ color: '#c084fc' }}>{metrics.totalStrokes} paths</strong></div>
-                    <div>Cut Distance: <strong style={{ color: '#e2e8f0' }}>{metrics.totalCutDistanceMm} mm</strong></div>
-                    <div>Rapid Travel: <strong style={{ color: '#e2e8f0' }}>{metrics.totalRapidDistanceMm} mm</strong></div>
+                    <div>Cut Distance: <strong style={{ color: '#0f172a' }}>{metrics.totalCutDistanceMm} mm</strong></div>
+                    <div>Rapid Travel: <strong style={{ color: '#0f172a' }}>{metrics.totalRapidDistanceMm} mm</strong></div>
                     <div>Depth Range: <strong style={{ color: '#10b981' }}>Z-{targetDepth} mm {vCarve3D ? '(3D Prism)' : ''}</strong></div>
                   </div>
                 </div>
@@ -1100,8 +1100,8 @@ export default function EngravingStudioModal({
 
             {/* TAB CONTENT 3: G-CODE EDITOR */}
             {activeTab === 'gcode' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#090f1d' }}>
-                <div style={{ padding: '10px 16px', background: '#0e172a', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+                <div style={{ padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: '12px', color: '#94a3b8' }}>
                     Production Ready ISO G-Code &bull; 3D V-Carve Variable Z Depth or Fast Single-Line Scribe
                   </div>
@@ -1113,7 +1113,7 @@ export default function EngravingStudioModal({
                         alignItems: 'center',
                         gap: '6px',
                         background: copiedGCode ? '#10b981' : '#1e293b',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         color: '#ffffff',
                         padding: '5px 12px',
                         borderRadius: '6px',
@@ -1171,8 +1171,8 @@ export default function EngravingStudioModal({
             <div
               style={{
                 height: '40px',
-                borderTop: '1px solid #1e293b',
-                background: '#090f1d',
+                borderTop: '1px solid #cbd5e1',
+                background: '#f8fafc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1202,8 +1202,8 @@ export default function EngravingStudioModal({
         <div
           style={{
             height: '56px',
-            borderTop: '1px solid #1e293b',
-            background: '#090f1d',
+            borderTop: '1px solid #cbd5e1',
+            background: '#f8fafc',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1218,9 +1218,9 @@ export default function EngravingStudioModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: '#1e293b',
-                border: '1px solid #334155',
-                color: '#e2e8f0',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                color: '#0f172a',
                 padding: '8px 14px',
                 borderRadius: '6px',
                 fontSize: '12px',
@@ -1237,9 +1237,9 @@ export default function EngravingStudioModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: '#1e293b',
-                border: '1px solid #334155',
-                color: '#e2e8f0',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                color: '#0f172a',
                 padding: '8px 14px',
                 borderRadius: '6px',
                 fontSize: '12px',
@@ -1277,8 +1277,8 @@ export default function EngravingStudioModal({
               onClick={onClose}
               style={{
                 background: 'transparent',
-                border: '1px solid #334155',
-                color: '#cbd5e1',
+                border: '1px solid #cbd5e1',
+                color: '#334155',
                 padding: '8px 16px',
                 borderRadius: '6px',
                 fontSize: '12px',

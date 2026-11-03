@@ -421,7 +421,7 @@ export default function ThreadStudioModal({
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(3, 7, 18, 0.88)',
+        background: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(10px)',
         display: 'flex',
         alignItems: 'center',
@@ -434,14 +434,14 @@ export default function ThreadStudioModal({
           width: isFullscreen ? '100vw' : '96vw',
           maxWidth: isFullscreen ? '100vw' : '1680px',
           height: isFullscreen ? '100vh' : '92vh',
-          background: '#0d1527',
+          background: '#ffffff',
           borderRadius: isFullscreen ? '0px' : '14px',
-          border: '1px solid #1e293b',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8)',
+          border: '1px solid #cbd5e1',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.25)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          color: '#e2e8f0'
+          color: '#0f172a'
         }}
       >
         {/* ================================================================== */}
@@ -450,8 +450,8 @@ export default function ThreadStudioModal({
         <div
           style={{
             height: '56px',
-            borderBottom: '1px solid #1e293b',
-            background: 'linear-gradient(90deg, #090f1d 0%, #0e172a 100%)',
+            borderBottom: '1px solid #cbd5e1',
+            background: '#f1f5f9',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -476,7 +476,7 @@ export default function ThreadStudioModal({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.3px', color: '#f8fafc' }}>
+                <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.3px', color: '#0f172a' }}>
                   CNC Feature-Based Thread Milling &amp; Tapping Studio
                 </span>
                 <span
@@ -585,8 +585,8 @@ export default function ThreadStudioModal({
           <div
             style={{
               width: '410px',
-              borderRight: '1px solid #1e293b',
-              background: '#090f1d',
+              borderRight: '1px solid #cbd5e1',
+              background: '#f8fafc',
               display: 'flex',
               flexDirection: 'column',
               flexShrink: 0
@@ -596,10 +596,10 @@ export default function ThreadStudioModal({
               {/* SECTION 1: OPERATION MODE TOGGLE */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '12px',
-                  border: '1px solid #1e293b',
+                  border: '1px solid #cbd5e1',
                   marginBottom: '16px'
                 }}
               >
@@ -643,10 +643,10 @@ export default function ThreadStudioModal({
               {/* SECTION 2: CAD HOLE SELECTION & AUTO-MATCHING */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b',
+                  border: '1px solid #cbd5e1',
                   marginBottom: '16px'
                 }}
               >
@@ -704,10 +704,10 @@ export default function ThreadStudioModal({
               {/* SECTION 3: THREAD STANDARD & SIZE SPECIFICATION */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b',
+                  border: '1px solid #cbd5e1',
                   marginBottom: '16px'
                 }}
               >
@@ -731,9 +731,9 @@ export default function ThreadStudioModal({
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       fontSize: '12px'
                     }}
@@ -757,9 +757,9 @@ export default function ThreadStudioModal({
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       fontSize: '12px',
                       fontWeight: 700
@@ -785,9 +785,9 @@ export default function ThreadStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -801,9 +801,9 @@ export default function ThreadStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px',
                         fontSize: '12px'
                       }}
@@ -818,10 +818,10 @@ export default function ThreadStudioModal({
               {/* SECTION 4: CUTTING TOOL & PASS PARAMETERS */}
               <div
                 style={{
-                  background: '#0e172a',
+                  background: '#f8fafc',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: '1px solid #1e293b'
+                  border: '1px solid #cbd5e1'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '12px' }}>
@@ -840,9 +840,9 @@ export default function ThreadStudioModal({
                     style={{
                       width: '100%',
                       background: '#0b1320',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '6px',
-                      color: '#f8fafc',
+                      color: '#0f172a',
                       padding: '7px 10px',
                       fontSize: '12px'
                     }}
@@ -865,9 +865,9 @@ export default function ThreadStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px',
                         fontSize: '12px'
                       }}
@@ -886,9 +886,9 @@ export default function ThreadStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px',
                         fontSize: '12px'
                       }}
@@ -910,9 +910,9 @@ export default function ThreadStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -928,9 +928,9 @@ export default function ThreadStudioModal({
                       style={{
                         width: '100%',
                         background: '#0b1320',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
-                        color: '#f8fafc',
+                        color: '#0f172a',
                         padding: '6px 8px',
                         fontSize: '12px'
                       }}
@@ -949,8 +949,8 @@ export default function ThreadStudioModal({
             <div
               style={{
                 height: '42px',
-                borderBottom: '1px solid #1e293b',
-                background: '#090f1d',
+                borderBottom: '1px solid #cbd5e1',
+                background: '#f8fafc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1036,11 +1036,11 @@ export default function ThreadStudioModal({
                     right: '16px',
                     background: 'rgba(15, 23, 42, 0.92)',
                     backdropFilter: 'blur(8px)',
-                    border: '1px solid #334155',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
                     padding: '12px 16px',
                     fontSize: '11px',
-                    color: '#f8fafc',
+                    color: '#0f172a',
                     boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
                     pointerEvents: 'none',
                     minWidth: '240px'
@@ -1051,9 +1051,9 @@ export default function ThreadStudioModal({
                     Thread Cutting Dynamics
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: '#94a3b8' }}>
-                    <div>Chip Load per Tooth: <strong style={{ color: '#e2e8f0' }}>{metrics.chipLoadMmTooth} mm</strong></div>
-                    <div>Radial Stepover Ae: <strong style={{ color: '#e2e8f0' }}>{metrics.radialStepoverAeMm} mm</strong></div>
-                    <div>Cutting Force: <strong style={{ color: '#e2e8f0' }}>{metrics.cuttingForceN} N</strong></div>
+                    <div>Chip Load per Tooth: <strong style={{ color: '#0f172a' }}>{metrics.chipLoadMmTooth} mm</strong></div>
+                    <div>Radial Stepover Ae: <strong style={{ color: '#0f172a' }}>{metrics.radialStepoverAeMm} mm</strong></div>
+                    <div>Cutting Force: <strong style={{ color: '#0f172a' }}>{metrics.cuttingForceN} N</strong></div>
                     <div>Tool Deflection: <strong style={{ color: metrics.toolDeflectionUm < 5 ? '#10b981' : '#f59e0b' }}>{metrics.toolDeflectionUm} &mu;m</strong></div>
                     <div>Tolerance Fit: <strong style={{ color: '#10b981' }}>{metrics.toleranceClass}</strong></div>
                   </div>
@@ -1063,8 +1063,8 @@ export default function ThreadStudioModal({
 
             {/* TAB CONTENT 2: G-CODE EDITOR */}
             {activeTab === 'gcode' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#090f1d' }}>
-                <div style={{ padding: '10px 16px', background: '#0e172a', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+                <div style={{ padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: '12px', color: '#94a3b8' }}>
                     Production Ready ISO G-Code &bull; Helical Interpolation G02/G03 or Rigid Tap G84
                   </div>
@@ -1076,7 +1076,7 @@ export default function ThreadStudioModal({
                         alignItems: 'center',
                         gap: '6px',
                         background: copiedGCode ? '#10b981' : '#1e293b',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         color: '#ffffff',
                         padding: '5px 12px',
                         borderRadius: '6px',
@@ -1133,8 +1133,8 @@ export default function ThreadStudioModal({
             {/* TAB CONTENT 3: THREAD ENGINEERING SPECS */}
             {activeTab === 'specs' && (
               <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
-                <div style={{ background: '#0e172a', borderRadius: '10px', padding: '20px', border: '1px solid #1e293b', marginBottom: '20px' }}>
-                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#f8fafc', marginBottom: '14px' }}>
+                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '20px', border: '1px solid #cbd5e1', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginBottom: '14px' }}>
                     {activeThread.name} Geometric Engineering Parameters
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', fontSize: '12px' }}>
@@ -1158,7 +1158,7 @@ export default function ThreadStudioModal({
                     </div>
                     <div>
                       <div style={{ color: '#94a3b8' }}>Thread Pitch (P):</div>
-                      <div style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0', marginTop: '2px' }}>
+                      <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
                         {activeThread.pitch} mm {activeThread.tpi ? `(${activeThread.tpi} TPI)` : ''}
                       </div>
                     </div>
@@ -1183,8 +1183,8 @@ export default function ThreadStudioModal({
             <div
               style={{
                 height: '40px',
-                borderTop: '1px solid #1e293b',
-                background: '#090f1d',
+                borderTop: '1px solid #cbd5e1',
+                background: '#f8fafc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1214,8 +1214,8 @@ export default function ThreadStudioModal({
         <div
           style={{
             height: '56px',
-            borderTop: '1px solid #1e293b',
-            background: '#090f1d',
+            borderTop: '1px solid #cbd5e1',
+            background: '#f8fafc',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1230,9 +1230,9 @@ export default function ThreadStudioModal({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: '#1e293b',
-                border: '1px solid #334155',
-                color: '#e2e8f0',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                color: '#0f172a',
                 padding: '8px 14px',
                 borderRadius: '6px',
                 fontSize: '12px',
@@ -1270,8 +1270,8 @@ export default function ThreadStudioModal({
               onClick={onClose}
               style={{
                 background: 'transparent',
-                border: '1px solid #334155',
-                color: '#cbd5e1',
+                border: '1px solid #cbd5e1',
+                color: '#334155',
                 padding: '8px 16px',
                 borderRadius: '6px',
                 fontSize: '12px',

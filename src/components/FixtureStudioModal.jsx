@@ -299,7 +299,7 @@ export default function FixtureStudioModal({
         width: '94vw',
         maxWidth: '1360px',
         height: '92vh',
-        background: '#12161f',
+        background: '#ffffff',
         color: '#f1f5f9',
         border: '1px solid #2d3545',
         borderRadius: '12px',
@@ -532,7 +532,7 @@ export default function FixtureStudioModal({
               {/* Jaw Opening Slider */}
               <div style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                  <span style={{ color: '#cbd5e1' }}>Jaw Opening (Stock Depth Z):</span>
+                  <span style={{ color: '#334155' }}>Jaw Opening (Stock Depth Z):</span>
                   <span style={{ fontWeight: 700, color: '#38bdf8' }}>{currentConfig.jawOpening} mm</span>
                 </div>
                 <input
@@ -553,7 +553,7 @@ export default function FixtureStudioModal({
               {/* Grip Depth Slider */}
               <div style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                  <span style={{ color: '#cbd5e1' }}>Workpiece Seating Grip Depth:</span>
+                  <span style={{ color: '#334155' }}>Workpiece Seating Grip Depth:</span>
                   <span style={{ fontWeight: 700, color: '#f59e0b' }}>{currentConfig.gripDepth} mm</span>
                 </div>
                 <input
@@ -575,7 +575,7 @@ export default function FixtureStudioModal({
               {/* Clamping Force Slider */}
               <div style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                  <span style={{ color: '#cbd5e1' }}>Clamping Retention Force:</span>
+                  <span style={{ color: '#334155' }}>Clamping Retention Force:</span>
                   <span style={{ fontWeight: 700, color: '#10b981' }}>{currentConfig.clampingForceKn} kN</span>
                 </div>
                 <input
@@ -605,7 +605,7 @@ export default function FixtureStudioModal({
                     onChange={(e) => setCurrentConfig({ ...currentConfig, rotationDeg: Number(e.target.value) })}
                     style={{
                       width: '100%',
-                      background: '#12161f',
+                      background: '#ffffff',
                       border: '1px solid #333d4e',
                       color: '#f1f5f9',
                       padding: '5px 8px',
@@ -629,7 +629,7 @@ export default function FixtureStudioModal({
                     onChange={(e) => setCurrentConfig({ ...currentConfig, safetyClearanceMm: Number(e.target.value) })}
                     style={{
                       width: '100%',
-                      background: '#12161f',
+                      background: '#ffffff',
                       border: '1px solid #333d4e',
                       color: '#f1f5f9',
                       padding: '5px 8px',
@@ -653,7 +653,7 @@ export default function FixtureStudioModal({
                   onChange={(e) => setCurrentConfig({ ...currentConfig, showCollisionZone: e.target.checked })}
                   style={{ accentColor: '#ef4444', cursor: 'pointer' }}
                 />
-                <label htmlFor="showCollisionZone" style={{ fontSize: '11px', color: '#cbd5e1', cursor: 'pointer' }}>
+                <label htmlFor="showCollisionZone" style={{ fontSize: '11px', color: '#334155', cursor: 'pointer' }}>
                   Render 3D Exclusion Danger Envelope (Red Hull)
                 </label>
               </div>
@@ -681,13 +681,13 @@ export default function FixtureStudioModal({
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '10.5px', marginBottom: '8px' }}>
-                <div style={{ background: '#12161f', padding: '6px 8px', borderRadius: '4px' }}>
+                <div style={{ background: '#ffffff', padding: '6px 8px', borderRadius: '4px' }}>
                   <div style={{ color: '#64748b' }}>Holding Force:</div>
                   <div style={{ color: '#10b981', fontWeight: 700, fontSize: '12px' }}>
                     {clampingPhysics.holdingForceNewtons.toLocaleString()} N
                   </div>
                 </div>
-                <div style={{ background: '#12161f', padding: '6px 8px', borderRadius: '4px' }}>
+                <div style={{ background: '#ffffff', padding: '6px 8px', borderRadius: '4px' }}>
                   <div style={{ color: '#64748b' }}>Est. Cut Force Fc:</div>
                   <div style={{ color: '#f59e0b', fontWeight: 700, fontSize: '12px' }}>
                     ~{clampingPhysics.cuttingForceFc.toLocaleString()} N
@@ -701,7 +701,7 @@ export default function FixtureStudioModal({
               <div
                 style={{
                   height: '6px',
-                  background: '#0f172a',
+                  background: '#ffffff',
                   borderRadius: '3px',
                   overflow: 'hidden',
                   marginTop: '4px'
@@ -743,9 +743,9 @@ export default function FixtureStudioModal({
                 <button
                   onClick={() => handleSetView('iso')}
                   style={{
-                    background: '#1e293b',
-                    border: '1px solid #334155',
-                    color: '#e2e8f0',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    color: '#0f172a',
                     padding: '3px 8px',
                     borderRadius: '4px',
                     fontSize: '10px',
@@ -757,9 +757,9 @@ export default function FixtureStudioModal({
                 <button
                   onClick={() => handleSetView('top')}
                   style={{
-                    background: '#1e293b',
-                    border: '1px solid #334155',
-                    color: '#e2e8f0',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    color: '#0f172a',
                     padding: '3px 8px',
                     borderRadius: '4px',
                     fontSize: '10px',
@@ -771,9 +771,9 @@ export default function FixtureStudioModal({
                 <button
                   onClick={() => handleSetView('front')}
                   style={{
-                    background: '#1e293b',
-                    border: '1px solid #334155',
-                    color: '#e2e8f0',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    color: '#0f172a',
                     padding: '3px 8px',
                     borderRadius: '4px',
                     fontSize: '10px',
@@ -785,9 +785,9 @@ export default function FixtureStudioModal({
                 <button
                   onClick={() => handleSetView('side')}
                   style={{
-                    background: '#1e293b',
-                    border: '1px solid #334155',
-                    color: '#e2e8f0',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    color: '#0f172a',
                     padding: '3px 8px',
                     borderRadius: '4px',
                     fontSize: '10px',
@@ -845,7 +845,7 @@ export default function FixtureStudioModal({
                 style={{
                   display: 'flex',
                   borderBottom: '1px solid #283144',
-                  background: '#12161f',
+                  background: '#ffffff',
                   padding: '0 16px'
                 }}
               >
@@ -921,7 +921,7 @@ export default function FixtureStudioModal({
                         </thead>
                         <tbody>
                           {collisionReport.issues.map((issue) => (
-                            <tr key={issue.id} style={{ borderBottom: '1px solid #1e293b' }}>
+                            <tr key={issue.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
                               <td style={{ padding: '6px' }}>
                                 <span
                                   style={{
@@ -942,7 +942,7 @@ export default function FixtureStudioModal({
                               <td style={{ padding: '6px', fontWeight: 700, color: issue.clearanceMm <= 0 ? '#ef4444' : '#f59e0b' }}>
                                 {issue.clearanceMm} mm
                               </td>
-                              <td style={{ padding: '6px', color: '#cbd5e1' }}>{issue.message}</td>
+                              <td style={{ padding: '6px', color: '#334155' }}>{issue.message}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -953,19 +953,19 @@ export default function FixtureStudioModal({
 
                 {activeTab === 'specs' && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', fontSize: '11px' }}>
-                    <div style={{ background: '#12161f', padding: '10px', borderRadius: '6px', border: '1px solid #283144' }}>
+                    <div style={{ background: '#ffffff', padding: '10px', borderRadius: '6px', border: '1px solid #283144' }}>
                       <div style={{ color: '#64748b' }}>Manufacturer:</div>
                       <div style={{ fontWeight: 600, color: '#f1f5f9' }}>{activeModel.manufacturer}</div>
                     </div>
-                    <div style={{ background: '#12161f', padding: '10px', borderRadius: '6px', border: '1px solid #283144' }}>
+                    <div style={{ background: '#ffffff', padding: '10px', borderRadius: '6px', border: '1px solid #283144' }}>
                       <div style={{ color: '#64748b' }}>Jaw Width:</div>
                       <div style={{ fontWeight: 600, color: '#f1f5f9' }}>{activeModel.jawWidth} mm</div>
                     </div>
-                    <div style={{ background: '#12161f', padding: '10px', borderRadius: '6px', border: '1px solid #283144' }}>
+                    <div style={{ background: '#ffffff', padding: '10px', borderRadius: '6px', border: '1px solid #283144' }}>
                       <div style={{ color: '#64748b' }}>Maximum Clamping Force:</div>
                       <div style={{ fontWeight: 600, color: '#10b981' }}>{activeModel.maxForceKn} kN</div>
                     </div>
-                    <div style={{ background: '#12161f', padding: '10px', borderRadius: '6px', border: '1px solid #283144' }}>
+                    <div style={{ background: '#ffffff', padding: '10px', borderRadius: '6px', border: '1px solid #283144' }}>
                       <div style={{ color: '#64748b' }}>Zero-Point Interface:</div>
                       <div style={{ fontWeight: 600, color: '#38bdf8' }}>4x Ø25mm Pull Studs (96mm Grid)</div>
                     </div>
@@ -980,7 +980,7 @@ export default function FixtureStudioModal({
         <div
           style={{
             padding: '12px 20px',
-            background: '#12161f',
+            background: '#ffffff',
             borderTop: '1px solid #283144',
             display: 'flex',
             alignItems: 'center',
@@ -998,8 +998,8 @@ export default function FixtureStudioModal({
             <button
               onClick={onClose}
               style={{
-                background: '#1e293b',
-                border: '1px solid #334155',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
                 color: '#94a3b8',
                 padding: '8px 16px',
                 borderRadius: '6px',

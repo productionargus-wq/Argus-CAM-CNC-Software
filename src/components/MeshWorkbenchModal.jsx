@@ -196,8 +196,8 @@ export default function MeshWorkbenchModal({
         {/* Tab Navigation */}
         <div style={{
           display: 'flex',
-          borderBottom: '1px solid #1f2737',
-          backgroundColor: '#0c0f14',
+          borderBottom: '1px solid #e2e8f0',
+          backgroundColor: '#ffffff',
           padding: '0 8px'
         }}>
           {[
@@ -235,9 +235,9 @@ export default function MeshWorkbenchModal({
           
           {/* Active Mesh Live Stats Bar */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-            <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '10px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px' }}>
               <div style={{ fontSize: '9.5px', color: '#64748b' }}>TRIANGLE COUNT</div>
-              <div style={{ fontSize: '15px', fontWeight: 700, color: '#f8fafc', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
                 {stats.triangles.toLocaleString()}
               </div>
               <div style={{ fontSize: '9.5px', color: '#38bdf8', marginTop: '2px' }}>
@@ -245,7 +245,7 @@ export default function MeshWorkbenchModal({
               </div>
             </div>
 
-            <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '10px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px' }}>
               <div style={{ fontSize: '9.5px', color: '#64748b' }}>VERTEX COUNT</div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
                 {stats.vertices.toLocaleString()}
@@ -253,7 +253,7 @@ export default function MeshWorkbenchModal({
               <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Indexed Point Cloud</div>
             </div>
 
-            <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '10px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px' }}>
               <div style={{ fontSize: '9.5px', color: '#64748b' }}>TOPOLOGY STATUS</div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: stats.isWatertight ? '#10b981' : '#f59e0b', marginTop: '3px' }}>
                 {stats.isWatertight ? 'Closed Solid (Watertight)' : 'Open Boundary Mesh'}
@@ -266,8 +266,8 @@ export default function MeshWorkbenchModal({
           {activeTab === 'decimate' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -276,9 +276,9 @@ export default function MeshWorkbenchModal({
                 Mesh decimation intelligently reduces polygon density while preserving sharp CAD edges and dimensional tolerances. Essential for accelerating 5-axis collision calculation.
               </div>
 
-              <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a' }}>
                     Target Reduction Ratio:
                   </label>
                   <span style={{ fontSize: '13px', fontWeight: 700, color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>
@@ -302,7 +302,7 @@ export default function MeshWorkbenchModal({
                       onClick={() => setReductionRatio(pct)}
                       style={{
                         padding: '4px 10px',
-                        background: reductionRatio === pct ? '#1e293b' : '#141822',
+                        background: reductionRatio === pct ? '#1e293b' : '#ffffff',
                         border: `1px solid ${reductionRatio === pct ? '#38bdf8' : '#334155'}`,
                         borderRadius: '3px',
                         color: reductionRatio === pct ? '#38bdf8' : '#94a3b8',
@@ -316,7 +316,7 @@ export default function MeshWorkbenchModal({
                   ))}
                 </div>
 
-                <div style={{ marginTop: '14px', padding: '10px', background: '#141822', borderRadius: '4px', border: '1px solid #232c3d', fontSize: '11px', color: '#94a3b8' }}>
+                <div style={{ marginTop: '14px', padding: '10px', background: '#ffffff', borderRadius: '4px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#94a3b8' }}>
                   Expected Result: ~<strong>{Math.round(stats.triangles * (1 - reductionRatio)).toLocaleString()}</strong> triangles remaining (faster CAM processing).
                 </div>
 
@@ -336,8 +336,8 @@ export default function MeshWorkbenchModal({
           {activeTab === 'smooth' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -347,8 +347,8 @@ export default function MeshWorkbenchModal({
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '6px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
                     Smoothing Iterations (Passes):
                   </label>
                   <input
@@ -357,13 +357,13 @@ export default function MeshWorkbenchModal({
                     max="8"
                     value={smoothIterations}
                     onChange={(e) => setSmoothIterations(parseInt(e.target.value) || 1)}
-                    style={{ width: '100%', padding: '8px', background: '#141822', border: '1px solid #334155', borderRadius: '4px', color: '#f8fafc', fontSize: '12px' }}
+                    style={{ width: '100%', padding: '8px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#0f172a', fontSize: '12px' }}
                   />
                   <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '4px' }}>Default: 2 passes (preserves feature corners)</div>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '6px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
                     Relaxation Strength ({smoothStrength}):
                   </label>
                   <input
@@ -394,8 +394,8 @@ export default function MeshWorkbenchModal({
           {activeTab === 'subdivide' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -404,8 +404,8 @@ export default function MeshWorkbenchModal({
                 Triangle subdivision splits each polygonal face into 4 sub-triangles via midpoint interpolation. Ideal for fine mold surfacing or 5-axis simultaneous blade finishing.
               </div>
 
-              <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
                   Midpoint 4-to-1 Triangle Tessellation
                 </div>
                 <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '4px' }}>
@@ -428,8 +428,8 @@ export default function MeshWorkbenchModal({
           {activeTab === 'repair' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -439,9 +439,9 @@ export default function MeshWorkbenchModal({
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
                   <CheckCircle2 size={20} color="#10b981" />
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>Fill Mesh Boundary Holes</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>Fill Mesh Boundary Holes</div>
                   <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px' }}>
                     Triangulates all open boundary loops and caps void spaces to enforce watertight manifold volume.
                   </div>
@@ -454,9 +454,9 @@ export default function MeshWorkbenchModal({
                   </button>
                 </div>
 
-                <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
                   <Grid size={20} color="#38bdf8" />
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>Extract Feature Edges</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>Extract Feature Edges</div>
                   <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px' }}>
                     Converts sharp polygonal creases into 3D wireframe curves stored on Level 10 for CAM boundary chaining.
                   </div>
@@ -476,8 +476,8 @@ export default function MeshWorkbenchModal({
           {activeTab === 'export' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{
-                background: '#141822',
-                border: '1px solid #232c3d',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '6px',
                 padding: '12px',
                 fontSize: '11px',
@@ -491,7 +491,7 @@ export default function MeshWorkbenchModal({
                   onClick={handleDownloadBinarySTL}
                   style={{
                     padding: '14px',
-                    background: '#0e1218',
+                    background: '#f8fafc',
                     border: '1px solid #38bdf8',
                     borderRadius: '6px',
                     textAlign: 'left',
@@ -499,7 +499,7 @@ export default function MeshWorkbenchModal({
                   }}
                 >
                   <Download size={20} color="#38bdf8" />
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>Binary STL (.stl)</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>Binary STL (.stl)</div>
                   <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Compact binary standard for CNC &amp; 3D printing</div>
                 </button>
 
@@ -507,7 +507,7 @@ export default function MeshWorkbenchModal({
                   onClick={handleDownloadAsciiSTL}
                   style={{
                     padding: '14px',
-                    background: '#0e1218',
+                    background: '#f8fafc',
                     border: '1px solid #10b981',
                     borderRadius: '6px',
                     textAlign: 'left',
@@ -515,7 +515,7 @@ export default function MeshWorkbenchModal({
                   }}
                 >
                   <FileCode size={20} color="#10b981" />
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>ASCII STL (.stl)</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>ASCII STL (.stl)</div>
                   <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Human-readable text file with triangle facets</div>
                 </button>
 
@@ -523,7 +523,7 @@ export default function MeshWorkbenchModal({
                   onClick={handleDownloadOBJ}
                   style={{
                     padding: '14px',
-                    background: '#0e1218',
+                    background: '#f8fafc',
                     border: '1px solid #a855f7',
                     borderRadius: '6px',
                     textAlign: 'left',
@@ -531,7 +531,7 @@ export default function MeshWorkbenchModal({
                   }}
                 >
                   <Layers size={20} color="#a855f7" />
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>Wavefront OBJ (.obj)</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>Wavefront OBJ (.obj)</div>
                   <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Universal CAD interchange with vertex normals</div>
                 </button>
               </div>
@@ -541,7 +541,7 @@ export default function MeshWorkbenchModal({
         </div>
 
         {/* Footer */}
-        <div className="modal-footer" style={{ borderTop: '1px solid #1f2737', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '10px', color: '#94a3b8' }}>
             Processed mesh geometry immediately updates 3D viewport rendering and machining simulation.
           </div>

@@ -560,7 +560,7 @@ export default function LatheStudioModal({
                       style={{
                         width: '100%',
                         background: '#10141d',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         color: '#f1f5f9',
                         padding: '4px 8px',
                         borderRadius: '4px',
@@ -581,7 +581,7 @@ export default function LatheStudioModal({
                       style={{
                         width: '100%',
                         background: '#10141d',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         color: '#f1f5f9',
                         padding: '4px 8px',
                         borderRadius: '4px',
@@ -603,7 +603,7 @@ export default function LatheStudioModal({
                       style={{
                         width: '100%',
                         background: '#10141d',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         color: '#f1f5f9',
                         padding: '4px 8px',
                         borderRadius: '4px',
@@ -624,7 +624,7 @@ export default function LatheStudioModal({
                       style={{
                         width: '100%',
                         background: '#10141d',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         color: '#f1f5f9',
                         padding: '4px 8px',
                         borderRadius: '4px',
@@ -648,7 +648,7 @@ export default function LatheStudioModal({
                 style={{
                   width: '100%',
                   background: '#10141d',
-                  border: '1px solid #334155',
+                  border: '1px solid #cbd5e1',
                   color: '#f1f5f9',
                   padding: '6px 8px',
                   borderRadius: '4px',
@@ -685,7 +685,7 @@ export default function LatheStudioModal({
               {/* Surface Speed Slider */}
               <div style={{ marginBottom: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
-                  <span style={{ color: '#cbd5e1' }}>Constant Surface Speed (Vc):</span>
+                  <span style={{ color: '#334155' }}>Constant Surface Speed (Vc):</span>
                   <span style={{ fontWeight: 700, color: '#38bdf8' }}>{setupConfig.surfaceSpeedVc} m/min</span>
                 </div>
                 <input
@@ -702,7 +702,7 @@ export default function LatheStudioModal({
               {/* Feed Per Rev Slider */}
               <div style={{ marginBottom: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
-                  <span style={{ color: '#cbd5e1' }}>Feed Rate Per Revolution (fn):</span>
+                  <span style={{ color: '#334155' }}>Feed Rate Per Revolution (fn):</span>
                   <span style={{ fontWeight: 700, color: '#10b981' }}>{setupConfig.feedRatePerRev} mm/rev</span>
                 </div>
                 <input
@@ -719,7 +719,7 @@ export default function LatheStudioModal({
               {/* Depth of Cut (ap) Slider */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
-                  <span style={{ color: '#cbd5e1' }}>Roughing Depth of Cut (ap):</span>
+                  <span style={{ color: '#334155' }}>Roughing Depth of Cut (ap):</span>
                   <span style={{ fontWeight: 700, color: '#f59e0b' }}>{setupConfig.roughingDepthOfCut} mm</span>
                 </div>
                 <input
@@ -823,8 +823,8 @@ export default function LatheStudioModal({
                     setIsPlaying(false);
                   }}
                   style={{
-                    background: '#1e293b',
-                    border: '1px solid #334155',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
                     color: '#94a3b8',
                     padding: '6px',
                     borderRadius: '6px',
@@ -863,7 +863,7 @@ export default function LatheStudioModal({
                       style={{
                         padding: '3px 8px',
                         background: simSpeed === s ? '#2563eb' : '#1e293b',
-                        border: '1px solid #334155',
+                        border: '1px solid #cbd5e1',
                         color: 'white',
                         borderRadius: '4px',
                         fontSize: '10px',
@@ -882,7 +882,7 @@ export default function LatheStudioModal({
             <div
               style={{
                 height: '240px',
-                background: '#12161f',
+                background: '#ffffff',
                 borderTop: '1px solid #283347',
                 display: 'flex',
                 flexDirection: 'column'
@@ -952,7 +952,7 @@ export default function LatheStudioModal({
                     onClick={handleCopyGCode}
                     style={{
                       background: 'transparent',
-                      border: '1px solid #334155',
+                      border: '1px solid #cbd5e1',
                       color: copied ? '#10b981' : '#cbd5e1',
                       padding: '4px 8px',
                       borderRadius: '4px',
@@ -1042,11 +1042,11 @@ export default function LatheStudioModal({
                     </thead>
                     <tbody>
                       {activeProfile.profile.map((p, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #1e293b' }}>
+                        <tr key={idx} style={{ borderBottom: '1px solid #cbd5e1' }}>
                           <td style={{ padding: '6px', color: '#64748b' }}>{idx + 1}</td>
                           <td style={{ padding: '6px', fontWeight: 700, color: '#38bdf8' }}>Ø{p.dia.toFixed(2)} mm</td>
                           <td style={{ padding: '6px', fontWeight: 600, color: '#f59e0b' }}>Z{p.z.toFixed(2)} mm</td>
-                          <td style={{ padding: '6px', color: '#cbd5e1' }}>{p.note || 'Contour Step'}</td>
+                          <td style={{ padding: '6px', color: '#334155' }}>{p.note || 'Contour Step'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1076,8 +1076,8 @@ export default function LatheStudioModal({
             <button
               onClick={onClose}
               style={{
-                background: '#1e293b',
-                border: '1px solid #334155',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
                 color: '#94a3b8',
                 padding: '8px 16px',
                 borderRadius: '6px',

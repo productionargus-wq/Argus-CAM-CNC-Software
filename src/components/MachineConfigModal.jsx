@@ -175,7 +175,7 @@ export default function MachineConfigModal({
         <div className="modal-body" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
           {/* Machine Fleet Selection */}
-          <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '12px' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
             <label style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc', display: 'block', marginBottom: '8px' }}>
               Active CNC Machine in Shop Fleet:
             </label>
@@ -191,8 +191,8 @@ export default function MachineConfigModal({
                   onClick={() => handleMachineSelect(m.id)}
                   style={{
                     padding: '8px',
-                    background: selectedMachineId === m.id ? '#1e293b' : '#141822',
-                    border: `1px solid ${selectedMachineId === m.id ? '#38bdf8' : '#232c3d'}`,
+                    background: selectedMachineId === m.id ? '#1e293b' : '#ffffff',
+                    border: `1px solid ${selectedMachineId === m.id ? '#38bdf8' : '#e2e8f0'}`,
                     borderRadius: '4px',
                     textAlign: 'left',
                     cursor: 'pointer'
@@ -209,7 +209,7 @@ export default function MachineConfigModal({
           </div>
 
           {/* Kinematic Travel Envelopes */}
-          <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: '#f8fafc', marginBottom: '10px' }}>
               <Gauge size={14} color="#38bdf8" />
               <span>Axis Travel Limits &amp; Rotary Boundaries</span>
@@ -222,7 +222,7 @@ export default function MachineConfigModal({
                   type="number"
                   value={xTravel}
                   onChange={(e) => setXTravel(e.target.value)}
-                  style={{ width: '100%', padding: '6px 8px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
+                  style={{ width: '100%', padding: '6px 8px', background: '#ffffff', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
                 />
               </div>
               <div>
@@ -231,7 +231,7 @@ export default function MachineConfigModal({
                   type="number"
                   value={yTravel}
                   onChange={(e) => setYTravel(e.target.value)}
-                  style={{ width: '100%', padding: '6px 8px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
+                  style={{ width: '100%', padding: '6px 8px', background: '#ffffff', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
                 />
               </div>
               <div>
@@ -240,20 +240,20 @@ export default function MachineConfigModal({
                   type="number"
                   value={zTravel}
                   onChange={(e) => setZTravel(e.target.value)}
-                  style={{ width: '100%', padding: '6px 8px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
+                  style={{ width: '100%', padding: '6px 8px', background: '#ffffff', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
                 />
               </div>
             </div>
 
             {/* 5-Axis Rotary Limits */}
             {machineType.includes('5-Axis') && (
-              <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #232c3d', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ fontSize: '10px', color: '#94a3b8', display: 'block' }}>B-Axis Swivel Range (deg):</label>
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
-                    <input type="number" value={bMin} onChange={(e) => setBMin(e.target.value)} style={{ width: '70px', padding: '5px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
+                    <input type="number" value={bMin} onChange={(e) => setBMin(e.target.value)} style={{ width: '70px', padding: '5px', background: '#ffffff', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
                     <span style={{ fontSize: '10px', color: '#64748b' }}>to</span>
-                    <input type="number" value={bMax} onChange={(e) => setBMax(e.target.value)} style={{ width: '70px', padding: '5px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
+                    <input type="number" value={bMax} onChange={(e) => setBMax(e.target.value)} style={{ width: '70px', padding: '5px', background: '#ffffff', border: '1px solid #334155', borderRadius: '3px', color: '#fff', fontSize: '11px' }} />
                     <span style={{ fontSize: '10px', color: '#64748b' }}>deg</span>
                   </div>
                 </div>
@@ -277,7 +277,7 @@ export default function MachineConfigModal({
           </div>
 
           {/* Spindle & Dynamic Capabilities */}
-          <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: '#f8fafc', marginBottom: '10px' }}>
               <Sliders size={14} color="#10b981" />
               <span>Spindle Dynamics &amp; Tool Changer (ATC)</span>
@@ -291,7 +291,7 @@ export default function MachineConfigModal({
                   step="500"
                   value={maxRpm}
                   onChange={(e) => setMaxRpm(e.target.value)}
-                  style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
+                  style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
                 />
               </div>
               <div>
@@ -301,7 +301,7 @@ export default function MachineConfigModal({
                   step="1000"
                   value={maxFeed}
                   onChange={(e) => setMaxFeed(e.target.value)}
-                  style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
+                  style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
                 />
               </div>
               <div>
@@ -309,7 +309,7 @@ export default function MachineConfigModal({
                 <select
                   value={spindleTaper}
                   onChange={(e) => setSpindleTaper(e.target.value)}
-                  style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '11px', marginTop: '3px' }}
+                  style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '11px', marginTop: '3px' }}
                 >
                   <option value="HSK-A63">HSK-A63</option>
                   <option value="CAT 40">CAT 40</option>
@@ -323,14 +323,14 @@ export default function MachineConfigModal({
                   type="number"
                   value={atcCapacity}
                   onChange={(e) => setAtcCapacity(e.target.value)}
-                  style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
+                  style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '12px', marginTop: '3px' }}
                 />
               </div>
             </div>
           </div>
 
           {/* Post Processor Settings */}
-          <div style={{ background: '#0e1218', border: '1px solid #1f2737', borderRadius: '6px', padding: '14px' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: '#f8fafc', marginBottom: '10px' }}>
               <Settings size={14} color="#f59e0b" />
               <span>G-Code Post Output Configurations</span>
@@ -357,7 +357,7 @@ export default function MachineConfigModal({
                 <select
                   value={arcFormat}
                   onChange={(e) => setArcFormat(e.target.value)}
-                  style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '11px', marginTop: '4px' }}
+                  style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '11px', marginTop: '4px' }}
                 >
                   <option value="ijk">I, J, K Center Vectors</option>
                   <option value="r">Radius (R) Format</option>
@@ -370,7 +370,7 @@ export default function MachineConfigModal({
                   type="number"
                   value={safeZ}
                   onChange={(e) => setSafeZ(e.target.value)}
-                  style={{ width: '100%', padding: '6px', background: '#141822', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '11px', marginTop: '4px' }}
+                  style={{ width: '100%', padding: '6px', background: '#ffffff', border: '1px solid #334155', borderRadius: '3px', color: '#f8fafc', fontSize: '11px', marginTop: '4px' }}
                 />
               </div>
             </div>
@@ -379,7 +379,7 @@ export default function MachineConfigModal({
         </div>
 
         {/* Footer */}
-        <div className="modal-footer" style={{ borderTop: '1px solid #1f2737', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '10px', color: '#94a3b8' }}>
             Active machine determines post-processor dialect and NC2Check kinematic collision physics.
           </div>

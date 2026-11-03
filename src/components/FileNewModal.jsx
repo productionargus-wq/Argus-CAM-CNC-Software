@@ -231,7 +231,7 @@ export default function FileNewModal({
 
           {/* Custom Billet Dimensions (Only active if blank_billet selected) */}
           {selectedTemplate === 'blank_billet' && (
-            <div style={{ background: '#0e1218', border: '1px solid #283344', borderRadius: '6px', padding: '12px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #283344', borderRadius: '6px', padding: '12px' }}>
               <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 700, marginBottom: '6px' }}>
                 CUSTOM BILLET DIMENSIONS (mm):
               </div>

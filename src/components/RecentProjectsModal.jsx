@@ -82,7 +82,7 @@ export default function RecentProjectsModal({
           {/* Auto-Save Alert Banner if available */}
           {autoSaveData && (
             <div style={{
-              background: '#1c2214',
+              background: '#ffffff',
               border: '1px solid #4d7c0f',
               borderRadius: '6px',
               padding: '12px',
@@ -145,11 +145,11 @@ export default function RecentProjectsModal({
                   onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#283344')}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ background: '#1e293b', padding: '8px', borderRadius: '4px' }}>
+                    <div style={{ background: '#f1f5f9', padding: '8px', borderRadius: '4px' }}>
                       <Box size={18} color="#38bdf8" />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, color: '#f8fafc', fontSize: '12px' }}>{item.projectName}</div>
+                      <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '12px' }}>{item.projectName}</div>
                       <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
                         {item.filename} &bull; {item.machine}
                       </div>
