@@ -1471,6 +1471,224 @@ export function createDrillPointsGrid(bounds, cornerOffset = 8) {
 }
 
 /**
+ * Creates a circular arc curve between start and end angles
+ */
+export function createWireframeArc(center = [0, 49, 0], radius = 25, startAngleDeg = 0, endAngleDeg = 180, options = {}) {
+  const points = [];
+  const segments = 48;
+  const startRad = (startAngleDeg * Math.PI) / 180;
+  const endRad = (endAngleDeg * Math.PI) / 180;
+  const sweep = endRad - startRad;
+
+  for (let i = 0; i <= segments; i++) {
+    const theta = startRad + (i / segments) * sweep;
+    points.push(new THREE.Vector3(
+      center[0] + radius * Math.cos(theta),
+      center[1],
+      center[2] + radius * Math.sin(theta)
+    ));
+  }
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0x38bdf8;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const arc = new THREE.Line(geo, mat);
+  arc.name = options.name || `Wireframe_Arc_R${radius}_${startAngleDeg}-${endAngleDeg}`;
+  arc.userData = { type: 'arc', center, radius, startAngleDeg, endAngleDeg };
+  return arc;
+}
+
+/**
+ * Creates a smooth 3D Catmull-Rom spline curve through control points
+ */
+export function createWireframeSpline(controlPoints = [[-30, 49, -20], [0, 49, 20], [30, 49, -15], [50, 49, 10]], options = {}) {
+  const pts = controlPoints.map((p) => new THREE.Vector3(...p));
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const points = curve.getPoints(64);
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0xa855f7;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const spline = new THREE.Line(geo, mat);
+  spline.name = options.name || `Wireframe_Spline_Manual_${controlPoints.length}Pts`;
+  spline.userData = { type: 'spline', controlPoints };
+  return spline;
+}
+
+/**
+ * Creates 3D wireframe text lettering paths
+ */
+export function createWireframeLettering(text = "ARGUS CAM", height = 12, position = [-40, 49, 0], options = {}) {
+  const group = new THREE.Group();
+  group.name = options.name || `Wireframe_Text_${text.replace(/\s+/g, '_')}`;
+  const color = options.color || 0x0284c7;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+
+  const charWidth = height * 0.65;
+  const spacing = charWidth * 1.35;
+
+  text.toUpperCase().split('').forEach((char, index) => {
+    const ox = position[0] + index * spacing;
+    const oy = position[1];
+    const oz = position[2];
+    const pts = [];
+
+    if (char === 'A') {
+      pts.push([ox, oy, oz + height], [ox + charWidth * 0.5, oy, oz], [ox + charWidth, oy, oz + height]);
+      const bar = [ox + charWidth * 0.25, oy, oz + height * 0.5, ox + charWidth * 0.75, oy, oz + height * 0.5];
+      const barGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(bar[0], bar[1], bar[2]), new THREE.Vector3(bar[3], bar[4], bar[5])]);
+      group.add(new THREE.Line(barGeo, mat));
+    } else if (char === 'R') {
+      pts.push([ox, oy, oz + height], [ox, oy, oz], [ox + charWidth, oy, oz], [ox + charWidth, oy, oz + height * 0.5], [ox, oy, oz + height * 0.5], [ox + charWidth, oy, oz + height]);
+    } else if (char === 'G') {
+      pts.push([ox + charWidth, oy, oz], [ox, oy, oz], [ox, oy, oz + height], [ox + charWidth, oy, oz + height], [ox + charWidth, oy, oz + height * 0.5], [ox + charWidth * 0.5, oy, oz + height * 0.5]);
+    } else if (char === 'U') {
+      pts.push([ox, oy, oz], [ox, oy, oz + height], [ox + charWidth, oy, oz + height], [ox + charWidth, oy, oz]);
+    } else if (char === 'S') {
+      pts.push([ox + charWidth, oy, oz], [ox, oy, oz], [ox, oy, oz + height * 0.5], [ox + charWidth, oy, oz + height * 0.5], [ox + charWidth, oy, oz + height], [ox, oy, oz + height]);
+    } else if (char === 'C') {
+      pts.push([ox + charWidth, oy, oz], [ox, oy, oz], [ox, oy, oz + height], [ox + charWidth, oy, oz + height]);
+    } else if (char === 'M') {
+      pts.push([ox, oy, oz + height], [ox, oy, oz], [ox + charWidth * 0.5, oy, oz + height * 0.6], [ox + charWidth, oy, oz], [ox + charWidth, oy, oz + height]);
+    } else {
+      pts.push([ox, oy, oz], [ox + charWidth, oy, oz], [ox + charWidth, oy, oz + height], [ox, oy, oz + height], [ox, oy, oz]);
+    }
+
+    if (pts.length > 1) {
+      const charGeo = new THREE.BufferGeometry().setFromPoints(pts.map((p) => new THREE.Vector3(...p)));
+      group.add(new THREE.Line(charGeo, mat));
+    }
+  });
+
+  group.userData = { type: 'lettering', text, height, position };
+  return group;
+}
+
+/**
+ * Creates a 2D planar silhouette boundary around workpiece at active Z
+ */
+export function createSilhouetteBoundaryWireframe(bounds, y = 49, options = {}) {
+  const min = bounds?.min || { x: -60, z: -35 };
+  const max = bounds?.max || { x: 60, z: 35 };
+  const margin = options.margin || 2.0;
+
+  const points = [
+    new THREE.Vector3(min.x - margin, y, min.z - margin),
+    new THREE.Vector3(max.x + margin, y, min.z - margin),
+    new THREE.Vector3(max.x + margin, y, max.z + margin),
+    new THREE.Vector3(min.x - margin, y, max.z + margin),
+    new THREE.Vector3(min.x - margin, y, min.z - margin)
+  ];
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0x06b6d4;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  line.name = options.name || "Wireframe_Silhouette_Boundary";
+  line.userData = { type: 'silhouette_boundary', bounds, y };
+  return line;
+}
+
+/**
+ * Creates 2D lathe turning envelope profile wireframe
+ */
+export function createTurnProfileWireframe(bounds, options = {}) {
+  const min = bounds?.min || { x: -60, y: 49, z: -35 };
+  const max = bounds?.max || { x: 60, y: 120, z: 35 };
+  const y = options.y || 49;
+
+  const points = [
+    new THREE.Vector3(min.x, y, 0),
+    new THREE.Vector3(min.x, y, (max.z - min.z) * 0.4),
+    new THREE.Vector3(0, y, (max.z - min.z) * 0.45),
+    new THREE.Vector3(max.x * 0.6, y, (max.z - min.z) * 0.5),
+    new THREE.Vector3(max.x, y, (max.z - min.z) * 0.5),
+    new THREE.Vector3(max.x, y, 0),
+    new THREE.Vector3(min.x, y, 0)
+  ];
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0xec4899;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  line.name = options.name || "Wireframe_Turn_Profile";
+  line.userData = { type: 'turn_profile' };
+  return line;
+}
+
+/**
+ * Creates planar cross-section slice curve at plane Y
+ */
+export function createSliceCurveWireframe(bounds, sliceY = 65, options = {}) {
+  const min = bounds?.min || { x: -50, z: -30 };
+  const max = bounds?.max || { x: 50, z: 30 };
+
+  const points = [
+    new THREE.Vector3(min.x, sliceY, min.z),
+    new THREE.Vector3(max.x, sliceY, min.z),
+    new THREE.Vector3(max.x, sliceY, max.z),
+    new THREE.Vector3(min.x, sliceY, max.z),
+    new THREE.Vector3(min.x, sliceY, min.z)
+  ];
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0x10b981;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  line.name = options.name || `Wireframe_Curve_Slice_Y${sliceY.toFixed(1)}`;
+  line.userData = { type: 'curve_slice', sliceY };
+  return line;
+}
+
+/**
+ * Creates corner fillet or chamfer bevel wireframe
+ */
+export function createFilletChamferWireframe(corner = [0, 49, 0], radius = 5, isChamfer = false, options = {}) {
+  const color = options.color || (isChamfer ? 0xf59e0b : 0x10b981);
+  const points = [];
+
+  if (isChamfer) {
+    points.push(
+      new THREE.Vector3(corner[0] - radius, corner[1], corner[2]),
+      new THREE.Vector3(corner[0], corner[1], corner[2] + radius)
+    );
+  } else {
+    const segments = 16;
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * (Math.PI / 2);
+      points.push(new THREE.Vector3(
+        corner[0] - radius + radius * Math.cos(theta),
+        corner[1],
+        corner[2] + radius * Math.sin(theta)
+      ));
+    }
+  }
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  line.name = options.name || `Wireframe_${isChamfer ? 'Chamfer' : 'Fillet'}_R${radius}`;
+  line.userData = { type: isChamfer ? 'chamfer' : 'fillet', radius, corner };
+  return line;
+}
+
+/**
+ * Creates parallel offset wireframe contour
+ */
+export function createOffsetWireframe(sourcePoints, offsetDist = 5, y = 49, options = {}) {
+  const points = (sourcePoints || [
+    [-30, y, -20], [30, y, -20], [30, y, 20], [-30, y, 20], [-30, y, -20]
+  ]).map(([x, py, z]) => new THREE.Vector3(x > 0 ? x + offsetDist : x - offsetDist, py, z > 0 ? z + offsetDist : z - offsetDist));
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0x38bdf8;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  line.name = options.name || `Wireframe_Offset_${offsetDist}mm`;
+  line.userData = { type: 'offset', offsetDist };
+  return line;
+}
+
+/**
  * Calculates part bounding box and dimensional metrics
  */
 export function calculatePartMetrics(object3D) {

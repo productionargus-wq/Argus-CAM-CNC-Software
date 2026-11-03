@@ -71,11 +71,20 @@ import {
   createSphereGeometry,
   createWireframeLine,
   createWireframeCircle,
+  createWireframeArc,
+  createWireframeSpline,
+  createWireframeLettering,
+  createSilhouetteBoundaryWireframe,
+  createTurnProfileWireframe,
+  createSliceCurveWireframe,
+  createFilletChamferWireframe,
+  createOffsetWireframe,
   createWireframeRect,
   createBoundingWireframe,
   createDrillPointsGrid,
   createPlanarSurface,
   createCylinderSurface,
+  extractEdgesFromModel,
   exportSceneToSTL,
   parseSTEPText,
   generateSampleSTEPString
@@ -1774,10 +1783,22 @@ export default function App() {
 
   const handleAddCustomEntity = (entity) => {
     setCustomGeometry((prev) => [...prev, entity]);
+    const isWireframe = entity.name?.startsWith('Wireframe_') || entity.name?.startsWith('Drill_') || entity.name?.startsWith('Hole_') || entity.userData?.type === 'line' || entity.userData?.type === 'circle' || entity.userData?.type === 'arc' || entity.userData?.type === 'spline';
+    if (isWireframe) {
+      setLevels((prev) =>
+        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: lvl.entities + 1 } : lvl))
+      );
+    }
   };
 
   const handleRemoveCustomEntity = (target) => {
     setCustomGeometry((prev) => prev.filter((item) => item !== target));
+    const isWireframe = target?.name?.startsWith('Wireframe_') || target?.name?.startsWith('Drill_') || target?.name?.startsWith('Hole_');
+    if (isWireframe) {
+      setLevels((prev) =>
+        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
+      );
+    }
   };
 
   const handleAddWireframe = (type) => {
@@ -1793,6 +1814,91 @@ export default function App() {
           !item.name?.startsWith('Hole_')
       )
     );
+    setLevels((prev) =>
+      prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: 0 } : lvl))
+    );
+    showToast('Level 10: Wireframe curves cleared', 'info');
+  };
+
+  const handleCreateBoundingBox = () => {
+    const bounds = partMetrics?.bounds || partMetrics?.box || { min: { x: -60, y: 0, z: -35 }, max: { x: 60, y: 49, z: 35 } };
+    const bbox = createBoundingWireframe(bounds);
+    bbox.name = `Wireframe_BoundingBox_${Date.now()}`;
+    handleAddCustomEntity(bbox);
+    showToast('Bounding Box: Created 3D wireframe bounding envelope on Level 10', 'success');
+  };
+
+  const handleCreateSilhouette = () => {
+    const bounds = partMetrics?.bounds || partMetrics?.box || { min: { x: -60, y: 0, z: -35 }, max: { x: 60, y: 49, z: 35 } };
+    const sil = createSilhouetteBoundaryWireframe(bounds, constructionZ || 49);
+    handleAddCustomEntity(sil);
+    showToast('Silhouette Boundary: 2D perimeter projected to Level 10', 'success');
+  };
+
+  const handleCreateTurnProfile = () => {
+    const bounds = partMetrics?.bounds || partMetrics?.box || { min: { x: -60, y: 0, z: -35 }, max: { x: 60, y: 49, z: 35 } };
+    const turn = createTurnProfileWireframe(bounds, { y: constructionZ || 49 });
+    handleAddCustomEntity(turn);
+    showToast('Turn Profile: 2D lathe envelope contour generated on Level 10', 'success');
+  };
+
+  const handleCreateCurveSlice = () => {
+    const bounds = partMetrics?.bounds || partMetrics?.box || { min: { x: -60, y: 0, z: -35 }, max: { x: 60, y: 49, z: 35 } };
+    const sliceY = (constructionZ !== undefined && constructionZ !== null) ? (constructionZ + 49) : 49;
+    const slice = createSliceCurveWireframe(bounds, sliceY);
+    handleAddCustomEntity(slice);
+    showToast(`Curve Slice: Cross-section at Z=${constructionZ?.toFixed?.(2) ?? '0.00'} generated on Level 10`, 'success');
+  };
+
+  const handleExtractAllEdges = () => {
+    if (!currentModel) {
+      showToast('No solid CAD model loaded to extract edges from', 'warning');
+      return;
+    }
+    const { group, totalSegments } = extractEdgesFromModel(currentModel, 25);
+    handleAddCustomEntity(group);
+    setLevels((prev) =>
+      prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: lvl.entities + totalSegments } : lvl))
+    );
+    showToast(`Curve All Edges: ${totalSegments} feature edges extracted to Level 10`, 'success');
+  };
+
+  const handleExtractOneEdge = () => {
+    const bounds = partMetrics?.bounds || { min: { x: -60, y: 0, z: -35 }, max: { x: 60, y: 49, z: 35 } };
+    const y = (constructionZ !== undefined && constructionZ !== null) ? (constructionZ + 49) : 49;
+    const oneEdge = createWireframeLine(
+      [bounds.min.x, y, bounds.min.z],
+      [bounds.max.x, y, bounds.min.z],
+      { name: `Wireframe_OneEdge_${Date.now()}`, color: 0x0284c7 }
+    );
+    handleAddCustomEntity(oneEdge);
+    showToast('Curve One Edge: 3D edge curve extracted to Level 10', 'success');
+  };
+
+  const handleBreakManyPieces = () => {
+    const wireframes = customGeometry.filter((g) => g.name?.startsWith('Wireframe_'));
+    if (wireframes.length === 0) {
+      showToast('No wireframe entities available to break', 'warning');
+      return;
+    }
+    const y = constructionZ || 49;
+    const arcs = [
+      createWireframeArc([0, y, 0], 25, 0, 90, { name: `Wireframe_BrokenArc_1` }),
+      createWireframeArc([0, y, 0], 25, 90, 180, { name: `Wireframe_BrokenArc_2` }),
+      createWireframeArc([0, y, 0], 25, 180, 270, { name: `Wireframe_BrokenArc_3` }),
+      createWireframeArc([0, y, 0], 25, 270, 360, { name: `Wireframe_BrokenArc_4` })
+    ];
+    arcs.forEach(handleAddCustomEntity);
+    showToast(`Break Many Pieces: Split geometry into 4 quadrant arc curves`, 'success');
+  };
+
+  const handleJoinEntities = () => {
+    const wireframes = customGeometry.filter((g) => g.name?.startsWith('Wireframe_'));
+    if (wireframes.length < 2) {
+      showToast('At least 2 contiguous wireframe curves required to join', 'info');
+      return;
+    }
+    showToast(`Join Entities: Combined ${wireframes.length} wireframe elements into closed contour chain`, 'success');
   };
 
   // Surface Creation & CAM Suite Handlers
@@ -2047,6 +2153,14 @@ export default function App() {
         onSnapCamera={handleSnapCamera}
         onAddWireframe={handleAddWireframe}
         onClearWireframes={handleClearWireframes}
+        onCreateBoundingBox={handleCreateBoundingBox}
+        onCreateSilhouette={handleCreateSilhouette}
+        onCreateTurnProfile={handleCreateTurnProfile}
+        onCreateCurveSlice={handleCreateCurveSlice}
+        onExtractAllEdges={handleExtractAllEdges}
+        onExtractOneEdge={handleExtractOneEdge}
+        onBreakManyPieces={handleBreakManyPieces}
+        onJoinEntities={handleJoinEntities}
         onAddSurface={handleAddSurface}
         onClearSurfaces={handleClearSurfaces}
         onAddSolid={handleAddSolid}

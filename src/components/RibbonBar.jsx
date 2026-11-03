@@ -144,7 +144,15 @@ export default function RibbonBar({
   onOpenStatistics,
   onOpenAddInsManager,
   onOpenCommandFinder,
-  onOpenAttributesModal
+  onOpenAttributesModal,
+  onCreateBoundingBox,
+  onCreateSilhouette,
+  onCreateTurnProfile,
+  onCreateCurveSlice,
+  onExtractAllEdges,
+  onExtractOneEdge,
+  onBreakManyPieces,
+  onJoinEntities
 }) {
   const fileInputRef = useRef(null);
   const mcamFileInputRef = useRef(null);
@@ -902,249 +910,324 @@ export default function RibbonBar({
         {/* ==================== 3. WIREFRAME TAB ==================== */}
         {activeTab === 'Wireframe' && (
           <>
-            {/* Interactive Viewport Sketcher Group */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className={`ribbon-btn-large ${workspaceViewMode === '2d' ? 'ribbon-btn-highlight' : ''}`}
-                  onClick={() => onChangeViewMode && onChangeViewMode('2d')}
-                  style={{
-                    background: workspaceViewMode === '2d' ? 'rgba(56, 189, 248, 0.22)' : undefined,
-                    borderColor: workspaceViewMode === '2d' ? '#38bdf8' : undefined
-                  }}
-                  title="Open Dedicated 2D CAD Design Board / Canvas (Easel & Carbide style drafting table)"
-                >
-                  <span style={{ fontSize: '22px' }}>🎨</span>
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>
-                    2D Design<br />Board
-                  </span>
-                </button>
-
-                <button
-                  className={`ribbon-btn-large ${isSketchModeActive ? 'ribbon-btn-highlight' : ''}`}
-                  onClick={() => onStartInteractiveSketch && onStartInteractiveSketch('line')}
-                  style={{
-                    background: isSketchModeActive ? 'rgba(56, 189, 248, 0.22)' : undefined,
-                    borderColor: isSketchModeActive ? '#38bdf8' : undefined
-                  }}
-                  title="Enter Interactive 2D/3D CAD Drawing Mode - Click & Drag Directly on 3D Viewport"
-                >
-                  <PenTool size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>
-                    {isSketchModeActive ? 'Drawing...' : 'Draw on\nViewport'}
-                  </span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Interactive CAD</span>
-            </div>
-
-            {/* Points */}
+            {/* 1. Points */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('drill') : (onOpenWireframeModal && onOpenWireframeModal('datum'))}
-                  title="Drop 3D Point / Drill Coordinates by Clicking Directly on Viewport (P)"
+                  title="Point Position - Place 3D coordinate point / datum on viewport"
                 >
-                  <Crosshair size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Point<br />Position</span>
+                  <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Plus size={22} color="#0284c7" strokeWidth={2.5} />
+                    <div style={{ position: 'absolute', width: '4px', height: '4px', background: '#0284c7', borderRadius: '50%' }} />
+                  </div>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Point<br />Position</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onOpenWireframeModal ? onOpenWireframeModal('pcd') : onAddWireframe('pcd')}
-                  title="Bolt Hole Circle Pattern (PCD & Drill Centers)"
+                  title="Bolt Circle - Create Pitch Circle Diameter (PCD) bolt hole pattern"
                 >
-                  <Disc size={22} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Bolt<br />Circle</span>
+                  <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Circle size={20} color="#38bdf8" strokeWidth={1.5} />
+                    <div style={{ position: 'absolute', top: 1, left: 9, width: '4px', height: '4px', background: '#0284c7', borderRadius: '50%' }} />
+                    <div style={{ position: 'absolute', bottom: 1, left: 9, width: '4px', height: '4px', background: '#0284c7', borderRadius: '50%' }} />
+                    <div style={{ position: 'absolute', top: 9, left: 1, width: '4px', height: '4px', background: '#0284c7', borderRadius: '50%' }} />
+                    <div style={{ position: 'absolute', top: 9, right: 1, width: '4px', height: '4px', background: '#0284c7', borderRadius: '50%' }} />
+                  </div>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Bolt<br />Circle</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Points</span>
             </div>
 
-            {/* Lines */}
+            {/* 2. Lines */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('line') : (onOpenWireframeModal && onOpenWireframeModal('line'))}
-                  title="Draw Line with Mouse in Viewport (L) - Click start, drag, click end"
+                  title="Line Endpoints (L) - Create 2D/3D wireframe line between endpoints"
                 >
-                  <div style={{ width: '22px', height: '2px', background: '#f43f5e', transform: 'rotate(-30deg)', margin: '10px 0' }} />
-                  <span className="btn-label" style={{ color: '#f43f5e', fontWeight: 600 }}>Line<br />Endpoints</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('parallel') : onAddWireframe('parallel')}
-                  title="Create Parallel Line Offset"
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '8px 0' }}>
-                    <div style={{ width: '22px', height: '2px', background: '#f59e0b' }} />
-                    <div style={{ width: '22px', height: '2px', background: '#38bdf8' }} />
+                  <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '24px', height: '2px', background: '#0284c7', transform: 'rotate(-35deg)' }} />
+                    <div style={{ position: 'absolute', top: 2, right: 1, width: '4px', height: '4px', background: '#0284c7', borderRadius: '50%' }} />
+                    <div style={{ position: 'absolute', bottom: 2, left: 1, width: '4px', height: '4px', background: '#0284c7', borderRadius: '50%' }} />
                   </div>
-                  <span className="btn-label">Line<br />Parallel</span>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Line<br />Endpoints</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('perp') : onAddWireframe('perp')}
-                  title="Create Perpendicular Line from Entity"
-                >
-                  <div style={{ position: 'relative', width: '20px', height: '20px', margin: '2px 0' }}>
-                    <div style={{ position: 'absolute', bottom: '2px', width: '20px', height: '2px', background: '#10b981' }} />
-                    <div style={{ position: 'absolute', left: '10px', top: '2px', width: '2px', height: '16px', background: '#10b981' }} />
-                  </div>
-                  <span className="btn-label">Line<br />Perpendicular</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Line Closest')} title="Create Line Along Closest Distance">
-                  <div style={{ width: '18px', height: '2px', background: '#94a3b8', margin: '10px 0' }} />
-                  <span className="btn-label">Line<br />Closest</span>
-                </button>
+
+                <div className="ribbon-col-stacked">
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('parallel') : onAddWireframe('parallel')}
+                    title="Line Parallel - Create parallel line at offset distance"
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', width: '13px' }}>
+                      <div style={{ width: '13px', height: '1.5px', background: '#0284c7' }} />
+                      <div style={{ width: '13px', height: '1.5px', background: '#0284c7' }} />
+                    </div>
+                    <span>Line Parallel</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('perp') : onAddWireframe('perp')}
+                    title="Line Perpendicular - Create 90° normal line from entity"
+                  >
+                    <div style={{ position: 'relative', width: '12px', height: '12px' }}>
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, width: '12px', height: '1.5px', background: '#0284c7' }} />
+                      <div style={{ position: 'absolute', top: 0, left: '5px', width: '1.5px', height: '12px', background: '#0284c7' }} />
+                    </div>
+                    <span>Line Perpendicular</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('closest') : onAddWireframe('line')}
+                    title="Line Closest - Create line connecting closest points between entities"
+                  >
+                    <div style={{ width: '12px', height: '1.5px', background: '#64748b' }} />
+                    <span>Line Closest ▾</span>
+                  </button>
+                </div>
               </div>
               <span className="ribbon-group-title">Lines</span>
             </div>
 
-            {/* Arcs */}
+            {/* 3. Arcs */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('circle') : (onOpenWireframeModal && onOpenWireframeModal('circle'))}
-                  title="Draw Circle by Center &amp; Radius Directly with Mouse (C)"
+                  title="Circle Center Point (C) - Create circle by center coordinates and radius"
                 >
-                  <div style={{ width: '20px', height: '20px', border: '2px solid #38bdf8', borderRadius: '50%' }} />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Circle<br />Center Point</span>
+                  <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Circle size={20} color="#0284c7" strokeWidth={2} />
+                    <div style={{ position: 'absolute', width: '3px', height: '3px', background: '#0284c7', borderRadius: '50%' }} />
+                  </div>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Circle<br />Center Point</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Arc 3 Points')} title="Create Arc Defined by 3 Points">
-                  <Orbit size={20} color="#f59e0b" />
-                  <span className="btn-label">Arc 3<br />Points</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Arc Tangent')} title="Create Tangent Arc to Existing Curve">
-                  <Disc size={20} color="#10b981" />
-                  <span className="btn-label">Arc<br />Tangent</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Circle Edge Point')} title="Create Circle Through Edge Points">
-                  <Orbit size={20} color="#a855f7" />
-                  <span className="btn-label">Circle<br />Edge Point</span>
-                </button>
+
+                <div className="ribbon-col-stacked">
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('arc3pt') : onAddWireframe('circle')}
+                    title="Arc 3 Points - Create circular arc passing through 3 points"
+                  >
+                    <Orbit size={13} color="#0284c7" />
+                    <span>Arc 3 Points</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('arctangent') : onAddWireframe('circle')}
+                    title="Arc Tangent - Create circular arc tangent to two curves"
+                  >
+                    <Disc size={13} color="#0284c7" />
+                    <span>Arc Tangent</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('circle') : onAddWireframe('circle')}
+                    title="Circle Edge Point - Create circle defined by edge points"
+                  >
+                    <Circle size={13} color="#64748b" />
+                    <span>Circle Edge Point ▾</span>
+                  </button>
+                </div>
               </div>
               <span className="ribbon-group-title">Arcs</span>
             </div>
 
-            {/* Splines */}
+            {/* 4. Splines */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Spline Manual')} title="Create Manual NURBS Spline through Points">
-                  <Sliders size={22} color="#38bdf8" />
-                  <span className="btn-label">Spline<br />Manual</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('spline') : onAddWireframe('spline')}
+                  title="Spline Manual - Create smooth NURBS / Catmull-Rom spline through points"
+                >
+                  <Sliders size={22} color="#0284c7" />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Spline<br />Manual ▾</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Splines</span>
             </div>
 
-            {/* Shapes */}
+            {/* 5. Shapes */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
                   onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('rect') : (onOpenWireframeModal && onOpenWireframeModal('rect'))}
-                  title="Draw Rectangle with Mouse in Viewport (R) - Click corner, drag to size"
+                  title="Rectangle (R) - Create 2D wireframe rectangle or pocket boundary"
                 >
-                  <div style={{ width: '22px', height: '16px', border: '2px solid #4ade80', borderRadius: '3px' }} />
-                  <span className="btn-label" style={{ color: '#4ade80', fontWeight: 600 }}>Rectangle</span>
+                  <Square size={22} color="#0284c7" strokeWidth={2} />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Rectangle</span>
                 </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('datum') : onAddWireframe('bounding')}
-                  title="Create 3D Bounding Box Wireframe"
-                >
-                  <Box size={22} color="#facc15" />
-                  <span className="btn-label">Bounding<br />Box</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Silhouette Boundary')} title="Create Silhouette Boundary Contour">
-                  <Layers size={20} color="#06b6d4" />
-                  <span className="btn-label">Silhouette<br />Boundary</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Create Letters')} title="Create Stick / TrueType Lettering Wireframe">
-                  <Type size={20} color="#c084fc" />
-                  <span className="btn-label">Create<br />Letters</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Turn Profile')} title="Extract Lathe Turning Profile">
-                  <Disc size={20} color="#ec4899" />
-                  <span className="btn-label">Turn<br />Profile</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Relief Groove')} title="Create Standard Relief Groove Profile">
-                  <Scissors size={20} color="#f59e0b" />
-                  <span className="btn-label">Relief<br />Groove</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Raster to Vector')} title="Convert Raster Image to Vector Wireframe">
-                  <Sparkles size={20} color="#34d399" />
-                  <span className="btn-label">Raster to<br />Vector</span>
-                </button>
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenCornerReliefStudio}
-                  title="Open CNC Automatic Corner Relief & Dog-Bone Studio"
-                >
-                  <Box size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Corner<br />Relief</span>
-                </button>
+
+                {/* Column 1: Create Letters, Bounding Box, Silhouette Boundary */}
+                <div className="ribbon-col-stacked">
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('letters') : onAddWireframe('letters')}
+                    title="Create Letters - Generate vector TrueType and stick font lettering"
+                  >
+                    <Type size={13} color="#0284c7" />
+                    <span>Create Letters</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={onCreateBoundingBox}
+                    title="Bounding Box - Generate 3D wireframe bounding box around part"
+                  >
+                    <Box size={13} color="#0284c7" />
+                    <span>Bounding Box</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={onCreateSilhouette}
+                    title="Silhouette Boundary - Project 2D silhouette boundary profile"
+                  >
+                    <Layers size={13} color="#0284c7" />
+                    <span>Silhouette Boundary</span>
+                  </button>
+                </div>
+
+                {/* Column 2: Turn Profile, Relief Groove, Raster to Vector */}
+                <div className="ribbon-col-stacked">
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={onCreateTurnProfile}
+                    title="Turn Profile - Extract 2D lathe turning envelope profile"
+                  >
+                    <Disc size={13} color="#0284c7" />
+                    <span>Turn Profile</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('relief') : onAddWireframe('relief')}
+                    title="Relief Groove - Generate standard DIN undercut relief groove"
+                  >
+                    <Scissors size={13} color="#0284c7" />
+                    <span>Relief Groove</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('raster') : onAddWireframe('raster')}
+                    title="Raster to Vector - Convert bitmap image to vector wireframe"
+                  >
+                    <Sparkles size={13} color="#0284c7" />
+                    <span>Raster to Vector</span>
+                  </button>
+                </div>
               </div>
               <span className="ribbon-group-title">Shapes</span>
             </div>
 
-            {/* Curves */}
+            {/* 6. Curves */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('edges') : onAddWireframe('edges')}
-                  title="Extract Curve on Single Solid Edge"
+                  onClick={onExtractOneEdge}
+                  title="Curve One Edge - Extract 3D wireframe curve along selected solid edge"
                 >
-                  <Box size={22} color="#38bdf8" />
-                  <span className="btn-label">Curve<br />One Edge</span>
+                  <div style={{ position: 'relative', width: '22px', height: '22px' }}>
+                    <Box size={22} color="#94a3b8" />
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '22px', height: '2px', background: '#0284c7' }} />
+                  </div>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Curve<br />One Edge</span>
                 </button>
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('edges') : onAddWireframe('edges')}
-                  title="Extract Curves on All Solid Edges"
+                  onClick={onExtractAllEdges}
+                  title="Curve All Edges - Extract wireframe curves for all solid model edges"
                 >
-                  <Box size={22} color="#60a5fa" />
-                  <span className="btn-label" style={{ color: '#60a5fa', fontWeight: 600 }}>Curve<br />All Edges</span>
+                  <div style={{ position: 'relative', width: '22px', height: '22px' }}>
+                    <Box size={22} color="#0284c7" />
+                  </div>
+                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 600 }}>Curve All<br />Edges</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Curve Slice')} title="Create Wireframe Slice Along Plane">
-                  <Scissors size={20} color="#ec4899" />
-                  <span className="btn-label">Curve<br />Slice</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onCreateCurveSlice}
+                  title="Curve Slice - Slice 3D model with active plane to create cross-section curve"
+                >
+                  <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Box size={22} color="#64748b" />
+                    <div style={{ position: 'absolute', width: '24px', height: '2px', background: '#10b981' }} />
+                  </div>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Curve<br />Slice ▾</span>
                 </button>
               </div>
               <span className="ribbon-group-title">Curves</span>
             </div>
 
-            {/* Modify */}
+            {/* 7. Modify */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Trim Break Extend')} title="Trim / Break / Extend Wireframe Entities">
-                  <Scissors size={20} color="#f43f5e" />
-                  <span className="btn-label">Trim Break<br />Extend</span>
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('trim') : onAddWireframe('trim')}
+                  title="Trim Break Extend - Interactively trim, break or extend wireframe lines"
+                >
+                  <Scissors size={22} color="#f43f5e" />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Trim Break<br />Extend ▾</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Fillet Entities')} title="Add Fillet Radius Between Entities">
-                  <Orbit size={20} color="#10b981" />
-                  <span className="btn-label">Fillet<br />Entities</span>
+
+                <button
+                  className="ribbon-btn-large"
+                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('fillet') : onAddWireframe('fillet')}
+                  title="Fillet Entities - Add tangent fillet arc radius between curves"
+                >
+                  <Orbit size={22} color="#10b981" />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Fillet<br />Entities ▾</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Chamfer Entities')} title="Add Chamfer Angle Between Entities">
-                  <Scissors size={20} color="#f59e0b" />
-                  <span className="btn-label">Chamfer<br />Entities</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Offset')} title="Offset Contour by Distance">
-                  <Move size={20} color="#38bdf8" />
-                  <span className="btn-label">Offset</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Project')} title="Project Wireframe Onto Surface / Plane">
-                  <ArrowDown size={20} color="#c084fc" />
-                  <span className="btn-label">Project</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onClearWireframes} title="Clear All Level 10 Wireframe Geometry">
-                  <Trash2 size={20} color="#94a3b8" />
-                  <span className="btn-label">Clear<br />Wireframes</span>
-                </button>
+
+                {/* Micro-stack: Chamfer, Offset, Project */}
+                <div className="ribbon-col-stacked">
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('chamfer') : onAddWireframe('chamfer')}
+                    title="Chamfer Entities - Add beveled chamfer corner between lines"
+                  >
+                    <Scissors size={13} color="#f59e0b" />
+                    <span>Chamfer Entities ▾</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('offset') : onAddWireframe('offset')}
+                    title="Offset - Offset wireframe contour by distance"
+                  >
+                    <Move size={13} color="#0284c7" />
+                    <span>Offset ▾</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('project') : onAddWireframe('project')}
+                    title="Project - Project 2D wireframe onto 3D surface or plane"
+                  >
+                    <ArrowDown size={13} color="#a855f7" />
+                    <span>Project</span>
+                  </button>
+                </div>
+
+                {/* Mini-tools on right: Break, Join, Clear */}
+                <div className="ribbon-col-stacked" style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '4px' }}>
+                  <button className="ribbon-btn-small" onClick={onBreakManyPieces} title="Break Many Pieces into Arcs">
+                    <Disc size={12} color="#64748b" />
+                    <span>Break</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={onJoinEntities} title="Join contiguous collinear segments">
+                    <Plus size={12} color="#0284c7" />
+                    <span>Join</span>
+                  </button>
+                  <button className="ribbon-btn-small" onClick={onClearWireframes} title="Clear All Level 10 Wireframe Geometry">
+                    <Trash2 size={12} color="#ef4444" />
+                    <span>Clear</span>
+                  </button>
+                </div>
               </div>
               <span className="ribbon-group-title">Modify</span>
             </div>

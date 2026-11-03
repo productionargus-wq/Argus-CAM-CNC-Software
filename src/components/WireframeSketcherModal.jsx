@@ -2,11 +2,19 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   X, Compass, Circle, Square, Box, Crosshair, Plus,
   Trash2, Layers, CheckCircle2, Sliders, Eye, RefreshCw,
-  Maximize2, ArrowRight, Grid, Disc, ShieldAlert
+  Maximize2, ArrowRight, Grid, Disc, ShieldAlert, Type, Scissors, Move
 } from 'lucide-react';
 import {
   createWireframeLine,
   createWireframeCircle,
+  createWireframeArc,
+  createWireframeSpline,
+  createWireframeLettering,
+  createSilhouetteBoundaryWireframe,
+  createTurnProfileWireframe,
+  createSliceCurveWireframe,
+  createFilletChamferWireframe,
+  createOffsetWireframe,
   createBoltHoleCircle,
   createWireframeRect,
   createWireframePolygon,
@@ -38,7 +46,15 @@ export default function WireframeSketcherModal({
 
   useEffect(() => {
     if (initialTool) {
-      setActiveTool(initialTool);
+      if (initialTool === 'chamfer') {
+        setActiveTool('fillet');
+        setIsChamferMode(true);
+      } else if (initialTool === 'arc3pt' || initialTool === 'arctangent') {
+        setActiveTool('circle');
+        setIsArcMode(true);
+      } else {
+        setActiveTool(initialTool);
+      }
     }
   }, [initialTool, isOpen]);
 
@@ -97,6 +113,22 @@ export default function WireframeSketcherModal({
   const [cageMargin, setCageMargin] = useState(2);
   const [datumPoint, setDatumPoint] = useState({ x: 0, y: topY, z: 0 });
   const [drillCornerOffset, setDrillCornerOffset] = useState(8);
+
+  // 9. Spline Manual state
+  const [splinePtsText, setSplinePtsText] = useState('-30, 49, -20\n0, 49, 20\n30, 49, -15\n50, 49, 10');
+
+  // 10. Lettering state
+  const [letterText, setLetterText] = useState('ARGUS CAM');
+  const [letterHeight, setLetterHeight] = useState(12);
+  const [letterPos, setLetterPos] = useState({ x: -40, y: topY, z: 0 });
+
+  // 11. Fillet & Chamfer state
+  const [filletRadius, setFilletRadius] = useState(6);
+  const [isChamferMode, setIsChamferMode] = useState(false);
+  const [filletCorner, setFilletCorner] = useState({ x: 0, y: topY, z: 0 });
+
+  // 12. Offset state
+  const [offsetDist, setOffsetDist] = useState(5);
 
   // Computed line length
   const lineLength = useMemo(() => {
@@ -257,14 +289,63 @@ export default function WireframeSketcherModal({
     notify(`4-Corner Drill Coordinate Grid (Offset: ${drillCornerOffset}mm) added to Level 10.`);
   };
 
+  const handleAddSpline = () => {
+    const lines = splinePtsText.split('\n').map((l) => l.trim()).filter(Boolean);
+    const pts = lines.map((l) => {
+      const parts = l.split(',').map((n) => parseFloat(n.trim()));
+      return parts.length === 3 ? parts : [0, topY, 0];
+    });
+    const spline = createWireframeSpline(pts.length >= 2 ? pts : [[-30, topY, -20], [0, topY, 20], [30, topY, -15], [50, topY, 10]]);
+    if (onAddEntity) onAddEntity(spline);
+    notify(`Manual Spline (${pts.length} knots) added to Level 10.`);
+  };
+
+  const handleAddLetters = () => {
+    const letters = createWireframeLettering(
+      letterText,
+      Number(letterHeight),
+      [Number(letterPos.x), Number(letterPos.y), Number(letterPos.z)]
+    );
+    if (onAddEntity) onAddEntity(letters);
+    notify(`Vector Lettering "${letterText}" added to Level 10.`);
+  };
+
+  const handleAddFilletChamfer = (isChamf = isChamferMode) => {
+    const fc = createFilletChamferWireframe(
+      [Number(filletCorner.x), Number(filletCorner.y), Number(filletCorner.z)],
+      Number(filletRadius),
+      isChamf
+    );
+    if (onAddEntity) onAddEntity(fc);
+    notify(`${isChamf ? 'Chamfer' : 'Fillet'} (R${filletRadius} mm) added to Level 10.`);
+  };
+
+  const handleAddOffsetCurve = () => {
+    const off = createOffsetWireframe(null, Number(offsetDist), topY);
+    if (onAddEntity) onAddEntity(off);
+    notify(`Parallel Offset Contour (${offsetDist} mm) added to Level 10.`);
+  };
+
+  const handleAddTurnProf = () => {
+    const bounds = partMetrics?.bounds || partMetrics?.box || { min: { x: -60, y: 0, z: -35 }, max: { x: 60, y: 49, z: 35 } };
+    const turn = createTurnProfileWireframe(bounds, { y: topY });
+    if (onAddEntity) onAddEntity(turn);
+    notify(`Lathe Turning Profile Envelope added to Level 10.`);
+  };
+
   const navTools = [
     { id: 'line', label: 'Line 2 Points', icon: Compass, badge: '2-Pt' },
     { id: 'parallel', label: 'Parallel Line', icon: Sliders, badge: 'Offset' },
     { id: 'circle', label: 'Circle / Arc', icon: Circle, badge: 'G17/18/19' },
+    { id: 'spline', label: 'Spline Manual', icon: Sliders, badge: 'NURBS' },
     { id: 'pcd', label: 'Bolt Circle (PCD)', icon: Disc, badge: 'CNC Drill' },
     { id: 'rect', label: 'Rectangle / Pocket', icon: Square, badge: 'Fillet R' },
+    { id: 'letters', label: 'Create Letters', icon: Type, badge: 'Vector' },
     { id: 'polygon', label: 'Polygon (Hexagon)', icon: Grid, badge: 'N-Gon' },
     { id: 'edges', label: 'Extract 3D Edges', icon: Box, badge: 'Solid CAD' },
+    { id: 'turn', label: 'Turn Profile', icon: Disc, badge: 'Lathe' },
+    { id: 'fillet', label: 'Fillet / Chamfer', icon: Scissors, badge: 'R & Bevel' },
+    { id: 'offset', label: 'Offset Wireframe', icon: Move, badge: 'Contour' },
     { id: 'datum', label: 'Datum & Grid', icon: Crosshair, badge: 'WCS' },
     { id: 'list', label: 'Entity Manager', icon: Layers, badge: `${wireframeEntities.length}` }
   ];
@@ -1290,6 +1371,240 @@ export default function WireframeSketcherModal({
                     <span>Insert Datum Point Marker</span>
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* SPLINE MANUAL */}
+            {activeTool === 'spline' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#a855f7' }}>Spline Manual (NURBS / Catmull-Rom)</div>
+                  <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                    Construct a smooth continuous 3D parametric spline passing through an arbitrary sequence of Cartesian control knots.
+                  </div>
+                </div>
+
+                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#38bdf8', marginBottom: '8px' }}>
+                    Spline Control Knots (X, Y, Z per line)
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={splinePtsText}
+                    onChange={(e) => setSplinePtsText(e.target.value)}
+                    style={{ ...inputStyle, height: '90px', resize: 'vertical' }}
+                  />
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                    <button className="modal-preset-btn" onClick={() => setSplinePtsText('-40, 49, -20\n-10, 49, 25\n20, 49, -20\n45, 49, 15')}>
+                      S-Curve Wave
+                    </button>
+                    <button className="modal-preset-btn" onClick={() => setSplinePtsText('-30, 49, 0\n0, 70, 0\n30, 49, 0')}>
+                      Arch Curve (Y)
+                    </button>
+                  </div>
+                </div>
+
+                <button onClick={handleAddSpline} style={{ ...primaryBtnStyle, backgroundColor: '#8b5cf6' }}>
+                  <Plus size={15} />
+                  <span>Insert 3D Spline Curve into Level 10</span>
+                </button>
+              </div>
+            )}
+
+            {/* CREATE LETTERS */}
+            {activeTool === 'letters' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#0284c7' }}>Create Letters (CNC Vector Text)</div>
+                  <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                    Generate stick and TrueType vector font strokes for engraving and surface lettering.
+                  </div>
+                </div>
+
+                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Text String</label>
+                    <input
+                      type="text"
+                      value={letterText}
+                      onChange={(e) => setLetterText(e.target.value)}
+                      style={inputStyle}
+                      placeholder="e.g. ARGUS CNC"
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Height (mm)</label>
+                      <input
+                        type="number"
+                        value={letterHeight}
+                        onChange={(e) => setLetterHeight(parseFloat(e.target.value) || 10)}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Origin X</label>
+                      <input
+                        type="number"
+                        value={letterPos.x}
+                        onChange={(e) => setLetterPos({ ...letterPos, x: parseFloat(e.target.value) || 0 })}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Origin Y</label>
+                      <input
+                        type="number"
+                        value={letterPos.y}
+                        onChange={(e) => setLetterPos({ ...letterPos, y: parseFloat(e.target.value) || 0 })}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Origin Z</label>
+                      <input
+                        type="number"
+                        value={letterPos.z}
+                        onChange={(e) => setLetterPos({ ...letterPos, z: parseFloat(e.target.value) || 0 })}
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button onClick={handleAddLetters} style={primaryBtnStyle}>
+                  <Type size={15} />
+                  <span>Generate Vector Text Strokes</span>
+                </button>
+              </div>
+            )}
+
+            {/* FILLET / CHAMFER */}
+            {activeTool === 'fillet' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: isChamferMode ? '#f59e0b' : '#10b981' }}>
+                    {isChamferMode ? 'Chamfer Entities' : 'Fillet Entities'}
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                    {isChamferMode ? 'Apply beveled corner transitions between lines.' : 'Apply tangent circular corner radius arcs between wireframe entities.'}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className={`modal-preset-btn ${!isChamferMode ? 'active' : ''}`}
+                    onClick={() => setIsChamferMode(false)}
+                    style={{ flex: 1, padding: '8px', backgroundColor: !isChamferMode ? '#065f46' : '#161b26', color: '#fff' }}
+                  >
+                    Fillet Arc (Radius)
+                  </button>
+                  <button
+                    className={`modal-preset-btn ${isChamferMode ? 'active' : ''}`}
+                    onClick={() => setIsChamferMode(true)}
+                    style={{ flex: 1, padding: '8px', backgroundColor: isChamferMode ? '#78350f' : '#161b26', color: '#fff' }}
+                  >
+                    Chamfer (Bevel Angle)
+                  </button>
+                </div>
+
+                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                    <div>
+                      <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>{isChamferMode ? 'Distance (mm)' : 'Radius R (mm)'}</label>
+                      <input
+                        type="number"
+                        value={filletRadius}
+                        onChange={(e) => setFilletRadius(parseFloat(e.target.value) || 1)}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Corner X</label>
+                      <input
+                        type="number"
+                        value={filletCorner.x}
+                        onChange={(e) => setFilletCorner({ ...filletCorner, x: parseFloat(e.target.value) || 0 })}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Corner Y</label>
+                      <input
+                        type="number"
+                        value={filletCorner.y}
+                        onChange={(e) => setFilletCorner({ ...filletCorner, y: parseFloat(e.target.value) || 0 })}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Corner Z</label>
+                      <input
+                        type="number"
+                        value={filletCorner.z}
+                        onChange={(e) => setFilletCorner({ ...filletCorner, z: parseFloat(e.target.value) || 0 })}
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button onClick={() => handleAddFilletChamfer(isChamferMode)} style={{ ...primaryBtnStyle, backgroundColor: isChamferMode ? '#d97706' : '#059669' }}>
+                  <Scissors size={15} />
+                  <span>Insert {isChamferMode ? 'Chamfer' : 'Fillet Arc'} into Level 10</span>
+                </button>
+              </div>
+            )}
+
+            {/* OFFSET WIREFRAME */}
+            {activeTool === 'offset' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#38bdf8' }}>Offset Contour</div>
+                  <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                    Create parallel offset wireframe contour boundaries at a uniform normal offset distance.
+                  </div>
+                </div>
+
+                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div>
+                    <label style={{ fontSize: '10.5px', color: '#94a3b8' }}>Offset Distance (mm)</label>
+                    <input
+                      type="number"
+                      value={offsetDist}
+                      onChange={(e) => setOffsetDist(parseFloat(e.target.value) || 0)}
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+
+                <button onClick={handleAddOffsetCurve} style={primaryBtnStyle}>
+                  <Move size={15} />
+                  <span>Generate Parallel Offset Wireframe</span>
+                </button>
+              </div>
+            )}
+
+            {/* TURN PROFILE */}
+            {activeTool === 'turn' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ borderBottom: '1px solid #232c3d', paddingBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#ec4899' }}>Lathe Turning Profile Envelope</div>
+                  <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                    Extract the 2D planar revolved silhouette envelope for lathe turning operations from the active 3D model.
+                  </div>
+                </div>
+
+                <div style={{ background: '#161b26', padding: '12px', borderRadius: '6px', border: '1px solid #232c3d' }}>
+                  <div style={{ fontSize: '12px', color: '#cbd5e1' }}>
+                    Extracts radial upper half profile aligned along the turning spindle centerline (Z-axis).
+                  </div>
+                </div>
+
+                <button onClick={handleAddTurnProf} style={{ ...primaryBtnStyle, backgroundColor: '#db2777' }}>
+                  <Disc size={15} />
+                  <span>Extract Turning Profile to Level 10</span>
+                </button>
               </div>
             )}
 
