@@ -18,6 +18,7 @@ import FileNewModal from './components/FileNewModal';
 import SaveAsModal from './components/SaveAsModal';
 import RecentProjectsModal from './components/RecentProjectsModal';
 import ExportCADModal from './components/ExportCADModal';
+import FileBackstageView from './components/FileBackstageView';
 import WireframeSketcherModal from './components/WireframeSketcherModal';
 import FeedsSpeedsModal from './components/FeedsSpeedsModal';
 import CPlanesCADModal from './components/CPlanesCADModal';
@@ -86,6 +87,11 @@ export default function App() {
   const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
   const [currentModel, setCurrentModel] = useState(() => createImpellerGeometry());
   const [currentProjectName, setCurrentProjectName] = useState('DMU50_5Axis_Impeller.mcam');
+  const [isFileBackstageOpen, setIsFileBackstageOpen] = useState(false);
+  const [projectDescriptor, setProjectDescriptor] = useState('Mastercam 5-Axis Multi-Surface Machining Project for DMU 50 VMC');
+  const [projectCreatedDate, setProjectCreatedDate] = useState(() => new Date(Date.now() - 3600000 * 24 * 2));
+  const [projectLastModifiedDate, setProjectLastModifiedDate] = useState(() => new Date());
+  const [autoSaveIntervalMinutes, setAutoSaveIntervalMinutes] = useState(5);
 
   // Workpiece appearance & transforms
   const [workpieceColor, setWorkpieceColor] = useState('#60a5fa');
@@ -1744,6 +1750,7 @@ export default function App() {
       <RibbonBar
         activeTab={activeRibbonTab}
         onSelectTab={setActiveRibbonTab}
+        onOpenFileBackstage={() => setIsFileBackstageOpen(true)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onOpenPostModal={() => setIsPostModalOpen(true)}
@@ -2021,6 +2028,37 @@ export default function App() {
 
       {/* 4. Bottom Status Bar */}
       <StatusBar coords={coords} activeWcs={activeWcs} activeMachine={activeMachine} theme={theme} />
+
+      {/* Mastercam Backstage File Menu UI */}
+      <FileBackstageView
+        isOpen={isFileBackstageOpen}
+        onClose={() => setIsFileBackstageOpen(false)}
+        currentProjectName={currentProjectName}
+        setCurrentProjectName={setCurrentProjectName}
+        projectDescriptor={projectDescriptor}
+        setProjectDescriptor={setProjectDescriptor}
+        projectCreatedDate={projectCreatedDate}
+        projectLastModifiedDate={projectLastModifiedDate}
+        setProjectLastModifiedDate={setProjectLastModifiedDate}
+        activeMachine={activeMachine}
+        machines={machines}
+        setActiveMachineId={setActiveMachineId}
+        activeWcs={activeWcs}
+        tools={tools}
+        operations={operations}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        solidsList={solidsList}
+        levels={levels}
+        planesList={planesList}
+        autoSaveInterval={autoSaveIntervalMinutes}
+        setAutoSaveInterval={setAutoSaveIntervalMinutes}
+        onCreateNewProject={handleCreateNewProject}
+        onLoadProject={handleProjectLoaded}
+        onModelImported={handleModelImported}
+        onSaveAs={handleSaveAs}
+        onNotify={showToast}
+      />
 
       {/* 5. File System Modal Dialogs (Tab 1) */}
       <FileNewModal

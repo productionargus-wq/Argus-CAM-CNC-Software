@@ -107,7 +107,8 @@ export default function RibbonBar({
   activeMachine,
   onSelectMachine,
   onSelectWcs,
-  activeWcs
+  activeWcs,
+  onOpenFileBackstage
 }) {
   const fileInputRef = useRef(null);
   const mcamFileInputRef = useRef(null);
@@ -202,7 +203,13 @@ export default function RibbonBar({
           {tabs.map((tab) => (
             <button
               key={tab}
-              onClick={() => onSelectTab(tab)}
+              onClick={() => {
+                if (tab === 'File' && onOpenFileBackstage) {
+                  onOpenFileBackstage();
+                } else {
+                  onSelectTab(tab);
+                }
+              }}
               className={`ribbon-tab ${tab === 'File' ? 'file-tab' : ''} ${activeTab === tab ? 'active' : ''}`}
             >
               {tab}
