@@ -12,6 +12,7 @@ import {
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
 import { parseAnyCADFile, ALL_SUPPORTED_EXTENSIONS_STRING } from '../utils/universalCadParser';
+import SurfacesRibbonGroup from './ribbon/SurfacesRibbonGroup';
 
 export default function RibbonBar({
   activeTab,
@@ -1236,190 +1237,15 @@ export default function RibbonBar({
 
         {/* ==================== 4. SURFACES TAB ==================== */}
         {activeTab === 'Surfaces' && (
-          <>
-            {/* Simple */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('cylinder') : onAddSurface('cylinder')}
-                  title="Create 3D Cylindrical Surface Sleeve"
-                >
-                  <Orbit size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Cylinder</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('plane') : onAddSurface('plane')}
-                  title="Create 3D Planar Surface Block Sheet"
-                >
-                  <Box size={22} color="#06b6d4" />
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Block</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Sphere Surface')} title="Create Spherical Surface Primitive">
-                  <Disc size={20} color="#38bdf8" />
-                  <span className="btn-label">Sphere</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Cone Surface')} title="Create Conical Surface Primitive">
-                  <Compass size={20} color="#f59e0b" />
-                  <span className="btn-label">Cone</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Torus Surface')} title="Create Torus Surface Primitive">
-                  <Orbit size={20} color="#a855f7" />
-                  <span className="btn-label">Torus</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Simple</span>
-            </div>
-
-            {/* Create */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('extrude') : null}
-                  title="Extrude Wireframe Contour into Surface Wall"
-                >
-                  <Box size={22} color="#8b5cf6" />
-                  <span className="btn-label">Extrude</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Draft Surface')} title="Create Draft Angle Surface">
-                  <Maximize2 size={20} color="#f59e0b" />
-                  <span className="btn-label">Draft</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('From Solid')} title="Create Surface Sheet From Solid Body Faces">
-                  <Layers size={20} color="#38bdf8" />
-                  <span className="btn-label">From<br />Solid</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Flat Boundary')} title="Create Flat Boundary Surface from Closed Curves">
-                  <Grid size={20} color="#10b981" />
-                  <span className="btn-label">Flat<br />Boundary</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('loft') : null}
-                  title="Create Loft Surface Blending Multiple Contours"
-                >
-                  <Sliders size={22} color="#3b82f6" />
-                  <span className="btn-label">Loft</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Sweep Surface')} title="Create Swept Surface Along Trajectory">
-                  <Move size={20} color="#c084fc" />
-                  <span className="btn-label">Sweep</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Net Surface')} title="Create Coons Patch Net Surface">
-                  <Grid size={20} color="#06b6d4" />
-                  <span className="btn-label">Net</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('revolve') : null}
-                  title="Revolve Profile Around Axis (Turned Surface)"
-                >
-                  <Disc size={22} color="#ec4899" />
-                  <span className="btn-label">Revolve</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Offset Surface')} title="Offset Surface Body by Normal Distance">
-                  <ArrowUp size={20} color="#facc15" />
-                  <span className="btn-label">Offset</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Create</span>
-            </div>
-
-            {/* Modify */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Trim to Curves')} title="Trim Surface to Boundary Curves">
-                  <Scissors size={20} color="#f43f5e" />
-                  <span className="btn-label">Trim to<br />Curves</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('cap') : null}
-                  title="Fill Holes & Cap Openings in Surfaces"
-                >
-                  <Sparkles size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Fill<br />Holes</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Extend Surface')} title="Extend Surface Edges Tangentially">
-                  <Maximize2 size={20} color="#10b981" />
-                  <span className="btn-label">Extend</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('fillet') : null}
-                  title="Fillet Transition Blend Between Surfaces"
-                >
-                  <Orbit size={20} color="#14b8a6" />
-                  <span className="btn-label">Fillet to<br />Surfaces</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Two Surface Blend')} title="Create Blend Surface Between 2 Surfaces">
-                  <Layers size={20} color="#60a5fa" />
-                  <span className="btn-label">Two Surface<br />Blend</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Three Surface Blend')} title="Create Blend Surface Across 3 Surfaces">
-                  <Layers size={20} color="#a855f7" />
-                  <span className="btn-label">Three Surface<br />Blend</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Three Fillet Blend')} title="Corner Blend at Three Fillet Intersection">
-                  <Sparkles size={20} color="#f59e0b" />
-                  <span className="btn-label">Three Fillet<br />Blend</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Untrim')} title="Restore Untrimmed Underlying Surface">
-                  <RotateCcw size={20} color="#94a3b8" />
-                  <span className="btn-label">Untrim</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Remove Boundary')} title="Remove Outer / Inner Surface Boundaries">
-                  <Trash2 size={20} color="#ef4444" />
-                  <span className="btn-label">Remove<br />Boundary</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Split Surface')} title="Split Surface by Isoparametric Curve">
-                  <Scissors size={20} color="#ec4899" />
-                  <span className="btn-label">Split</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Modify</span>
-            </div>
-
-            {/* Normals */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onChangeRenderMode && onChangeRenderMode('normals')} title="Flip Normal Vectors">
-                  <RefreshCw size={20} color="#38bdf8" />
-                  <span className="btn-label">Change</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Set Normal')} title="Set Normal Vector Direction">
-                  <ArrowUp size={20} color="#10b981" />
-                  <span className="btn-label">Set</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Orient Normals')} title="Orient Connected Surface Patch Normals">
-                  <Compass size={20} color="#f59e0b" />
-                  <span className="btn-label">Orient</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Normals</span>
-            </div>
-
-            {/* Drive / Check */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSurfacesModal ? onOpenSurfacesModal('list') : null}
-                  title="Inspect Drive & Check Surfaces Manager on Level 15"
-                >
-                  <ShieldAlert size={22} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Drive &amp; Check<br />Manager</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onClearSurfaces} title="Clear All Level 15 Surface Sheets">
-                  <Trash2 size={20} color="#94a3b8" />
-                  <span className="btn-label">Clear<br />Surfaces</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Drive / Check</span>
-            </div>
-          </>
+          <SurfacesRibbonGroup
+            onAction={(action, id) => {
+              if (onOpenSurfacesModal) {
+                onOpenSurfacesModal(action || id);
+              } else if (onAddSurface) {
+                onAddSurface(id);
+              }
+            }}
+          />
         )}
 
         {/* ==================== 5. SOLIDS TAB ==================== */}

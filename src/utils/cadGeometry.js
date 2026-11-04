@@ -1096,6 +1096,372 @@ export function createFilletBlendSurface(
 }
 
 /**
+ * Creates a 3D Spherical Surface Primitive
+ */
+export function createSphereSurface(
+  radius = 25,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
+  const geo = new THREE.SphereGeometry(radius, 32, 24);
+  const isCheck = options.role === 'check';
+  const color = options.color || (isCheck ? 0xf59e0b : 0xeab308);
+  const opacity = options.opacity !== undefined ? options.opacity : 0.8;
+
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.25,
+    roughness: 0.35,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo, 20);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x854d0e, linewidth: 1 }));
+  group.add(edgeLine);
+
+  group.position.set(cx, y, cz);
+  group.name = options.name || `Surface_Sphere_R${Math.round(radius)}_${isCheck ? 'Check' : 'Drive'}`;
+  group.userData = { type: 'surface_sphere', radius, elevation: y, role: isCheck ? 'check' : 'drive' };
+  return group;
+}
+
+/**
+ * Creates a 3D Conical Surface Primitive
+ */
+export function createConeSurface(
+  rBottom = 30,
+  rTop = 0,
+  height = 40,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
+  const geo = new THREE.CylinderGeometry(rTop, rBottom, height, 32, 4, true);
+  const isCheck = options.role === 'check';
+  const color = options.color || (isCheck ? 0xf59e0b : 0xca8a04);
+  const opacity = options.opacity !== undefined ? options.opacity : 0.8;
+
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.2,
+    roughness: 0.35,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo, 15);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x713f12, linewidth: 1 }));
+  group.add(edgeLine);
+
+  group.position.set(cx, y + height / 2, cz);
+  group.name = options.name || `Surface_Cone_R${Math.round(rBottom)}xH${Math.round(height)}_${isCheck ? 'Check' : 'Drive'}`;
+  group.userData = { type: 'surface_cone', rBottom, rTop, height, elevation: y, role: isCheck ? 'check' : 'drive' };
+  return group;
+}
+
+/**
+ * Creates a 3D Torus Surface Primitive
+ */
+export function createTorusSurface(
+  rMajor = 35,
+  rMinor = 10,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
+  const geo = new THREE.TorusGeometry(rMajor, rMinor, 20, 36);
+  geo.rotateX(Math.PI / 2); // Orient horizontally by default
+
+  const isCheck = options.role === 'check';
+  const color = options.color || (isCheck ? 0xf59e0b : 0xd97706);
+  const opacity = options.opacity !== undefined ? options.opacity : 0.8;
+
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.2,
+    roughness: 0.35,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo, 25);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x78350f, linewidth: 1 }));
+  group.add(edgeLine);
+
+  group.position.set(cx, y, cz);
+  group.name = options.name || `Surface_Torus_R${Math.round(rMajor)}r${Math.round(rMinor)}_${isCheck ? 'Check' : 'Drive'}`;
+  group.userData = { type: 'surface_torus', rMajor, rMinor, elevation: y, role: isCheck ? 'check' : 'drive' };
+  return group;
+}
+
+/**
+ * Creates a 3D Planar Block Surface Body (6 connected sheet patches)
+ */
+export function createBlockSurface(
+  width = 80,
+  depth = 60,
+  height = 30,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
+  const geo = new THREE.BoxGeometry(width, height, depth);
+  const isCheck = options.role === 'check';
+  const color = options.color || (isCheck ? 0xf59e0b : 0xeab308);
+  const opacity = options.opacity !== undefined ? options.opacity : 0.75;
+
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.15,
+    roughness: 0.4,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xb45309, linewidth: 1.5 }));
+  group.add(edgeLine);
+
+  group.position.set(cx, y + height / 2, cz);
+  group.name = options.name || `Surface_Block_${Math.round(width)}x${Math.round(depth)}x${Math.round(height)}_${isCheck ? 'Check' : 'Drive'}`;
+  group.userData = { type: 'surface_block', width, depth, height, elevation: y, role: isCheck ? 'check' : 'drive' };
+  return group;
+}
+
+/**
+ * Creates a Tapered Draft Angle Surface
+ */
+export function createDraftSurface(
+  baseW = 70,
+  baseD = 50,
+  height = 35,
+  draftAngleDeg = 5,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
+  const rad = (draftAngleDeg * Math.PI) / 180;
+  const topW = Math.max(10, baseW - 2 * height * Math.tan(rad));
+  const topD = Math.max(10, baseD - 2 * height * Math.tan(rad));
+
+  return createRuledLoftSurface(baseW, baseD, topW, topD, height, y, center, {
+    ...options,
+    name: `Surface_Draft_${Math.round(baseW)}x${Math.round(baseD)}_Angle${draftAngleDeg}deg`
+  });
+}
+
+/**
+ * Creates a 4-Sided Coons Patch / Net Surface
+ */
+export function createNetSurface(
+  width = 80,
+  depth = 60,
+  domeHeight = 12,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
+  const uSegs = 16;
+  const vSegs = 16;
+  const geo = new THREE.PlaneGeometry(width, depth, uSegs, vSegs);
+  geo.rotateX(-Math.PI / 2);
+
+  // Apply smooth double-curved sine dome displacement
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const px = pos.getX(i);
+    const pz = pos.getZ(i);
+    const u = (px / (width / 2)) * (Math.PI / 2);
+    const v = (pz / (depth / 2)) * (Math.PI / 2);
+    const displacement = Math.cos(u) * Math.cos(v) * domeHeight;
+    pos.setY(i, displacement);
+  }
+  geo.computeVertexNormals();
+
+  const isCheck = options.role === 'check';
+  const color = options.color || (isCheck ? 0xf59e0b : 0xeab308);
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.2,
+    roughness: 0.35,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.8
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+
+  // Wireframe UV grid lines
+  const wireMat = new THREE.LineBasicMaterial({ color: 0xb45309, linewidth: 1 });
+  const wireSegments = new THREE.LineSegments(new THREE.WireframeGeometry(geo), wireMat);
+  group.add(wireSegments);
+
+  group.position.set(cx, y, cz);
+  group.name = options.name || `Surface_Net_Coons_${Math.round(width)}x${Math.round(depth)}_H${domeHeight}`;
+  group.userData = { type: 'surface_net', width, depth, domeHeight, elevation: y, role: isCheck ? 'check' : 'drive' };
+  return group;
+}
+
+/**
+ * Creates a Swept Surface along a curved trajectory
+ */
+export function createSweptSurface(
+  radius = 18,
+  length = 60,
+  bendAngleDeg = 45,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  const group = new THREE.Group();
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+
+  // Arc path curve
+  const curve = new THREE.CubicBezierCurve3(
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, length * 0.4, 0),
+    new THREE.Vector3(length * 0.5, length * 0.7, 0),
+    new THREE.Vector3(length, length, 0)
+  );
+
+  const geo = new THREE.TubeGeometry(curve, 24, radius, 16, false);
+  const isCheck = options.role === 'check';
+  const color = options.color || (isCheck ? 0xf59e0b : 0xfbbf24);
+
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.2,
+    roughness: 0.35,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.8
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo, 20);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xb45309, linewidth: 1 }));
+  group.add(edgeLine);
+
+  group.position.set(cx, y, cz);
+  group.name = options.name || `Surface_Sweep_R${radius}_L${length}`;
+  group.userData = { type: 'surface_sweep', radius, length, bendAngleDeg, elevation: y, role: isCheck ? 'check' : 'drive' };
+  return group;
+}
+
+/**
+ * Creates an Offset Surface Mesh from existing surface parameters
+ */
+export function createOffsetSurface(
+  baseWidth = 80,
+  baseDepth = 60,
+  offsetDist = 5,
+  y = 35,
+  center = [0, 0],
+  options = {}
+) {
+  return createPlanarSurface(baseWidth, baseDepth, y + offsetDist, center, 'G17', {
+    ...options,
+    name: `Surface_Offset_+${offsetDist}mm_${options.role === 'check' ? 'Check' : 'Drive'}`
+  });
+}
+
+/**
+ * Surface Normals Inversion (Flips facing vector and triangle winding)
+ */
+export function invertSurfaceNormals(groupOrMesh) {
+  if (!groupOrMesh) return false;
+  groupOrMesh.traverse((child) => {
+    if (child.isMesh && child.geometry) {
+      const geo = child.geometry;
+      // Invert normals attribute
+      if (geo.attributes.normal) {
+        const normals = geo.attributes.normal;
+        for (let i = 0; i < normals.count; i++) {
+          normals.setXYZ(i, -normals.getX(i), -normals.getY(i), -normals.getZ(i));
+        }
+        normals.needsUpdate = true;
+      }
+      // Reverse index winding if indexed geometry
+      if (geo.index) {
+        const index = geo.index.array;
+        for (let i = 0; i < index.length; i += 3) {
+          const tmp = index[i + 1];
+          index[i + 1] = index[i + 2];
+          index[i + 2] = tmp;
+        }
+        geo.index.needsUpdate = true;
+      }
+      geo.computeVertexNormals();
+    }
+  });
+  return true;
+}
+
+/**
+ * Set Surface Normals to align strictly along an axis (+Z, -Z, +Y, etc.)
+ */
+export function setSurfaceNormals(groupOrMesh, axis = 'Y') {
+  if (!groupOrMesh) return false;
+  const dir = axis === 'Y' ? [0, 1, 0] : axis === 'Z' ? [0, 0, 1] : [1, 0, 0];
+  groupOrMesh.traverse((child) => {
+    if (child.isMesh && child.geometry && child.geometry.attributes.normal) {
+      const normals = child.geometry.attributes.normal;
+      for (let i = 0; i < normals.count; i++) {
+        normals.setXYZ(i, dir[0], dir[1], dir[2]);
+      }
+      normals.needsUpdate = true;
+    }
+  });
+  return true;
+}
+
+/**
  * Creates a 3D wireframe bounding box cage
  */
 export function createBoundingWireframe(bounds, offset = { x: 0, y: 0, z: 0 }) {
