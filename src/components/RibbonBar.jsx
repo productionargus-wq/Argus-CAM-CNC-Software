@@ -14,6 +14,7 @@ import { parseProjectMCAM } from '../utils/projectStorage';
 import { parseAnyCADFile, ALL_SUPPORTED_EXTENSIONS_STRING } from '../utils/universalCadParser';
 import SurfacesRibbonGroup from './ribbon/SurfacesRibbonGroup';
 import SolidsRibbonGroup from './ribbon/SolidsRibbonGroup';
+import ModelPrepRibbonGroup from './ribbon/ModelPrepRibbonGroup';
 
 export default function RibbonBar({
   activeTab,
@@ -1264,134 +1265,13 @@ export default function RibbonBar({
 
         {/* ==================== 6. MODEL PREP TAB ==================== */}
         {activeTab === 'Model Prep' && (
-          <>
-            {/* Create */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Hole Axis')} title="Create Coordinate Axis Centerline in Holes">
-                  <Crosshair size={20} color="#38bdf8" />
-                  <span className="btn-label">Hole<br />Axis</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('pushpull') : (onPushPull && onPushPull(2))}
-                  title="Direct Modeling Push / Pull Face Offset"
-                >
-                  <Maximize2 size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Push / Pull<br />Face</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('align') : onResetTransform()}
-                  title="Move Solid Faces / Features"
-                >
-                  <Move size={20} color="#10b981" />
-                  <span className="btn-label">Move</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Split Solid Faces')} title="Split Faces Along Curve Boundary">
-                  <Scissors size={20} color="#f59e0b" />
-                  <span className="btn-label">Split Solid<br />Faces</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Create</span>
-            </div>
-
-            {/* Direct Editing */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Modify Feature')} title="Modify CAD Hole Diameter & Depth Directly">
-                  <Sliders size={20} color="#38bdf8" />
-                  <span className="btn-label">Modify<br />Feature</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Modify Fillet')} title="Modify Existing Fillet Radius">
-                  <Orbit size={20} color="#f59e0b" />
-                  <span className="btn-label">Modify<br />Fillet</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('defeature') : null}
-                  title="Remove Faces & Auto-Cap Cavities (CAM Defeaturing)"
-                >
-                  <ShieldAlert size={22} color="#06b6d4" />
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Remove<br />Faces</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Remove Fillets')} title="Remove Fillets & Restore Sharp Corners">
-                  <Scissors size={20} color="#ef4444" />
-                  <span className="btn-label">Remove<br />Fillets</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Direct Editing</span>
-            </div>
-
-            {/* Modify */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Simplify Solid')} title="Simplify B-Rep Topology into Analytic Planes & Cylinders">
-                  <Sparkles size={20} color="#10b981" />
-                  <span className="btn-label">Simplify<br />Solid</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenAFRModal} title="Find Milled Pockets, Slots & Drilled Holes">
-                  <Compass size={20} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Find<br />Features</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Remove History')} title="Remove History Tree (Convert to Direct Solid Body)">
-                  <Trash2 size={20} color="#94a3b8" />
-                  <span className="btn-label">Remove<br />History</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Modify</span>
-            </div>
-
-            {/* Layout */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Disassemble')} title="Disassemble Multi-Body Assembly onto Table">
-                  <Grid size={20} color="#60a5fa" />
-                  <span className="btn-label">Disassemble</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('orient') : onRotatePart(0, 0, Math.PI)}
-                  title="Position & Orient Part on CNC Machine Table (Flip 180°)"
-                >
-                  <RotateCcw size={22} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Position /<br />Flip</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onResetTransform} title="Clear All Offsets & Snap to Origin">
-                  <RefreshCw size={20} color="#ef4444" />
-                  <span className="btn-label">Clear All</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onDropToTable} title="Align Part Bottom Face to Table Baseplate">
-                  <Layers size={20} color="#10b981" />
-                  <span className="btn-label">Drop to<br />Table</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Layout</span>
-            </div>
-
-            {/* Color & Diagnostics */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Change Face Color')} title="Change Color of Specific Solid Faces">
-                  <Palette size={20} color="#38bdf8" />
-                  <span className="btn-label">Change<br />Face</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Clear Feature Color')} title="Clear Color Override on Selected Feature">
-                  <Trash2 size={20} color="#94a3b8" />
-                  <span className="btn-label">Clear<br />Feature</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenModelPrepModal ? onOpenModelPrepModal('manifold') : onOpenEntityAnalyzer()}
-                  title="Check Watertight Manifold Topology"
-                >
-                  <CheckCircle2 size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Check<br />Manifold</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Color &amp; Health</span>
-            </div>
-          </>
+          <ModelPrepRibbonGroup
+            onAction={(action, id) => {
+              if (onOpenModelPrepModal) {
+                onOpenModelPrepModal(action || id);
+              }
+            }}
+          />
         )}
 
         {/* ==================== 7. MESH TAB ==================== */}

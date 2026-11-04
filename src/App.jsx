@@ -2724,6 +2724,7 @@ export default function App() {
         onUpdateTransform={setPartTransform}
         onResetTransform={handleResetTransform}
         onAddSurfaceEntity={handleAddSurfaceEntity}
+        onOpenAFRModal={() => setIsAFRModalOpen(true)}
       />
 
       {/* Mesh Workbench & Reverse Engineering Modal (Tab 7) */}

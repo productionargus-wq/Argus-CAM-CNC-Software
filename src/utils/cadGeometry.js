@@ -3344,6 +3344,92 @@ export function exportProjectMCAM(projectState, filename = "Project.mcam") {
 }
 
 /**
+ * Creates a 3D dashed coordinate centerline axis in hole
+ */
+export function createHoleAxisCenterline(cx = 0, cy = 20, cz = 0, height = 50) {
+  const points = [
+    new THREE.Vector3(cx, cy - height / 2 - 5, cz),
+    new THREE.Vector3(cx, cy + height / 2 + 5, cz)
+  ];
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const mat = new THREE.LineDashedMaterial({
+    color: 0x0f172a,
+    dashSize: 3,
+    gapSize: 1.5,
+    linewidth: 2
+  });
+  const line = new THREE.Line(geo, mat);
+  line.computeLineDistances();
+  line.name = `Hole_Axis_X${cx}_Z${cz}`;
+  line.userData = { type: 'hole_axis', cx, cy, cz, height };
+  return line;
+}
+
+/**
+ * Disassembles / Explodes multi-component solid assemblies
+ */
+export function disassembleAssemblyComponents(modelGroup, distance = 35) {
+  if (!modelGroup) return false;
+  let idx = 0;
+  modelGroup.traverse((child) => {
+    if (child.isMesh) {
+      idx++;
+      child.userData.originalPosition = child.userData.originalPosition || child.position.clone();
+      child.position.y += (idx % 2 === 0 ? 1 : -1) * distance * (idx * 0.5);
+      child.position.x += (idx % 3 === 0 ? 1 : -1) * distance * 0.4;
+    }
+  });
+  return true;
+}
+
+/**
+ * Repositions / Collapses exploded assemblies back together
+ */
+export function positionAssemblyComponents(modelGroup) {
+  if (!modelGroup) return false;
+  modelGroup.traverse((child) => {
+    if (child.isMesh && child.userData.originalPosition) {
+      child.position.copy(child.userData.originalPosition);
+    }
+  });
+  return true;
+}
+
+/**
+ * Clears custom face and feature colors across model
+ */
+export function clearAllCustomColors(modelGroup, defaultColor = 0x38bdf8) {
+  if (!modelGroup) return false;
+  modelGroup.traverse((child) => {
+    if (child.isMesh && child.material) {
+      child.material = new THREE.MeshStandardMaterial({
+        color: defaultColor,
+        metalness: 0.8,
+        roughness: 0.25
+      });
+    }
+  });
+  return true;
+}
+
+/**
+ * Applies custom color to selected feature or faces
+ */
+export function applyFeatureColor(modelGroup, color = 0xf43f5e) {
+  if (!modelGroup) return false;
+  modelGroup.traverse((child) => {
+    if (child.isMesh && child.material) {
+      child.material = new THREE.MeshStandardMaterial({
+        color,
+        metalness: 0.8,
+        roughness: 0.25
+      });
+    }
+  });
+  return true;
+}
+
+/**
  * Re-export Native STEP (ISO 10303-21) and IGES B-Rep solid model parsers and exporters
  */
 export {
