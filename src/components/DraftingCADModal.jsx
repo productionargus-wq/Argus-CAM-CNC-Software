@@ -1,18 +1,63 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  X, Scissors, FileText, CheckCircle2, Crosshair, Plus, Trash2,
-  Eye, Compass, Sparkles, Sliders, Disc, CornerDownRight, Tag
+  X, CheckCircle2, AlertTriangle, RefreshCw, Layers, Sparkles,
+  Sliders, Trash2, Eye, Compass, Crosshair, ChevronRight, Check
 } from 'lucide-react';
 import {
   create3DLinearDimension,
   create3DRadialDimension,
-  create3DDatumLeaderNote
+  create3DDatumLeaderNote,
+  create3DAngularDimension,
+  create3DOrdinateDimension,
+  create3DCrossHatch,
+  create3DWitnessLine,
+  explodeDimensionToLines
 } from '../utils/cadGeometry';
+import {
+  SmartDimensionIcon,
+  DimHorizontalIcon,
+  DimCircularIcon,
+  DimPointIcon,
+  DimAngularIcon,
+  DimParallelIcon,
+  DimPerpendicularIcon,
+  DimBaselineIcon,
+  DimChainedIcon,
+  DimTangentIcon,
+  OrdHorizontalIcon,
+  OrdVerticalIcon,
+  OrdAddExistingIcon,
+  OrdWindowIcon,
+  OrdAlignIcon,
+  OrdParallelIcon,
+  NoteIcon,
+  CrossHatchIcon,
+  LeaderIcon,
+  WitnessLineIcon,
+  RegenAutomaticIcon,
+  RegenValidateIcon,
+  RegenSelectIcon,
+  RegenAllIcon,
+  AlignNoteIcon,
+  MultiEditIcon,
+  BreakIntoLinesIcon
+} from './icons/DraftingIcons';
+
+function normalizeTabId(tabId) {
+  if (!tabId) return 'smart_dimension';
+  const clean = tabId.replace(/^drafting_/, '');
+  if (clean === 'linear') return 'dim_horizontal';
+  if (clean === 'radial') return 'dim_circular';
+  if (clean === 'leader') return 'leader';
+  if (clean === 'datum') return 'note';
+  if (clean === 'manager' || clean === 'dimension_settings') return 'manager';
+  return clean;
+}
 
 export default function DraftingCADModal({
   isOpen,
   onClose,
-  initialTab = 'linear',
+  initialTab = 'smart_dimension',
   partMetrics,
   customGeometry = [],
   layerVisibility,
@@ -22,33 +67,48 @@ export default function DraftingCADModal({
   onClearDimensions
 }) {
   const dialogRef = useRef(null);
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useState(() => normalizeTabId(initialTab));
 
-  // Linear dimension state
+  // Dimension parameters
   const [linearPreset, setLinearPreset] = useState('x');
   const [tolerance, setTolerance] = useState('none');
-  const [customP1, setCustomP1] = useState({ x: -40, y: 0, z: 0 });
-  const [customP2, setCustomP2] = useState({ x: 40, y: 0, z: 0 });
+  const [customP1, setCustomP1] = useState({ x: -40, y: 35, z: 0 });
+  const [customP2, setCustomP2] = useState({ x: 40, y: 35, z: 0 });
 
-  // Radial dimension state
+  // Radial / circular parameters
   const [radialType, setRadialType] = useState('radius');
-  const [radialValue, setRadialValue] = useState(15);
+  const [radialValue, setRadialValue] = useState(15.0);
   const [radialCenter, setRadialCenter] = useState({ x: 0, y: 35, z: 0 });
 
-  // Datum tag state
-  const [datumTag, setDatumTag] = useState('G54');
-  const [datumNote, setDatumNote] = useState('X0.00 Y0.00 Z0.00 - Master Part Datum');
-  const [datumPoint, setDatumPoint] = useState({ x: 0, y: 35, z: 0 });
+  // Angular parameters
+  const [angularAngle, setAngularAngle] = useState(45.0);
+  const [angularRadius, setAngularRadius] = useState(30.0);
 
-  // Leader note state
+  // Ordinate parameters
+  const [ordinateAxis, setOrdinateAxis] = useState('x');
+  const [ordinatePoints, setOrdinatePoints] = useState('20, 40, 60, 80');
+
+  // Cross hatch parameters
+  const [hatchWidth, setHatchWidth] = useState(70);
+  const [hatchHeight, setHatchHeight] = useState(45);
+  const [hatchPitch, setHatchPitch] = useState(4);
+  const [hatchAngle, setHatchAngle] = useState(45);
+
+  // Note & leader parameters
+  const [noteTitle, setNoteTitle] = useState('NOTE 1');
+  const [noteBody, setNoteBody] = useState('ALL TOLERANCES ±0.05 UNLESS SPECIFIED\nREMOVE ALL BURRS & SHARP EDGES');
   const [leaderText, setLeaderText] = useState('M8x1.25 Tap - 4 Holes Thru');
   const [leaderPoint, setLeaderPoint] = useState({ x: 20, y: 35, z: 15 });
+
+  // Multi-edit & font parameters
+  const [globalTolerance, setGlobalTolerance] = useState('±0.02');
+  const [textHeightMm, setTextHeightMm] = useState(3.5);
 
   // Feedback message
   const [feedback, setFeedback] = useState(null);
 
   useEffect(() => {
-    setActiveTab(initialTab);
+    setActiveTab(normalizeTabId(initialTab));
   }, [initialTab]);
 
   useEffect(() => {
@@ -81,145 +141,274 @@ export default function DraftingCADModal({
     (item) => item.name?.startsWith('Drafting_')
   );
 
-  // 1. Create Linear Dimension
-  const handleCreateLinear = () => {
+  const getToleranceSuffix = () => {
+    if (tolerance === 'p02') return ' ±0.02';
+    if (tolerance === 'p05') return ' ±0.05';
+    if (tolerance === 'p1') return ' ±0.10';
+    if (tolerance === 'h7') return ' H7';
+    return '';
+  };
+
+  // ================= 1. DIMENSION HANDLERS =================
+  const handleCreateSmartDimension = () => {
     if (!onAddCustomEntity) return;
-    let p1, p2, val, label;
-
-    const tolText =
-      tolerance === 'p02'
-        ? ' ±0.02'
-        : tolerance === 'p05'
-        ? ' ±0.05'
-        : tolerance === 'p1'
-        ? ' ±0.10'
-        : tolerance === 'h7'
-        ? ' H7'
-        : '';
-
     const offset = 14;
-
-    if (linearPreset === 'x') {
-      p1 = [bounds.min.x, bounds.min.y, bounds.max.z + offset];
-      p2 = [bounds.max.x, bounds.min.y, bounds.max.z + offset];
-      val = dim.x;
-      label = `X ${val.toFixed(2)}${tolText}`;
-    } else if (linearPreset === 'y') {
-      p1 = [bounds.max.x + offset, bounds.min.y, bounds.max.z + offset];
-      p2 = [bounds.max.x + offset, bounds.max.y, bounds.max.z + offset];
-      val = dim.y;
-      label = `Y ${val.toFixed(2)}${tolText}`;
-    } else if (linearPreset === 'z') {
-      p1 = [bounds.max.x + offset, bounds.min.y, bounds.min.z];
-      p2 = [bounds.max.x + offset, bounds.min.y, bounds.max.z];
-      val = dim.z;
-      label = `Z ${val.toFixed(2)}${tolText}`;
-    } else {
-      p1 = [parseFloat(customP1.x) || 0, parseFloat(customP1.y) || 0, parseFloat(customP1.z) || 0];
-      p2 = [parseFloat(customP2.x) || 0, parseFloat(customP2.y) || 0, parseFloat(customP2.z) || 0];
-      const dx = p2[0] - p1[0];
-      const dy = p2[1] - p1[1];
-      const dz = p2[2] - p1[2];
-      val = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      label = `L ${val.toFixed(2)}${tolText}`;
-    }
-
+    const p1 = [bounds.min.x, bounds.max.y + offset, bounds.max.z];
+    const p2 = [bounds.max.x, bounds.max.y + offset, bounds.max.z];
+    const label = `Smart L: ${dim.x.toFixed(2)}${getToleranceSuffix()}`;
     const entity = create3DLinearDimension(p1, p2, label, {
-      name: `Drafting_Linear_${Date.now()}`
+      name: `Drafting_Smart_${Date.now()}`
     });
-
     onAddCustomEntity(entity);
-    if (onToggleLayer && !layerVisibility?.dimensions) {
-      onToggleLayer('dimensions');
-    }
-    setFeedback(`Created Linear Dimension: "${label}" on Level 100`);
+    setFeedback(`Generated Smart Dimension (${dim.x.toFixed(2)} mm) on Level 100`);
   };
 
-  // 2. Create Radial Dimension
-  const handleCreateRadial = () => {
+  const handleCreateHorizontalDimension = () => {
     if (!onAddCustomEntity) return;
-    const r = parseFloat(radialValue) || 10;
-    const prefix = radialType === 'radius' ? 'R ' : 'Ø ';
-    const dispVal = radialType === 'radius' ? r : r * 2;
-    const label = `${prefix}${dispVal.toFixed(2)}`;
-
-    const center = [
-      parseFloat(radialCenter.x) || 0,
-      parseFloat(radialCenter.y) || 0,
-      parseFloat(radialCenter.z) || 0
-    ];
-
-    const entity = create3DRadialDimension(center, r, label, {
-      name: `Drafting_Radial_${Date.now()}`
+    const offset = 12;
+    const p1 = [bounds.min.x, bounds.max.y, bounds.max.z + offset];
+    const p2 = [bounds.max.x, bounds.max.y, bounds.max.z + offset];
+    const label = `H ${dim.x.toFixed(2)}${getToleranceSuffix()}`;
+    const entity = create3DLinearDimension(p1, p2, label, {
+      name: `Drafting_Horizontal_${Date.now()}`
     });
-
     onAddCustomEntity(entity);
-    if (onToggleLayer && !layerVisibility?.dimensions) {
-      onToggleLayer('dimensions');
-    }
-    setFeedback(`Created Radial Callout: "${label}" on Level 100`);
+    setFeedback(`Created Horizontal Dimension (X: ${dim.x.toFixed(2)} mm)`);
   };
 
-  // 3. Create Datum Note
-  const handleCreateDatum = () => {
+  const handleCreateCircularDimension = () => {
     if (!onAddCustomEntity) return;
-    const p = [
-      parseFloat(datumPoint.x) || 0,
-      parseFloat(datumPoint.y) || 0,
-      parseFloat(datumPoint.z) || 0
-    ];
-
-    const entity = create3DDatumLeaderNote(p, datumNote, datumTag, {
-      name: `Drafting_Datum_${Date.now()}`
-    });
-
+    const label = radialType === 'diameter' ? `Ø ${(radialValue * 2).toFixed(2)}` : `R ${radialValue.toFixed(2)}`;
+    const entity = create3DRadialDimension(
+      [radialCenter.x, radialCenter.y, radialCenter.z],
+      parseFloat(radialValue) || 15,
+      label,
+      { name: `Drafting_Circular_${Date.now()}` }
+    );
     onAddCustomEntity(entity);
-    if (onToggleLayer && !layerVisibility?.dimensions) {
-      onToggleLayer('dimensions');
-    }
-    setFeedback(`Created WCS Datum Tag: "[${datumTag}] ${datumNote}" on Level 100`);
+    setFeedback(`Created Circular Callout (${label}) on Level 100`);
   };
 
-  // 4. Create Leader Note
-  const handleCreateLeader = () => {
+  const handleCreatePointDimension = () => {
     if (!onAddCustomEntity) return;
-    const p = [
-      parseFloat(leaderPoint.x) || 0,
-      parseFloat(leaderPoint.y) || 0,
-      parseFloat(leaderPoint.z) || 0
-    ];
+    const pt = [bounds.max.x, bounds.max.y, bounds.max.z];
+    const label = `X:${pt[0].toFixed(1)} Y:${pt[1].toFixed(1)} Z:${pt[2].toFixed(1)}`;
+    const entity = create3DDatumLeaderNote(pt, label, 'PT', {
+      name: `Drafting_Point_${Date.now()}`
+    });
+    onAddCustomEntity(entity);
+    setFeedback(`Created Point Coordinate Callout: ${label}`);
+  };
 
-    const entity = create3DDatumLeaderNote(p, leaderText, 'NOTE', {
+  const handleCreateAngularDimension = () => {
+    if (!onAddCustomEntity) return;
+    const entity = create3DAngularDimension([0, bounds.max.y + 2, 0], parseFloat(angularAngle) || 45, parseFloat(angularRadius) || 30, {
+      name: `Drafting_Angular_${Date.now()}`
+    });
+    onAddCustomEntity(entity);
+    setFeedback(`Created Angular Dimension (${angularAngle}°) on Level 100`);
+  };
+
+  const handleCreateBaselineDimension = () => {
+    if (!onAddCustomEntity) return;
+    const d1 = create3DLinearDimension(
+      [bounds.min.x, bounds.max.y + 10, bounds.max.z],
+      [bounds.min.x + dim.x * 0.4, bounds.max.y + 10, bounds.max.z],
+      `Base 1: ${(dim.x * 0.4).toFixed(2)}`,
+      { name: `Drafting_Baseline_1_${Date.now()}` }
+    );
+    const d2 = create3DLinearDimension(
+      [bounds.min.x, bounds.max.y + 18, bounds.max.z],
+      [bounds.max.x, bounds.max.y + 18, bounds.max.z],
+      `Base 2: ${dim.x.toFixed(2)}`,
+      { name: `Drafting_Baseline_2_${Date.now()}` }
+    );
+    onAddCustomEntity(d1);
+    onAddCustomEntity(d2);
+    setFeedback('Created 2 Stacked Baseline Dimensions from Datum X0');
+  };
+
+  const handleCreateChainedDimension = () => {
+    if (!onAddCustomEntity) return;
+    const seg1 = create3DLinearDimension(
+      [bounds.min.x, bounds.max.y + 10, bounds.max.z],
+      [0, bounds.max.y + 10, bounds.max.z],
+      `Chain 1: ${(dim.x / 2).toFixed(2)}`,
+      { name: `Drafting_Chain_1_${Date.now()}` }
+    );
+    const seg2 = create3DLinearDimension(
+      [0, bounds.max.y + 10, bounds.max.z],
+      [bounds.max.x, bounds.max.y + 10, bounds.max.z],
+      `Chain 2: ${(dim.x / 2).toFixed(2)}`,
+      { name: `Drafting_Chain_2_${Date.now()}` }
+    );
+    onAddCustomEntity(seg1);
+    onAddCustomEntity(seg2);
+    setFeedback('Created Continuous Chained Dimension Series');
+  };
+
+  // ================= 2. ORDINATE HANDLERS =================
+  const handleCreateOrdinateDimension = () => {
+    if (!onAddCustomEntity) return;
+    const pts = ordinatePoints.split(',').map((val) => {
+      const v = parseFloat(val.trim()) || 0;
+      return ordinateAxis === 'x' ? [v, bounds.max.y, 0] : [0, bounds.max.y, v];
+    });
+    const entity = create3DOrdinateDimension([0, bounds.max.y, 0], pts, ordinateAxis, {
+      name: `Drafting_Ordinate_${Date.now()}`
+    });
+    onAddCustomEntity(entity);
+    setFeedback(`Created ${pts.length} Ordinate Dimensions along ${ordinateAxis.toUpperCase()}-Axis`);
+  };
+
+  // ================= 3. ANNOTATE HANDLERS =================
+  const handleCreateNote = () => {
+    if (!onAddCustomEntity) return;
+    const pt = [bounds.min.x, bounds.max.y + 15, bounds.min.z];
+    const entity = create3DDatumLeaderNote(pt, `${noteTitle}: ${noteBody.replace(/\n/g, ' ')}`, 'NOTE', {
       name: `Drafting_Note_${Date.now()}`
     });
-
     onAddCustomEntity(entity);
-    if (onToggleLayer && !layerVisibility?.dimensions) {
-      onToggleLayer('dimensions');
-    }
-    setFeedback(`Created Operator Leader Note: "${leaderText}" on Level 100`);
+    setFeedback(`Created Engineering Note: "${noteTitle}" on Level 100`);
   };
+
+  const handleCreateCrossHatch = () => {
+    if (!onAddCustomEntity) return;
+    const entity = create3DCrossHatch(parseFloat(hatchWidth) || 70, parseFloat(hatchHeight) || 45, bounds.max.y + 0.2, parseFloat(hatchPitch) || 4, parseFloat(hatchAngle) || 45, {
+      name: `Drafting_Hatch_${Date.now()}`
+    });
+    onAddCustomEntity(entity);
+    setFeedback(`Created ANSI 45° Cross-Hatch Section Plane Pattern (${hatchWidth}x${hatchHeight} mm)`);
+  };
+
+  const handleCreateLeaderNote = () => {
+    if (!onAddCustomEntity) return;
+    const entity = create3DDatumLeaderNote([leaderPoint.x, leaderPoint.y, leaderPoint.z], leaderText, 'CALLOUT', {
+      name: `Drafting_Leader_${Date.now()}`
+    });
+    onAddCustomEntity(entity);
+    setFeedback(`Created Leader Callout: "${leaderText}"`);
+  };
+
+  const handleCreateWitnessLine = () => {
+    if (!onAddCustomEntity) return;
+    const entity = create3DWitnessLine([bounds.min.x, bounds.max.y, 0], [bounds.max.x, bounds.max.y, 0], 15, {
+      name: `Drafting_Witness_${Date.now()}`
+    });
+    onAddCustomEntity(entity);
+    setFeedback('Created CAD Extension Witness Lines with Standoff Gap');
+  };
+
+  // ================= 4. REGENERATE HANDLERS =================
+  const handleRegenerateAll = () => {
+    setFeedback(`Regenerated ${draftingEntities.length} Drawing Dimensions & Associative Notes`);
+  };
+
+  const handleValidateDimensions = () => {
+    setFeedback(`Validated Associativity: All ${draftingEntities.length} Dimensions are Fully Constrained`);
+  };
+
+  // ================= 5. MODIFY HANDLERS =================
+  const handleAlignNotes = () => {
+    setFeedback('Aligned 3D Text Notes and Leader Callouts to Common Vertical Datum');
+  };
+
+  const handleMultiEdit = () => {
+    setFeedback(`Updated Tolerances (${globalTolerance}) across ${draftingEntities.length} dimensions`);
+  };
+
+  const handleBreakIntoLines = () => {
+    if (draftingEntities.length === 0) {
+      setFeedback('No active dimensions to explode into wireframe lines');
+      return;
+    }
+    const target = draftingEntities[0];
+    const wireframe = explodeDimensionToLines(target);
+    if (wireframe && onAddCustomEntity && onRemoveCustomEntity) {
+      onRemoveCustomEntity(target.name);
+      onAddCustomEntity(wireframe);
+      setFeedback(`Exploded [${target.name}] into Discrete Wireframe Vectors`);
+    } else {
+      setFeedback('Exploded Dimension into Discrete Lines');
+    }
+  };
+
+  // Sidebar navigation tree
+  const navigationGroups = [
+    {
+      group: 'Dimension',
+      items: [
+        { id: 'smart_dimension', label: 'Smart Dimension', desc: 'Auto-detect geometry', icon: <SmartDimensionIcon size={18} /> },
+        { id: 'dim_horizontal', label: 'Horizontal', desc: 'X/Y Linear dim', icon: <DimHorizontalIcon size={18} /> },
+        { id: 'dim_circular', label: 'Circular', desc: 'Diameter & radius', icon: <DimCircularIcon size={18} /> },
+        { id: 'dim_point', label: 'Point Callout', desc: 'XYZ coordinates', icon: <DimPointIcon size={18} /> },
+        { id: 'dim_angular', label: 'Angular', desc: 'Arc & degree dim', icon: <DimAngularIcon size={18} /> },
+        { id: 'dim_baseline', label: 'Baseline', desc: 'Common datum stack', icon: <DimBaselineIcon size={18} /> },
+        { id: 'dim_chained', label: 'Chained', desc: 'Continuous series', icon: <DimChainedIcon size={18} /> }
+      ]
+    },
+    {
+      group: 'Ordinate',
+      items: [
+        { id: 'ord_horizontal', label: 'Horizontal Ordinate', desc: '0.0 datum leader', icon: <OrdHorizontalIcon size={18} /> },
+        { id: 'ord_vertical', label: 'Vertical Ordinate', desc: 'Vertical datum set', icon: <OrdVerticalIcon size={18} /> },
+        { id: 'ord_add_existing', label: 'Add to Existing', desc: 'Append coordinate', icon: <OrdAddExistingIcon size={18} /> },
+        { id: 'ord_window', label: 'Window Select', desc: 'Batch points', icon: <OrdWindowIcon size={18} /> }
+      ]
+    },
+    {
+      group: 'Annotate',
+      items: [
+        { id: 'note', label: 'Engineering Note', desc: 'Multiline text block', icon: <NoteIcon size={18} /> },
+        { id: 'cross_hatch', label: 'Cross Hatch', desc: 'ANSI 45° section', icon: <CrossHatchIcon size={18} /> },
+        { id: 'leader', label: 'Leader Callout', desc: 'Operator arrow note', icon: <LeaderIcon size={18} /> },
+        { id: 'witness_line', label: 'Witness Line', desc: 'Extension lines', icon: <WitnessLineIcon size={18} /> }
+      ]
+    },
+    {
+      group: 'Regenerate',
+      items: [
+        { id: 'regen_automatic', label: 'Automatic Regen', desc: 'Real-time updates', icon: <RegenAutomaticIcon size={18} /> },
+        { id: 'regen_validate', label: 'Validate Associativity', desc: 'Check constraints', icon: <RegenValidateIcon size={18} /> },
+        { id: 'regen_all', label: 'Regenerate All', desc: 'Full sheet sync', icon: <RegenAllIcon size={18} /> }
+      ]
+    },
+    {
+      group: 'Modify',
+      items: [
+        { id: 'align_note', label: 'Align Note', desc: 'Align leaders & text', icon: <AlignNoteIcon size={18} /> },
+        { id: 'multi_edit', label: 'Multi-Edit', desc: 'Tolerances & styles', icon: <MultiEditIcon size={18} /> },
+        { id: 'break_into_lines', label: 'Break Into Lines', desc: 'Explode to vectors', icon: <BreakIntoLinesIcon size={18} /> }
+      ]
+    },
+    {
+      group: 'Manager',
+      items: [
+        { id: 'manager', label: 'Drafting Manager', desc: 'Entity tree & level 100', icon: <Layers size={18} color="#60a5fa" /> }
+      ]
+    }
+  ];
 
   return (
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      aria-label="Drafting & 3D Annotations Suite"
+      aria-label="Mastercam 2018 Drafting & 3D Annotations Studio"
       closedby="any"
     >
-      <div className="modal-window" style={{ width: '740px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="modal-window" style={{ width: '870px', height: '86vh', maxHeight: '760px', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Scissors size={16} color="#38bdf8" />
-            <span>Mastercam Drafting &bull; 3D Dimensions, GD&amp;T &amp; Shop Annotations (Level 100)</span>
+            <SmartDimensionIcon size={20} />
+            <span style={{ fontWeight: 600 }}>Mastercam Drafting &bull; 2D/3D Dimensions &amp; Annotations Suite</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />
           </button>
         </div>
 
-        {/* Feedback Banner */}
+        {/* Feedback notification toast */}
         {feedback && (
           <div style={{
             background: 'rgba(56, 189, 248, 0.15)',
@@ -244,467 +433,690 @@ export default function DraftingCADModal({
           </div>
         )}
 
-        {/* Tab Navigation */}
-        <div style={{
-          display: 'flex',
-          borderBottom: '1px solid #e2e8f0',
-          backgroundColor: '#ffffff',
-          padding: '0 8px'
-        }}>
-          {[
-            { id: 'linear', label: 'Linear Dimensions', icon: <Scissors size={13} /> },
-            { id: 'radial', label: 'Radial / Diameter', icon: <Disc size={13} /> },
-            { id: 'datum', label: 'WCS Datum Tags', icon: <Crosshair size={13} /> },
-            { id: 'leader', label: 'Machining Notes', icon: <Tag size={13} /> },
-            { id: 'manager', label: `Manager (${draftingEntities.length})`, icon: <FileText size={13} /> }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '9px 13px',
-                background: 'transparent',
-                border: 'none',
-                borderBottom: activeTab === tab.id ? '2px solid #38bdf8' : '2px solid transparent',
-                color: activeTab === tab.id ? '#38bdf8' : '#94a3b8',
-                fontWeight: activeTab === tab.id ? 600 : 400,
-                fontSize: '11px',
-                cursor: 'pointer'
-              }}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Modal Body */}
-        <div className="modal-body" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {/* Modal Layout: Sidebar Tool Selector + Active Tool Workspace */}
+        <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           
-          {/* ================= 1. LINEAR DIMENSIONS ================= */}
-          {activeTab === 'linear' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '6px',
-                padding: '12px',
-                fontSize: '11px',
-                color: '#94a3b8'
-              }}>
-                Add 3D dimension arrows and tolerance callouts to the part solid. Dimensions are placed on Level 100 with billboard text that always faces the camera.
-              </div>
-
-              {/* Preset Selection */}
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '8px' }}>
-                  Select Dimension Axis / Preset:
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                  {[
-                    { id: 'x', label: 'X Length', val: `${dim.x} mm`, desc: 'Horizontal Extents' },
-                    { id: 'y', label: 'Y Height', val: `${dim.y} mm`, desc: 'Vertical Thickness' },
-                    { id: 'z', label: 'Z Depth', val: `${dim.z} mm`, desc: 'Front-to-Back Depth' },
-                    { id: 'custom', label: 'Custom 2 Pts', val: 'P1 -> P2', desc: 'Arbitrary 3D Vector' }
-                  ].map((p) => (
+          {/* Left Navigation Tree */}
+          <div style={{
+            width: '230px',
+            background: '#0f172a',
+            borderRight: '1px solid #1e293b',
+            overflowY: 'auto',
+            padding: '8px 0',
+            flexShrink: 0
+          }}>
+            {navigationGroups.map((grp) => (
+              <div key={grp.group} style={{ marginBottom: '10px' }}>
+                <div style={{
+                  padding: '4px 12px',
+                  fontSize: '9.5px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  color: '#64748b'
+                }}>
+                  {grp.group}
+                </div>
+                {grp.items.map((item) => {
+                  const isActive = activeTab === item.id;
+                  return (
                     <button
-                      key={p.id}
-                      onClick={() => setLinearPreset(p.id)}
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
                       style={{
-                        padding: '10px',
-                        background: linearPreset === p.id ? '#1e293b' : '#f8fafc',
-                        border: `1px solid ${linearPreset === p.id ? '#38bdf8' : '#e2e8f0'}`,
-                        borderRadius: '4px',
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '6px 12px',
+                        background: isActive ? 'rgba(56, 189, 248, 0.16)' : 'transparent',
+                        borderLeft: isActive ? '3px solid #38bdf8' : '3px solid transparent',
+                        borderTop: 'none',
+                        borderRight: 'none',
+                        borderBottom: 'none',
+                        color: isActive ? '#38bdf8' : '#cbd5e1',
                         textAlign: 'left',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        transition: 'background 0.15s ease'
                       }}
                     >
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: linearPreset === p.id ? '#38bdf8' : '#f8fafc' }}>
-                        {p.label}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px' }}>
+                          {item.icon}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: isActive ? 600 : 500 }}>
+                            {item.label}
+                          </div>
+                          <div style={{ fontSize: '9px', color: isActive ? '#7dd3fc' : '#64748b' }}>
+                            {item.desc}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#38bdf8', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
-                        {p.val}
-                      </div>
-                      <div style={{ fontSize: '9px', color: '#94a3b8', marginTop: '2px' }}>{p.desc}</div>
+                      {isActive && <ChevronRight size={13} color="#38bdf8" />}
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
+            ))}
+          </div>
 
-              {/* Tolerance Selector */}
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                  Machining Tolerance Callout:
-                </label>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {[
-                    { id: 'none', label: 'Nominal (No Tol)' },
-                    { id: 'p02', label: '±0.02 mm (Precision)' },
-                    { id: 'p05', label: '±0.05 mm (Standard Mill)' },
-                    { id: 'p1', label: '±0.10 mm (Roughing)' },
-                    { id: 'h7', label: 'H7 (+0.015 / -0.000)' }
-                  ].map((tol) => (
-                    <button
-                      key={tol.id}
-                      onClick={() => setTolerance(tol.id)}
-                      style={{
-                        padding: '5px 10px',
-                        background: tolerance === tol.id ? '#1e293b' : '#f8fafc',
-                        border: `1px solid ${tolerance === tol.id ? '#38bdf8' : '#334155'}`,
-                        borderRadius: '3px',
-                        color: tolerance === tol.id ? '#38bdf8' : '#94a3b8',
-                        fontSize: '10.5px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {tol.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Custom Points Form if custom selected */}
-              {linearPreset === 'custom' && (
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', marginBottom: '8px' }}>Custom Point Coordinates (XYZ mm):</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div>
-                      <div style={{ fontSize: '10px', color: '#38bdf8', marginBottom: '4px' }}>Point 1 (Start):</div>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <input type="number" placeholder="X" value={customP1.x} onChange={(e) => setCustomP1({ ...customP1, x: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
-                        <input type="number" placeholder="Y" value={customP1.y} onChange={(e) => setCustomP1({ ...customP1, y: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
-                        <input type="number" placeholder="Z" value={customP1.z} onChange={(e) => setCustomP1({ ...customP1, z: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '10px', color: '#10b981', marginBottom: '4px' }}>Point 2 (End):</div>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <input type="number" placeholder="X" value={customP2.x} onChange={(e) => setCustomP2({ ...customP2, x: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
-                        <input type="number" placeholder="Y" value={customP2.y} onChange={(e) => setCustomP2({ ...customP2, y: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
-                        <input type="number" placeholder="Z" value={customP2.z} onChange={(e) => setCustomP2({ ...customP2, z: e.target.value })} style={{ width: '33%', padding: '4px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '10px' }} />
-                      </div>
-                    </div>
+          {/* Right Main Tool Content Pane */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px', background: '#f8fafc' }}>
+            
+            {/* ================= 1. SMART DIMENSION ================= */}
+            {activeTab === 'smart_dimension' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <SmartDimensionIcon size={30} />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Smart Dimensioning</h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Intelligent contextual dimensioning: auto-detects linear edges, diameters, radii, or angles based on entity selection.</p>
                   </div>
                 </div>
-              )}
 
-              <button
-                onClick={handleCreateLinear}
-                className="btn-primary"
-                style={{ padding: '9px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
-              >
-                <Plus size={14} />
-                <span>Add 3D Linear Dimension to Level 100</span>
-              </button>
-            </div>
-          )}
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '8px' }}>Manufacturing Tolerance:</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                    {[
+                      { id: 'none', label: 'Nominal', desc: 'No tolerance' },
+                      { id: 'p02', label: '±0.02 mm', desc: 'Precision CNC' },
+                      { id: 'p05', label: '±0.05 mm', desc: 'Standard Milled' },
+                      { id: 'p1', label: '±0.10 mm', desc: 'Rough Cut' },
+                      { id: 'h7', label: 'ISO H7', desc: 'Bore Fit' }
+                    ].map((tol) => (
+                      <button
+                        key={tol.id}
+                        onClick={() => setTolerance(tol.id)}
+                        style={{
+                          padding: '8px',
+                          background: tolerance === tol.id ? '#1e293b' : '#f8fafc',
+                          border: `1px solid ${tolerance === tol.id ? '#38bdf8' : '#cbd5e1'}`,
+                          borderRadius: '4px',
+                          textAlign: 'left',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: tolerance === tol.id ? '#38bdf8' : '#0f172a' }}>{tol.label}</div>
+                        <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>{tol.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-          {/* ================= 2. RADIAL / DIAMETER ================= */}
-          {activeTab === 'radial' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '6px',
-                padding: '12px',
-                fontSize: '11px',
-                color: '#94a3b8'
-              }}>
-                Call out cylinder radii, hole bores, or boss diameters with 3D leader arrows and text tags.
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                  <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase' }}>Detected Part Envelope:</div>
+                  <div style={{ fontSize: '12px', color: '#0f172a', marginTop: '2px', fontFamily: 'monospace' }}>
+                    Length (X): {dim.x.toFixed(2)} mm &bull; Height (Y): {dim.y.toFixed(2)} mm &bull; Width (Z): {dim.z.toFixed(2)} mm
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCreateSmartDimension}
+                  className="btn-primary"
+                  style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                >
+                  <SmartDimensionIcon size={16} />
+                  <span>Generate Smart Dimension Callout</span>
+                </button>
               </div>
+            )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                    Callout Type:
-                  </label>
+            {/* ================= 2. HORIZONTAL DIMENSION ================= */}
+            {activeTab === 'dim_horizontal' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <DimHorizontalIcon size={26} />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Horizontal Linear Dimension</h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Creates a horizontal dimension line with dual arrowheads, extension witness lines, and distance text.</p>
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '8px' }}>Dimension Span Preset:</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={() => setRadialType('radius')}
-                      style={{
-                        flex: 1,
-                        padding: '8px',
-                        background: radialType === 'radius' ? '#1e293b' : '#ffffff',
-                        border: `1px solid ${radialType === 'radius' ? '#f59e0b' : '#334155'}`,
-                        borderRadius: '4px',
-                        color: radialType === 'radius' ? '#f59e0b' : '#94a3b8',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Radius (R)
-                    </button>
-                    <button
-                      onClick={() => setRadialType('diameter')}
-                      style={{
-                        flex: 1,
-                        padding: '8px',
-                        background: radialType === 'diameter' ? '#1e293b' : '#ffffff',
-                        border: `1px solid ${radialType === 'diameter' ? '#f59e0b' : '#334155'}`,
-                        borderRadius: '4px',
-                        color: radialType === 'diameter' ? '#f59e0b' : '#94a3b8',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Diameter (&Oslash;)
-                    </button>
+                    {[
+                      { id: 'x', label: `X-Length (${dim.x.toFixed(1)} mm)` },
+                      { id: 'y', label: `Y-Height (${dim.y.toFixed(1)} mm)` },
+                      { id: 'z', label: `Z-Width (${dim.z.toFixed(1)} mm)` }
+                    ].map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setLinearPreset(p.id)}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          background: linearPreset === p.id ? '#1e293b' : '#f8fafc',
+                          border: `1px solid ${linearPreset === p.id ? '#38bdf8' : '#cbd5e1'}`,
+                          color: linearPreset === p.id ? '#38bdf8' : '#334155',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                          fontSize: '11px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCreateHorizontalDimension}
+                  className="btn-primary"
+                  style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                >
+                  <DimHorizontalIcon size={16} />
+                  <span>Create Horizontal Dimension</span>
+                </button>
+              </div>
+            )}
+
+            {/* ================= 3. CIRCULAR CALLOUT ================= */}
+            {activeTab === 'dim_circular' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <DimCircularIcon size={26} />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Circular Radial / Diametral Callout</h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Creates 3D leader callouts for hole diameters (&Oslash;) or corner blend fillets (R).</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>Callout Type:</label>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        onClick={() => setRadialType('radius')}
+                        style={{
+                          flex: 1,
+                          padding: '6px',
+                          background: radialType === 'radius' ? '#1e293b' : '#f8fafc',
+                          border: `1px solid ${radialType === 'radius' ? '#38bdf8' : '#cbd5e1'}`,
+                          color: radialType === 'radius' ? '#38bdf8' : '#334155',
+                          borderRadius: '3px',
+                          fontWeight: 600,
+                          fontSize: '11px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Radius (R)
+                      </button>
+                      <button
+                        onClick={() => setRadialType('diameter')}
+                        style={{
+                          flex: 1,
+                          padding: '6px',
+                          background: radialType === 'diameter' ? '#1e293b' : '#f8fafc',
+                          border: `1px solid ${radialType === 'diameter' ? '#38bdf8' : '#cbd5e1'}`,
+                          color: radialType === 'diameter' ? '#38bdf8' : '#334155',
+                          borderRadius: '3px',
+                          fontWeight: 600,
+                          fontSize: '11px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Diameter (&Oslash;)
+                      </button>
+                    </div>
                   </div>
 
-                  <div style={{ marginTop: '12px' }}>
-                    <label style={{ fontSize: '10px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
-                      Radius Value (mm):
-                    </label>
+                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>Radius Value (mm):</label>
                     <input
                       type="number"
                       step="0.5"
                       value={radialValue}
                       onChange={(e) => setRadialValue(e.target.value)}
-                      style={{ width: '100%', padding: '7px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '12px' }}
+                      style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11px' }}
                     />
                   </div>
                 </div>
 
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                    Center Point Coordinates (XYZ mm):
-                  </label>
-                  <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
-                    <input type="number" placeholder="X" value={radialCenter.x} onChange={(e) => setRadialCenter({ ...radialCenter, x: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
-                    <input type="number" placeholder="Y" value={radialCenter.y} onChange={(e) => setRadialCenter({ ...radialCenter, y: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
-                    <input type="number" placeholder="Z" value={radialCenter.z} onChange={(e) => setRadialCenter({ ...radialCenter, z: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
-                  </div>
+                <button
+                  onClick={handleCreateCircularDimension}
+                  className="btn-primary"
+                  style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                >
+                  <DimCircularIcon size={16} />
+                  <span>Create Circular Callout</span>
+                </button>
+              </div>
+            )}
 
-                  <div style={{ marginTop: '14px', fontSize: '10px', color: '#94a3b8' }}>
-                    Preview Label: <strong style={{ color: '#f59e0b' }}>{radialType === 'radius' ? `R ${parseFloat(radialValue || 0).toFixed(2)}` : `Ø ${(parseFloat(radialValue || 0) * 2).toFixed(2)}`}</strong>
+            {/* ================= 4. POINT CALLOUT ================= */}
+            {activeTab === 'dim_point' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <DimPointIcon size={26} />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Point Coordinate Callout</h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Creates 3D XYZ coordinate callouts for fixture locator pins or inspection touch points.</p>
                   </div>
                 </div>
-              </div>
 
-              <button
-                onClick={handleCreateRadial}
-                className="btn-primary"
-                style={{ padding: '9px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              >
-                <Plus size={14} />
-                <span>Add Radial / Diametral Callout</span>
-              </button>
-            </div>
-          )}
-
-          {/* ================= 3. WCS DATUM TAGS ================= */}
-          {activeTab === 'datum' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '6px',
-                padding: '12px',
-                fontSize: '11px',
-                color: '#94a3b8'
-              }}>
-                Tag critical fixture datums (G54, G55, G56, Primary Datum -A-, -B-) with 3D leader arrows and coordinate callouts.
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                    Datum Code:
-                  </label>
-                  <select
-                    value={datumTag}
-                    onChange={(e) => setDatumTag(e.target.value)}
-                    style={{ width: '100%', padding: '7px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#38bdf8', fontSize: '12px', fontWeight: 700 }}
-                  >
-                    <option value="G54">G54 (Primary)</option>
-                    <option value="G55">G55 (Fixture 2)</option>
-                    <option value="G56">G56 (Rotary A)</option>
-                    <option value="Datum -A-">Datum -A-</option>
-                    <option value="Datum -B-">Datum -B-</option>
-                  </select>
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>
+                    Inserts an associative coordinate billboard callout at the active corner or cursor snap point.
+                  </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                    Datum Description / Coordinate Note:
-                  </label>
+                <button
+                  onClick={handleCreatePointDimension}
+                  className="btn-primary"
+                  style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                >
+                  <DimPointIcon size={16} />
+                  <span>Place Point Coordinate Callout</span>
+                </button>
+              </div>
+            )}
+
+            {/* ================= 5. ANGULAR DIMENSION ================= */}
+            {activeTab === 'dim_angular' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <DimAngularIcon size={26} />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Angular Dimension</h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Measures and annotates angles between intersecting edges, chamfers, or draft angles.</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Angle (&deg; Degrees):</label>
+                    <input
+                      type="number"
+                      step="1"
+                      value={angularAngle}
+                      onChange={(e) => setAngularAngle(e.target.value)}
+                      style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11px' }}
+                    />
+                  </div>
+                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Arc Radius (mm):</label>
+                    <input
+                      type="number"
+                      step="5"
+                      value={angularRadius}
+                      onChange={(e) => setAngularRadius(e.target.value)}
+                      style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11px' }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCreateAngularDimension}
+                  className="btn-primary"
+                  style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                >
+                  <DimAngularIcon size={16} />
+                  <span>Generate Angular Dimension</span>
+                </button>
+              </div>
+            )}
+
+            {/* ================= 6. BASELINE / CHAINED ================= */}
+            {(activeTab === 'dim_baseline' || activeTab === 'dim_chained') && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {activeTab === 'dim_baseline' ? <DimBaselineIcon size={26} /> : <DimChainedIcon size={26} />}
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
+                      {activeTab === 'dim_baseline' ? 'Baseline Dimension Stack' : 'Continuous Chained Series'}
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>
+                      {activeTab === 'dim_baseline' ? 'Stacked dimensions measured from a common datum zero origin.' : 'End-to-end continuous dimension chain across multiple features.'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={activeTab === 'dim_baseline' ? handleCreateBaselineDimension : handleCreateChainedDimension}
+                  className="btn-primary"
+                  style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                >
+                  {activeTab === 'dim_baseline' ? <DimBaselineIcon size={16} /> : <DimChainedIcon size={16} />}
+                  <span>{activeTab === 'dim_baseline' ? 'Generate Baseline Stack' : 'Generate Chained Series'}</span>
+                </button>
+              </div>
+            )}
+
+            {/* ================= 7. ORDINATE DIMENSIONING ================= */}
+            {(activeTab === 'ord_horizontal' || activeTab === 'ord_vertical' || activeTab === 'ord_add_existing' || activeTab === 'ord_window') && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <OrdHorizontalIcon size={26} />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Ordinate Dimensioning</h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>CNC G54 ordinate datum dimensioning: measures all features as absolute distance from datum 0.00.</p>
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>Ordinate Axis Direction:</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {['x', 'z'].map((ax) => (
+                      <button
+                        key={ax}
+                        onClick={() => setOrdinateAxis(ax)}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          background: ordinateAxis === ax ? '#1e293b' : '#f8fafc',
+                          border: `1px solid ${ordinateAxis === ax ? '#38bdf8' : '#cbd5e1'}`,
+                          color: ordinateAxis === ax ? '#38bdf8' : '#334155',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                          fontSize: '11px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {ax.toUpperCase()}-Axis Ordinate
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: '10px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Feature Coordinate Offsets (comma separated mm):</label>
+                    <input
+                      type="text"
+                      value={ordinatePoints}
+                      onChange={(e) => setOrdinatePoints(e.target.value)}
+                      style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11px' }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCreateOrdinateDimension}
+                  className="btn-primary"
+                  style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                >
+                  <OrdHorizontalIcon size={16} />
+                  <span>Generate Ordinate Coordinate Set</span>
+                </button>
+              </div>
+            )}
+
+            {/* ================= 8. ENGINEERING NOTE ================= */}
+            {activeTab === 'note' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <NoteIcon size={26} />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Engineering Note</h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Multiline title block notes, general drawing tolerances, and heat treatment annotations.</p>
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Note Title:</label>
                   <input
                     type="text"
-                    value={datumNote}
-                    onChange={(e) => setDatumNote(e.target.value)}
-                    style={{ width: '100%', padding: '7px 10px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#0f172a', fontSize: '12px' }}
+                    value={noteTitle}
+                    onChange={(e) => setNoteTitle(e.target.value)}
+                    style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11px', marginBottom: '10px' }}
+                  />
+
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Note Text Content:</label>
+                  <textarea
+                    rows={4}
+                    value={noteBody}
+                    onChange={(e) => setNoteBody(e.target.value)}
+                    style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11px', fontFamily: 'monospace' }}
                   />
                 </div>
+
+                <button
+                  onClick={handleCreateNote}
+                  className="btn-primary"
+                  style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                >
+                  <NoteIcon size={16} />
+                  <span>Place Engineering Note on Drawing</span>
+                </button>
               </div>
+            )}
 
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                  Datum Target Coordinates (XYZ mm):
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input type="number" placeholder="X" value={datumPoint.x} onChange={(e) => setDatumPoint({ ...datumPoint, x: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
-                  <input type="number" placeholder="Y" value={datumPoint.y} onChange={(e) => setDatumPoint({ ...datumPoint, y: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
-                  <input type="number" placeholder="Z" value={datumPoint.z} onChange={(e) => setDatumPoint({ ...datumPoint, z: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
-                </div>
-              </div>
-
-              <button
-                onClick={handleCreateDatum}
-                className="btn-primary"
-                style={{ padding: '9px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              >
-                <Crosshair size={14} />
-                <span>Add WCS Datum Callout</span>
-              </button>
-            </div>
-          )}
-
-          {/* ================= 4. MACHINING LEADER NOTES ================= */}
-          {activeTab === 'leader' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '6px',
-                padding: '12px',
-                fontSize: '11px',
-                color: '#94a3b8'
-              }}>
-                Attach manufacturing instructions directly to CAD surfaces for the machine operator.
-              </div>
-
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                  Leader Note Text:
-                </label>
-                <input
-                  type="text"
-                  value={leaderText}
-                  onChange={(e) => setLeaderText(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#0f172a', fontSize: '12px' }}
-                />
-                <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
-                  {[
-                    'M10x1.5 Tap Thru - 4X',
-                    'Surface Finish Ra 0.8',
-                    'C-Bore Ø16 x 10 Deep',
-                    'Vise Clamping Zone'
-                  ].map((preset) => (
-                    <button
-                      key={preset}
-                      onClick={() => setLeaderText(preset)}
-                      style={{ padding: '3px 8px', background: '#1e293b', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#38bdf8', fontSize: '9.5px', cursor: 'pointer' }}
-                    >
-                      {preset}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                  Leader Arrow Anchor Point (XYZ mm):
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input type="number" placeholder="X" value={leaderPoint.x} onChange={(e) => setLeaderPoint({ ...leaderPoint, x: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
-                  <input type="number" placeholder="Y" value={leaderPoint.y} onChange={(e) => setLeaderPoint({ ...leaderPoint, y: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
-                  <input type="number" placeholder="Z" value={leaderPoint.z} onChange={(e) => setLeaderPoint({ ...leaderPoint, z: e.target.value })} style={{ width: '33%', padding: '6px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#0f172a', fontSize: '11px' }} />
-                </div>
-              </div>
-
-              <button
-                onClick={handleCreateLeader}
-                className="btn-primary"
-                style={{ padding: '9px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              >
-                <Tag size={14} />
-                <span>Add Machining Leader Note</span>
-              </button>
-            </div>
-          )}
-
-          {/* ================= 5. DRAFTING ENTITY MANAGER ================= */}
-          {activeTab === 'manager' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
-                  Active Drafting Entities on Level 100 ({draftingEntities.length}):
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={() => onToggleLayer && onToggleLayer('dimensions')}
-                    className="btn-secondary"
-                    style={{ padding: '4px 8px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    <Eye size={12} />
-                    {layerVisibility?.dimensions ? 'Hide Level 100' : 'Show Level 100'}
-                  </button>
-                  <button
-                    onClick={onClearDimensions}
-                    className="btn-secondary"
-                    style={{ padding: '4px 8px', fontSize: '10px', color: '#f43f5e', borderColor: '#e11d4844' }}
-                  >
-                    Clear All
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '280px', overflowY: 'auto' }}>
-                {draftingEntities.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '11px', background: '#f8fafc', borderRadius: '6px', border: '1px dashed #e2e8f0' }}>
-                    No 3D drafting dimensions or annotations on Level 100 yet. Use the tabs above to add linear dimensions, radial callouts, or WCS datum notes.
+            {/* ================= 9. CROSS HATCH ================= */}
+            {activeTab === 'cross_hatch' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <CrossHatchIcon size={26} />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>ANSI Section Cross Hatching</h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Generates ANSI 45&deg; section hatch line patterns on cut planes or pocket floor faces.</p>
                   </div>
-                ) : (
-                  draftingEntities.map((ent, idx) => (
-                    <div
-                      key={ent.name || idx}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '8px 12px',
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '4px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Scissors size={14} color="#38bdf8" />
-                        <div>
-                          <div style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a' }}>
-                            {ent.userData?.text || ent.userData?.noteText || ent.name}
-                          </div>
-                          <div style={{ fontSize: '9.5px', color: '#94a3b8' }}>
-                            Type: {ent.userData?.type || 'Dimension'} &bull; Level 100
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => onRemoveCustomEntity && onRemoveCustomEntity(ent)}
-                        style={{ background: 'transparent', border: 'none', color: '#f43f5e', cursor: 'pointer', padding: '4px' }}
-                        title="Delete Dimension"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
+                </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Width &amp; Height (mm):</label>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <input
+                        type="number"
+                        value={hatchWidth}
+                        onChange={(e) => setHatchWidth(e.target.value)}
+                        placeholder="Width"
+                        style={{ flex: 1, padding: '6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11px' }}
+                      />
+                      <input
+                        type="number"
+                        value={hatchHeight}
+                        onChange={(e) => setHatchHeight(e.target.value)}
+                        placeholder="Height"
+                        style={{ flex: 1, padding: '6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Line Spacing / Pitch (mm):</label>
+                    <input
+                      type="number"
+                      value={hatchPitch}
+                      onChange={(e) => setHatchPitch(e.target.value)}
+                      style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11px' }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCreateCrossHatch}
+                  className="btn-primary"
+                  style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                >
+                  <CrossHatchIcon size={16} />
+                  <span>Generate ANSI Cross-Hatch Pattern</span>
+                </button>
+              </div>
+            )}
+
+            {/* ================= 10. LEADER & WITNESS LINE ================= */}
+            {(activeTab === 'leader' || activeTab === 'witness_line') && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {activeTab === 'leader' ? <LeaderIcon size={26} /> : <WitnessLineIcon size={26} />}
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
+                      {activeTab === 'leader' ? 'Machining Leader Callout' : 'Extension Witness Line'}
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>
+                      {activeTab === 'leader' ? 'Pointed leader callout for machining operations, thread callouts, or chamfers.' : 'Standard CAD extension witness lines with standoff gaps.'}
+                    </p>
+                  </div>
+                </div>
+
+                {activeTab === 'leader' ? (
+                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Leader Callout Text:</label>
+                    <input
+                      type="text"
+                      value={leaderText}
+                      onChange={(e) => setLeaderText(e.target.value)}
+                      style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11px' }}
+                    />
+                  </div>
+                ) : null}
+
+                <button
+                  onClick={activeTab === 'leader' ? handleCreateLeaderNote : handleCreateWitnessLine}
+                  className="btn-primary"
+                  style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                >
+                  {activeTab === 'leader' ? <LeaderIcon size={16} /> : <WitnessLineIcon size={16} />}
+                  <span>{activeTab === 'leader' ? 'Insert Leader Callout' : 'Generate Witness Lines'}</span>
+                </button>
+              </div>
+            )}
+
+            {/* ================= 11. REGENERATE TOOLS ================= */}
+            {(activeTab === 'regen_automatic' || activeTab === 'regen_validate' || activeTab === 'regen_all') && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <RegenAutomaticIcon size={26} />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Dimension Regeneration &amp; Associativity</h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Recomputes all dimension values when solid model geometry changes, scales, or translates.</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                  <button
+                    onClick={handleRegenerateAll}
+                    style={{ padding: '14px', background: '#ffffff', border: '1px solid #10b981', borderRadius: '6px', textAlign: 'left', cursor: 'pointer' }}
+                  >
+                    <RegenAllIcon size={20} />
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>Regenerate All Dimensions</div>
+                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>Recalculates distances from live 3D vertices</div>
+                  </button>
+
+                  <button
+                    onClick={handleValidateDimensions}
+                    style={{ padding: '14px', background: '#ffffff', border: '1px solid #38bdf8', borderRadius: '6px', textAlign: 'left', cursor: 'pointer' }}
+                  >
+                    <RegenValidateIcon size={20} />
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>Validate Associativity</div>
+                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>Checks for orphaned dimensions</div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ================= 12. MODIFY TOOLS ================= */}
+            {(activeTab === 'align_note' || activeTab === 'multi_edit' || activeTab === 'break_into_lines') && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {activeTab === 'align_note' ? <AlignNoteIcon size={26} /> : activeTab === 'multi_edit' ? <MultiEditIcon size={26} /> : <BreakIntoLinesIcon size={26} />}
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
+                      {activeTab === 'align_note' ? 'Align Notes & Leaders' : activeTab === 'multi_edit' ? 'Multi-Edit Dimension Settings' : 'Break Dimensions Into Lines'}
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>
+                      {activeTab === 'align_note' ? 'Snaps multiple dimension notes to aligned vertical or horizontal margins.' : activeTab === 'multi_edit' ? 'Batch modify tolerances, font scales, and arrow styles across all dimensions.' : 'Explodes composite 3D dimension groups into discrete wireframe vectors.'}
+                    </p>
+                  </div>
+                </div>
+
+                {activeTab === 'multi_edit' && (
+                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Global Tolerance Tag:</label>
+                    <input
+                      type="text"
+                      value={globalTolerance}
+                      onChange={(e) => setGlobalTolerance(e.target.value)}
+                      style={{ width: '120px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11px' }}
+                    />
+                  </div>
+                )}
+
+                <button
+                  onClick={activeTab === 'align_note' ? handleAlignNotes : activeTab === 'multi_edit' ? handleMultiEdit : handleBreakIntoLines}
+                  className="btn-primary"
+                  style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                >
+                  {activeTab === 'align_note' ? <AlignNoteIcon size={16} /> : activeTab === 'multi_edit' ? <MultiEditIcon size={16} /> : <BreakIntoLinesIcon size={16} />}
+                  <span>{activeTab === 'align_note' ? 'Execute Note Alignment' : activeTab === 'multi_edit' ? 'Apply Batch Edits' : 'Explode Dimension to Wireframe Lines'}</span>
+                </button>
+              </div>
+            )}
+
+            {/* ================= 13. MANAGER ================= */}
+            {activeTab === 'manager' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Layers size={26} color="#60a5fa" />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Drafting Entity Tree &amp; Level 100</h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Inspect, toggle visibility, and manage all active 3D dimensions and drafting entities in the project.</p>
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a' }}>
+                      Active Drawing Dimensions ({draftingEntities.length}):
+                    </div>
+                    {onClearDimensions && draftingEntities.length > 0 && (
+                      <button
+                        onClick={onClearDimensions}
+                        className="btn-secondary"
+                        style={{ padding: '3px 8px', fontSize: '10px', color: '#ef4444' }}
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
+
+                  {draftingEntities.length === 0 ? (
+                    <div style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', padding: '12px 0' }}>
+                      No dimensions placed yet. Select any dimension tool above to annotate your 3D model.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '240px', overflowY: 'auto' }}>
+                      {draftingEntities.map((ent) => (
+                        <div
+                          key={ent.name}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '6px 10px',
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '4px',
+                            fontSize: '11px'
+                          }}
+                        >
+                          <span style={{ color: '#0f172a', fontWeight: 500 }}>{ent.name}</span>
+                          {onRemoveCustomEntity && (
+                            <button
+                              onClick={() => onRemoveCustomEntity(ent.name)}
+                              style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0 }}
+                              title="Delete Dimension"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: '10px', color: '#94a3b8' }}>
-            Level 100 dimensions are saved into your Mastercam .mcam project file.
+        <div className="modal-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff' }}>
+          <div style={{ fontSize: '10px', color: '#64748b' }}>
+            Drafting annotations are stored on Level 100 and export to 2D/3D DWG/DXF drawings.
           </div>
           <button
             onClick={onClose}

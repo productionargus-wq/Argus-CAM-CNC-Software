@@ -3430,6 +3430,219 @@ export function applyFeatureColor(modelGroup, color = 0xf43f5e) {
 }
 
 /**
+ * Creates a parametric 3D angular dimension entity
+ */
+export function create3DAngularDimension(center = [0, 0, 0], angleDeg = 45, radius = 25, options = {}) {
+  const group = new THREE.Group();
+  group.name = options.name || `Drafting_Angular_${Date.now()}`;
+  const c = new THREE.Vector3(...center);
+  const color = options.color || 0x0284c7;
+
+  const radTotal = (angleDeg * Math.PI) / 180;
+  const segments = 32;
+  const points = [];
+  for (let i = 0; i <= segments; i++) {
+    const theta = (i / segments) * radTotal;
+    points.push(new THREE.Vector3(c.x + Math.cos(theta) * radius, c.y, c.z + Math.sin(theta) * radius));
+  }
+
+  const arcGeo = new THREE.BufferGeometry().setFromPoints(points);
+  const arcMat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const arcLine = new THREE.Line(arcGeo, arcMat);
+  group.add(arcLine);
+
+  // Dimension rays from center
+  const r1 = new THREE.Vector3(c.x + Math.cos(0) * (radius + 5), c.y, c.z + Math.sin(0) * (radius + 5));
+  const r2 = new THREE.Vector3(c.x + Math.cos(radTotal) * (radius + 5), c.y, c.z + Math.sin(radTotal) * (radius + 5));
+  const raysGeo = new THREE.BufferGeometry().setFromPoints([c, r1, c, r2]);
+  const raysLine = new THREE.LineSegments(raysGeo, new THREE.LineBasicMaterial({ color: 0x64748b, linewidth: 1 }));
+  group.add(raysLine);
+
+  // Arrowheads at arc endpoints
+  const coneGeo = new THREE.ConeGeometry(1.2, 4, 8);
+  const coneMat = new THREE.MeshBasicMaterial({ color });
+  const arrow1 = new THREE.Mesh(coneGeo, coneMat);
+  arrow1.position.copy(points[0]);
+  arrow1.rotation.y = -Math.PI / 2;
+  group.add(arrow1);
+
+  const arrow2 = new THREE.Mesh(coneGeo, coneMat);
+  arrow2.position.copy(points[points.length - 1]);
+  arrow2.rotation.y = radTotal + Math.PI / 2;
+  group.add(arrow2);
+
+  // Text label
+  const midAngle = radTotal / 2;
+  const textPos = new THREE.Vector3(c.x + Math.cos(midAngle) * (radius + 8), c.y + 2, c.z + Math.sin(midAngle) * (radius + 8));
+  const labelSprite = createTextCanvasSprite(`${angleDeg.toFixed(1)}°`, {
+    borderColor: '#0284c7',
+    scaleX: 16,
+    scaleY: 5.5
+  });
+  labelSprite.position.copy(textPos);
+  group.add(labelSprite);
+
+  group.userData = {
+    type: 'drafting_angular',
+    level: 100,
+    center,
+    angleDeg,
+    radius
+  };
+  return group;
+}
+
+/**
+ * Creates a parametric 3D ordinate dimension set from a common 0.0 datum
+ */
+export function create3DOrdinateDimension(origin = [0, 0, 0], points = [[20, 0, 0], [50, 0, 0]], axis = 'x', options = {}) {
+  const group = new THREE.Group();
+  group.name = options.name || `Drafting_Ordinate_${Date.now()}`;
+  const orig = new THREE.Vector3(...origin);
+  const color = options.color || 0x0284c7;
+
+  // Datum origin marker (0.0)
+  const sphereGeo = new THREE.SphereGeometry(1.5, 12, 12);
+  const marker = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+  marker.position.copy(orig);
+  group.add(marker);
+
+  const origSprite = createTextCanvasSprite(`${axis.toUpperCase()} 0.00`, {
+    borderColor: '#ef4444',
+    scaleX: 16,
+    scaleY: 5
+  });
+  origSprite.position.set(orig.x, orig.y + 4, orig.z);
+  group.add(origSprite);
+
+  // Measured ordinate leader callouts
+  points.forEach((pArr, idx) => {
+    const pt = new THREE.Vector3(...pArr);
+    const dist = axis === 'x' ? Math.abs(pt.x - orig.x) : Math.abs(pt.z - orig.z);
+    const leaderY = pt.y + 12 + idx * 4;
+    const leaderEnd = new THREE.Vector3(pt.x, leaderY, pt.z);
+
+    const leaderGeo = new THREE.BufferGeometry().setFromPoints([pt, leaderEnd]);
+    const leaderLine = new THREE.Line(leaderGeo, new THREE.LineBasicMaterial({ color, linewidth: 1.5 }));
+    group.add(leaderLine);
+
+    const calloutSprite = createTextCanvasSprite(`${dist.toFixed(2)} mm`, {
+      borderColor: '#0284c7',
+      scaleX: 18,
+      scaleY: 5.2
+    });
+    calloutSprite.position.set(leaderEnd.x, leaderEnd.y + 2.5, leaderEnd.z);
+    group.add(calloutSprite);
+  });
+
+  group.userData = {
+    type: 'drafting_ordinate',
+    level: 100,
+    origin,
+    axis,
+    pointCount: points.length
+  };
+  return group;
+}
+
+/**
+ * Creates ANSI cross-hatching pattern wireframe lines
+ */
+export function create3DCrossHatch(w = 60, h = 40, yPos = 35.1, pitch = 5, angleDeg = 45, options = {}) {
+  const group = new THREE.Group();
+  group.name = options.name || `Drafting_CrossHatch_${Date.now()}`;
+  const color = options.color || 0x0284c7;
+
+  const lines = [];
+  const hw = w / 2;
+  const hh = h / 2;
+  const count = Math.ceil((w + h) / pitch);
+
+  for (let i = -count; i <= count; i++) {
+    const offset = i * pitch;
+    const x1 = Math.max(-hw, Math.min(hw, offset - hh));
+    const z1 = Math.max(-hh, Math.min(hh, -offset + hw));
+    const x2 = Math.max(-hw, Math.min(hw, offset + hh));
+    const z2 = Math.max(-hh, Math.min(hh, offset - hw));
+
+    lines.push(new THREE.Vector3(x1, yPos, z1));
+    lines.push(new THREE.Vector3(x2, yPos, z2));
+  }
+
+  // Boundary rectangle
+  lines.push(new THREE.Vector3(-hw, yPos, -hh), new THREE.Vector3(hw, yPos, -hh));
+  lines.push(new THREE.Vector3(hw, yPos, -hh), new THREE.Vector3(hw, yPos, hh));
+  lines.push(new THREE.Vector3(hw, yPos, hh), new THREE.Vector3(-hw, yPos, hh));
+  lines.push(new THREE.Vector3(-hw, yPos, hh), new THREE.Vector3(-hw, yPos, -hh));
+
+  const geo = new THREE.BufferGeometry().setFromPoints(lines);
+  const mat = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color, opacity: 0.85, transparent: true }));
+  group.add(mat);
+
+  group.userData = {
+    type: 'drafting_cross_hatch',
+    level: 100,
+    width: w,
+    height: h,
+    pitch,
+    angleDeg
+  };
+  return group;
+}
+
+/**
+ * Creates CAD extension witness lines with standard standoff gap
+ */
+export function create3DWitnessLine(p1, p2, offset = 12, options = {}) {
+  const group = new THREE.Group();
+  group.name = options.name || `Drafting_WitnessLine_${Date.now()}`;
+  const v1 = new THREE.Vector3(...p1);
+  const v2 = new THREE.Vector3(...p2);
+  const color = options.color || 0x64748b;
+
+  const w1End = new THREE.Vector3(v1.x, v1.y + offset, v1.z);
+  const w2End = new THREE.Vector3(v2.x, v2.y + offset, v2.z);
+
+  const geo = new THREE.BufferGeometry().setFromPoints([
+    v1, w1End,
+    v2, w2End
+  ]);
+  const lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color, linewidth: 1.2 }));
+  group.add(lines);
+
+  group.userData = {
+    type: 'drafting_witness_line',
+    level: 100,
+    p1,
+    p2,
+    offset
+  };
+  return group;
+}
+
+/**
+ * Explodes composite drafting dimensions into editable wireframe vector lines
+ */
+export function explodeDimensionToLines(dimensionGroup) {
+  if (!dimensionGroup) return null;
+  const explodedGroup = new THREE.Group();
+  explodedGroup.name = `${dimensionGroup.name}_Exploded_Wireframe`;
+
+  dimensionGroup.traverse((child) => {
+    if (child.isLine || child.isLineSegments) {
+      explodedGroup.add(child.clone());
+    }
+  });
+
+  explodedGroup.userData = {
+    type: 'wireframe_exploded',
+    originalType: dimensionGroup.userData?.type || 'dimension',
+    level: 100
+  };
+  return explodedGroup;
+}
+
+/**
  * Re-export Native STEP (ISO 10303-21) and IGES B-Rep solid model parsers and exporters
  */
 export {

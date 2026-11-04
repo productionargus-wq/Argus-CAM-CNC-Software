@@ -15,6 +15,7 @@ import { parseAnyCADFile, ALL_SUPPORTED_EXTENSIONS_STRING } from '../utils/unive
 import SurfacesRibbonGroup from './ribbon/SurfacesRibbonGroup';
 import SolidsRibbonGroup from './ribbon/SolidsRibbonGroup';
 import ModelPrepRibbonGroup from './ribbon/ModelPrepRibbonGroup';
+import DraftingRibbonGroup from './ribbon/DraftingRibbonGroup';
 
 export default function RibbonBar({
   activeTab,
@@ -1365,135 +1366,13 @@ export default function RibbonBar({
 
         {/* ==================== 8. DRAFTING TAB ==================== */}
         {activeTab === 'Drafting' && (
-          <>
-            {/* Dimension */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('linear') : null}
-                  title="Smart Linear Dimension (Horizontal, Vertical & Aligned)"
-                >
-                  <Scissors size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Smart<br />Dimension</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Horizontal Dimension')} title="Horizontal Dimension">
-                  <div style={{ width: '20px', height: '2px', background: '#94a3b8', margin: '10px 0' }} />
-                  <span className="btn-label">Horizontal</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Angular Dimension')} title="Angular Dimension Between Lines">
-                  <Compass size={20} color="#f59e0b" />
-                  <span className="btn-label">Angular</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('radial') : null}
-                  title="3D Radial (R) & Diametral (Ø) Leader Callouts"
-                >
-                  <Disc size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Circular<br />Callout</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Parallel Dimension')} title="Parallel Dimension">
-                  <Layers size={20} color="#60a5fa" />
-                  <span className="btn-label">Parallel</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Point Dimension')} title="Point Coordinate Dimension">
-                  <Crosshair size={20} color="#c084fc" />
-                  <span className="btn-label">Point</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Baseline Dimension')} title="Baseline Dimension Stack">
-                  <Grid size={20} color="#34d399" />
-                  <span className="btn-label">Baseline</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Chained Dimension')} title="Chained Continuous Dimension">
-                  <Sliders size={20} color="#f43f5e" />
-                  <span className="btn-label">Chained</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Dimension</span>
-            </div>
-
-            {/* Ordinate */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Horizontal Ordinate')} title="Horizontal Ordinate Dimensioning">
-                  <Grid size={20} color="#38bdf8" />
-                  <span className="btn-label">Horizontal<br />Ordinate</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Vertical Ordinate')} title="Vertical Ordinate Dimensioning">
-                  <Grid size={20} color="#10b981" />
-                  <span className="btn-label">Vertical<br />Ordinate</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Parallel Ordinate')} title="Parallel Ordinate Dimensioning">
-                  <Grid size={20} color="#f59e0b" />
-                  <span className="btn-label">Parallel<br />Ordinate</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Ordinate</span>
-            </div>
-
-            {/* Annotate */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('leader') : null}
-                  title="Machining Operator Leader Note"
-                >
-                  <FileText size={22} color="#a855f7" />
-                  <span className="btn-label">Note /<br />Leader</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Witness Line')} title="Add Witness Extension Line">
-                  <div style={{ width: '18px', height: '2px', background: '#38bdf8', margin: '10px 0' }} />
-                  <span className="btn-label">Witness<br />Line</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Cross Hatch')} title="Cross Hatch Section Pattern">
-                  <Grid size={20} color="#facc15" />
-                  <span className="btn-label">Cross<br />Hatch</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('datum') : null}
-                  title="WCS Coordinate Datum Tags (G54 / G55 / Datum -A-)"
-                >
-                  <Crosshair size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>WCS Datum<br />Tag</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Annotate</span>
-            </div>
-
-            {/* Regenerate & Modify */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Regenerate All Dimensions')} title="Regenerate All Annotations">
-                  <RefreshCw size={20} color="#10b981" />
-                  <span className="btn-label">Regenerate<br />All</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Align Note')} title="Align Multiple Notes">
-                  <Sliders size={20} color="#38bdf8" />
-                  <span className="btn-label">Align<br />Note</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenDraftingModal ? onOpenDraftingModal('manager') : null}
-                  title="Drafting Entity Manager Tree"
-                >
-                  <Layers size={21} color="#60a5fa" />
-                  <span className="btn-label">Drafting<br />Manager</span>
-                </button>
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenEngravingStudio}
-                  title="Open CNC 2.5D & 3D Engraving & V-Carve Studio"
-                >
-                  <Type size={22} color="#06b6d4" />
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 700 }}>Engraving<br />&amp; V-Carve</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Modify &amp; Engrave</span>
-            </div>
-          </>
+          <DraftingRibbonGroup
+            onAction={(action, id) => {
+              if (onOpenDraftingModal) {
+                onOpenDraftingModal(action || id);
+              }
+            }}
+          />
         )}
 
         {/* ==================== 9. TRANSFORM TAB ==================== */}
