@@ -18,6 +18,7 @@ import ModelPrepRibbonGroup from './ribbon/ModelPrepRibbonGroup';
 import DraftingRibbonGroup from './ribbon/DraftingRibbonGroup';
 import TransformRibbonGroup from './ribbon/TransformRibbonGroup';
 import MachineRibbonGroup from './ribbon/MachineRibbonGroup';
+import ViewRibbonGroup from './ribbon/ViewRibbonGroup';
 
 export default function RibbonBar({
   activeTab,
@@ -98,6 +99,25 @@ export default function RibbonBar({
   onChangeWorkpieceColor,
   onChangeRenderMode,
   renderMode,
+  materialStyle = 'metallic',
+  onChangeMaterialStyle,
+  translucencyEnabled = false,
+  onToggleTranslucency,
+  showBackside = false,
+  onToggleBackside,
+  showAxes = true,
+  onToggleAxes,
+  showGnomons = true,
+  onToggleGnomons,
+  showGrid = true,
+  onToggleGrid,
+  snapToGrid = false,
+  onToggleSnapToGrid,
+  isViewsheetsVisible = true,
+  onToggleViewsheets,
+  onAddViewsheet,
+  onSaveViewsheetBookmark,
+  onRestoreViewsheetBookmark,
   layerVisibility,
   onToggleLayer,
   onSnapCamera,
@@ -1467,196 +1487,159 @@ export default function RibbonBar({
 
         {/* ==================== 11. VIEW TAB ==================== */}
         {activeTab === 'View' && (
-          <>
-            {/* Workspace View Mode (2D Board | Split | 3D Viewport) */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className={`ribbon-btn-large ${workspaceViewMode === '2d' ? 'ribbon-btn-highlight' : ''}`}
-                  onClick={() => onChangeViewMode && onChangeViewMode('2d')}
-                  title="Switch to Full 2D CAD Design Board"
-                >
-                  <span style={{ fontSize: '20px' }}>🎨</span>
-                  <span className="btn-label" style={{ fontWeight: 600 }}>2D Design<br />Board</span>
-                </button>
-                <button
-                  className={`ribbon-btn-large ${workspaceViewMode === 'split' ? 'ribbon-btn-highlight' : ''}`}
-                  onClick={() => onChangeViewMode && onChangeViewMode('split')}
-                  title="Switch to Side-by-Side Split View"
-                >
-                  <span style={{ fontSize: '20px' }}>◫</span>
-                  <span className="btn-label" style={{ fontWeight: 600 }}>Split<br />2D / 3D</span>
-                </button>
-                <button
-                  className={`ribbon-btn-large ${workspaceViewMode === '3d' ? 'ribbon-btn-highlight' : ''}`}
-                  onClick={() => onChangeViewMode && onChangeViewMode('3d')}
-                  title="Switch to Full 3D Machine Viewport"
-                >
-                  <Box size={20} color="#38bdf8" />
-                  <span className="btn-label" style={{ fontWeight: 600 }}>3D<br />Machine</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Workspace View</span>
-            </div>
+          <ViewRibbonGroup
+            activeManagerTab={activeManagerTab}
+            renderMode={renderMode}
+            materialStyle={materialStyle}
+            translucencyEnabled={translucencyEnabled}
+            showBackside={showBackside}
+            showAxes={showAxes}
+            showGnomons={showGnomons}
+            showGrid={showGrid}
+            snapToGrid={snapToGrid}
+            isViewsheetsVisible={isViewsheetsVisible}
+            onAction={(action, id, payload) => {
+              // Zoom Actions
+              if (action === 'view_zoom_fit' && onSnapCamera) {
+                onSnapCamera('fit');
+                return;
+              }
+              if (action === 'view_unzoom_50' && onSnapCamera) {
+                onSnapCamera('unzoom_50');
+                return;
+              }
+              if (action === 'view_unzoom_80' && onSnapCamera) {
+                onSnapCamera('unzoom_80');
+                return;
+              }
+              if (action === 'view_zoom_window') {
+                if (payload === 'target' && onSnapCamera) onSnapCamera('fit');
+                return;
+              }
 
-            {/* Zoom */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('fit')} title="Fit Workpiece to Viewport">
-                  <Maximize2 size={20} color="#e2e8f0" />
-                  <span className="btn-label" style={{ fontWeight: 600 }}>Fit</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Unzoom 50%')} title="Zoom Out 50%">
-                  <Minimize2 size={20} color="#94a3b8" />
-                  <span className="btn-label">Unzoom<br />50%</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Unzoom 80%')} title="Zoom Out 80%">
-                  <Minimize2 size={20} color="#94a3b8" />
-                  <span className="btn-label">Unzoom<br />80%</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Zoom</span>
-            </div>
+              // Graphics View Actions
+              if (action === 'view_gv_top' && onSnapCamera) {
+                onSnapCamera('top');
+                return;
+              }
+              if (action === 'view_gv_iso' && onSnapCamera) {
+                onSnapCamera('iso');
+                return;
+              }
+              if (action === 'view_gv_right' && onSnapCamera) {
+                if (payload === 'left_neg') onSnapCamera('left');
+                else onSnapCamera('right');
+                return;
+              }
+              if (action === 'view_gv_front' && onSnapCamera) {
+                if (payload === 'back_pos') onSnapCamera('back');
+                else if (payload === 'bottom_neg') onSnapCamera('bottom');
+                else onSnapCamera('front');
+                return;
+              }
 
-            {/* Graphics View */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('iso')} title="Isometric Camera View">
-                  <Box size={20} color="#38bdf8" />
-                  <span className="btn-label">Isometric</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('top')} title="Top View (G17 XY)">
-                  <Eye size={20} color="#f59e0b" />
-                  <span className="btn-label">Top</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('front')} title="Front View (G18 XZ)">
-                  <Eye size={20} color="#10b981" />
-                  <span className="btn-label">Front</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('right')} title="Right View (G19 YZ)">
-                  <Eye size={20} color="#a855f7" />
-                  <span className="btn-label">Right</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('bottom')} title="Bottom View (-Z)">
-                  <Eye size={20} color="#94a3b8" />
-                  <span className="btn-label">Bottom</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSnapCamera('left')} title="Left View (-X)">
-                  <Eye size={20} color="#94a3b8" />
-                  <span className="btn-label">Left</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Graphics View</span>
-            </div>
+              // Appearance Actions
+              if (action === 'view_appearance_launcher' && onOpenViewStudioModal) {
+                onOpenViewStudioModal();
+                return;
+              }
+              if (action === 'view_app_wireframe' && onChangeRenderMode) {
+                onChangeRenderMode(renderMode === 'wireframe' ? 'edges' : 'wireframe');
+                return;
+              }
+              if (action === 'view_app_outline_shaded' && onChangeRenderMode) {
+                if (payload === 'filled_shaded') onChangeRenderMode('shaded');
+                else if (payload === 'hidden_line') onChangeRenderMode('hidden_line');
+                else onChangeRenderMode('edges');
+                return;
+              }
+              if (action === 'view_mat_metallic' && onChangeMaterialStyle) {
+                onChangeMaterialStyle('metallic');
+                if (onChangeRenderMode) onChangeRenderMode('shaded');
+                return;
+              }
+              if (action === 'view_mat_plastic' && onChangeMaterialStyle) {
+                onChangeMaterialStyle('plastic');
+                if (onChangeRenderMode) onChangeRenderMode('shaded');
+                return;
+              }
+              if (action === 'view_mat_glossy' && onChangeMaterialStyle) {
+                onChangeMaterialStyle('glossy');
+                if (onChangeRenderMode) onChangeRenderMode('shaded');
+                return;
+              }
+              if (action === 'view_mat_translucency' && onToggleTranslucency) {
+                onToggleTranslucency();
+                return;
+              }
+              if (action === 'view_mat_backside' && onToggleBackside) {
+                onToggleBackside();
+                return;
+              }
 
-            {/* Appearance */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className={`ribbon-btn-large ${renderMode === 'wireframe' ? 'active' : ''}`} onClick={() => onChangeRenderMode('wireframe')} title="Pure CAD Wireframe Only">
-                  <Crosshair size={20} color="#10b981" />
-                  <span className="btn-label">Wireframe</span>
-                </button>
-                <button className={`ribbon-btn-large ${renderMode === 'edges' ? 'active' : ''}`} onClick={() => onChangeRenderMode('edges')} title="Outline Shaded with Polygon Edges">
-                  <Layers size={20} color="#f59e0b" />
-                  <span className="btn-label">Outline<br />Shaded</span>
-                </button>
-                <button className={`ribbon-btn-large ${renderMode === 'shaded' ? 'active' : ''}`} onClick={() => onChangeRenderMode('shaded')} title="PBR Metallic Shading">
-                  <Eye size={20} color="#38bdf8" />
-                  <span className="btn-label">Metallic</span>
-                </button>
-                <button className={`ribbon-btn-large ${renderMode === 'transparent' ? 'active' : ''}`} onClick={() => onChangeRenderMode('transparent')} title="Translucency Glass">
-                  <Eye size={20} color="#a855f7" />
-                  <span className="btn-label">Translucency</span>
-                </button>
-                <button className={`ribbon-btn-large ${renderMode === 'normals' ? 'active' : ''}`} onClick={() => onChangeRenderMode('normals')} title="Inspect Surface Normals">
-                  <Sparkles size={20} color="#ec4899" />
-                  <span className="btn-label">Normals</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Appearance</span>
-            </div>
+              // Managers Actions
+              if (action.startsWith('view_mgr_') && onSelectManagerTab) {
+                const targetTab = payload || (action === 'view_mgr_toolpaths' ? 'Toolpaths'
+                  : action === 'view_mgr_solids' ? 'Solids'
+                  : action === 'view_mgr_planes' ? 'Planes'
+                  : action === 'view_mgr_levels' ? 'Levels'
+                  : action === 'view_mgr_groups' ? 'Groups'
+                  : action === 'view_mgr_recent' ? 'Recent Functions'
+                  : action === 'view_mgr_multithreading' ? 'Multi-Threading'
+                  : null);
+                if (targetTab) onSelectManagerTab(targetTab);
+                return;
+              }
 
-            {/* Managers */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onSelectManagerTab && onSelectManagerTab('Toolpaths')} title="Toolpaths Manager">
-                  <Layers size={20} color="#10b981" />
-                  <span className="btn-label">Toolpaths</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSelectManagerTab && onSelectManagerTab('Levels')} title="Levels Manager">
-                  <Layers size={20} color="#38bdf8" />
-                  <span className="btn-label">Levels</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSelectManagerTab && onSelectManagerTab('Solids')} title="Solids Manager">
-                  <Box size={20} color="#f59e0b" />
-                  <span className="btn-label">Solids</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onSelectManagerTab && onSelectManagerTab('Planes')} title="Planes Manager">
-                  <Compass size={20} color="#a855f7" />
-                  <span className="btn-label">Planes</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Managers</span>
-            </div>
+              // Display Actions
+              if (action === 'view_disp_axes' && onToggleAxes) {
+                onToggleAxes();
+                return;
+              }
+              if (action === 'view_disp_gnomons' && onToggleGnomons) {
+                onToggleGnomons();
+                return;
+              }
 
-            {/* Display */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onToggleLayer('bed')} title="Toggle Grid Bed">
-                  <Grid size={20} color="#60a5fa" />
-                  <span className="btn-label">Show Grid</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onToggleLayer('stock')} title="Toggle Stock Bounding Box">
-                  <Box size={20} color="#f59e0b" />
-                  <span className="btn-label">Show Stock</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onToggleLayer('fixture')} title="Toggle Fixture Vise">
-                  <Wrench size={20} color="#a855f7" />
-                  <span className="btn-label">Show Vise</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Display</span>
-            </div>
+              // Grid Actions
+              if (action === 'view_grid_launcher' && onOpenViewStudioModal) {
+                onOpenViewStudioModal();
+                return;
+              }
+              if (action === 'view_grid_show' && onToggleGrid) {
+                onToggleGrid();
+                return;
+              }
+              if (action === 'view_grid_snap' && onToggleSnapToGrid) {
+                onToggleSnapToGrid();
+                return;
+              }
 
-            {/* Controller & Studio */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className={`ribbon-btn-large ${cameraMode === 'orthographic' ? 'active' : ''}`}
-                  onClick={() => onToggleCameraMode && onToggleCameraMode(cameraMode === 'orthographic' ? 'perspective' : 'orthographic')}
-                  title="Toggle Perspective vs Orthographic Parallel CAD Projection"
-                >
-                  <Camera size={20} color={cameraMode === 'orthographic' ? '#38bdf8' : '#64748b'} />
-                  <span className="btn-label">{cameraMode === 'orthographic' ? 'Ortho CAD' : 'Persp 3D'}</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onToggleTheme}
-                  title={`Toggle UI Theme (Current: ${theme === 'light' ? 'Light CAD Day' : 'Dark CAD Night'})`}
-                >
-                  {theme === 'light' ? <Sun size={20} color="#d97706" /> : <Moon size={20} color="#38bdf8" />}
-                  <span className="btn-label">{theme === 'light' ? 'Light Theme' : 'Dark Theme'}</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenViewStudioModal}
-                  title="Open Mastercam 3D View Studio"
-                >
-                  <Sliders size={20} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>View Studio</span>
-                </button>
-                <button
-                  className={`ribbon-btn-large ${clippingPlane?.enabled ? 'active' : ''}`}
-                  onClick={() => onUpdateClippingPlane && onUpdateClippingPlane({ ...clippingPlane, enabled: !clippingPlane?.enabled })}
-                  title="Toggle 3D Cross-Section Cut"
-                >
-                  <Scissors size={20} color={clippingPlane?.enabled ? '#f472b6' : '#ec4899'} />
-                  <span className="btn-label">Section<br />Cut</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Controller &amp; Studio</span>
-            </div>
-          </>
+              // Controller Actions
+              if (action === 'view_controller_rotation_position') {
+                if (onSnapCamera) onSnapCamera('fit');
+                return;
+              }
+
+              // Viewsheets Actions
+              if (action === 'view_viewsheet_toggle' && onToggleViewsheets) {
+                onToggleViewsheets();
+                return;
+              }
+              if (action === 'view_viewsheet_new' && onAddViewsheet) {
+                onAddViewsheet();
+                return;
+              }
+              if (action === 'view_viewsheet_save' && onSaveViewsheetBookmark) {
+                onSaveViewsheetBookmark();
+                return;
+              }
+              if (action === 'view_viewsheet_restore' && onRestoreViewsheetBookmark) {
+                onRestoreViewsheetBookmark();
+                return;
+              }
+            }}
+          />
         )}
 
         {/* ==================== 12. TOOLPATHS TAB ==================== */}

@@ -568,6 +568,8 @@ export default function Viewport3D({
     else if (preset === 'left') cam.position.set(-360, 50, 0);
     else if (preset === 'back') cam.position.set(0, 50, -360);
     else if (preset === 'fit') cam.position.set(200, 150, 240);
+    else if (preset === 'unzoom_50') cam.position.multiplyScalar(1.5);
+    else if (preset === 'unzoom_80') cam.position.multiplyScalar(1.8);
     cam.lookAt(0, 45, 0);
   };
 

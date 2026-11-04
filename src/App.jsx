@@ -62,6 +62,7 @@ import AddInsManagerModal from './components/AddInsManagerModal';
 import PartStatisticsModal from './components/PartStatisticsModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
+import ViewsheetBar from './components/ViewsheetBar';
 import {
   createImpellerGeometry,
   createAerospaceBracket,
@@ -135,6 +136,20 @@ export default function App() {
   const [customGeometry, setCustomGeometry] = useState([]);
   const [workspaceViewMode, setWorkspaceViewMode] = useState('3d'); // '3d' | '2d' | 'split'
   const [boardShapes, setBoardShapes] = useState(() => getCADTemplate('mounting-plate', 200, 150));
+
+  // View Tab & Viewsheets State
+  const [materialStyle, setMaterialStyle] = useState('metallic');
+  const [translucencyEnabled, setTranslucencyEnabled] = useState(false);
+  const [showBackside, setShowBackside] = useState(false);
+  const [showAxes, setShowAxes] = useState(true);
+  const [showGnomons, setShowGnomons] = useState(true);
+  const [showGrid, setShowGrid] = useState(true);
+  const [snapToGrid, setSnapToGrid] = useState(false);
+  const [isViewsheetsVisible, setIsViewsheetsVisible] = useState(true);
+  const [viewsheets, setViewsheets] = useState([
+    { id: 'vs_1', name: 'Viewsheet #1', bookmark: null, active: true }
+  ]);
+  const [activeViewsheetId, setActiveViewsheetId] = useState('vs_1');
 
   // Machine Definition
   const [machines] = useState([
@@ -1562,6 +1577,76 @@ export default function App() {
     setCameraCommand({ preset, timestamp: Date.now() });
   };
 
+  // Mastercam Viewsheet Bookmark Handlers
+  const handleSelectViewsheet = (id) => {
+    setActiveViewsheetId(id);
+    const sheet = viewsheets.find((s) => s.id === id);
+    if (sheet?.bookmark) {
+      if (sheet.bookmark.cameraPreset) handleSnapCamera(sheet.bookmark.cameraPreset);
+      if (sheet.bookmark.renderMode) setRenderMode(sheet.bookmark.renderMode);
+      if (sheet.bookmark.materialStyle) setMaterialStyle(sheet.bookmark.materialStyle);
+      if (sheet.bookmark.activePlane) setActivePlane(sheet.bookmark.activePlane);
+      showToast(`Restored bookmark for "${sheet.name}"`, 'info');
+    }
+  };
+
+  const handleAddViewsheet = () => {
+    const nextNum = viewsheets.length + 1;
+    const newSheet = {
+      id: `vs_${Date.now()}`,
+      name: `Viewsheet #${nextNum}`,
+      bookmark: null,
+      active: true
+    };
+    setViewsheets((prev) => [...prev, newSheet]);
+    setActiveViewsheetId(newSheet.id);
+    showToast(`Created "${newSheet.name}"`, 'success');
+  };
+
+  const handleDeleteViewsheet = (id) => {
+    if (viewsheets.length <= 1) return;
+    setViewsheets((prev) => prev.filter((s) => s.id !== id));
+    if (activeViewsheetId === id) {
+      const remaining = viewsheets.filter((s) => s.id !== id);
+      if (remaining.length > 0) setActiveViewsheetId(remaining[0].id);
+    }
+  };
+
+  const handleRenameViewsheet = (id, newName) => {
+    setViewsheets((prev) => prev.map((s) => (s.id === id ? { ...s, name: newName } : s)));
+  };
+
+  const handleSaveViewsheetBookmark = () => {
+    setViewsheets((prev) =>
+      prev.map((s) =>
+        s.id === activeViewsheetId
+          ? {
+              ...s,
+              bookmark: {
+                renderMode,
+                materialStyle,
+                activePlane,
+                savedAt: Date.now()
+              }
+            }
+          : s
+      )
+    );
+    showToast('Saved current view bookmark to active viewsheet.', 'success');
+  };
+
+  const handleRestoreViewsheetBookmark = () => {
+    const sheet = viewsheets.find((s) => s.id === activeViewsheetId);
+    if (sheet?.bookmark) {
+      if (sheet.bookmark.renderMode) setRenderMode(sheet.bookmark.renderMode);
+      if (sheet.bookmark.materialStyle) setMaterialStyle(sheet.bookmark.materialStyle);
+      if (sheet.bookmark.activePlane) setActivePlane(sheet.bookmark.activePlane);
+      showToast(`Restored bookmark for "${sheet.name}"`, 'info');
+    } else {
+      showToast('No saved bookmark for this viewsheet yet.', 'warning');
+    }
+  };
+
   const handleSelectPlane = (planeName) => {
     setActivePlane(planeName);
     const target = planesList.find((p) => p.name === planeName);
@@ -2152,6 +2237,25 @@ export default function App() {
         onChangeWorkpieceColor={setWorkpieceColor}
         onChangeRenderMode={setRenderMode}
         renderMode={renderMode}
+        materialStyle={materialStyle}
+        onChangeMaterialStyle={setMaterialStyle}
+        translucencyEnabled={translucencyEnabled}
+        onToggleTranslucency={() => setTranslucencyEnabled((prev) => !prev)}
+        showBackside={showBackside}
+        onToggleBackside={() => setShowBackside((prev) => !prev)}
+        showAxes={showAxes}
+        onToggleAxes={() => setShowAxes((prev) => !prev)}
+        showGnomons={showGnomons}
+        onToggleGnomons={() => setShowGnomons((prev) => !prev)}
+        showGrid={showGrid}
+        onToggleGrid={() => setShowGrid((prev) => !prev)}
+        snapToGrid={snapToGrid}
+        onToggleSnapToGrid={() => setSnapToGrid((prev) => !prev)}
+        isViewsheetsVisible={isViewsheetsVisible}
+        onToggleViewsheets={() => setIsViewsheetsVisible((prev) => !prev)}
+        onAddViewsheet={handleAddViewsheet}
+        onSaveViewsheetBookmark={handleSaveViewsheetBookmark}
+        onRestoreViewsheetBookmark={handleRestoreViewsheetBookmark}
         layerVisibility={layerVisibility}
         onToggleLayer={handleToggleLayer}
         onSnapCamera={handleSnapCamera}
@@ -2364,7 +2468,19 @@ export default function App() {
         )}
       </div>
 
-      {/* 4. Bottom Status Bar */}
+      {/* 4. Mastercam Viewsheets Strip */}
+      <ViewsheetBar
+        isVisible={isViewsheetsVisible}
+        viewsheets={viewsheets}
+        activeViewsheetId={activeViewsheetId}
+        onSelectViewsheet={handleSelectViewsheet}
+        onAddViewsheet={handleAddViewsheet}
+        onDeleteViewsheet={handleDeleteViewsheet}
+        onRenameViewsheet={handleRenameViewsheet}
+        onSaveBookmark={handleSaveViewsheetBookmark}
+      />
+
+      {/* 5. Bottom Status Bar */}
       <StatusBar coords={coords} activeWcs={activeWcs} activeMachine={activeMachine} theme={theme} />
 
       {/* Mastercam Backstage File Menu UI */}
