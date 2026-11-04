@@ -16,7 +16,8 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "three": "^0.174.0",
-    "three-bvh-csg": "^0.0.18"
+    "three-bvh-csg": "^0.0.18",
+    "three-mesh-bvh": "^0.9.18"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -110,3 +110,31 @@ export function createParametricCutterSolid(type = 'pocket', params = {}) {
   return mesh;
 }
 
+/**
+ * Creates a mold cavity / core stamp impression in a solid billet
+ * @param {THREE.Mesh} billetMesh Base block or mold plate
+ * @param {THREE.Mesh} stampMesh Part solid to impress
+ * @param {number} shrinkageFactor Material shrinkage compensation (e.g., 1.005 for 0.5% POM/ABS)
+ * @returns {THREE.Mesh} Mold impression body
+ */
+export function performSolidImpression(billetMesh, stampMesh, shrinkageFactor = 1.002) {
+  if (!billetMesh) {
+    billetMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(100, 45, 80),
+      new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.8, roughness: 0.25 })
+    );
+  }
+  if (!stampMesh) {
+    stampMesh = createParametricCutterSolid('pocket', { width: 50, length: 40, depth: 20 });
+  }
+
+  // Scale stamp for shrinkage compensation
+  stampMesh.scale.multiplyScalar(shrinkageFactor);
+  stampMesh.updateMatrixWorld(true);
+
+  const result = performSolidBoolean(billetMesh, stampMesh, BOOLEAN_OPERATIONS.SUBTRACT);
+  result.name = `Solid_Impression_Cavity`;
+  result.userData = { type: 'solid_impression', shrinkageFactor };
+  return result;
+}
+

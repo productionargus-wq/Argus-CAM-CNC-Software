@@ -13,6 +13,7 @@ import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../uti
 import { parseProjectMCAM } from '../utils/projectStorage';
 import { parseAnyCADFile, ALL_SUPPORTED_EXTENSIONS_STRING } from '../utils/universalCadParser';
 import SurfacesRibbonGroup from './ribbon/SurfacesRibbonGroup';
+import SolidsRibbonGroup from './ribbon/SolidsRibbonGroup';
 
 export default function RibbonBar({
   activeTab,
@@ -1250,210 +1251,15 @@ export default function RibbonBar({
 
         {/* ==================== 5. SOLIDS TAB ==================== */}
         {activeTab === 'Solids' && (
-          <>
-            {/* Simple */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('cylinder') : onAddSolid('cylinder')}
-                  title="Create Parametric 3D Cylindrical Blank Solid"
-                >
-                  <Orbit size={22} color="#60a5fa" />
-                  <span className="btn-label" style={{ color: '#60a5fa', fontWeight: 600 }}>Cylinder</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('box') : onAddSolid('box')}
-                  title="Create Parametric 3D Rectangular Billet Solid"
-                >
-                  <Box size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Block</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('sphere') : onAddSolid('sphere')}
-                  title="Create Parametric Spherical Solid"
-                >
-                  <Disc size={20} color="#10b981" />
-                  <span className="btn-label">Sphere</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('cone') : onAddSolid('cone')}
-                  title="Create Parametric Conical Frustum Solid"
-                >
-                  <Compass size={20} color="#f59e0b" />
-                  <span className="btn-label">Cone</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('torus') : onAddSolid('torus')}
-                  title="Create Parametric Torus Ring Solid"
-                >
-                  <Orbit size={20} color="#a855f7" />
-                  <span className="btn-label">Torus</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Simple</span>
-            </div>
-
-            {/* Create */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('extrude') : onAddSolid('extrude')}
-                  title="Extrude 2D Contour to 3D Solid Body"
-                >
-                  <Sliders size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Extrude</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Revolve Solid')} title="Revolve Profile Into Solid of Revolution">
-                  <Disc size={20} color="#ec4899" />
-                  <span className="btn-label">Revolve</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Loft Solid')} title="Loft Solid Body Through Multiple Sections">
-                  <Layers size={20} color="#3b82f6" />
-                  <span className="btn-label">Loft</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Sweep Solid')} title="Sweep Solid Profile Along Trajectory">
-                  <Move size={20} color="#c084fc" />
-                  <span className="btn-label">Sweep</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Boolean Solid')} title="Boolean Union, Subtract, or Intersect">
-                  <Sparkles size={20} color="#f59e0b" />
-                  <span className="btn-label">Boolean</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Impression Solid')} title="Create Mold Core/Cavity Impression">
-                  <Box size={20} color="#06b6d4" />
-                  <span className="btn-label">Impression</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Rectangular Pattern')} title="Rectangular Matrix Pattern of Features">
-                  <Grid size={20} color="#38bdf8" />
-                  <span className="btn-label">Rectangular<br />Pattern</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Circular Pattern')} title="Circular PCD Pattern of Features">
-                  <Orbit size={20} color="#facc15" />
-                  <span className="btn-label">Circular<br />Pattern</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Manual Pattern')} title="Point-Driven Manual Pattern">
-                  <Crosshair size={20} color="#94a3b8" />
-                  <span className="btn-label">Manual<br />Pattern</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('From Surfaces')} title="Stitch Surfaces into Watertight Solid Body">
-                  <Layers size={20} color="#34d399" />
-                  <span className="btn-label">From<br />Surfaces</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Create</span>
-            </div>
-
-            {/* Modify */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Constant Fillet')} title="Apply Constant Radius Fillet to Solid Edges">
-                  <Orbit size={20} color="#10b981" />
-                  <span className="btn-label">Constant<br />Fillet</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('One Distance Chamfer')} title="Apply One Distance Chamfer to Edges">
-                  <Scissors size={20} color="#f59e0b" />
-                  <span className="btn-label">One Distance<br />Chamfer</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Shell Solid')} title="Hollow Out Solid to Thin-Wall Shell">
-                  <Box size={20} color="#38bdf8" />
-                  <span className="btn-label">Shell</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Thicken Solid')} title="Thicken Sheet Surface into Solid">
-                  <Maximize2 size={20} color="#60a5fa" />
-                  <span className="btn-label">Thicken</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Draft Solid')} title="Add Mold Release Draft Angle to Faces">
-                  <Maximize2 size={20} color="#c084fc" />
-                  <span className="btn-label">Draft</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Trim by Plane')} title="Trim Solid Body by Cutting Plane">
-                  <Scissors size={20} color="#ef4444" />
-                  <span className="btn-label">Trim by<br />Plane</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Modify</span>
-            </div>
-
-            {/* Drawing & Features */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('manager') : null}
-                  title="Open Solids History Tree & Feature Manager"
-                >
-                  <Layers size={22} color="#60a5fa" />
-                  <span className="btn-label" style={{ color: '#60a5fa', fontWeight: 600 }}>Layout /<br />Tree</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenSolidsModal ? onOpenSolidsModal('pocket') : null}
-                  title="Generate Milled Pocket Workpiece Cavity"
-                >
-                  <Sparkles size={22} color="#38bdf8" />
-                  <span className="btn-label">Pocket<br />Cavity</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenStockModal} title="Configure Raw Stock Bounding Box">
-                  <Settings size={20} color="#10b981" />
-                  <span className="btn-label">Stock<br />Setup</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenAFRModal}
-                  title="Automatic Feature Recognition (AFR) & Feature-Based Machining"
-                >
-                  <Sparkles size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Recognize<br />Features</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Drawing &amp; Features</span>
-            </div>
-
-            {/* Sample CAD Workpieces */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onSelectSampleModel && onSelectSampleModel('step_bracket')}
-                  title="Load Native ISO 10303-21 STEP Aerospace Bracket Solid"
-                >
-                  <FileCode size={20} color="#3b82f6" />
-                  <span className="btn-label" style={{ color: '#3b82f6', fontWeight: 600 }}>STEP<br />Bracket</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onSelectSampleModel && onSelectSampleModel('impeller')}
-                  title="Load 5-Axis Bladed Impeller Solid"
-                >
-                  <Compass size={20} color="#a855f7" />
-                  <span className="btn-label">5X Impeller<br />Solid</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onSelectSampleModel && onSelectSampleModel('bracket')}
-                  title="Load 3-Axis Aerospace Pocket Bracket"
-                >
-                  <Layers size={20} color="#06b6d4" />
-                  <span className="btn-label">Aero<br />Bracket</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onSelectSampleModel && onSelectSampleModel('mold')}
-                  title="Load Injection Mold Core Cavity Solid"
-                >
-                  <Box size={20} color="#f59e0b" />
-                  <span className="btn-label">Mold Core<br />Solid</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Sample Workpieces</span>
-            </div>
-          </>
+          <SolidsRibbonGroup
+            onAction={(action, id) => {
+              if (onOpenSolidsModal) {
+                onOpenSolidsModal(action || id);
+              } else if (onAddSolid) {
+                onAddSolid(id);
+              }
+            }}
+          />
         )}
 
         {/* ==================== 6. MODEL PREP TAB ==================== */}

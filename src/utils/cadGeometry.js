@@ -709,6 +709,463 @@ export function createSphereGeometry(radius = 30, name = "Spherical_Blank") {
 }
 
 /**
+ * Creates a Revolved 3D Solid Body (Turned Part / Flange)
+ */
+export function createRevolvedSolid(
+  rBase = 35,
+  rTop = 20,
+  height = 45,
+  sweepDeg = 360,
+  options = {}
+) {
+  const group = new THREE.Group();
+  const rad = (sweepDeg * Math.PI) / 180;
+  const geo = new THREE.CylinderGeometry(rTop, rBase, height, 36, 1, false, 0, rad);
+  const color = options.color || 0x0284c7;
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.8,
+    roughness: 0.25
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = height / 2;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x0369a1, linewidth: 1.5 }));
+  edgeLine.position.y = height / 2;
+  group.add(edgeLine);
+
+  group.name = options.name || `Solid_Revolved_R${Math.round(rBase)}xH${Math.round(height)}_${sweepDeg}deg`;
+  group.userData = { type: 'solid_revolved', rBase, rTop, height, sweepDeg };
+  return group;
+}
+
+/**
+ * Creates a Lofted 3D Solid Body
+ */
+export function createLoftSolid(
+  botW = 80,
+  botD = 60,
+  topW = 50,
+  topD = 40,
+  height = 40,
+  options = {}
+) {
+  const group = new THREE.Group();
+  const geo = new THREE.CylinderGeometry(
+    Math.sqrt(topW * topW + topD * topD) / 2,
+    Math.sqrt(botW * botW + botD * botD) / 2,
+    height,
+    4,
+    1
+  );
+  geo.rotateY(Math.PI / 4);
+
+  const color = options.color || 0x0284c7;
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.8,
+    roughness: 0.25
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = height / 2;
+  mesh.castShadow = true;
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x0369a1, linewidth: 1.5 }));
+  edgeLine.position.y = height / 2;
+  group.add(edgeLine);
+
+  group.name = options.name || `Solid_Loft_${Math.round(botW)}x${Math.round(botD)}_to_${Math.round(topW)}x${Math.round(topD)}`;
+  group.userData = { type: 'solid_loft', botW, botD, topW, topD, height };
+  return group;
+}
+
+/**
+ * Creates a Swept 3D Solid Tube
+ */
+export function createSweptSolid(
+  radius = 16,
+  length = 65,
+  options = {}
+) {
+  const group = new THREE.Group();
+  const curve = new THREE.CubicBezierCurve3(
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, length * 0.4, 0),
+    new THREE.Vector3(length * 0.4, length * 0.7, 0),
+    new THREE.Vector3(length * 0.8, length * 0.8, 0)
+  );
+
+  const geo = new THREE.TubeGeometry(curve, 24, radius, 16, false);
+  const color = options.color || 0x0284c7;
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.8,
+    roughness: 0.25
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo, 20);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x0369a1, linewidth: 1.2 }));
+  group.add(edgeLine);
+
+  group.name = options.name || `Solid_Sweep_R${radius}_L${length}`;
+  group.userData = { type: 'solid_sweep', radius, length };
+  return group;
+}
+
+/**
+ * Creates a Parametric Pattern Array of Solid Features (Rectangular, Circular, Manual)
+ */
+export function createSolidPattern(
+  patternType = 'rect',
+  params = {},
+  options = {}
+) {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({
+    color: options.color || 0x0284c7,
+    metalness: 0.8,
+    roughness: 0.25
+  });
+
+  const featureRadius = params.radius || 6;
+  const featureDepth = params.depth || 20;
+
+  if (patternType === 'rect') {
+    const countX = params.countX || 3;
+    const countY = params.countY || 3;
+    const spacingX = params.spacingX || 25;
+    const spacingY = params.spacingY || 25;
+
+    for (let ix = 0; ix < countX; ix++) {
+      for (let iy = 0; iy < countY; iy++) {
+        const cyl = new THREE.CylinderGeometry(featureRadius, featureRadius, featureDepth, 24);
+        const mesh = new THREE.Mesh(cyl, mat);
+        const posX = (ix - (countX - 1) / 2) * spacingX;
+        const posZ = (iy - (countY - 1) / 2) * spacingY;
+        mesh.position.set(posX, featureDepth / 2, posZ);
+        group.add(mesh);
+      }
+    }
+    group.name = options.name || `Solid_Pattern_Rect_${countX}x${countY}`;
+  } else if (patternType === 'circ') {
+    const count = params.count || 6;
+    const pcdRadius = params.pcdRadius || 35;
+
+    for (let i = 0; i < count; i++) {
+      const angle = (i * 2 * Math.PI) / count;
+      const cyl = new THREE.CylinderGeometry(featureRadius, featureRadius, featureDepth, 24);
+      const mesh = new THREE.Mesh(cyl, mat);
+      mesh.position.set(Math.cos(angle) * pcdRadius, featureDepth / 2, Math.sin(angle) * pcdRadius);
+      group.add(mesh);
+    }
+    group.name = options.name || `Solid_Pattern_Circ_${count}Holes_PCD${pcdRadius * 2}`;
+  } else {
+    // Manual coordinate points
+    const points = params.points || [
+      [-25, -20], [0, 15], [30, -10], [10, -25]
+    ];
+    points.forEach(([px, pz]) => {
+      const cyl = new THREE.CylinderGeometry(featureRadius, featureRadius, featureDepth, 24);
+      const mesh = new THREE.Mesh(cyl, mat);
+      mesh.position.set(px, featureDepth / 2, pz);
+      group.add(mesh);
+    });
+    group.name = options.name || `Solid_Pattern_Manual_${points.length}Instances`;
+  }
+
+  group.userData = { type: 'solid_pattern', patternType, params };
+  return group;
+}
+
+/**
+ * Stitches surface sheets into a watertight solid body
+ */
+export function createSolidFromSurfaces(
+  w = 80,
+  h = 35,
+  d = 60,
+  options = {}
+) {
+  const group = new THREE.Group();
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x0284c7,
+    metalness: 0.85,
+    roughness: 0.25
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = h / 2;
+  mesh.castShadow = true;
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 }));
+  edgeLine.position.y = h / 2;
+  group.add(edgeLine);
+
+  group.name = options.name || `Solid_FromSurfaces_${Math.round(w)}x${Math.round(h)}x${Math.round(d)}`;
+  group.userData = { type: 'solid_stitched_body', width: w, height: h, depth: d, isWatertight: true };
+  return group;
+}
+
+/**
+ * Creates a Solid Chamfer (45° flat bevel edge)
+ */
+export function createSolidChamfer(
+  w = 80,
+  h = 35,
+  d = 60,
+  chamferDist = 4,
+  options = {}
+) {
+  const group = new THREE.Group();
+  const shape = new THREE.Shape();
+  const halfW = w / 2;
+  const c = Math.min(chamferDist, h / 2, w / 4);
+
+  // Cross-section profile with top chamfered corners
+  shape.moveTo(-halfW, 0);
+  shape.lineTo(halfW, 0);
+  shape.lineTo(halfW, h - c);
+  shape.lineTo(halfW - c, h);
+  shape.lineTo(-halfW + c, h);
+  shape.lineTo(-halfW, h - c);
+  shape.closePath();
+
+  const extrudeSettings = {
+    steps: 1,
+    depth: d,
+    bevelEnabled: false
+  };
+
+  const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  geo.center();
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: options.color || 0x0284c7,
+    metalness: 0.8,
+    roughness: 0.25
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = h / 2;
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x0369a1, linewidth: 1.5 }));
+  edgeLine.position.y = h / 2;
+  group.add(edgeLine);
+
+  group.name = options.name || `Solid_Chamfer_${Math.round(w)}x${Math.round(d)}_C${chamferDist}`;
+  group.userData = { type: 'solid_chamfer', width: w, height: h, depth: d, chamferDist };
+  return group;
+}
+
+/**
+ * Creates a Solid Fillet (Smooth rounded corner blend)
+ */
+export function createSolidFillet(
+  w = 80,
+  h = 35,
+  d = 60,
+  filletRadius = 6,
+  options = {}
+) {
+  const group = new THREE.Group();
+  const shape = new THREE.Shape();
+  const halfW = w / 2;
+  const r = Math.min(filletRadius, h / 2, w / 4);
+
+  // Cross-section profile with rounded top corners
+  shape.moveTo(-halfW, 0);
+  shape.lineTo(halfW, 0);
+  shape.lineTo(halfW, h - r);
+  shape.absarc(halfW - r, h - r, r, 0, Math.PI / 2, false);
+  shape.lineTo(-halfW + r, h);
+  shape.absarc(-halfW + r, h - r, r, Math.PI / 2, Math.PI, false);
+  shape.closePath();
+
+  const geo = new THREE.ExtrudeGeometry(shape, { steps: 1, depth: d, bevelEnabled: false });
+  geo.center();
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: options.color || 0x0284c7,
+    metalness: 0.8,
+    roughness: 0.25
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = h / 2;
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 1.5 }));
+  edgeLine.position.y = h / 2;
+  group.add(edgeLine);
+
+  group.name = options.name || `Solid_Fillet_${Math.round(w)}x${Math.round(d)}_R${filletRadius}`;
+  group.userData = { type: 'solid_fillet', width: w, height: h, depth: d, filletRadius };
+  return group;
+}
+
+/**
+ * Creates a Shelled Solid Body with open top face and uniform wall thickness
+ */
+export function createSolidShell(
+  w = 80,
+  h = 35,
+  d = 60,
+  wallThickness = 4,
+  options = {}
+) {
+  return createPocketedBillet(
+    w,
+    h,
+    d,
+    w - wallThickness * 2,
+    d - wallThickness * 2,
+    h - wallThickness,
+    wallThickness / 2,
+    options.name || `Solid_Shell_${Math.round(w)}x${Math.round(d)}_Wall${wallThickness}mm`,
+    options
+  );
+}
+
+/**
+ * Thickens a 2D surface sheet into a 3D solid billet body
+ */
+export function createThickenedSolid(
+  width = 80,
+  depth = 60,
+  thickness = 6,
+  options = {}
+) {
+  return createBoxGeometry(width, thickness, depth, {
+    ...options,
+    name: options.name || `Solid_Thickened_${Math.round(width)}x${Math.round(depth)}_Thick${thickness}mm`
+  });
+}
+
+/**
+ * Slices a solid body along an inclined plane knife
+ */
+export function trimSolidByPlane(
+  w = 80,
+  h = 35,
+  d = 60,
+  cutAngleDeg = 30,
+  options = {}
+) {
+  const group = new THREE.Group();
+  const shape = new THREE.Shape();
+  const halfW = w / 2;
+  const cutH = Math.tan((cutAngleDeg * Math.PI) / 180) * (w / 2);
+
+  shape.moveTo(-halfW, 0);
+  shape.lineTo(halfW, 0);
+  shape.lineTo(halfW, h - cutH);
+  shape.lineTo(-halfW, h + cutH);
+  shape.closePath();
+
+  const geo = new THREE.ExtrudeGeometry(shape, { steps: 1, depth: d, bevelEnabled: false });
+  geo.center();
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: options.color || 0x0284c7,
+    metalness: 0.8,
+    roughness: 0.25
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = h / 2;
+  group.add(mesh);
+
+  const edges = new THREE.EdgesGeometry(geo);
+  const edgeLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 }));
+  edgeLine.position.y = h / 2;
+  group.add(edgeLine);
+
+  group.name = options.name || `Solid_TrimmedByPlane_${cutAngleDeg}deg`;
+  group.userData = { type: 'solid_trim_plane', cutAngleDeg, width: w, height: h, depth: d };
+  return group;
+}
+
+/**
+ * Generates 2D Orthographic Multi-View Drawing Layout Sheet (Top, Front, Right, Isometric)
+ */
+export function generateDrawingLayoutSheet(
+  partW = 80,
+  partH = 35,
+  partD = 60,
+  options = {}
+) {
+  const group = new THREE.Group();
+  const sheetW = 280;
+  const sheetH = 190;
+
+  // Sheet background
+  const sheetGeo = new THREE.PlaneGeometry(sheetW, sheetH);
+  sheetGeo.rotateX(-Math.PI / 2);
+  const sheetMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.9,
+    metalness: 0.0,
+    side: THREE.DoubleSide
+  });
+  const sheetMesh = new THREE.Mesh(sheetGeo, sheetMat);
+  sheetMesh.position.y = 0;
+  group.add(sheetMesh);
+
+  // Outer border & title block
+  const borderGeo = new THREE.EdgesGeometry(sheetGeo);
+  const borderLine = new THREE.LineSegments(borderGeo, new THREE.LineBasicMaterial({ color: 0x0f172a, linewidth: 2 }));
+  borderLine.position.y = 0.2;
+  group.add(borderLine);
+
+  // 1. Top View (Top Left)
+  const topBox = new THREE.BoxGeometry(partW * 0.7, 0.5, partD * 0.7);
+  const topWire = new THREE.LineSegments(new THREE.EdgesGeometry(topBox), new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 }));
+  topWire.position.set(-sheetW * 0.25, 0.5, -sheetH * 0.25);
+  group.add(topWire);
+
+  // 2. Front View (Bottom Left)
+  const frontBox = new THREE.BoxGeometry(partW * 0.7, 0.5, partH * 0.7);
+  const frontWire = new THREE.LineSegments(new THREE.EdgesGeometry(frontBox), new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 }));
+  frontWire.position.set(-sheetW * 0.25, 0.5, sheetH * 0.25);
+  group.add(frontWire);
+
+  // 3. Right Side View (Bottom Right)
+  const sideBox = new THREE.BoxGeometry(partD * 0.7, 0.5, partH * 0.7);
+  const sideWire = new THREE.LineSegments(new THREE.EdgesGeometry(sideBox), new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 }));
+  sideWire.position.set(sheetW * 0.25, 0.5, sheetH * 0.25);
+  group.add(sideWire);
+
+  // 4. Isometric 3D Projection (Top Right)
+  const isoBox = new THREE.BoxGeometry(partW * 0.5, partH * 0.5, partD * 0.5);
+  const isoMesh = new THREE.Mesh(isoBox, new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.6, roughness: 0.3 }));
+  isoMesh.rotation.set(Math.PI / 6, Math.PI / 4, 0);
+  isoMesh.position.set(sheetW * 0.25, 12, -sheetH * 0.25);
+  group.add(isoMesh);
+
+  group.name = options.name || `Drawing_Layout_4Views_A3`;
+  group.userData = { type: 'drawing_layout_sheet', sheetW, sheetH, partW, partH, partD };
+  return group;
+}
+
+/**
  * Creates a 3D planar surface sheet on G17, G18, or G19
  */
 export function createPlanarSurface(
