@@ -595,7 +595,8 @@ export default function Viewport3D({
       const defaultMetrics = {
         center: { x: 0, y: 0, z: 0 },
         dimensions: { x: 100, y: 25, z: 80 },
-        box: { min: { x: -50, y: 0, z: -40 }, max: { x: 50, y: 0, z: 40 } }
+        box: { min: { x: -50, y: 0, z: -40 }, max: { x: 50, y: 0, z: 40 } },
+        triangles: 0
       };
       setPartMetrics(defaultMetrics);
       if (onMetricsCalculated) onMetricsCalculated(defaultMetrics);
@@ -1701,26 +1702,26 @@ export default function Viewport3D({
           <div className="part-info-row">
             <span className="part-info-label">Part Size (XYZ):</span>
             <span className="part-info-val">
-              {partMetrics.dimensions.x} &times; {partMetrics.dimensions.y} &times; {partMetrics.dimensions.z} mm
+              {partMetrics.dimensions?.x ?? 0} &times; {partMetrics.dimensions?.y ?? 0} &times; {partMetrics.dimensions?.z ?? 0} mm
             </span>
           </div>
           <div className="part-info-row">
             <span className="part-info-label">Stock Size:</span>
             <span className="part-info-val" style={{ color: '#f59e0b' }}>
-              {(partMetrics.dimensions.x + (stockConfig.allowanceSides || 4) * 2).toFixed(1)} &times;{' '}
-              {(partMetrics.dimensions.y + (stockConfig.allowanceTop || 2)).toFixed(1)} &times;{' '}
-              {(partMetrics.dimensions.z + (stockConfig.allowanceSides || 4) * 2).toFixed(1)} mm
+              {(((partMetrics.dimensions?.x ?? 0) + (stockConfig?.allowanceSides || 4) * 2)).toFixed(1)} &times;{' '}
+              {(((partMetrics.dimensions?.y ?? 0) + (stockConfig?.allowanceTop || 2))).toFixed(1)} &times;{' '}
+              {(((partMetrics.dimensions?.z ?? 0) + (stockConfig?.allowanceSides || 4) * 2)).toFixed(1)} mm
             </span>
           </div>
           <div className="part-info-row">
             <span className="part-info-label">Material &amp; Mass:</span>
             <span className="part-info-val">
-              {stockConfig.material} &bull; {stockConfig.massKg || '0.95'} kg
+              {stockConfig?.material || '6061-T6'} &bull; {stockConfig?.massKg || '0.95'} kg
             </span>
           </div>
           <div className="part-info-row">
             <span className="part-info-label">Triangles:</span>
-            <span className="part-info-val">{partMetrics.triangles.toLocaleString()}</span>
+            <span className="part-info-val">{(partMetrics.triangles || 0).toLocaleString()}</span>
           </div>
         </div>
       )}
@@ -1735,7 +1736,7 @@ export default function Viewport3D({
 
       {/* Metric Scale Indicator */}
       <div className="viewport-scale-indicator">
-        <span>{partMetrics ? `${partMetrics.dimensions.x} mm` : '95.530 mm'}</span>
+        <span>{partMetrics?.dimensions?.x ? `${partMetrics.dimensions.x} mm` : '95.530 mm'}</span>
         <div className="scale-bar" />
         <span style={{ fontSize: '8.5px', color: '#64748b' }}>Metric G21</span>
       </div>

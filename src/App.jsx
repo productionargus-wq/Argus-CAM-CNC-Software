@@ -1892,7 +1892,8 @@ export default function App() {
         box: {
           min: { x: -50, y: 0, z: -40 },
           max: { x: 50, y: 25, z: 40 }
-        }
+        },
+        triangles: 0
       });
       const stockDims = customDimensions || { x: 120, y: 30, z: 90 };
       setStockConfig((prev) => ({
@@ -1920,7 +1921,8 @@ export default function App() {
       setPartMetrics({
         center: { x: 0, y: 0, z: 0 },
         dimensions: { x: w, y: h, z: d },
-        box: { min: { x: -w / 2, y: -h / 2, z: -d / 2 }, max: { x: w / 2, y: h / 2, z: d / 2 } }
+        box: { min: { x: -w / 2, y: -h / 2, z: -d / 2 }, max: { x: w / 2, y: h / 2, z: d / 2 } },
+        triangles: 12
       });
       setStockConfig((prev) => ({
         ...prev,
