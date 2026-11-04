@@ -97,6 +97,7 @@ export default function Viewport3D({
   showArcCenters = true,
   showEndpoints = false
 }) {
+  const isLight = theme !== 'dark';
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
   const cameraRef = useRef(null);
