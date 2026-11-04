@@ -17,6 +17,7 @@ import SolidsRibbonGroup from './ribbon/SolidsRibbonGroup';
 import ModelPrepRibbonGroup from './ribbon/ModelPrepRibbonGroup';
 import DraftingRibbonGroup from './ribbon/DraftingRibbonGroup';
 import TransformRibbonGroup from './ribbon/TransformRibbonGroup';
+import MachineRibbonGroup from './ribbon/MachineRibbonGroup';
 
 export default function RibbonBar({
   activeTab,
@@ -61,6 +62,7 @@ export default function RibbonBar({
   onOpenMeshModal,
   onOpenDraftingModal,
   onOpenTransformModal,
+  onOpenATPModal,
   onOpenMachineConfigModal,
   onOpenViewStudioModal,
   onOpenCPlanesModal,
@@ -1393,195 +1395,74 @@ export default function RibbonBar({
 
         {/* ==================== 10. MACHINE TAB ==================== */}
         {activeTab === 'Machine' && (
-          <>
-            {/* Machine Type */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenMachineConfigModal}
-                  title="Configure CNC Machine Definition & Kinematic Limits"
-                >
-                  <Cpu size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Machine<br />Definition</span>
-                </button>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center' }}>
-                  <select
-                    value={activeMachine?.id || 'dmu50'}
-                    onChange={(e) => onSelectMachine(e.target.value)}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #333d4e',
-                      color: '#38bdf8',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      width: '150px'
-                    }}
-                  >
-                    <option value="dmu50">DMG MORI DMU 50 (5X)</option>
-                    <option value="haas_vf2">Haas VF-2 (3X VMC)</option>
-                    <option value="robodrill">Fanuc Robodrill D21</option>
-                    <option value="integrex">Mazak Integrex i-200</option>
-                  </select>
-
-                  <div style={{ display: 'flex', gap: '3px', width: '150px' }}>
-                    {['G54', 'G55', 'G56'].map((wcs) => (
-                      <button
-                        key={wcs}
-                        onClick={() => onSelectWcs(wcs)}
-                        style={{
-                          flex: 1,
-                          background: activeWcs === wcs ? '#2563eb' : '#1e2430',
-                          border: '1px solid #333d4e',
-                          color: 'white',
-                          padding: '2px 4px',
-                          borderRadius: '3px',
-                          fontSize: '10px',
-                          fontWeight: 600,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {wcs}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenCPlanesModal}
-                  title="Open Construction Planes & Dynamic WCS Origin Studio"
-                >
-                  <Compass size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Planes /<br />WCS Studio</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Machine Type</span>
-            </div>
-
-            {/* Job Setup */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onOpenStockModal} title="Configure Stock Bounding Box Dimensions">
-                  <Box size={22} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Stock<br />Setup</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenFixtureModal}
-                  title="Workholding Vises & Fixture Setup"
-                >
-                  <Wrench size={22} color="#a855f7" />
-                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Workholding<br />&amp; Fixtures</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Library">
-                  <Wrench size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Mill Tool<br />Manager</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenToolAssemblyModal} title="Toolholder Assembly Studio (BT40, HSK, Collets)">
-                  <Wrench size={22} color="#0284c7" />
-                  <span className="btn-label">Tool<br />Assembly</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenFeedsSpeedsModal} title="Feeds & Speeds Calculator">
-                  <Gauge size={22} color="#38bdf8" />
-                  <span className="btn-label">Feeds &amp;<br />Speeds</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Job Setup</span>
-            </div>
-
-            {/* Simulator */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onStartBackplot && onStartBackplot()} title="Backplot Wireframe Tool Tracing">
-                  <Play size={20} color="#06b6d4" />
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Backplot</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onOpenSolidVerifyModal ? onOpenSolidVerifyModal() : (onStartVerify && onStartVerify(null, 'verify'))} title="Verify Solid Stock Removal">
-                  <Box size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Verify</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenSimModal} title="Kinematic Machine Digital Twin Simulation">
-                  <Play size={22} color="#10b981" />
-                  <span className="btn-label">Simulate</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenCollisionCheck} title="Run Tool Collision & Gouge Detection Audit">
-                  <ShieldAlert size={20} color="#f43f5e" />
-                  <span className="btn-label">Collision<br />Check</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Simulator</span>
-            </div>
-
-            {/* Post */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenPostModal}
-                  title="Generate G-Code (G1)"
-                >
-                  <div className="post-badge">G1</div>
-                  <FileCode size={24} color="#ffffff" />
-                  <span className="btn-label" style={{ fontWeight: 700, color: '#ffffff' }}>Generate<br />Post</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenCustomPostStudio} title="Create Custom Post-Processor">
-                  <FileCode size={20} color="#38bdf8" />
-                  <span className="btn-label">Create</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenGCodeViewer} title="Export CNC G-Code">
-                  <Download size={20} color="#10b981" />
-                  <span className="btn-label">Export<br />G-Code</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Post</span>
-            </div>
-
-            {/* Setup Sheet */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onOpenSetupSheet} title="Generate Setup Sheet">
-                  <Printer size={22} color="#e2e8f0" />
-                  <span className="btn-label">Setup<br />Sheet</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Image Capture')} title="Capture Image for Setup Sheet">
-                  <Camera size={20} color="#38bdf8" />
-                  <span className="btn-label">Image<br />Capture</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Setup Sheet</span>
-            </div>
-
-            {/* Argus Production Suite */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large ribbon-btn-highlight" onClick={onOpenTombstoneStudio} title="Tombstone 4-Axis Rotary Studio">
-                  <Grid size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 700 }}>Tombstone<br />Rotary</span>
-                </button>
-                <button className="ribbon-btn-large ribbon-btn-highlight" onClick={onOpenKioskModal} title="Shop Floor Operator Tablet Kiosk">
-                  <Tablet size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 700 }}>Operator<br />Kiosk</span>
-                </button>
-                <button className="ribbon-btn-large ribbon-btn-highlight" onClick={onOpenAnomalyScanner} title="AI Chatter & Cantilever Deflection Scanner">
-                  <Activity size={22} color="#f43f5e" />
-                  <span className="btn-label" style={{ color: '#f43f5e', fontWeight: 700 }}>AI Chatter<br />&amp; Deflect</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenLatheStudio} title="Turning & Lathe Studio">
-                  <Disc size={20} color="#ec4899" />
-                  <span className="btn-label">Lathe /<br />Turn</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenProbingStudio} title="Renishaw & Haas Touch Probing Studio">
-                  <Crosshair size={20} color="#d946ef" />
-                  <span className="btn-label">Touch<br />Probe</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Argus CAM Suite</span>
-            </div>
-          </>
+          <MachineRibbonGroup
+            onAction={(action, id) => {
+              if (action.startsWith('machine_atp') && onOpenATPModal) {
+                const tab = action === 'machine_atp_reports' ? 'reports' : action === 'machine_atp_options' ? 'options' : 'wizard';
+                onOpenATPModal(tab);
+                return;
+              }
+              if (action === 'machine_machine_definition' || action === 'machine_control_definition') {
+                if (onOpenMachineConfigModal) onOpenMachineConfigModal();
+                return;
+              }
+              if (action === 'machine_material_definition' && onOpenStockModal) {
+                onOpenStockModal();
+                return;
+              }
+              if (action === 'machine_generate_post' && onOpenPostModal) {
+                onOpenPostModal();
+                return;
+              }
+              if ((action === 'machine_backplot' || action === 'machine_sim_backplot') && onStartBackplot) {
+                onStartBackplot();
+                return;
+              }
+              if (action === 'machine_verify' || action === 'machine_sim_verify') {
+                if (onOpenSolidVerifyModal) onOpenSolidVerifyModal();
+                else if (onStartVerify) onStartVerify(null, 'verify');
+                return;
+              }
+              if ((action === 'machine_simulate' || action === 'machine_sim_run') && onOpenSimModal) {
+                onOpenSimModal();
+                return;
+              }
+              if (action === 'machine_create_setup_sheet' && onOpenSetupSheet) {
+                onOpenSetupSheet();
+                return;
+              }
+              if (action === 'machine_image_capture') {
+                if (onCopyViewportImage) onCopyViewportImage();
+                return;
+              }
+              if (action === 'machine_clear_image_list') {
+                return;
+              }
+              if (action.startsWith('machine_mill') && onSelectMachine) {
+                onSelectMachine('dmu50');
+                return;
+              }
+              if (action.startsWith('machine_lathe') && onSelectMachine) {
+                onSelectMachine('integrex');
+                return;
+              }
+              if (action === 'machine_mill_turn' && onSelectMachine) {
+                onSelectMachine('integrex');
+                return;
+              }
+              if (action === 'machine_wire' && onSelectMachine) {
+                onSelectMachine('robodrill');
+                return;
+              }
+              if (action === 'machine_router' && onSelectMachine) {
+                onSelectMachine('haas_vf2');
+                return;
+              }
+              if (action === 'machine_design') {
+                return;
+              }
+            }}
+          />
         )}
 
         {/* ==================== 11. VIEW TAB ==================== */}

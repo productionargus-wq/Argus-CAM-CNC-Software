@@ -32,6 +32,7 @@ import MeshWorkbenchModal from './components/MeshWorkbenchModal';
 import DraftingCADModal from './components/DraftingCADModal';
 import TransformCADModal from './components/TransformCADModal';
 import MachineConfigModal from './components/MachineConfigModal';
+import ATPModal from './components/ATPModal';
 import ViewStudioModal from './components/ViewStudioModal';
 import CAMOperationsWizardModal from './components/CAMOperationsWizardModal';
 import ProbingStudioModal from './components/ProbingStudioModal';
@@ -217,6 +218,8 @@ export default function App() {
   const [isTransformModalOpen, setIsTransformModalOpen] = useState(false);
   const [transformModalTab, setTransformModalTab] = useState('translate');
   const [isMachineConfigModalOpen, setIsMachineConfigModalOpen] = useState(false);
+  const [isATPModalOpen, setIsATPModalOpen] = useState(false);
+  const [atpModalTab, setAtpModalTab] = useState('wizard');
   const [isViewStudioModalOpen, setIsViewStudioModalOpen] = useState(false);
   const [cameraMode, setCameraMode] = useState('perspective');
   const [cameraFov, setCameraFov] = useState(45);
@@ -2096,6 +2099,7 @@ export default function App() {
         onOpenMeshModal={handleOpenMeshModal}
         onOpenDraftingModal={handleOpenDraftingModal}
         onOpenTransformModal={handleOpenTransformModal}
+        onOpenATPModal={(tab) => { setAtpModalTab(tab || 'wizard'); setIsATPModalOpen(true); }}
         onOpenMachineConfigModal={() => setIsMachineConfigModalOpen(true)}
         onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
         onOpenCPlanesModal={() => setIsCPlanesModalOpen(true)}
@@ -2772,6 +2776,15 @@ export default function App() {
         machines={machines}
         activeMachine={activeMachine}
         onSelectMachine={setActiveMachineId}
+      />
+
+      {/* Automatic Toolpathing (ATP) Studio Modal (Tab 10) */}
+      <ATPModal
+        isOpen={isATPModalOpen}
+        onClose={() => setIsATPModalOpen(false)}
+        initialTab={atpModalTab}
+        currentModel={currentModel}
+        partMetrics={partMetrics}
       />
 
       {/* 3D View & Section Analysis Studio Modal (Tab 11) */}
