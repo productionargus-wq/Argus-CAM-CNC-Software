@@ -19,6 +19,7 @@ import DraftingRibbonGroup from './ribbon/DraftingRibbonGroup';
 import TransformRibbonGroup from './ribbon/TransformRibbonGroup';
 import MachineRibbonGroup from './ribbon/MachineRibbonGroup';
 import ViewRibbonGroup from './ribbon/ViewRibbonGroup';
+import ToolpathsRibbonGroup from './ribbon/ToolpathsRibbonGroup';
 
 export default function RibbonBar({
   activeTab,
@@ -1644,209 +1645,92 @@ export default function RibbonBar({
 
         {/* ==================== 12. TOOLPATHS TAB ==================== */}
         {activeTab === 'Toolpaths' && (
-          <>
-            {/* 2D */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pocket')} title="2D Contour Milling">
-                  <div style={{ width: '18px', height: '18px', background: '#3b82f6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CT</div>
-                  <span className="btn-label">Contour</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('drilling')} title="2D Hole Drilling Cycle">
-                  <div style={{ width: '18px', height: '18px', background: '#ef4444', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>DR</div>
-                  <span className="btn-label">Drill</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('adaptive')} title="2D Dynamic High-Speed Trochoidal Roughing">
-                  <div style={{ width: '18px', height: '18px', background: '#10b981', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>DY</div>
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Dynamic...</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('facing')} title="Face Milling Planar Pass">
-                  <div style={{ width: '18px', height: '18px', background: '#f59e0b', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>FC</div>
-                  <span className="btn-label">Face</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pocket')} title="2D Pocket Milling">
-                  <div style={{ width: '18px', height: '18px', background: '#8b5cf6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PK</div>
-                  <span className="btn-label">Pocket</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">2D</span>
-            </div>
+          <ToolpathsRibbonGroup
+            stockVisible={layerVisibility?.stock !== false}
+            onAction={(action, id, opType) => {
+              // 2D Toolpaths
+              if (action.startsWith('tp_2d_')) {
+                if (opType && onQuickAddOp) {
+                  onQuickAddOp(opType);
+                } else if (onQuickAddOp) {
+                  onQuickAddOp('contour');
+                }
+                return;
+              }
 
-            {/* 3D */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenAdaptiveModal ? onOpenAdaptiveModal : () => onQuickAddOp('adaptive')}
-                  title="3D OptiRough High-Speed Constant Engagement Roughing"
-                >
-                  <div style={{ width: '18px', height: '18px', background: '#06b6d4', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>OR</div>
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>OptiRough</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pocket')} title="3D Pocketing">
-                  <div style={{ width: '18px', height: '18px', background: '#3b82f6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PK</div>
-                  <span className="btn-label">Pocket</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onQuickAddOp('pencil')} title="3D Project Toolpath">
-                  <div style={{ width: '18px', height: '18px', background: '#f97316', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PR</div>
-                  <span className="btn-label">Project</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenSurfaceFinishContour ? onOpenSurfaceFinishContour : () => onQuickAddOp('waterline')}
-                  title="3D Parallel / Surface Finish Contour"
-                >
-                  <div style={{ width: '18px', height: '18px', background: '#f59e0b', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PL</div>
-                  <span className="btn-label">Parallel</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">3D</span>
-            </div>
+              // 3D Toolpaths
+              if (action.startsWith('tp_3d_')) {
+                if (action === 'tp_3d_optirough' && onOpenAdaptiveModal) {
+                  onOpenAdaptiveModal();
+                  return;
+                }
+                if (opType && onQuickAddOp) {
+                  onQuickAddOp(opType);
+                } else if (onQuickAddOp) {
+                  onQuickAddOp('waterline');
+                }
+                return;
+              }
 
-            {/* Multiaxis */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onQuickAddOp('pencil')}
-                  title="Multiaxis Curve"
-                >
-                  <div style={{ width: '18px', height: '18px', background: '#a855f7', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>CV</div>
-                  <span className="btn-label">Curve</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenFiveAxisStudio ? onOpenFiveAxisStudio : () => onQuickAddOp('swarf')}
-                  title="5-Axis Swarf Milling"
-                >
-                  <div style={{ width: '18px', height: '18px', background: '#8b5cf6', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>SW</div>
-                  <span className="btn-label">Swarf Mill...</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onQuickAddOp('waterline')}
-                  title="Multiaxis Parallel"
-                >
-                  <div style={{ width: '18px', height: '18px', background: '#38bdf8', borderRadius: '3px', color: 'black', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>PL</div>
-                  <span className="btn-label">Parallel</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onQuickAddOp('drilling')}
-                  title="Multiaxis Drill"
-                >
-                  <div style={{ width: '18px', height: '18px', background: '#ef4444', borderRadius: '3px', color: 'white', fontWeight: 800, fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>DR</div>
-                  <span className="btn-label">Drill</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Multiaxis</span>
-            </div>
+              // Multiaxis Toolpaths
+              if (action.startsWith('tp_multi_')) {
+                if (action === 'tp_multi_swarf' && onOpenFiveAxisStudio) {
+                  onOpenFiveAxisStudio();
+                  return;
+                }
+                if (opType && onQuickAddOp) {
+                  onQuickAddOp(opType);
+                } else if (onOpenFiveAxisStudio) {
+                  onOpenFiveAxisStudio();
+                }
+                return;
+              }
 
-            {/* Stock */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onToggleLayer && onToggleLayer('stock')} title="Toggle Stock Shading">
-                  <Box size={20} color="#f59e0b" />
-                  <span className="btn-label">Stock<br />Shading</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onToggleLayer && onToggleLayer('stock')} title="Toggle Stock Wireframe Display">
-                  <Eye size={20} color="#10b981" />
-                  <span className="btn-label">Stock<br />Display</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenStockModal} title="Configure Stock Bounding Model">
-                  <Settings size={20} color="#38bdf8" />
-                  <span className="btn-label">Stock<br />Model</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Stock</span>
-            </div>
+              // Stock Group
+              if (action === 'tp_stock_shading' && onToggleLayer) {
+                onToggleLayer('stock');
+                return;
+              }
+              if (action === 'tp_stock_display' && onToggleLayer) {
+                onToggleLayer('stock');
+                return;
+              }
+              if (action === 'tp_stock_model' && onOpenStockModal) {
+                onOpenStockModal();
+                return;
+              }
 
-            {/* Utilities */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenDefineToolModal ? onOpenDefineToolModal : onOpenToolManager}
-                  title="Define Tool Wizard (Create End Mill, Bull Mill, Drill, etc.)"
-                >
-                  <Plus size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Define<br />Tool</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenToolManager} title="Open Mill Tool Manager">
-                  <Wrench size={20} color="#38bdf8" />
-                  <span className="btn-label">Tool<br />Manager</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenProbingStudio} title="Touch Probing Studio">
-                  <Crosshair size={20} color="#d946ef" />
-                  <span className="btn-label">Probe</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={onOpenFiveAxisStudio}
-                  title="Multiaxis Linking Studio"
-                >
-                  <Orbit size={20} color="#a855f7" />
-                  <span className="btn-label">Multiaxis<br />Linking</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onOpenTransformModal ? onOpenTransformModal('translate') : null} title="Toolpath Transform & Multi-Part Matrix">
-                  <Move size={20} color="#38bdf8" />
-                  <span className="btn-label">Toolpath<br />Transform</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Utilities</span>
-            </div>
-
-            {/* Verify & Post */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => onStartBackplot && onStartBackplot()} title="Toolpath Wireframe Backplot">
-                  <Play size={20} color="#06b6d4" />
-                  <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Backplot</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onOpenSolidVerifyModal ? onOpenSolidVerifyModal() : (onStartVerify && onStartVerify(null, 'verify'))} title="Verify Solid Stock Material Removal">
-                  <Box size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Verify<br />Solid</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => onStartVerify ? onStartVerify(null, 'heatmap') : null} title="Inspect Heatmap Tolerance Gouges vs Excess">
-                  <Gauge size={20} color="#f59e0b" />
-                  <span className="btn-label">Tolerance<br />Heatmap</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenFeedOptimizerModal} title="Feed Rate Optimization & Constant Chip Thickness">
-                  <Activity size={20} color="#f59e0b" />
-                  <span className="btn-label">Feed Rate<br />Optimizer</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onOpenSimModal} title="Full 5-Axis Machine Kinematic Digital Twin Simulation">
-                  <Play size={20} color="#38bdf8" />
-                  <span className="btn-label">Kinematic<br />Twin</span>
-                </button>
-                <button className="ribbon-btn-large ribbon-btn-highlight" onClick={onOpenPostModal} title="Generate G-Code & NC2Check">
-                  <div className="post-badge">G1</div>
-                  <FileCode size={24} color="#ffffff" />
-                  <span className="btn-label" style={{ fontWeight: 700, color: '#ffffff' }}>G1 Post</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Verify &amp; Post</span>
-            </div>
-
-            {/* Operations Controls */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onOpenOperationsWizard} title="Open Operations Wizard">
-                  <Layers size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Ops<br />Wizard</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onRegenerateAll} title="Regenerate All Operations">
-                  <RefreshCw size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Regenerate<br />All</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onDeleteActiveOp} title="Delete Selected Operation">
-                  <Trash2 size={20} color="#ef4444" />
-                  <span className="btn-label">Delete<br />Op</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Operation Controls</span>
-            </div>
-          </>
+              // Utilities Group
+              if (action === 'tp_util_tool_manager' && onOpenToolManager) {
+                onOpenToolManager();
+                return;
+              }
+              if (action === 'tp_util_probe' && onOpenProbingStudio) {
+                onOpenProbingStudio();
+                return;
+              }
+              if (action === 'tp_util_multiaxis_linking' && onOpenFiveAxisStudio) {
+                onOpenFiveAxisStudio();
+                return;
+              }
+              if (action === 'tp_util_transform') {
+                if (onOpenTransformModal) onOpenTransformModal('translate');
+                return;
+              }
+              if (action === 'tp_util_check' && onOpenCollisionCheck) {
+                onOpenCollisionCheck();
+                return;
+              }
+              if (action === 'tp_util_trim') {
+                if (onOpenCornerReliefStudio) onOpenCornerReliefStudio();
+                return;
+              }
+              if (action === 'tp_util_filter' && onOpenHSMFilterStudio) {
+                onOpenHSMFilterStudio();
+                return;
+              }
+            }}
+          />
         )}
       </div>
     </nav>
