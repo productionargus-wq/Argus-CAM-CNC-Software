@@ -16,6 +16,7 @@ import SurfacesRibbonGroup from './ribbon/SurfacesRibbonGroup';
 import SolidsRibbonGroup from './ribbon/SolidsRibbonGroup';
 import ModelPrepRibbonGroup from './ribbon/ModelPrepRibbonGroup';
 import DraftingRibbonGroup from './ribbon/DraftingRibbonGroup';
+import TransformRibbonGroup from './ribbon/TransformRibbonGroup';
 
 export default function RibbonBar({
   activeTab,
@@ -1377,115 +1378,17 @@ export default function RibbonBar({
 
         {/* ==================== 9. TRANSFORM TAB ==================== */}
         {activeTab === 'Transform' && (
-          <>
-            {/* Position */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenTransformModal ? onOpenTransformModal('translate') : null}
-                  title="Dynamic 3D Translation Workbench"
-                >
-                  <Move size={22} color="#38bdf8" />
-                  <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>Dynamic<br />Translate</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenTransformModal ? onOpenTransformModal('rotate') : null}
-                  title="3D Rotate Around Axis"
-                >
-                  <RotateCcw size={22} color="#a855f7" />
-                  <span className="btn-label" style={{ color: '#a855f7', fontWeight: 600 }}>Rotate</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Project Transform')} title="Project Geometry onto Plane">
-                  <ArrowDown size={20} color="#60a5fa" />
-                  <span className="btn-label">Project</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onResetTransform} title="Move Selection Directly to WCS Origin (0,0,0)">
-                  <Crosshair size={20} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Move to<br />Origin</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenTransformModal ? onOpenTransformModal('mirror') : null}
-                  title="Mirror Left/Right Hand Symmetrical Pairs"
-                >
-                  <Copy size={21} color="#f59e0b" />
-                  <span className="btn-label" style={{ color: '#f59e0b', fontWeight: 600 }}>Mirror</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Roll Transform')} title="Roll Geometry Around Cylindrical Surface">
-                  <Orbit size={20} color="#ec4899" />
-                  <span className="btn-label">Roll</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Position</span>
-            </div>
-
-            {/* Offset */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Offset Entity')} title="Offset Individual Entity">
-                  <Move size={20} color="#38bdf8" />
-                  <span className="btn-label">Entity<br />Offset</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Offset Chains')} title="Offset Connected Wireframe Chains">
-                  <Layers size={20} color="#10b981" />
-                  <span className="btn-label">Chains<br />Offset</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Offset</span>
-            </div>
-
-            {/* Layout */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button
-                  className="ribbon-btn-large ribbon-btn-highlight"
-                  onClick={onOpenNestingStudio}
-                  title="Open CNC True-Shape Sheet Nesting Studio"
-                >
-                  <Scissors size={21} color="#0284c7" />
-                  <span className="btn-label" style={{ color: '#0284c7', fontWeight: 700 }}>Geometry<br />Nesting</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenTransformModal ? onOpenTransformModal('pattern') : null}
-                  title="Rectangular Array / Matrix Pattern"
-                >
-                  <Grid size={21} color="#38bdf8" />
-                  <span className="btn-label">Rectangular<br />Array</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={() => console.log('Distribute')} title="Distribute Geometry Evenly">
-                  <Sliders size={20} color="#a855f7" />
-                  <span className="btn-label">Distribute</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Layout</span>
-            </div>
-
-            {/* Size & Reset */}
-            <div className="ribbon-group">
-              <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={() => console.log('Stretch')} title="Stretch Geometry by Vector">
-                  <Maximize2 size={20} color="#f59e0b" />
-                  <span className="btn-label">Stretch</span>
-                </button>
-                <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenTransformModal ? onOpenTransformModal('scale') : null}
-                  title="Scale Factor & Casting Shrinkage Compensation"
-                >
-                  <Maximize2 size={22} color="#10b981" />
-                  <span className="btn-label" style={{ color: '#10b981', fontWeight: 600 }}>Scale</span>
-                </button>
-                <button className="ribbon-btn-large" onClick={onResetTransform} title="Reset All Position, Rotation & Scale">
-                  <RefreshCw size={20} color="#ef4444" />
-                  <span className="btn-label">Reset All</span>
-                </button>
-              </div>
-              <span className="ribbon-group-title">Size &amp; Reset</span>
-            </div>
-          </>
+          <TransformRibbonGroup
+            onAction={(action, id) => {
+              if (action === 'transform_geometry_nesting' && onOpenNestingStudio) {
+                onOpenNestingStudio();
+                return;
+              }
+              if (onOpenTransformModal) {
+                onOpenTransformModal(action || id);
+              }
+            }}
+          />
         )}
 
         {/* ==================== 10. MACHINE TAB ==================== */}

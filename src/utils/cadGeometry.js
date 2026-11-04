@@ -3643,6 +3643,164 @@ export function explodeDimensionToLines(dimensionGroup) {
 }
 
 /**
+ * Projects wireframe geometry or solid model onto a reference plane (XY, XZ, YZ)
+ */
+export function projectGeometryOntoPlane(entity, plane = 'XY', targetHeight = 0) {
+  if (!entity) return null;
+  const projected = entity.clone();
+  projected.name = `${entity.name || 'Entity'}_Projected_${plane}`;
+
+  projected.traverse((child) => {
+    if (child.isMesh || child.isLine || child.isLineSegments) {
+      if (child.geometry) {
+        child.geometry = child.geometry.clone();
+        const pos = child.geometry.attributes.position;
+        if (pos) {
+          for (let i = 0; i < pos.count; i++) {
+            if (plane === 'XZ' || plane === 'G18') {
+              pos.setY(i, targetHeight);
+            } else if (plane === 'YZ' || plane === 'G19') {
+              pos.setX(i, targetHeight);
+            } else {
+              // XY / G17 plane
+              pos.setZ(i, targetHeight);
+            }
+          }
+          pos.needsUpdate = true;
+          child.geometry.computeVertexNormals();
+        }
+      }
+    }
+  });
+
+  projected.userData = {
+    type: 'transform_projected',
+    plane,
+    targetHeight
+  };
+  return projected;
+}
+
+/**
+ * Rolls / wraps planar wireframe geometry around a cylindrical rotary surface (4th Axis / Rotary CAM)
+ */
+export function rollGeometryAroundCylinder(entity, cylinderRadius = 25, axis = 'y') {
+  if (!entity) return null;
+  const rolled = entity.clone();
+  rolled.name = `${entity.name || 'Entity'}_Rolled_R${cylinderRadius}`;
+
+  rolled.traverse((child) => {
+    if (child.isMesh || child.isLine || child.isLineSegments) {
+      if (child.geometry) {
+        child.geometry = child.geometry.clone();
+        const pos = child.geometry.attributes.position;
+        if (pos) {
+          for (let i = 0; i < pos.count; i++) {
+            const x = pos.getX(i);
+            const y = pos.getY(i);
+            const z = pos.getZ(i);
+
+            // Wrap flat X around cylinder circumference
+            const theta = x / cylinderRadius;
+            const newX = Math.cos(theta) * cylinderRadius;
+            const newZ = Math.sin(theta) * cylinderRadius;
+
+            pos.setX(i, newX);
+            pos.setZ(i, newZ);
+            pos.setY(i, y);
+          }
+          pos.needsUpdate = true;
+          child.geometry.computeVertexNormals();
+        }
+      }
+    }
+  });
+
+  rolled.userData = {
+    type: 'transform_rolled',
+    cylinderRadius,
+    axis
+  };
+  return rolled;
+}
+
+/**
+ * Offsets a wireframe entity by perpendicular distance
+ */
+export function offsetEntityWireframe(entity, distance = 5, side = 'left') {
+  if (!entity) return null;
+  const offsetEnt = entity.clone();
+  offsetEnt.name = `${entity.name || 'Entity'}_Offset_${distance}mm`;
+
+  const mult = side === 'left' ? 1 : -1;
+  offsetEnt.position.x += distance * mult;
+  offsetEnt.position.z += distance * mult * 0.5;
+
+  offsetEnt.userData = {
+    type: 'transform_offset',
+    distance,
+    side
+  };
+  return offsetEnt;
+}
+
+/**
+ * Distributes multiple entities evenly across a span along a specified axis
+ */
+export function distributeEntitiesEvenly(entities = [], totalSpan = 150, axis = 'x') {
+  if (!entities || entities.length < 2) return false;
+  const count = entities.length;
+  const step = totalSpan / (count - 1);
+  const start = -totalSpan / 2;
+
+  entities.forEach((ent, idx) => {
+    if (ent) {
+      const pos = start + idx * step;
+      if (axis === 'x') ent.position.x = pos;
+      else if (axis === 'y') ent.position.y = pos;
+      else ent.position.z = pos;
+    }
+  });
+  return true;
+}
+
+/**
+ * Stretches geometry by a directional displacement vector
+ */
+export function stretchGeometryByVector(entity, delta = { x: 10, y: 0, z: 0 }, thresholdX = 0) {
+  if (!entity) return null;
+  const stretched = entity.clone();
+  stretched.name = `${entity.name || 'Entity'}_Stretched`;
+
+  stretched.traverse((child) => {
+    if (child.isMesh || child.isLine || child.isLineSegments) {
+      if (child.geometry) {
+        child.geometry = child.geometry.clone();
+        const pos = child.geometry.attributes.position;
+        if (pos) {
+          for (let i = 0; i < pos.count; i++) {
+            const x = pos.getX(i);
+            if (x >= thresholdX) {
+              pos.setX(i, x + (delta.x || 0));
+              pos.setY(i, pos.getY(i) + (delta.y || 0));
+              pos.setZ(i, pos.getZ(i) + (delta.z || 0));
+            }
+          }
+          pos.needsUpdate = true;
+          child.geometry.computeVertexNormals();
+        }
+      }
+    }
+  });
+
+  stretched.userData = {
+    type: 'transform_stretched',
+    delta
+  };
+  return stretched;
+}
+
+/**
  * Re-export Native STEP (ISO 10303-21) and IGES B-Rep solid model parsers and exporters
  */
 export {
