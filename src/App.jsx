@@ -2198,6 +2198,7 @@ export default function App() {
         onUpdateClippingPlane={setClippingPlane}
         lightingMode={lightingMode}
         onChangeLightingMode={setLightingMode}
+        activeManagerTab={activeManagerTab}
         onSelectManagerTab={setActiveManagerTab}
         onUnblankAll={handleUnblankAll}
         onInvertVisibility={handleInvertVisibility}

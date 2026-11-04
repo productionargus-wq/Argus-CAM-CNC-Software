@@ -80,6 +80,7 @@ export default function RibbonBar({
   onUpdateClippingPlane,
   lightingMode = 'studio',
   onChangeLightingMode,
+  activeManagerTab = 'Toolpaths',
   onSelectManagerTab,
   onUnblankAll,
   onInvertVisibility,
