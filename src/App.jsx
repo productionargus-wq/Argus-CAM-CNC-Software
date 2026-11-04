@@ -1417,14 +1417,32 @@ export default function App() {
       setCurrentModel(createImpellerGeometry());
       setCurrentProjectName('DMU50_5Axis_Impeller.mcam');
       setActiveMachineId('dmu50');
+      setCustomGeometry([]);
+      setOperations([]);
+      setSolidsList([
+        { id: 1, name: 'Solid 1 - 5-Axis Impeller Blisk', material: 'Ti-6Al-4V Titanium', volumeCm3: 142.5, isPrimary: true, visible: true, active: true, color: '#38bdf8' }
+      ]);
+      showToast('Loaded DMU50 5-Axis Impeller Geometry', 'success');
     } else if (type === 'bracket') {
       setCurrentModel(createAerospaceBracket());
       setCurrentProjectName('DMU50_Aero_Bracket.mcam');
       setActiveMachineId('haas_vf2');
+      setCustomGeometry([]);
+      setOperations([]);
+      setSolidsList([
+        { id: 1, name: 'Solid 1 - Aerospace 5X Bracket', material: '7075-T6 Aluminum', volumeCm3: 98.4, isPrimary: true, visible: true, active: true, color: '#38bdf8' }
+      ]);
+      showToast('Loaded Aerospace Structural Bracket Geometry', 'success');
     } else if (type === 'mold') {
       setCurrentModel(createMoldCoreGeometry());
       setCurrentProjectName('DMU50_Mold_Core.mcam');
       setActiveMachineId('dmu50');
+      setCustomGeometry([]);
+      setOperations([]);
+      setSolidsList([
+        { id: 1, name: 'Solid 1 - Mold Core Cavity', material: 'P20 Tool Steel', volumeCm3: 210.0, isPrimary: true, visible: true, active: true, color: '#38bdf8' }
+      ]);
+      showToast('Loaded Injection Mold Core Geometry', 'success');
     }
     handleResetTransform();
   };
@@ -1596,13 +1614,25 @@ export default function App() {
 
   // Create New Project Wizard Handler
   const handleCreateNewProject = ({ template, projectName, unitSystem, customDimensions }) => {
-    setCurrentProjectName(projectName);
-    setCustomGeometry([]);
+    // 1. Comprehensive State Teardown & Reset
+    setIsBackplotActive(false);
+    setActiveOpId(null);
+    setHistory([]);
+    setHistoryIndex(0);
+    setDeletedEntitiesStack([]);
     handleResetTransform();
+    setCustomGeometry([]);
 
-    if (template === 'blank_wireframe') {
+    const projName = projectName || 'Mastercam_Part1.mcam';
+    setCurrentProjectName(projName);
+
+    const t = String(template || 'blank').toLowerCase().trim();
+
+    if (t === 'blank' || t === 'blank_wireframe' || t === 'blank_part') {
       // Mastercam clean 2D CAD Part drawing canvas
       setCurrentModel(null);
+      setOperations([]);
+      setSolidsList([]);
       setPartMetrics({
         center: { x: 0, y: 0, z: 0 },
         dimensions: { x: 100, y: 25, z: 80 },
@@ -1611,32 +1641,70 @@ export default function App() {
           max: { x: 50, y: 25, z: 40 }
         }
       });
+      const stockDims = customDimensions || { x: 120, y: 30, z: 90 };
       setStockConfig((prev) => ({
         ...prev,
-        dimensions: { x: 120, y: 30, z: 90 },
-        rawDimensions: { x: 120, y: 30, z: 90 }
+        dimensions: stockDims,
+        rawDimensions: stockDims
       }));
-      setOperations([]);
       setActiveRibbonTab('Wireframe');
       setIsSketchModeActive(true);
       setSketchTool('rect');
       showToast("✏️ Blank Mastercam Drawing Canvas Ready! Click & drag to draw Rectangle (R), Circle (C), Line (L).", "success");
-    } else if (template === 'mastercam2019_tutorial' || template === 'milling_tutorial') {
+    } else if (t === 'mastercam2019_tutorial' || t === 'milling_tutorial' || t === 'mastercam_tutorial') {
       handleSelectSampleModel('mastercam2019_tutorial');
-    } else if (template === 'dmu50_impeller') {
-      setCurrentModel(createImpellerGeometry());
-      setActiveMachineId('dmu50');
-    } else if (template === 'haas_bracket') {
-      setCurrentModel(createAerospaceBracket());
-      setActiveMachineId('haas_vf2');
-    } else if (template === 'mold_core') {
-      setCurrentModel(createMoldCoreGeometry());
-      setActiveMachineId('dmu50');
-    } else if (template === 'blank_billet') {
-      const w = customDimensions?.x || 80;
-      const h = customDimensions?.y || 35;
-      const d = customDimensions?.z || 60;
+    } else if (t === 'vmc3x' || t === 'blank_billet' || t === 'billet') {
+      const w = customDimensions?.x || 120;
+      const h = customDimensions?.y || 45;
+      const d = customDimensions?.z || 80;
       setCurrentModel(createBoxGeometry(w, h, d, "Raw_Block_Billet"));
+      setOperations([]);
+      setSolidsList([
+        { id: 1, name: 'Solid 1 - Raw Stock Billet', material: '6061-T6 Aluminum', volumeCm3: parseFloat(((w * h * d) / 1000).toFixed(1)), isPrimary: true, visible: true, active: true, color: '#38bdf8' }
+      ]);
+      setPartMetrics({
+        center: { x: 0, y: 0, z: 0 },
+        dimensions: { x: w, y: h, z: d },
+        box: { min: { x: -w / 2, y: -h / 2, z: -d / 2 }, max: { x: w / 2, y: h / 2, z: d / 2 } }
+      });
+      setStockConfig((prev) => ({
+        ...prev,
+        dimensions: { x: w + 10, y: h + 10, z: d + 10 },
+        rawDimensions: { x: w + 10, y: h + 10, z: d + 10 }
+      }));
+      setActiveMachineId('haas_vf2');
+      setIsSketchModeActive(false);
+      setActiveRibbonTab('Toolpaths');
+      showToast("Loaded 3-Axis VMC Billet Machining Template", "success");
+    } else if (t === 'impeller' || t === 'dmu50_impeller') {
+      handleSelectSampleModel('impeller');
+      setIsSketchModeActive(false);
+      setActiveRibbonTab('Toolpaths');
+    } else if (t === 'bracket' || t === 'haas_bracket') {
+      handleSelectSampleModel('bracket');
+      setIsSketchModeActive(false);
+      setActiveRibbonTab('Toolpaths');
+    } else if (t === 'mold' || t === 'mold_core') {
+      handleSelectSampleModel('mold');
+      setIsSketchModeActive(false);
+      setActiveRibbonTab('Toolpaths');
+    } else if (t === 'lathe' || t === 'lathe_turn') {
+      setCurrentModel(null);
+      setOperations([]);
+      setSolidsList([]);
+      setCustomGeometry([]);
+      setIsSketchModeActive(false);
+      setIsLatheStudioOpen(true);
+      showToast("Opened 2-Axis CNC Lathe Studio", "success");
+    } else {
+      // Clean fallback blank canvas
+      setCurrentModel(null);
+      setOperations([]);
+      setSolidsList([]);
+      setCustomGeometry([]);
+      setIsSketchModeActive(true);
+      setActiveRibbonTab('Wireframe');
+      showToast("Created New Project Canvas", "success");
     }
   };
 
