@@ -217,7 +217,7 @@ export function projectCPlaneToWorld(uCoord, vCoord, plane) {
 /**
  * Builds an oriented Three.js Group containing a local CPlane grid and 3D coordinate triad (X_p Red, Y_p Green, Z_p Blue)
  */
-export function buildCPlaneHelperGroup(plane, size = 260, isLight = false) {
+export function buildCPlaneHelperGroup(plane, size = 260, isLight = true) {
   const group = new THREE.Group();
   group.name = `CPlane_Helper_${plane.id}`;
 
@@ -227,7 +227,7 @@ export function buildCPlaneHelperGroup(plane, size = 260, isLight = false) {
   const n = new THREE.Vector3(plane.normal.x, plane.normal.y, plane.normal.z).normalize();
 
   // 1. Oriented Grid (adapts subline contrast to light vs dark theme)
-  const subGridColor = isLight ? 0x94a3b8 : 0x1e293b;
+  const subGridColor = isLight ? 0xcbd5e1 : 0x1e293b;
   const gridHelper = new THREE.GridHelper(size, 26, 0x0284c7, subGridColor);
   gridHelper.position.set(0, 0, 0);
 

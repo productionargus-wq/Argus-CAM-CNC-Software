@@ -124,7 +124,7 @@ export const DEFAULT_FIXTURE_CONFIG = {
   fixtureOffset: { x: 0, y: 0, z: 0 },
   rotationDeg: 0,         // 0, 90, 180, 270 deg
   safetyClearanceMm: 5.0, // mm safety clearance envelope
-  showCollisionZone: true,
+  showCollisionZone: false,
   autoFitStock: true
 };
 
@@ -153,10 +153,11 @@ export function calculateAutoFitFixture(stockBounds, currentConfig = DEFAULT_FIX
 /**
  * Generates 3D Parametric Mesh Group for Three.js Viewport
  */
-export function createParametricFixture3D(fixtureConfig = DEFAULT_FIXTURE_CONFIG, stockBounds = null) {
+export function createParametricFixture3D(fixtureConfig = DEFAULT_FIXTURE_CONFIG, stockBounds = null, theme = 'light') {
   const group = new THREE.Group();
   group.name = 'Parametric_Workholding_Fixture';
 
+  const isLight = theme !== 'dark';
   const cfg = { ...DEFAULT_FIXTURE_CONFIG, ...fixtureConfig };
   const model = FIXTURE_MODELS[cfg.type] || FIXTURE_MODELS.LANG_MAKRO_GRIP;
   const b = resolveSafeBounds(stockBounds);
@@ -173,24 +174,23 @@ export function createParametricFixture3D(fixtureConfig = DEFAULT_FIXTURE_CONFIG
   // Therefore the top of the jaw body sits at: jawTopY = stockBottomY + gripDepth
   const jawTopY = stockBottomY + gripDepth;
   const jawCenterY = jawTopY - jawHeight / 2;
-  const baseCenterY = jawTopY - jawHeight - baseHeight / 2;
 
-  // Materials
+  // Materials - Clean Light Anodized / Precision Ground Steel vs Dark Industrial
   const castIronMat = new THREE.MeshStandardMaterial({
-    color: 0x242a38,
-    metalness: 0.75,
-    roughness: 0.38
+    color: isLight ? 0xdfe5ec : 0x242a38,
+    metalness: isLight ? 0.35 : 0.75,
+    roughness: isLight ? 0.45 : 0.38
   });
 
   const groundSteelMat = new THREE.MeshStandardMaterial({
-    color: 0x94a3b8,
-    metalness: 0.9,
-    roughness: 0.22
+    color: isLight ? 0xf8fafc : 0x94a3b8,
+    metalness: isLight ? 0.6 : 0.9,
+    roughness: isLight ? 0.25 : 0.22
   });
 
   const teethSteelMat = new THREE.MeshStandardMaterial({
-    color: 0x64748b,
-    metalness: 0.85,
+    color: isLight ? 0x94a3b8 : 0x64748b,
+    metalness: isLight ? 0.5 : 0.85,
     roughness: 0.3
   });
 
@@ -203,14 +203,14 @@ export function createParametricFixture3D(fixtureConfig = DEFAULT_FIXTURE_CONFIG
   const dangerZoneMat = new THREE.MeshBasicMaterial({
     color: 0xef4444,
     transparent: true,
-    opacity: 0.18,
+    opacity: isLight ? 0.08 : 0.18,
     depthWrite: false
   });
 
   const dangerLineMat = new THREE.LineBasicMaterial({
     color: 0xef4444,
     transparent: true,
-    opacity: 0.65
+    opacity: isLight ? 0.4 : 0.65
   });
 
   // 1. Base Machine Table Subplate / Bed Grid
@@ -225,7 +225,7 @@ export function createParametricFixture3D(fixtureConfig = DEFAULT_FIXTURE_CONFIG
   // T-slot channels on bed plate
   [-60, 0, 60].forEach((tz) => {
     const slotGeo = new THREE.BoxGeometry(bedWidth - 10, 3, 14);
-    const slotMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+    const slotMat = new THREE.MeshBasicMaterial({ color: isLight ? 0x94a3b8 : 0x0f172a });
     const slot = new THREE.Mesh(slotGeo, slotMat);
     slot.position.set(0, 0, tz);
     group.add(slot);

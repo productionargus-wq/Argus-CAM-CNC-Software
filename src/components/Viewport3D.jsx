@@ -260,7 +260,12 @@ export default function Viewport3D({
     dirLight2Ref.current = dirLight2;
 
     // Machine Bed Grid
-    const gridHelper = new THREE.GridHelper(400, 40, 0x334155, 0x1e293b);
+    const gridHelper = new THREE.GridHelper(
+      400,
+      40,
+      isLightInit ? 0x94a3b8 : 0x334155,
+      isLightInit ? 0xcbd5e1 : 0x1e293b
+    );
     gridHelper.position.y = -20;
     scene.add(gridHelper);
     gridHelperRef.current = gridHelper;
@@ -270,7 +275,7 @@ export default function Viewport3D({
       new THREE.Vector3(-40, 49, -35),
       new THREE.Vector3(40, 85, 35)
     );
-    const fixtureGroup = createParametricFixture3D(fixtureConfig || DEFAULT_FIXTURE_CONFIG, initialBounds);
+    const fixtureGroup = createParametricFixture3D(fixtureConfig || DEFAULT_FIXTURE_CONFIG, initialBounds, theme);
     fixtureGroup.name = "fixture_group";
     scene.add(fixtureGroup);
     fixtureGroupRef.current = fixtureGroup;
@@ -895,11 +900,11 @@ export default function Viewport3D({
       new THREE.Vector3(40, 85, 35)
     );
 
-    const fixtureMesh = createParametricFixture3D(fixtureConfig || DEFAULT_FIXTURE_CONFIG, bounds);
+    const fixtureMesh = createParametricFixture3D(fixtureConfig || DEFAULT_FIXTURE_CONFIG, bounds, theme);
     fixtureMesh.visible = layerVisibility.fixture !== false;
     scene.add(fixtureMesh);
     fixtureGroupRef.current = fixtureMesh;
-  }, [fixtureConfig, partMetrics, stockConfig, layerVisibility.fixture]);
+  }, [fixtureConfig, partMetrics, stockConfig, layerVisibility.fixture, theme]);
 
   // 8. Update Dynamic Stock Box Mesh
   useEffect(() => {
@@ -1640,6 +1645,7 @@ export default function Viewport3D({
       {/* CAD Sketcher HUD Floating Toolbar */}
       {isSketchModeActive && (
         <DrawingToolbarHUD
+          theme={theme}
           activeTool={activeSketchTool}
           onChangeTool={(tool) => {
             setActiveSketchTool(tool);
@@ -1674,9 +1680,9 @@ export default function Viewport3D({
           position: 'absolute',
           top: '52px',
           left: '16px',
-          background: 'rgba(236, 72, 153, 0.18)',
-          border: '1px solid rgba(236, 72, 153, 0.4)',
-          color: '#f472b6',
+          background: isLight ? '#fce7f3' : 'rgba(236, 72, 153, 0.18)',
+          border: isLight ? '1px solid #f472b6' : '1px solid rgba(236, 72, 153, 0.4)',
+          color: isLight ? '#be185d' : '#f472b6',
           borderRadius: '6px',
           padding: '4px 10px',
           fontSize: '11px',
@@ -1748,9 +1754,9 @@ export default function Viewport3D({
           bottom: '22px',
           left: '50%',
           transform: 'translateX(-50%)',
-          background: 'rgba(15, 23, 42, 0.95)',
-          border: '1px solid rgba(56, 189, 248, 0.4)',
-          boxShadow: '0 20px 45px rgba(0,0,0,0.7)',
+          background: isLight ? 'rgba(255, 255, 255, 0.97)' : 'rgba(15, 23, 42, 0.95)',
+          border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(56, 189, 248, 0.4)',
+          boxShadow: isLight ? '0 12px 36px rgba(0,0,0,0.14)' : '0 20px 45px rgba(0,0,0,0.7)',
           borderRadius: '10px',
           padding: '12px 18px',
           display: 'flex',
@@ -1759,13 +1765,14 @@ export default function Viewport3D({
           zIndex: 1000,
           width: '720px',
           backdropFilter: 'blur(14px)',
-          userSelect: 'none'
+          userSelect: 'none',
+          color: isLight ? '#0f172a' : '#f8fafc'
         }}>
           {/* Header Row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Play size={15} color="#38bdf8" />
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.5px' }}>
+              <Play size={15} color="#0284c7" />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: isLight ? '#0f172a' : '#f8fafc', letterSpacing: '0.5px' }}>
                 {backplotInternalMode === 'heatmap' ? 'IN-PROCESS TOLERANCE DEVIATION HEATMAP' : backplotInternalMode === 'verify' ? 'SOLID MATERIAL REMOVAL VERIFY' : '3D TOOLPATH WIREFRAME BACKPLOT'}
               </span>
 
@@ -1779,9 +1786,9 @@ export default function Viewport3D({
                   setIsBackplotPlaying(true);
                 }}
                 style={{
-                  background: '#090d14',
-                  color: '#38bdf8',
-                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                  background: isLight ? '#f1f5f9' : '#090d14',
+                  color: isLight ? '#0284c7' : '#38bdf8',
+                  border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(56, 189, 248, 0.4)',
                   borderRadius: '4px',
                   padding: '2px 8px',
                   fontSize: '10px',
@@ -1803,9 +1810,9 @@ export default function Viewport3D({
                 fontSize: '9.5px',
                 padding: '2px 7px',
                 borderRadius: '4px',
-                background: holderCollisionAlert ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.2)',
+                background: holderCollisionAlert ? (isLight ? '#fee2e2' : 'rgba(239, 68, 68, 0.25)') : (isLight ? '#dcfce7' : 'rgba(16, 185, 129, 0.2)'),
                 border: `1px solid ${holderCollisionAlert ? '#ef4444' : '#10b981'}`,
-                color: holderCollisionAlert ? '#ef4444' : '#10b981',
+                color: holderCollisionAlert ? '#b91c1c' : '#15803d',
                 fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
@@ -1827,12 +1834,12 @@ export default function Viewport3D({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {/* Mode Switcher */}
-              <div style={{ display: 'flex', background: '#0a0d14', padding: '2px', borderRadius: '4px', border: '1px solid #1e293b' }}>
+              <div style={{ display: 'flex', background: isLight ? '#f1f5f9' : '#0a0d14', padding: '2px', borderRadius: '4px', border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b' }}>
                 <button
                   onClick={() => setBackplotInternalMode('backplot')}
                   style={{
                     background: backplotInternalMode === 'backplot' ? '#0284c7' : 'transparent',
-                    color: '#fff',
+                    color: backplotInternalMode === 'backplot' ? '#fff' : (isLight ? '#475569' : '#94a3b8'),
                     border: 'none',
                     padding: '2px 9px',
                     fontSize: '10px',
@@ -1847,7 +1854,7 @@ export default function Viewport3D({
                   onClick={() => setBackplotInternalMode('verify')}
                   style={{
                     background: backplotInternalMode === 'verify' ? '#10b981' : 'transparent',
-                    color: '#fff',
+                    color: backplotInternalMode === 'verify' ? '#fff' : (isLight ? '#475569' : '#94a3b8'),
                     border: 'none',
                     padding: '2px 9px',
                     fontSize: '10px',
@@ -1862,7 +1869,7 @@ export default function Viewport3D({
                   onClick={() => setBackplotInternalMode('heatmap')}
                   style={{
                     background: backplotInternalMode === 'heatmap' ? '#f59e0b' : 'transparent',
-                    color: '#fff',
+                    color: backplotInternalMode === 'heatmap' ? '#fff' : (isLight ? '#475569' : '#94a3b8'),
                     border: 'none',
                     padding: '2px 9px',
                     fontSize: '10px',
@@ -1882,7 +1889,7 @@ export default function Viewport3D({
 
               <button
                 onClick={onCloseBackplot}
-                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }}
+                style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer', padding: '2px' }}
                 title="Exit Backplot (Esc)"
               >
                 <X size={16} />
@@ -1893,8 +1900,8 @@ export default function Viewport3D({
           {/* Tolerance Heatmap Legend & Telemetry Card */}
           {backplotInternalMode === 'heatmap' && (
             <div style={{
-              background: 'rgba(15, 23, 42, 0.75)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              background: isLight ? '#f8fafc' : 'rgba(15, 23, 42, 0.75)',
+              border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '6px',
               padding: '8px 12px',
               display: 'flex',
@@ -1913,14 +1920,14 @@ export default function Viewport3D({
 
                 {/* Tolerance Presets */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '9.5px' }}>Band:</span>
+                  <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '9.5px' }}>Band:</span>
                   {[0.01, 0.02, 0.05, 0.10].map((tol) => (
                     <button
                       key={tol}
                       onClick={() => setHeatmapTolerance(tol)}
                       style={{
-                        background: heatmapTolerance === tol ? '#0284c7' : 'rgba(255,255,255,0.1)',
-                        color: '#fff',
+                        background: heatmapTolerance === tol ? '#0284c7' : (isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)'),
+                        color: heatmapTolerance === tol ? '#fff' : (isLight ? '#334155' : '#fff'),
                         border: 'none',
                         padding: '1px 6px',
                         borderRadius: '3px',
@@ -1944,11 +1951,11 @@ export default function Viewport3D({
               }} />
 
               {/* Live Inspection Stats */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#cbd5e1' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: isLight ? '#475569' : '#cbd5e1' }}>
                 <span>In-Tolerance: <strong style={{ color: '#10b981' }}>{heatmapStats?.inTolerancePct ?? 86.4}%</strong></span>
-                <span>Excess Unmachined: <strong style={{ color: '#38bdf8' }}>{heatmapStats?.excessStockPct ?? 13.6}%</strong></span>
+                <span>Excess Unmachined: <strong style={{ color: '#0284c7' }}>{heatmapStats?.excessStockPct ?? 13.6}%</strong></span>
                 <span>Gouges Detected: <strong style={{ color: (heatmapStats?.gougeCount || 0) > 0 ? '#ef4444' : '#10b981' }}>{heatmapStats?.gougeCount || 0}</strong></span>
-                <span>Max Excess: <strong style={{ color: '#f59e0b' }}>+{heatmapStats?.maxExcessStock ?? 1.85}mm</strong></span>
+                <span>Max Excess: <strong style={{ color: '#d97706' }}>+{heatmapStats?.maxExcessStock ?? 1.85}mm</strong></span>
               </div>
             </div>
           )}
@@ -1966,9 +1973,9 @@ export default function Viewport3D({
                 backplotProgressRef.current = p;
                 setBackplotProgress(p);
               }}
-              style={{ flex: 1, cursor: 'pointer', accentColor: '#38bdf8' }}
+              style={{ flex: 1, cursor: 'pointer', accentColor: '#0284c7' }}
             />
-            <span style={{ fontSize: '11px', color: '#38bdf8', fontFamily: 'monospace', minWidth: '45px', textAlign: 'right' }}>
+            <span style={{ fontSize: '11px', color: '#0284c7', fontFamily: 'monospace', minWidth: '45px', textAlign: 'right' }}>
               {(backplotProgress * 100).toFixed(1)}%
             </span>
           </div>
@@ -2017,7 +2024,7 @@ export default function Viewport3D({
                 style={{
                   padding: '5px 14px',
                   background: isBackplotPlaying ? '#e11d48' : '#0284c7',
-                  borderColor: isBackplotPlaying ? '#f43f5e' : '#38bdf8',
+                  borderColor: isBackplotPlaying ? '#f43f5e' : '#0284c7',
                   fontWeight: 700
                 }}
                 title="Play / Pause (Spacebar)"
@@ -2046,8 +2053,8 @@ export default function Viewport3D({
                 title="Toggle Repeat Loop"
                 style={{
                   padding: '5px 8px',
-                  color: backplotLoop ? '#38bdf8' : '#94a3b8',
-                  borderColor: backplotLoop ? '#38bdf8' : 'rgba(255,255,255,0.1)'
+                  color: backplotLoop ? '#0284c7' : (isLight ? '#475569' : '#94a3b8'),
+                  borderColor: backplotLoop ? '#0284c7' : (isLight ? '#cbd5e1' : 'rgba(255,255,255,0.1)')
                 }}
               >
                 Loop
@@ -2064,9 +2071,9 @@ export default function Viewport3D({
                     padding: '3px 7px',
                     fontSize: '10px',
                     borderRadius: '3px',
-                    border: backplotSpeed === spd ? '1px solid #38bdf8' : '1px solid #334155',
-                    background: backplotSpeed === spd ? 'rgba(56,189,248,0.2)' : '#0f172a',
-                    color: backplotSpeed === spd ? '#38bdf8' : '#94a3b8',
+                    border: backplotSpeed === spd ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
+                    background: backplotSpeed === spd ? (isLight ? '#e0f2fe' : 'rgba(56,189,248,0.2)') : (isLight ? '#f8fafc' : '#0f172a'),
+                    color: backplotSpeed === spd ? '#0284c7' : (isLight ? '#475569' : '#94a3b8'),
                     cursor: 'pointer',
                     fontWeight: backplotSpeed === spd ? 700 : 500
                   }}
@@ -2083,16 +2090,16 @@ export default function Viewport3D({
               gap: '10px',
               fontFamily: 'monospace',
               fontSize: '10.5px',
-              color: '#f8fafc',
-              background: '#090d14',
+              color: isLight ? '#0f172a' : '#f8fafc',
+              background: isLight ? '#f1f5f9' : '#090d14',
               padding: '4px 10px',
               borderRadius: '4px',
-              border: '1px solid #1e293b'
+              border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b'
             }}>
-              <span>X: <strong style={{ color: '#38bdf8' }}>{currentSample.pos.x.toFixed(2)}</strong></span>
+              <span>X: <strong style={{ color: '#0284c7' }}>{currentSample.pos.x.toFixed(2)}</strong></span>
               <span>Y: <strong style={{ color: '#10b981' }}>{currentSample.pos.y.toFixed(2)}</strong></span>
-              <span>Z: <strong style={{ color: '#f59e0b' }}>{currentSample.pos.z.toFixed(2)}</strong></span>
-              <span style={{ color: currentSample.isRapid ? '#06b6d4' : '#10b981', fontWeight: 600 }}>
+              <span>Z: <strong style={{ color: '#d97706' }}>{currentSample.pos.z.toFixed(2)}</strong></span>
+              <span style={{ color: currentSample.isRapid ? '#0284c7' : '#10b981', fontWeight: 600 }}>
                 {currentSample.isRapid ? 'G0 RAPID' : 'G1 CUT'}
               </span>
             </div>

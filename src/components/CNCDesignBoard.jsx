@@ -28,8 +28,9 @@ export default function CNCDesignBoard({
   onGenerateToolpaths,
   onSwitchTo3D,
   stockConfig = { dimensions: { x: 200, y: 150, z: 25 } },
-  theme = 'dark'
+  theme = 'light'
 }) {
+  const isLight = theme !== 'dark';
   // Board setup (in millimeters)
   const [boardW, setBoardW] = useState(stockConfig?.dimensions?.x || 200);
   const [boardH, setBoardH] = useState(stockConfig?.dimensions?.y || 150);
@@ -321,10 +322,10 @@ export default function CNCDesignBoard({
             left: `${scr.x}px`,
             top: 0,
             height: '100%',
-            borderLeft: '1px solid rgba(148, 163, 184, 0.3)',
+            borderLeft: isLight ? '1px solid #cbd5e1' : '1px solid rgba(148, 163, 184, 0.3)',
             paddingLeft: '2px',
             fontSize: '9px',
-            color: '#94a3b8',
+            color: isLight ? '#475569' : '#94a3b8',
             pointerEvents: 'none'
           }}
         >
@@ -344,10 +345,10 @@ export default function CNCDesignBoard({
             top: `${scr.y}px`,
             left: 0,
             width: '100%',
-            borderTop: '1px solid rgba(148, 163, 184, 0.3)',
+            borderTop: isLight ? '1px solid #cbd5e1' : '1px solid rgba(148, 163, 184, 0.3)',
             paddingTop: '1px',
             fontSize: '9px',
-            color: '#94a3b8',
+            color: isLight ? '#475569' : '#94a3b8',
             pointerEvents: 'none'
           }}
         >
@@ -375,8 +376,8 @@ export default function CNCDesignBoard({
         flexDirection: 'column',
         width: '100%',
         height: '100%',
-        background: '#090d16',
-        color: '#f8fafc',
+        background: isLight ? '#f8fafc' : '#090d16',
+        color: isLight ? '#0f172a' : '#f8fafc',
         fontFamily: 'Inter, system-ui, sans-serif',
         overflow: 'hidden',
         position: 'relative',
@@ -387,8 +388,8 @@ export default function CNCDesignBoard({
       <div
         style={{
           height: '42px',
-          background: 'rgba(15, 23, 42, 0.95)',
-          borderBottom: '1px solid rgba(56, 189, 248, 0.2)',
+          background: isLight ? '#ffffff' : 'rgba(15, 23, 42, 0.95)',
+          borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid rgba(56, 189, 248, 0.2)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -401,12 +402,12 @@ export default function CNCDesignBoard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '13px' }}>🎨</span>
-            <span style={{ fontWeight: 800, color: '#38bdf8', letterSpacing: '0.5px' }}>
+            <span style={{ fontWeight: 800, color: '#0284c7', letterSpacing: '0.5px' }}>
               CNC 2D DESIGN BOARD
             </span>
             <span style={{
-              background: 'rgba(56, 189, 248, 0.15)',
-              color: '#38bdf8',
+              background: isLight ? '#e0f2fe' : 'rgba(56, 189, 248, 0.15)',
+              color: '#0284c7',
               padding: '1px 6px',
               borderRadius: '3px',
               fontSize: '10px',
@@ -416,10 +417,10 @@ export default function CNCDesignBoard({
             </span>
           </div>
 
-          <div style={{ height: '16px', width: '1px', background: '#334155' }} />
+          <div style={{ height: '16px', width: '1px', background: isLight ? '#e2e8f0' : '#334155' }} />
 
           {/* Stock Sheet Size Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: isLight ? '#475569' : '#94a3b8' }}>
             <span>Stock:</span>
             <input
               type="number"
@@ -427,9 +428,9 @@ export default function CNCDesignBoard({
               onChange={(e) => setBoardW(Math.max(10, Number(e.target.value)))}
               style={{
                 width: '46px',
-                background: '#1e293b',
-                color: '#f8fafc',
-                border: '1px solid #475569',
+                background: isLight ? '#f1f5f9' : '#1e293b',
+                color: isLight ? '#0f172a' : '#f8fafc',
+                border: isLight ? '1px solid #cbd5e1' : '1px solid #475569',
                 borderRadius: '3px',
                 padding: '2px 4px',
                 fontSize: '11px',
@@ -639,8 +640,8 @@ export default function CNCDesignBoard({
         <div
           style={{
             width: '48px',
-            background: 'rgba(15, 23, 42, 0.96)',
-            borderRight: '1px solid rgba(56, 189, 248, 0.2)',
+            background: isLight ? '#ffffff' : 'rgba(15, 23, 42, 0.96)',
+            borderRight: isLight ? '1px solid #cbd5e1' : '1px solid rgba(56, 189, 248, 0.2)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -737,7 +738,7 @@ export default function CNCDesignBoard({
             position: 'relative',
             overflow: 'hidden',
             cursor: activeTool === 'select' ? (isDraggingShape ? 'grabbing' : 'default') : 'crosshair',
-            background: '#0a0f1d'
+            background: isLight ? '#f8fafc' : '#0a0f1d'
           }}
         >
           {/* Top Horizontal Millimeter Ruler */}
@@ -748,8 +749,8 @@ export default function CNCDesignBoard({
               left: '24px',
               right: 0,
               height: '20px',
-              background: '#0f172a',
-              borderBottom: '1px solid #334155',
+              background: isLight ? '#f1f5f9' : '#0f172a',
+              borderBottom: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
               zIndex: 5,
               overflow: 'hidden'
             }}
@@ -777,8 +778,8 @@ export default function CNCDesignBoard({
               left: 0,
               bottom: 0,
               width: '24px',
-              background: '#0f172a',
-              borderRight: '1px solid #334155',
+              background: isLight ? '#f1f5f9' : '#0f172a',
+              borderRight: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
               zIndex: 5,
               overflow: 'hidden'
             }}

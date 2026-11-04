@@ -107,7 +107,11 @@ import CNCDesignBoard from './components/CNCDesignBoard';
 import { convertBoardDiagramsToToolpaths, getCADTemplate } from './utils/cncBoardEngine';
 
 export default function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('argus_theme') || 'light');
+  const [theme, setTheme] = useState(() => {
+    // Pure Light Theme default
+    localStorage.setItem('argus_theme', 'light');
+    return 'light';
+  });
   const [activeRibbonTab, setActiveRibbonTab] = useState('Toolpaths');
   const [currentModel, setCurrentModel] = useState(() => createMastercamBaseStructureALU());
   const [currentProjectName, setCurrentProjectName] = useState('Base Structure-ALU.mcam');
@@ -1882,7 +1886,7 @@ export default function App() {
     const t = String(template || 'blank').toLowerCase().trim();
 
     if (t === 'blank' || t === 'blank_wireframe' || t === 'blank_part') {
-      // Mastercam clean 2D CAD Part drawing canvas
+      // Mastercam clean 2D CAD Part drawing canvas (pure light drafting sheet)
       setCurrentModel(null);
       setOperations([]);
       setSolidsList([]);
@@ -1900,6 +1904,11 @@ export default function App() {
         ...prev,
         dimensions: stockDims,
         rawDimensions: stockDims
+      }));
+      setLayerVisibility((prev) => ({
+        ...prev,
+        fixture: false,
+        stock: false
       }));
       setActiveRibbonTab('Wireframe');
       setIsSketchModeActive(true);
@@ -3699,18 +3708,18 @@ export default function App() {
             key={toast.id}
             style={{
               pointerEvents: 'auto',
-              background: toast.type === 'danger' ? 'rgba(239, 68, 68, 0.95)' :
-                          toast.type === 'warning' ? 'rgba(245, 158, 11, 0.95)' :
-                          toast.type === 'success' ? 'rgba(16, 185, 129, 0.95)' :
-                          'rgba(30, 41, 59, 0.95)',
-              color: '#ffffff',
+              background: toast.type === 'danger' ? '#ef4444' :
+                          toast.type === 'warning' ? '#f59e0b' :
+                          toast.type === 'success' ? '#10b981' :
+                          '#ffffff',
+              color: toast.type ? '#ffffff' : '#0f172a',
               padding: '9px 16px',
               borderRadius: '6px',
               fontSize: '12px',
               fontWeight: '500',
               fontFamily: 'Inter, system-ui, sans-serif',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-              border: '1px solid rgba(255,255,255,0.18)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: toast.type ? '1px solid rgba(255,255,255,0.2)' : '1px solid #cbd5e1',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
@@ -3726,8 +3735,8 @@ export default function App() {
                 }}
                 style={{
                   marginLeft: '8px',
-                  background: '#38bdf8',
-                  color: '#0f172a',
+                  background: '#0284c7',
+                  color: '#ffffff',
                   border: 'none',
                   padding: '4px 10px',
                   borderRadius: '4px',
@@ -3736,7 +3745,8 @@ export default function App() {
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '4px',
+                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)'
                 }}
               >
                 {toast.action.label}

@@ -39,9 +39,9 @@
   --input-border: #cbd5e1;
   --input-text: #0f172a;
 
-  --viewport-bg: radial-gradient(circle at 50% 50%, #ffffff 0%, #cbd5e1 100%);
-  --hud-bg: rgba(255, 255, 255, 0.92);
-  --hud-border: rgba(0, 0, 0, 0.12);
+  --viewport-bg: radial-gradient(circle at 50% 50%, #ffffff 0%, #e2e8f0 100%);
+  --hud-bg: rgba(255, 255, 255, 0.95);
+  --hud-border: rgba(0, 0, 0, 0.1);
   --hud-text: #0f172a;
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
