@@ -137,16 +137,44 @@ function extractModelTriangles(object3D) {
  * Automatically recognizes machining features from CAD Model and recommends CAM Toolpaths.
  */
 export function analyzeModelFeatures(model, bounds = null, tools = [], options = {}) {
-  const features = [];
+  // Compute model bounding box if not provided or normalize plain bounds object
+  let bBox = null;
+  if (bounds && bounds.min && bounds.max) {
+    if (typeof bounds.isEmpty === 'function') {
+      bBox = bounds.isEmpty() ? null : bounds.clone();
+    } else {
+      bBox = new THREE.Box3(
+        new THREE.Vector3(bounds.min.x, bounds.min.y, bounds.min.z),
+        new THREE.Vector3(bounds.max.x, bounds.max.y, bounds.max.z)
+      );
+    }
+  }
 
-  // Compute model bounding box if not provided
-  let bBox = bounds;
   if (!bBox && model) {
     bBox = new THREE.Box3().setFromObject(model);
   }
-  if (!bBox || bBox.isEmpty()) {
+
+  if (!bBox || (typeof bBox.isEmpty === 'function' && bBox.isEmpty())) {
     bBox = new THREE.Box3(new THREE.Vector3(-45, 0, -35), new THREE.Vector3(45, 35, 35));
   }
+
+  // If there is no CAD 3D solid model (e.g. blank drawing canvas), return empty features cleanly
+  if (!model) {
+    return {
+      features: [],
+      totalCount: 0,
+      countsByType: {
+        face: 0,
+        pocket: 0,
+        hole: 0,
+        contour: 0,
+        chamfer: 0
+      },
+      modelBounds: bBox
+    };
+  }
+
+  const features = [];
 
   const modelWidth = bBox.max.x - bBox.min.x;
   const modelHeight = bBox.max.y - bBox.min.y;

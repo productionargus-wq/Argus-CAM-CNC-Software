@@ -28,7 +28,7 @@ export default function AFRModal({
     return analyzeModelFeatures(currentModel, partMetrics?.box, tools);
   }, [currentModel, partMetrics, tools]);
 
-  const { features, countsByType, modelBounds } = afrResult;
+  const { features = [], countsByType = {}, modelBounds } = afrResult || {};
 
   // Initialize all features as selected by default when opened
   useEffect(() => {
