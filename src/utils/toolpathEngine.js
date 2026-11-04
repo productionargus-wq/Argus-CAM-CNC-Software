@@ -519,6 +519,125 @@ export function generateDrillingToolpath(bounds, tool, params = {}, model = null
 }
 
 /**
+ * Generates 2D Circle Milling / Circular Helical Plunge & Pocket Toolpath
+ */
+export function generateCircleMillToolpath(bounds, tool, params = {}) {
+  bounds = resolveSafeBounds(bounds);
+  const toolRadius = (tool.diameter || 12.0) / 2;
+  const {
+    diameter = 50.8,
+    totalDepth = 50.8,
+    stepdown = 6.35,
+    rapidHeight = 15.0,
+    center = { x: (bounds.min.x + bounds.max.x) / 2, y: bounds.max.y, z: (bounds.min.z + bounds.max.z) / 2 }
+  } = params;
+
+  const cuttingLines = [];
+  const rapidLines = [];
+  const topY = bounds.max.y;
+  const finalR = Math.max(toolRadius * 1.05, (diameter / 2) - toolRadius);
+
+  // Rapid approach to center
+  rapidLines.push([
+    new THREE.Vector3(center.x, topY + rapidHeight, center.z),
+    new THREE.Vector3(center.x, topY + 2.0, center.z)
+  ]);
+
+  // Helical entry spiral down to depth
+  const spiralR = Math.min(finalR * 0.5, toolRadius * 0.8);
+  const totalRampLevels = Math.ceil(totalDepth / stepdown);
+  const segmentsPerRev = 32;
+
+  let lastPoint = new THREE.Vector3(center.x + spiralR, topY, center.z);
+  cuttingLines.push([new THREE.Vector3(center.x, topY + 2.0, center.z), lastPoint]);
+
+  for (let lvl = 1; lvl <= totalRampLevels; lvl++) {
+    const curZ = Math.min(totalDepth, lvl * stepdown);
+    const prevZ = (lvl - 1) * stepdown;
+    for (let s = 1; s <= segmentsPerRev; s++) {
+      const theta = (s / segmentsPerRev) * Math.PI * 2;
+      const interpZ = prevZ + (curZ - prevZ) * (s / segmentsPerRev);
+      const pt = new THREE.Vector3(
+        center.x + Math.cos(theta) * spiralR,
+        topY - interpZ,
+        center.z + Math.sin(theta) * spiralR
+      );
+      cuttingLines.push([lastPoint, pt]);
+      lastPoint = pt;
+    }
+  }
+
+  // Circular pocket expanding passes at each level
+  for (let curDepth = stepdown; curDepth <= totalDepth; curDepth += stepdown) {
+    const yLevel = topY - curDepth;
+    const radialPasses = Math.max(2, Math.ceil(finalR / (toolRadius * 0.75)));
+    for (let p = 1; p <= radialPasses; p++) {
+      const passR = (p / radialPasses) * finalR;
+      const passStart = new THREE.Vector3(center.x + passR, yLevel, center.z);
+      cuttingLines.push([lastPoint, passStart]);
+      lastPoint = passStart;
+      for (let s = 1; s <= segmentsPerRev; s++) {
+        const theta = (s / segmentsPerRev) * Math.PI * 2;
+        const pt = new THREE.Vector3(
+          center.x + Math.cos(theta) * passR,
+          yLevel,
+          center.z + Math.sin(theta) * passR
+        );
+        cuttingLines.push([lastPoint, pt]);
+        lastPoint = pt;
+      }
+    }
+  }
+
+  // Final rapid retract
+  rapidLines.push([
+    lastPoint,
+    new THREE.Vector3(lastPoint.x, topY + rapidHeight, lastPoint.z)
+  ]);
+
+  return { cuttingLines, rapidLines };
+}
+
+/**
+ * Generates Spot Drill (G81 cycle) Chamfer Toolpath on Hole Features
+ */
+export function generateSpotDrillToolpath(bounds, tool, params = {}, model = null) {
+  bounds = resolveSafeBounds(bounds);
+  const {
+    spotDepth = 3.8,
+    rapidHeight = 10.0
+  } = params;
+
+  const cuttingLines = [];
+  const rapidLines = [];
+  const topY = bounds.max.y;
+
+  const holes = detectHoleFeatures(model, bounds);
+
+  holes.forEach((hole) => {
+    // Rapid to hole
+    rapidLines.push([
+      new THREE.Vector3(hole.x, topY + rapidHeight, hole.z),
+      new THREE.Vector3(hole.x, topY + 2.0, hole.z)
+    ]);
+
+    // G81 simple drill plunge
+    cuttingLines.push([
+      new THREE.Vector3(hole.x, topY + 2.0, hole.z),
+      new THREE.Vector3(hole.x, topY - spotDepth, hole.z)
+    ]);
+
+    // Rapid retract
+    rapidLines.push([
+      new THREE.Vector3(hole.x, topY - spotDepth, hole.z),
+      new THREE.Vector3(hole.x, topY + rapidHeight, hole.z)
+    ]);
+  });
+
+  return { cuttingLines, rapidLines, detectedHoles: holes };
+}
+
+/**
  * Converts line segments into Three.js LineSegments geometries
  */
 export function buildToolpathMeshes(toolpathData) {

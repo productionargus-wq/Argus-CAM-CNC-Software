@@ -22,7 +22,8 @@ import {
   createSolidShell,
   createThickenedSolid,
   trimSolidByPlane,
-  generateDrawingLayoutSheet
+  generateDrawingLayoutSheet,
+  createMastercam2019TutorialPart
 } from '../utils/cadGeometry';
 import {
   performSolidBoolean,
@@ -137,6 +138,15 @@ export default function SolidsCADModal({
 
   // 10. Boolean CSG State
   const [boolOp, setBoolOp] = useState(BOOLEAN_OPERATIONS.SUBTRACT);
+
+  // 11. Plate with Cutouts & Fillets (Mastercam 2.5D Part)
+  const [plateW, setPlateW] = useState(127);
+  const [plateD, setPlateD] = useState(127);
+  const [plateH, setPlateH] = useState(50.8);
+  const [plateFillet, setPlateFillet] = useState(19.05);
+  const [plateBore, setPlateBore] = useState(50.8);
+  const [plateHoles, setPlateHoles] = useState(12.7);
+  const [plateOffset, setPlateOffset] = useState(44.45);
 
   // Real-time mass calculation helper
   const calcMassKg = (volCm3) => {
@@ -283,6 +293,21 @@ export default function SolidsCADModal({
     notify(`Surface sheets stitched into watertight solid body.`);
   };
 
+  const handleCreatePlateWithHoles = () => {
+    const plate = createMastercam2019TutorialPart({
+      width: plateW / 25.4,
+      depth: plateD / 25.4,
+      thickness: plateH / 25.4,
+      filletRadius: plateFillet / 25.4,
+      centerHoleDia: plateBore / 25.4,
+      cornerHoleDia: plateHoles / 25.4,
+      holeOffset: plateOffset / 25.4,
+      color: activeMaterial.color
+    });
+    if (onAddSolidBody) onAddSolidBody(plate);
+    notify(`Plate with Fillets & Holes (${plateW}x${plateD}x${plateH}mm) added to scene.`);
+  };
+
   const handleCreateFillet = () => {
     const fillet = createSolidFillet(boxW, boxH, boxD, filletR);
     if (onAddSolidBody) onAddSolidBody(fillet);
@@ -329,6 +354,7 @@ export default function SolidsCADModal({
     { id: 'torus', group: 'Simple', label: 'Torus Ring', icon: Disc, badge: 'Primitive' },
 
     // Create
+    { id: 'plate_holes', group: 'Create', label: 'Plate with Holes & Fillets', icon: Sparkles, badge: '2.5D Part' },
     { id: 'extrude', group: 'Create', label: 'Extrude Solid', icon: Sliders, badge: 'Draft' },
     { id: 'revolve', group: 'Create', label: 'Revolve Solid', icon: RefreshCw, badge: 'Turned' },
     { id: 'loft', group: 'Create', label: 'Loft Solid', icon: Sliders, badge: 'Profile' },
@@ -686,6 +712,63 @@ export default function SolidsCADModal({
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* 3B. 2.5D MILLING PLATE WITH HOLES & FILLETS */}
+            {activeTool === 'plate_holes' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#0284c7' }}>
+                    2.5D Milling Plate Solid (Fillets, Bore &amp; Bolt Holes)
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    Generate the standard Mastercam 2.5D milling tutorial part: filleted rectangular plate with central through-bore and 4 corner bolt holes.
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    <label style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>Width (mm / 5")</label>
+                    <input type="number" step="1" value={plateW} onChange={(e) => setPlateW(parseFloat(e.target.value) || 127)} style={inputStyle} />
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    <label style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>Depth (mm / 5")</label>
+                    <input type="number" step="1" value={plateD} onChange={(e) => setPlateD(parseFloat(e.target.value) || 127)} style={inputStyle} />
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    <label style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>Thickness (mm / 2")</label>
+                    <input type="number" step="1" value={plateH} onChange={(e) => setPlateH(parseFloat(e.target.value) || 50.8)} style={inputStyle} />
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    <label style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>Corner Fillet R (0.75")</label>
+                    <input type="number" step="0.5" value={plateFillet} onChange={(e) => setPlateFillet(parseFloat(e.target.value) || 19.05)} style={inputStyle} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    <label style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>Center Bore Ø (mm / 2")</label>
+                    <input type="number" step="1" value={plateBore} onChange={(e) => setPlateBore(parseFloat(e.target.value) || 50.8)} style={inputStyle} />
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    <label style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>4x Bolt Holes Ø (0.5")</label>
+                    <input type="number" step="0.5" value={plateHoles} onChange={(e) => setPlateHoles(parseFloat(e.target.value) || 12.7)} style={inputStyle} />
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    <label style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>Hole Offset (1.75")</label>
+                    <input type="number" step="0.5" value={plateOffset} onChange={(e) => setPlateOffset(parseFloat(e.target.value) || 44.45)} style={inputStyle} />
+                  </div>
+                </div>
+
+                <div style={{ background: '#eff6ff', padding: '10px 14px', borderRadius: '6px', border: '1px solid #bfdbfe', fontSize: '11.5px', color: '#1e40af' }}>
+                  Parametric B-Rep solid model with through-cuts, feature cylinders, and arc center points for 2D Facing, Contour, Circle Mill, Spot Drill, and Peck Drill operations.
+                </div>
+
+                <button onClick={handleCreatePlateWithHoles} style={primaryBtnStyle}>
+                  <Plus size={16} />
+                  <span>Generate Parametric 2.5D Milling Plate Solid</span>
+                </button>
               </div>
             )}
 

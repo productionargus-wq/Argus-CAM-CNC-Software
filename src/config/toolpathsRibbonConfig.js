@@ -84,7 +84,7 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         label: 'Circle Mill',
         icon: 'Tp2dCircleMill',
         action: 'tp_2d_circle_mill',
-        opType: 'contour',
+        opType: 'circlemill',
         tooltip: 'Circular Boss & Counterbore Milling'
       },
       {

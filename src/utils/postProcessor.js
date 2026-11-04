@@ -5,6 +5,8 @@ import {
   generateWaterlineToolpath,
   generateSwarfToolpath,
   generateDrillingToolpath,
+  generateCircleMillToolpath,
+  generateSpotDrillToolpath,
   generateSurfaceParallelToolpath,
   generateAdaptiveRoughingToolpath
 } from './toolpathEngine.js';
@@ -125,6 +127,13 @@ export function generateNCProgram({
         stepdown: op.stepdown || 5.0,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
+    } else if (op.badgeClass === 'circlemill') {
+      toolpathData = generateCircleMillToolpath(bounds, tool, {
+        diameter: op.diameter || 50.8,
+        totalDepth: op.totalDepth || 50.8,
+        stepdown: op.stepdown || 6.35,
+        rapidHeight: op.rapidHeight || 15.0
+      });
     } else if (op.badgeClass === 'contour') {
       toolpathData = generateWaterlineToolpath(bounds, tool, {
         stepdown: op.stepdown || 3.0,
@@ -139,6 +148,11 @@ export function generateNCProgram({
       toolpathData = generateDrillingToolpath(bounds, tool, {
         drillDepth: op.totalDepth || 25.0,
         peckDepth: op.stepdown || 5.0,
+        rapidHeight: op.rapidHeight || 10.0
+      }, model);
+    } else if (op.badgeClass === 'spotdrill') {
+      toolpathData = generateSpotDrillToolpath(bounds, tool, {
+        spotDepth: op.stepdown || op.totalDepth || 3.8,
         rapidHeight: op.rapidHeight || 10.0
       }, model);
     } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {

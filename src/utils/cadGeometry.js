@@ -120,6 +120,170 @@ export function createMoldCoreGeometry() {
 }
 
 /**
+ * Creates the Mastercam 2019 Milling Operations Tutorial part (YouTube PfPOn5-8A80 by CAD CAM PDF)
+ * 5.0" x 5.0" plate with 4x R0.75" corner fillets, central 2.0" bore, and 4x 0.5" corner bolt holes at (±1.75", ±1.75").
+ * Uses mm by default (127mm x 127mm x 50.8mm) or configurable units.
+ */
+export function createMastercam2019TutorialPart(options = {}) {
+  const isInch = options.units === 'inch';
+  const scale = isInch ? 1 : 25.4;
+
+  const width = (options.width ?? 5.0) * scale;
+  const depth = (options.depth ?? 5.0) * scale;
+  const height = (options.thickness ?? 2.0) * scale;
+  const filletRadius = (options.filletRadius ?? 0.75) * scale;
+  const centerHoleDia = (options.centerHoleDia ?? 2.0) * scale;
+  const cornerHoleDia = (options.cornerHoleDia ?? 0.5) * scale;
+  const holeOffset = (options.holeOffset ?? 1.75) * scale;
+
+  const group = new THREE.Group();
+  group.name = "Mastercam2019_Milling_Tutorial.mcam";
+
+  // Create 2D Shape with rounded rectangle outer boundary
+  const shape = new THREE.Shape();
+  const hw = width / 2;
+  const hd = depth / 2;
+  const r = filletRadius;
+
+  shape.moveTo(-hw + r, -hd);
+  shape.lineTo(hw - r, -hd);
+  shape.quadraticCurveTo(hw, -hd, hw, -hd + r);
+  shape.lineTo(hw, hd - r);
+  shape.quadraticCurveTo(hw, hd, hw - r, hd);
+  shape.lineTo(-hw + r, hd);
+  shape.quadraticCurveTo(-hw, hd, -hw, hd - r);
+  shape.lineTo(-hw, -hd + r);
+  shape.quadraticCurveTo(-hw, -hd, -hw + r, -hd);
+
+  // Central through-bore hole
+  const centerHole = new THREE.Path();
+  const centerR = centerHoleDia / 2;
+  centerHole.absarc(0, 0, centerR, 0, Math.PI * 2, true);
+  shape.holes.push(centerHole);
+
+  // 4 Corner Bolt Holes
+  const cornerR = cornerHoleDia / 2;
+  const holePositions = [
+    [holeOffset, holeOffset],
+    [-holeOffset, holeOffset],
+    [-holeOffset, -holeOffset],
+    [holeOffset, -holeOffset]
+  ];
+
+  holePositions.forEach(([hx, hy]) => {
+    const boltHole = new THREE.Path();
+    boltHole.absarc(hx, hy, cornerR, 0, Math.PI * 2, true);
+    shape.holes.push(boltHole);
+  });
+
+  // Extrude solid
+  const extrudeSettings = {
+    steps: 1,
+    depth: height,
+    bevelEnabled: false
+  };
+
+  const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  geo.rotateX(-Math.PI / 2);
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: options.color || 0x38bdf8,
+    metalness: 0.8,
+    roughness: 0.25
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.name = "Tutorial_Milling_Solid_Body";
+  mesh.position.y = 0;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+
+  // Add cylinder hole meshes for automatic feature recognition
+  holePositions.forEach(([hx, hz], idx) => {
+    const holeCylGeo = new THREE.CylinderGeometry(cornerR, cornerR, height + 1, 32);
+    const holeMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.3 });
+    const holeCylMesh = new THREE.Mesh(holeCylGeo, holeMat);
+    holeCylMesh.name = `Hole_${idx + 1}_Ø${cornerHoleDia.toFixed(1)}mm`;
+    holeCylMesh.position.set(hx, height / 2, hz);
+    group.add(holeCylMesh);
+  });
+
+  // Central bore cylinder mesh for feature recognition
+  const centerBoreGeo = new THREE.CylinderGeometry(centerR, centerR, height + 1, 48);
+  const centerBoreMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.3 });
+  const centerBoreMesh = new THREE.Mesh(centerBoreGeo, centerBoreMat);
+  centerBoreMesh.name = `Bore_Center_Ø${centerHoleDia.toFixed(1)}mm`;
+  centerBoreMesh.position.set(0, height / 2, 0);
+  group.add(centerBoreMesh);
+
+  group.userData = {
+    isMastercamTutorial: true,
+    width,
+    depth,
+    height,
+    filletRadius,
+    centerHoleDia,
+    cornerHoleDia,
+    holePositions,
+    units: isInch ? 'inch' : 'mm'
+  };
+
+  return group;
+}
+
+/**
+ * Creates 2D Wireframe curves matching the tutorial part for Mastercam Level 10
+ */
+export function createMastercam2019TutorialWireframe(scale = 25.4) {
+  const width = 5.0 * scale;
+  const depth = 5.0 * scale;
+  const height = 2.0 * scale;
+  const filletRadius = 0.75 * scale;
+  const centerHoleDia = 2.0 * scale;
+  const cornerHoleDia = 0.5 * scale;
+  const holeOffset = 1.75 * scale;
+
+  const entities = [];
+  const topY = height;
+
+  // 1. Rectangle Outer Boundary with Fillets
+  entities.push(
+    createWireframeRect(width, depth, topY, filletRadius, [0, 0], {
+      color: '#38bdf8',
+      name: 'Wireframe_Outer_Profile'
+    })
+  );
+
+  // 2. Central Bore Circle
+  entities.push(
+    createWireframeCircle(centerHoleDia / 2, topY, [0, 0], 0, 360, 'G17', {
+      color: '#a855f7',
+      name: 'Wireframe_Center_Bore'
+    })
+  );
+
+  // 3. Four Corner Bolt Holes
+  const holePositions = [
+    [holeOffset, holeOffset],
+    [-holeOffset, holeOffset],
+    [-holeOffset, -holeOffset],
+    [holeOffset, -holeOffset]
+  ];
+
+  holePositions.forEach(([hx, hz], idx) => {
+    entities.push(
+      createWireframeCircle(cornerHoleDia / 2, topY, [hx, hz], 0, 360, 'G17', {
+        color: '#10b981',
+        name: `Wireframe_Corner_Hole_${idx + 1}`
+      })
+    );
+  });
+
+  return entities;
+}
+
+/**
  * Creates the Mastercam "Base Structure-ALU" turned & milled multi-body CAD part (Image 2)
  * Features purple cylindrical flange with radial holes, blue sculpted body, and yellow toolpath passes
  */

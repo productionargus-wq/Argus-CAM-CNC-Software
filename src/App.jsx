@@ -68,6 +68,8 @@ import {
   createAerospaceBracket,
   createMoldCoreGeometry,
   createMastercamBaseStructureALU,
+  createMastercam2019TutorialPart,
+  createMastercam2019TutorialWireframe,
   createBoxGeometry,
   createCylinderGeometry,
   createSphereGeometry,
@@ -940,6 +942,38 @@ export default function App() {
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
+    } else if (s === 'circlemill' || s === 'circle_mill') {
+      newOp = {
+        id: nextId,
+        name: `Circle Mill / Bore ${nextId}`,
+        toolId: 2,
+        toolName: 'T2 - 1/2" Flat Endmill',
+        badgeClass: 'circlemill',
+        badgeText: 'CM',
+        visible: true,
+        diameter: 50.8,
+        stepoverPct: 50,
+        stepdown: 6.35,
+        totalDepth: 50.8,
+        stockToLeaveXY: 0.0,
+        stockToLeaveZ: 0.0,
+        rapidHeight: 25.0
+      };
+    } else if (s === 'spotdrill' || s === 'spot_drill' || s === 'spot') {
+      newOp = {
+        id: nextId,
+        name: `Spot Drill Chamfer ${nextId}`,
+        toolId: 3,
+        toolName: 'T3 - 1/2" 90° Spot Drill',
+        badgeClass: 'spotdrill',
+        badgeText: 'SD',
+        visible: true,
+        stepdown: 3.8,
+        totalDepth: 3.8,
+        stockToLeaveXY: 0.0,
+        stockToLeaveZ: 0.0,
+        rapidHeight: 15.0
+      };
     } else if (s === 'drill' || s === 'drilling' || s === 'point') {
       newOp = {
         id: nextId,
@@ -1206,6 +1240,179 @@ export default function App() {
       setActiveMachineId('haas_vf2');
       setActiveRibbonTab('Toolpaths');
       showToast('Loaded Mastercam Base Structure-ALU Part with 3D Contour Toolpaths', 'success');
+    } else if (type === 'mastercam2019_tutorial' || type === 'mastercam_tutorial' || type === 'milling_tutorial') {
+      const tutorialPart = createMastercam2019TutorialPart();
+      setCurrentModel(tutorialPart);
+      setCurrentProjectName('Mastercam2019_Milling_Tutorial.mcam');
+      setActiveMachineId('haas_vf2');
+      setActiveWcs('G54');
+      setActiveRibbonTab('Toolpaths');
+
+      setStockConfig({
+        shape: 'box',
+        allowanceTop: 5.08,
+        allowanceSides: 2.54,
+        material: 'Alu 6061-T6',
+        originPoint: 'top-center',
+        massKg: '2.85',
+        rawDimensions: { x: 132, y: 88, z: 132 }
+      });
+
+      const tutorialTools = [
+        {
+          id: 1,
+          number: 1,
+          name: '2" Face Mill (5-Flute)',
+          type: 'face',
+          diameter: 50.8,
+          cornerRad: 0,
+          fluteLength: 25,
+          overallLength: 75,
+          flutes: 5,
+          cuttingSpeedVc: 170,
+          rpm: 1069,
+          feedPerTooth: 0.2,
+          feedRate: 1069,
+          plungeRate: 250,
+          coolant: 'Flood'
+        },
+        {
+          id: 2,
+          number: 2,
+          name: '1/2" Flat Endmill (4-Flute)',
+          type: 'flat',
+          diameter: 12.7,
+          cornerRad: 0,
+          fluteLength: 35,
+          overallLength: 75,
+          flutes: 4,
+          cuttingSpeedVc: 85,
+          rpm: 2139,
+          feedPerTooth: 0.08,
+          feedRate: 684,
+          plungeRate: 200,
+          coolant: 'Flood'
+        },
+        {
+          id: 3,
+          number: 3,
+          name: '1/2" 90° Spot Drill',
+          type: 'spot',
+          diameter: 12.7,
+          cornerRad: 0,
+          fluteLength: 20,
+          overallLength: 70,
+          flutes: 2,
+          cuttingSpeedVc: 65,
+          rpm: 1630,
+          feedPerTooth: 0.05,
+          feedRate: 163,
+          plungeRate: 163,
+          coolant: 'Flood'
+        },
+        {
+          id: 4,
+          number: 4,
+          name: '1/2" Carbide Drill',
+          type: 'drill',
+          diameter: 12.7,
+          cornerRad: 0,
+          fluteLength: 60,
+          overallLength: 100,
+          flutes: 2,
+          cuttingSpeedVc: 75,
+          rpm: 1880,
+          feedPerTooth: 0.12,
+          feedRate: 451,
+          plungeRate: 451,
+          coolant: 'Through'
+        }
+      ];
+      setTools(tutorialTools);
+
+      const tutorialOps = [
+        {
+          id: 1,
+          name: '1 - Facing (Top Z: 0.00)',
+          toolId: 1,
+          toolName: 'T1 - 2" Face Mill',
+          badgeClass: 'face',
+          badgeText: 'FM',
+          visible: true,
+          stepoverPct: 75,
+          stepdown: 2.54,
+          totalDepth: 5.08,
+          stockToLeaveXY: 0.0,
+          stockToLeaveZ: 0.0,
+          rapidHeight: 25.0
+        },
+        {
+          id: 2,
+          name: '2 - Contour (2D) - Outside Profile',
+          toolId: 2,
+          toolName: 'T2 - 1/2" Flat Endmill',
+          badgeClass: 'contour',
+          badgeText: 'CT',
+          visible: true,
+          stepoverPct: 40,
+          stepdown: 6.35,
+          totalDepth: 50.8,
+          stockToLeaveXY: 0.0,
+          stockToLeaveZ: 0.0,
+          rapidHeight: 25.0
+        },
+        {
+          id: 3,
+          name: '3 - Circle Mill / Pocket (Center Bore)',
+          toolId: 2,
+          toolName: 'T2 - 1/2" Flat Endmill',
+          badgeClass: 'circlemill',
+          badgeText: 'CM',
+          visible: true,
+          diameter: 50.8,
+          stepoverPct: 50,
+          stepdown: 6.35,
+          totalDepth: 50.8,
+          stockToLeaveXY: 0.0,
+          stockToLeaveZ: 0.0,
+          rapidHeight: 25.0
+        },
+        {
+          id: 4,
+          name: '4 - Spot Drill - 4x Corners',
+          toolId: 3,
+          toolName: 'T3 - 1/2" 90° Spot Drill',
+          badgeClass: 'spotdrill',
+          badgeText: 'SD',
+          visible: true,
+          stepdown: 3.8,
+          totalDepth: 3.8,
+          stockToLeaveXY: 0.0,
+          stockToLeaveZ: 0.0,
+          rapidHeight: 25.0
+        },
+        {
+          id: 5,
+          name: '5 - Peck Drill (G83) - 4x Through Holes',
+          toolId: 4,
+          toolName: 'T4 - 1/2" Drill',
+          badgeClass: 'drill',
+          badgeText: 'DR',
+          visible: true,
+          stepdown: 5.0,
+          totalDepth: 50.8,
+          stockToLeaveXY: 0.0,
+          stockToLeaveZ: 0.0,
+          rapidHeight: 25.0
+        }
+      ];
+      setOperations(tutorialOps);
+      setActiveOpId(1);
+
+      const wireframes = createMastercam2019TutorialWireframe();
+      setCustomGeometry(wireframes);
+
+      showToast('Loaded Mastercam 2019 Milling Tutorial Project with 5 Standard Operations', 'success');
     } else if (type === 'impeller') {
       setCurrentModel(createImpellerGeometry());
       setCurrentProjectName('DMU50_5Axis_Impeller.mcam');
@@ -1414,6 +1621,8 @@ export default function App() {
       setIsSketchModeActive(true);
       setSketchTool('rect');
       showToast("✏️ Blank Mastercam Drawing Canvas Ready! Click & drag to draw Rectangle (R), Circle (C), Line (L).", "success");
+    } else if (template === 'mastercam2019_tutorial' || template === 'milling_tutorial') {
+      handleSelectSampleModel('mastercam2019_tutorial');
     } else if (template === 'dmu50_impeller') {
       setCurrentModel(createImpellerGeometry());
       setActiveMachineId('dmu50');

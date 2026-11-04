@@ -939,6 +939,7 @@ export default function FileBackstageView({
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                     {[
+                      { id: 'mastercam2019_tutorial', label: 'Mastercam 2019 Tutorial', desc: '5x5" plate with Facing, 2D Contour, Circle Mill, Spot & Peck Drill', icon: Zap },
                       { id: 'blank', label: 'Blank Part', desc: 'Empty CAD canvas with default levels and origin', icon: Box },
                       { id: 'vmc3x', label: '3-Axis VMC Billet', desc: 'Raw 6061-T6 stock block with G54 WCS', icon: Layers },
                       { id: 'impeller', label: '5-Axis Impeller', desc: 'Rotary blisk geometry for multiaxis milling', icon: Cpu },

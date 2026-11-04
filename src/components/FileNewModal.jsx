@@ -127,6 +127,36 @@ export default function FileNewModal({
                 </div>
               </div>
 
+              {/* Template Mastercam 2019 Tutorial */}
+              <div
+                onClick={() => setSelectedTemplate('mastercam2019_tutorial')}
+                style={{
+                  background: selectedTemplate === 'mastercam2019_tutorial' ? '#1e2d4a' : '#11151e',
+                  border: `1px solid ${selectedTemplate === 'mastercam2019_tutorial' ? '#38bdf8' : '#283344'}`,
+                  borderRadius: '6px',
+                  padding: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  gap: '10px',
+                  alignItems: 'flex-start'
+                }}
+              >
+                <div style={{ background: '#0284c7', padding: '6px', borderRadius: '4px' }}>
+                  <Box size={20} color="white" />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 700, color: '#f8fafc', fontSize: '12px' }}>Mastercam 2019 Milling Tutorial (CAD CAM PDF)</span>
+                    <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#eab308', fontSize: '9.5px', fontWeight: 700, padding: '1px 6px', borderRadius: '3px' }}>
+                      YOUTUBE
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '2px' }}>
+                    5.0"x5.0" Plate with Corner Fillets &bull; Facing, 2D Contour, Circle Mill, Spot Drill, Peck Drill (G83)
+                  </div>
+                </div>
+              </div>
+
               {/* Template 1 */}
               <div
                 onClick={() => setSelectedTemplate('dmu50_impeller')}

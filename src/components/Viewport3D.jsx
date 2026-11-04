@@ -19,6 +19,8 @@ import {
   generateWaterlineToolpath,
   generateSwarfToolpath,
   generateDrillingToolpath,
+  generateCircleMillToolpath,
+  generateSpotDrillToolpath,
   generateAdaptiveRoughingToolpath,
   generateChamferToolpath,
   generateSurfaceParallelToolpath,
@@ -990,9 +992,11 @@ export default function Viewport3D({
       const opColors = {
         face: 0x3b82f6,
         pocket: 0x10b981,
+        circlemill: 0xa855f7,
         contour: 0xf59e0b,
         swarf: 0x8b5cf6,
         drill: 0xef4444,
+        spotdrill: 0x059669,
         adaptive: 0x06b6d4,
         chamfer: 0xec4899,
         parallel: 0xd946ef,
@@ -1021,6 +1025,13 @@ export default function Viewport3D({
           stepdown: op.stepdown || 5.0,
           rapidHeight: op.rapidHeight || 15.0
         }, currentModel);
+      } else if (op.badgeClass === 'circlemill') {
+        toolpathData = generateCircleMillToolpath(bounds, assignedTool, {
+          diameter: op.diameter || 50.8,
+          totalDepth: op.totalDepth || 50.8,
+          stepdown: op.stepdown || 6.35,
+          rapidHeight: op.rapidHeight || 15.0
+        });
       } else if (op.badgeClass === 'contour') {
         toolpathData = generateWaterlineToolpath(bounds, assignedTool, {
           stepdown: op.stepdown || 3.0,
@@ -1035,6 +1046,11 @@ export default function Viewport3D({
         toolpathData = generateDrillingToolpath(bounds, assignedTool, {
           drillDepth: op.totalDepth || 25.0,
           peckDepth: op.stepdown || 5.0,
+          rapidHeight: op.rapidHeight || 10.0
+        }, currentModel);
+      } else if (op.badgeClass === 'spotdrill') {
+        toolpathData = generateSpotDrillToolpath(bounds, assignedTool, {
+          spotDepth: op.stepdown || op.totalDepth || 3.8,
           rapidHeight: op.rapidHeight || 10.0
         }, currentModel);
       } else if (op.badgeClass === 'adaptive') {

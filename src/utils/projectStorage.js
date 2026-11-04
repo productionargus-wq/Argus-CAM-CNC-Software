@@ -126,6 +126,15 @@ export function getRecentProjects() {
     if (!raw) {
       return [
         {
+          filename: 'Mastercam2019_Milling_Tutorial.mcam',
+          projectName: 'Mastercam 2019 Milling Operations Tutorial (Face, Contour, Pocket, Drill)',
+          savedAt: new Date().toISOString(),
+          machine: 'Haas VF-2 (3X VMC)',
+          opsCount: 5,
+          toolsCount: 4,
+          sampleType: 'mastercam2019_tutorial'
+        },
+        {
           filename: 'DMU50_5Axis_Impeller.mcam',
           projectName: '5-Axis Turbine Impeller',
           savedAt: new Date(Date.now() - 3600000).toISOString(),
