@@ -7,6 +7,8 @@ import {
   generateDrillingToolpath,
   generateCircleMillToolpath,
   generateSpotDrillToolpath,
+  generateChamferToolpath,
+  generateTapToolpath,
   generateSurfaceParallelToolpath,
   generateAdaptiveRoughingToolpath
 } from './toolpathEngine.js';
@@ -155,14 +157,26 @@ export function generateNCProgram({
         spotDepth: op.stepdown || op.totalDepth || 3.8,
         rapidHeight: op.rapidHeight || 10.0
       }, model);
+    } else if (op.badgeClass === 'chamfer') {
+      toolpathData = generateChamferToolpath(bounds, tool, {
+        chamferWidth: op.chamferWidth || op.stepdown || 0.508,
+        tipOffset: op.tipOffset || 1.27,
+        rapidHeight: op.rapidHeight || 15.0
+      }, model);
+    } else if (op.badgeClass === 'tap') {
+      toolpathData = generateTapToolpath(bounds, tool, {
+        pitch: op.pitch || 0.79375,
+        totalDepth: op.totalDepth || 12.19,
+        rapidHeight: op.rapidHeight || 10.0
+      }, model);
     } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
       toolpathData = generateSurfaceParallelToolpath(bounds, tool, {
         stepoverPct: op.stepoverPct || 20,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
-    } else if (op.badgeClass === 'adaptive') {
+    } else if (op.badgeClass === 'adaptive' || op.badgeClass === 'dynamic') {
       toolpathData = generateAdaptiveRoughingToolpath(bounds, tool, {
-        stepoverPct: op.stepoverPct || 15,
+        stepoverPct: op.stepoverPct || 25,
         stepdown: op.stepdown || 18.0,
         totalDepth: op.totalDepth || 20.0,
         rapidHeight: op.rapidHeight || 15.0

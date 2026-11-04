@@ -21,6 +21,7 @@ import {
   generateDrillingToolpath,
   generateCircleMillToolpath,
   generateSpotDrillToolpath,
+  generateTapToolpath,
   generateAdaptiveRoughingToolpath,
   generateChamferToolpath,
   generateSurfaceParallelToolpath,
@@ -998,7 +999,9 @@ export default function Viewport3D({
         drill: 0xef4444,
         spotdrill: 0x059669,
         adaptive: 0x06b6d4,
+        dynamic: 0x06b6d4,
         chamfer: 0xec4899,
+        tap: 0x06b6d4,
         parallel: 0xd946ef,
         surface: 0xd946ef,
         rest: 0x14b8a6,
@@ -1053,7 +1056,7 @@ export default function Viewport3D({
           spotDepth: op.stepdown || op.totalDepth || 3.8,
           rapidHeight: op.rapidHeight || 10.0
         }, currentModel);
-      } else if (op.badgeClass === 'adaptive') {
+      } else if (op.badgeClass === 'adaptive' || op.badgeClass === 'dynamic') {
         toolpathData = generateAdaptiveRoughingToolpath(bounds, assignedTool, {
           stepoverPct: op.stepoverPct || 25,
           stepdown: op.stepdown || 6.0,
@@ -1062,9 +1065,16 @@ export default function Viewport3D({
         });
       } else if (op.badgeClass === 'chamfer') {
         toolpathData = generateChamferToolpath(bounds, assignedTool, {
-          chamferWidth: op.stepdown || 1.0,
+          chamferWidth: op.chamferWidth || op.stepdown || 0.508,
+          tipOffset: op.tipOffset || 1.27,
           rapidHeight: op.rapidHeight || 15.0
-        });
+        }, currentModel);
+      } else if (op.badgeClass === 'tap') {
+        toolpathData = generateTapToolpath(bounds, assignedTool, {
+          pitch: op.pitch || 0.79375,
+          totalDepth: op.totalDepth || 12.19,
+          rapidHeight: op.rapidHeight || 10.0
+        }, currentModel);
       } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
         toolpathData = generateSurfaceParallelToolpath(bounds, assignedTool, {
           stepoverPct: op.stepoverPct || 20,

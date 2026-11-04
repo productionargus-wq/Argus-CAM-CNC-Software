@@ -168,6 +168,7 @@ export default function RibbonBar({
   onOpenDynamicAnalyzer,
   onOpenAngleAnalyzer,
   onOpenChainAnalyzer,
+  onOpenChaining,
   onOpenCheckSolid,
   onOpen2DArea,
   onOpenStatistics,
@@ -1259,6 +1260,21 @@ export default function RibbonBar({
                 </div>
               </div>
               <span className="ribbon-group-title">Modify</span>
+            </div>
+
+            {/* Chaining Group */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className="ribbon-btn-large"
+                  onClick={onOpenChaining}
+                  title="Chaining Manager - Select closed 2D wireframe contours and partial chains"
+                >
+                  <Layers size={22} color="#0284c7" />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Chaining<br />Manager</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Chains</span>
             </div>
           </>
         )}

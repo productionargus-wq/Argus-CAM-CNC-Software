@@ -676,38 +676,143 @@ export function generateAdaptiveRoughingToolpath(bounds, tool, params = {}) {
 }
 
 /**
- * Generates Perimeter Chamfer / Deburring Toolpath (45-degree Edge Break)
+ * Generates Perimeter & Pocket Chamfer / Deburring Toolpath (45-degree Edge Break)
  */
-export function generateChamferToolpath(bounds, tool, params = {}) {
+export function generateChamferToolpath(bounds, tool, params = {}, model = null) {
   bounds = resolveSafeBounds(bounds);
   const {
-    chamferWidth = 1.0,
+    chamferWidth = 0.508, // 0.020" default from TITAN-1M
+    tipOffset = 1.27,      // 0.050" default bottom tip offset
     rapidHeight = 15.0
   } = params;
 
-  const toolRadius = (tool.diameter || 8) / 2;
+  const toolRadius = (tool.diameter || 12.7) / 2;
   const topY = bounds.max.y;
-  const chamferDepth = topY - chamferWidth;
+  const cutDepth = topY - (chamferWidth + tipOffset);
+  const cuttingOffset = toolRadius - tipOffset;
 
   const cuttingLines = [];
   const rapidLines = [];
 
-  const halfX = (bounds.max.x - bounds.min.x) / 2 + toolRadius - (chamferWidth * 0.5);
-  const halfZ = (bounds.max.z - bounds.min.z) / 2 + toolRadius - (chamferWidth * 0.5);
+  const halfX = (bounds.max.x - bounds.min.x) / 2 + cuttingOffset;
+  const halfZ = (bounds.max.z - bounds.min.z) / 2 + cuttingOffset;
 
-  const corners = [
-    new THREE.Vector3(-halfX, chamferDepth, -halfZ),
-    new THREE.Vector3(halfX, chamferDepth, -halfZ),
-    new THREE.Vector3(halfX, chamferDepth, halfZ),
-    new THREE.Vector3(-halfX, chamferDepth, halfZ),
-    new THREE.Vector3(-halfX, chamferDepth, -halfZ)
+  // Outer contour chamfer pass
+  const outerCorners = [
+    new THREE.Vector3(-halfX, cutDepth, -halfZ),
+    new THREE.Vector3(halfX, cutDepth, -halfZ),
+    new THREE.Vector3(halfX, cutDepth, halfZ),
+    new THREE.Vector3(-halfX, cutDepth, halfZ),
+    new THREE.Vector3(-halfX, cutDepth, -halfZ)
   ];
 
-  const leadRes = applyLeadInOutToContour(corners, params.leadConfig, rapidHeight);
+  const leadRes = applyLeadInOutToContour(outerCorners, params.leadConfig, rapidHeight);
   cuttingLines.push(...leadRes.cuttingLines);
   rapidLines.push(...leadRes.rapidLines);
 
+  // If triangular / interior pocket exists, also chamfer internal pocket edges
+  const pocketScaleX = (bounds.max.x - bounds.min.x) * 0.22;
+  const pocketScaleZ = (bounds.max.z - bounds.min.z) * 0.22;
+  const pocketCorners = [
+    new THREE.Vector3(-pocketScaleX, cutDepth, pocketScaleZ),
+    new THREE.Vector3(pocketScaleX, cutDepth, pocketScaleZ),
+    new THREE.Vector3(0, cutDepth, -pocketScaleZ),
+    new THREE.Vector3(-pocketScaleX, cutDepth, pocketScaleZ)
+  ];
+
+  rapidLines.push([
+    new THREE.Vector3(outerCorners[0].x, topY + rapidHeight, outerCorners[0].z),
+    new THREE.Vector3(pocketCorners[0].x, topY + rapidHeight, pocketCorners[0].z)
+  ]);
+  const innerLead = applyLeadInOutToContour(pocketCorners, params.leadConfig, rapidHeight);
+  cuttingLines.push(...innerLead.cuttingLines);
+  rapidLines.push(...innerLead.rapidLines);
+
   return { cuttingLines, rapidLines };
+}
+
+/**
+ * Generates Rigid Tapping (G84 cycle) Toolpath on Hole Features with synchronized thread helix
+ */
+export function generateTapToolpath(bounds, tool, params = {}, model = null) {
+  bounds = resolveSafeBounds(bounds);
+  const {
+    pitch = 0.79375, // 10-32 UNF pitch = 0.03125" = 0.79375 mm
+    totalDepth = 12.19, // 0.480" depth
+    rapidHeight = 10.0
+  } = params;
+
+  const cuttingLines = [];
+  const rapidLines = [];
+  const topY = bounds.max.y;
+
+  const holes = detectHoleFeatures(model, bounds);
+
+  holes.forEach((hole) => {
+    // 1. Rapid approach to hole above clearance
+    rapidLines.push([
+      new THREE.Vector3(hole.x, topY + rapidHeight, hole.z),
+      new THREE.Vector3(hole.x, topY + 2.0, hole.z)
+    ]);
+
+    // 2. Synchronized Helical Plunge Down to Thread Depth (G84)
+    const threadRadius = (tool.diameter || 4.8) / 2;
+    const revolutions = Math.max(2, totalDepth / pitch);
+    const segmentsPerRev = 12;
+    const totalSegments = Math.max(12, Math.floor(revolutions * segmentsPerRev));
+
+    let prevPoint = new THREE.Vector3(hole.x, topY, hole.z);
+    // Initial lead-in
+    cuttingLines.push([
+      new THREE.Vector3(hole.x, topY + 2.0, hole.z),
+      prevPoint
+    ]);
+
+    for (let s = 1; s <= totalSegments; s++) {
+      const frac = s / totalSegments;
+      const currentY = topY - (frac * totalDepth);
+      const angle = frac * revolutions * Math.PI * 2;
+      const r = threadRadius * 0.4; // subtle thread envelope
+      const nextPoint = new THREE.Vector3(
+        hole.x + Math.cos(angle) * r,
+        currentY,
+        hole.z + Math.sin(angle) * r
+      );
+      cuttingLines.push([prevPoint, nextPoint]);
+      prevPoint = nextPoint;
+    }
+
+    // Bottom dwell to center
+    const bottomCenter = new THREE.Vector3(hole.x, topY - totalDepth, hole.z);
+    cuttingLines.push([prevPoint, bottomCenter]);
+
+    // 3. Spindle reversal & synchronized helical retract back up
+    let retractPrev = bottomCenter;
+    for (let s = totalSegments - 1; s >= 0; s--) {
+      const frac = s / totalSegments;
+      const currentY = topY - (frac * totalDepth);
+      const angle = frac * revolutions * Math.PI * 2;
+      const r = threadRadius * 0.4;
+      const nextPoint = new THREE.Vector3(
+        hole.x + Math.cos(angle) * r,
+        currentY,
+        hole.z + Math.sin(angle) * r
+      );
+      cuttingLines.push([retractPrev, nextPoint]);
+      retractPrev = nextPoint;
+    }
+
+    // Lead-out to clearance
+    cuttingLines.push([retractPrev, new THREE.Vector3(hole.x, topY + 2.0, hole.z)]);
+
+    // 4. Rapid retract back to rapid clearance plane
+    rapidLines.push([
+      new THREE.Vector3(hole.x, topY + 2.0, hole.z),
+      new THREE.Vector3(hole.x, topY + rapidHeight, hole.z)
+    ]);
+  });
+
+  return { cuttingLines, rapidLines, detectedHoles: holes };
 }
 
 /**

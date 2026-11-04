@@ -284,6 +284,187 @@ export function createMastercam2019TutorialWireframe(scale = 25.4) {
 }
 
 /**
+ * Creates the TITANS of CNC: TITAN-1M Aerospace Benchmark Milling Part
+ * Finished workpiece: 4.000" x 1.900" x 0.750" (101.6mm x 48.26mm x 19.05mm)
+ * Features 2.5D stepped islands, central triangular pocket, and 7x 10-32 tapped holes.
+ */
+export function createTitan1MPart(options = {}) {
+  const isInch = options.units === 'inch';
+  const scale = isInch ? 1 : 25.4;
+
+  const width = (options.width ?? 4.0) * scale;       // 101.6 mm
+  const depth = (options.depth ?? 1.9) * scale;       // 48.26 mm
+  const height = (options.thickness ?? 0.75) * scale; // 19.05 mm
+  const stepDepth = (options.stepDepth ?? 0.5) * scale; // 12.7 mm
+  const tapHoleDia = 0.159 * scale;                   // 4.039 mm (#21 drill)
+  const tapR = tapHoleDia / 2;
+
+  const group = new THREE.Group();
+  group.name = "TITAN-1M.mcam";
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: options.color || 0x38bdf8,
+    metalness: 0.85,
+    roughness: 0.22
+  });
+
+  const hw = width / 2;
+  const hd = depth / 2;
+  const cornerR = 0.375 * scale;
+
+  // 1. Base Workpiece Body (from Z = 0 to height)
+  const baseShape = new THREE.Shape();
+  baseShape.moveTo(-hw + cornerR, -hd);
+  baseShape.lineTo(hw - cornerR, -hd);
+  baseShape.quadraticCurveTo(hw, -hd, hw, -hd + cornerR);
+  baseShape.lineTo(hw, hd - cornerR);
+  baseShape.quadraticCurveTo(hw, hd, hw - cornerR, hd);
+  baseShape.lineTo(-hw + cornerR, hd);
+  baseShape.quadraticCurveTo(-hw, hd, -hw, hd - cornerR);
+  baseShape.lineTo(-hw, -hd + cornerR);
+  baseShape.quadraticCurveTo(-hw, -hd, -hw + cornerR, -hd);
+
+  // 7 Tapped Holes
+  const holePositions = [
+    [-1.625 * scale, -0.575 * scale],
+    [-0.850 * scale, -0.575 * scale],
+    [0.850 * scale, -0.575 * scale],
+    [1.625 * scale, -0.575 * scale],
+    [-1.625 * scale, 0.575 * scale],
+    [0.000 * scale, 0.575 * scale],
+    [1.625 * scale, 0.575 * scale]
+  ];
+
+  holePositions.forEach(([hx, hy]) => {
+    const hole = new THREE.Path();
+    hole.absarc(hx, hy, tapR, 0, Math.PI * 2, true);
+    baseShape.holes.push(hole);
+  });
+
+  const baseExtrude = new THREE.ExtrudeGeometry(baseShape, { steps: 1, depth: height, bevelEnabled: false });
+  baseExtrude.rotateX(-Math.PI / 2);
+  const baseMesh = new THREE.Mesh(baseExtrude, mat);
+  baseMesh.name = "TITAN_1M_Solid_Body";
+  baseMesh.castShadow = true;
+  baseMesh.receiveShadow = true;
+  group.add(baseMesh);
+
+  // 2. Add Central Triangular Pocket Cavity (machined pocket floor)
+  const pocketMat = new THREE.MeshStandardMaterial({
+    color: 0x0284c7,
+    metalness: 0.75,
+    roughness: 0.35,
+    side: THREE.DoubleSide
+  });
+
+  const pocketShape = new THREE.Shape();
+  const p1 = [-0.750 * scale, 0.350 * scale];
+  const p2 = [0.750 * scale, 0.350 * scale];
+  const p3 = [0.000 * scale, -0.400 * scale];
+  pocketShape.moveTo(p1[0], p1[1]);
+  pocketShape.lineTo(p2[0], p2[1]);
+  pocketShape.lineTo(p3[0], p3[1]);
+  pocketShape.closePath();
+
+  const pocketGeo = new THREE.ExtrudeGeometry(pocketShape, { steps: 1, depth: stepDepth + 0.1, bevelEnabled: false });
+  pocketGeo.rotateX(-Math.PI / 2);
+  const pocketMesh = new THREE.Mesh(pocketGeo, pocketMat);
+  pocketMesh.name = "Pocket_Center_Triangular_Cavity";
+  pocketMesh.position.y = height - stepDepth;
+  group.add(pocketMesh);
+
+  // 3. 7 Tapped Hole Cylinders (for hole recognition & rendering)
+  const holeMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.3 });
+  holePositions.forEach(([hx, hz], idx) => {
+    const holeGeo = new THREE.CylinderGeometry(tapR, tapR, height + 1, 32);
+    const holeMesh = new THREE.Mesh(holeGeo, holeMat);
+    holeMesh.name = `Hole_${idx + 1}_10-32_UNF`;
+    holeMesh.position.set(hx, height / 2, hz);
+    group.add(holeMesh);
+
+    // Top Chamfer Cone
+    const chamferGeo = new THREE.CylinderGeometry(tapR * 1.5, tapR, 0.05 * scale, 32);
+    const chamferMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.2 });
+    const chamferMesh = new THREE.Mesh(chamferGeo, chamferMat);
+    chamferMesh.position.set(hx, height - 0.025 * scale, hz);
+    group.add(chamferMesh);
+  });
+
+  group.userData = {
+    isTitan1M: true,
+    width,
+    depth,
+    height,
+    stepDepth,
+    cornerR,
+    tapHoleDia,
+    holePositions,
+    units: isInch ? 'inch' : 'mm'
+  };
+
+  return group;
+}
+
+/**
+ * Creates 2D Wireframe curves matching TITAN-1M for Mastercam Level 10
+ */
+export function createTitan1MWireframe(scale = 25.4) {
+  const width = 4.0 * scale;
+  const depth = 1.9 * scale;
+  const height = 0.75 * scale;
+  const cornerR = 0.375 * scale;
+  const tapHoleDia = 0.159 * scale;
+  const topY = height;
+
+  const entities = [];
+
+  // 1. Rectangle Outer Boundary with Fillets
+  entities.push(
+    createWireframeRect(width, depth, topY, cornerR, [0, 0], {
+      color: '#38bdf8',
+      name: 'Wireframe_TITAN_1M_Outer_Profile'
+    })
+  );
+
+  // 2. Central Triangular Pocket
+  const p1 = [-0.750 * scale, 0.350 * scale];
+  const p2 = [0.750 * scale, 0.350 * scale];
+  const p3 = [0.000 * scale, -0.400 * scale];
+  entities.push(
+    createWireframePolygon([
+      [p1[0], topY, p1[1]],
+      [p2[0], topY, p2[1]],
+      [p3[0], topY, p3[1]]
+    ], {
+      color: '#a855f7',
+      name: 'Wireframe_Center_Pocket_Triangular'
+    })
+  );
+
+  // 3. 7 Tapped Hole Wireframe Circles (10-32 UNF)
+  const holePositions = [
+    [-1.625 * scale, -0.575 * scale],
+    [-0.850 * scale, -0.575 * scale],
+    [0.850 * scale, -0.575 * scale],
+    [1.625 * scale, -0.575 * scale],
+    [-1.625 * scale, 0.575 * scale],
+    [0.000 * scale, 0.575 * scale],
+    [1.625 * scale, 0.575 * scale]
+  ];
+
+  holePositions.forEach(([hx, hz], idx) => {
+    entities.push(
+      createWireframeCircle(tapHoleDia / 2, topY, [hx, hz], 0, 360, 'G17', {
+        color: '#10b981',
+        name: `Wireframe_Hole_${idx + 1}_10-32`
+      })
+    );
+  });
+
+  return entities;
+}
+
+/**
  * Creates the Mastercam "Base Structure-ALU" turned & milled multi-body CAD part (Image 2)
  * Features purple cylindrical flange with radial holes, blue sculpted body, and yellow toolpath passes
  */

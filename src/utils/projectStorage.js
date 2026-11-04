@@ -126,6 +126,15 @@ export function getRecentProjects() {
     if (!raw) {
       return [
         {
+          filename: 'TITAN-1M_Mastercam_Benchmark.mcam',
+          projectName: 'TITAN-1M Aerospace Benchmark Milling (Facing, Dynamic Mill, Contour, Pocket, Chamfer, Drill, Tap)',
+          savedAt: new Date().toISOString(),
+          machine: 'Haas VF-2 (3X VMC)',
+          opsCount: 8,
+          toolsCount: 5,
+          sampleType: 'titan_1m'
+        },
+        {
           filename: 'Mastercam2019_Milling_Tutorial.mcam',
           projectName: 'Mastercam 2019 Milling Operations Tutorial (Face, Contour, Pocket, Drill)',
           savedAt: new Date().toISOString(),

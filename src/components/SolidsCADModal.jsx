@@ -23,7 +23,8 @@ import {
   createThickenedSolid,
   trimSolidByPlane,
   generateDrawingLayoutSheet,
-  createMastercam2019TutorialPart
+  createMastercam2019TutorialPart,
+  createTitan1MPart
 } from '../utils/cadGeometry';
 import {
   performSolidBoolean,
@@ -308,6 +309,12 @@ export default function SolidsCADModal({
     notify(`Plate with Fillets & Holes (${plateW}x${plateD}x${plateH}mm) added to scene.`);
   };
 
+  const handleCreateTitan1M = () => {
+    const titan = createTitan1MPart({ color: activeMaterial.color });
+    if (onAddSolidBody) onAddSolidBody(titan);
+    notify(`TITAN-1M Aerospace Benchmark Solid Body added to scene.`);
+  };
+
   const handleCreateFillet = () => {
     const fillet = createSolidFillet(boxW, boxH, boxD, filletR);
     if (onAddSolidBody) onAddSolidBody(fillet);
@@ -354,6 +361,7 @@ export default function SolidsCADModal({
     { id: 'torus', group: 'Simple', label: 'Torus Ring', icon: Disc, badge: 'Primitive' },
 
     // Create
+    { id: 'titan1m', group: 'Create', label: 'TITAN-1M Part', icon: Sparkles, badge: 'Titans CNC' },
     { id: 'plate_holes', group: 'Create', label: 'Plate with Holes & Fillets', icon: Sparkles, badge: '2.5D Part' },
     { id: 'extrude', group: 'Create', label: 'Extrude Solid', icon: Sliders, badge: 'Draft' },
     { id: 'revolve', group: 'Create', label: 'Revolve Solid', icon: RefreshCw, badge: 'Turned' },
@@ -712,6 +720,31 @@ export default function SolidsCADModal({
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* 3A. TITAN-1M BENCHMARK MILLING PART */}
+            {activeTool === 'titan1m' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#0284c7' }}>
+                    TITANS of CNC: TITAN-1M Aerospace Part
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    Industry standard CNC benchmark part: 4.0"x1.9"x0.75" 6061-T6 aluminum with stepped outer profile, central triangular pocket, and 7x 10-32 tapped holes.
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', color: '#334155', lineHeight: 1.6 }}>
+                  <div><strong>Workpiece:</strong> 4.000" x 1.900" x 0.750" (101.6mm x 48.26mm x 19.05mm)</div>
+                  <div><strong>Material:</strong> 6061-T6 Aircraft-Grade Aluminum</div>
+                  <div><strong>Features:</strong> 2.5D Stepped Shoulder, Triangular Machined Pocket, 7x 10-32 UNF Threaded Holes, 0.020" Deburr Chamfers</div>
+                </div>
+
+                <button onClick={handleCreateTitan1M} style={primaryBtnStyle}>
+                  <Sparkles size={16} />
+                  <span>Generate TITAN-1M Solid Body</span>
+                </button>
               </div>
             )}
 

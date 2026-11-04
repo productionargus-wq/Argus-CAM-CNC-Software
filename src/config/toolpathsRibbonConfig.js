@@ -94,6 +94,22 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         action: 'tp_2d_engrave',
         opType: 'contour',
         tooltip: '2D V-Carve & Text Engraving'
+      },
+      {
+        id: '2d_chamfer',
+        label: 'Model Chamfer',
+        icon: 'Tp2dContour',
+        action: 'tp_2d_chamfer',
+        opType: 'chamfer',
+        tooltip: '2D / 3D Model Edge Deburring & 45° Chamfering'
+      },
+      {
+        id: '2d_tap',
+        label: 'Rigid Tap (G84)',
+        icon: 'Tp2dDrill',
+        action: 'tp_2d_tap',
+        opType: 'tap',
+        tooltip: 'Synchronized Spindle Rigid & Floating Tapping'
       }
     ]
   },

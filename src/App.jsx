@@ -60,6 +60,8 @@ import SurfaceFinishContourModal from './components/SurfaceFinishContourModal';
 import CommandFinderModal from './components/CommandFinderModal';
 import AddInsManagerModal from './components/AddInsManagerModal';
 import PartStatisticsModal from './components/PartStatisticsModal';
+import MastercamToolpathParametersModal from './components/MastercamToolpathParametersModal';
+import MastercamChainingModal from './components/MastercamChainingModal';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import ViewsheetBar from './components/ViewsheetBar';
@@ -70,6 +72,8 @@ import {
   createMastercamBaseStructureALU,
   createMastercam2019TutorialPart,
   createMastercam2019TutorialWireframe,
+  createTitan1MPart,
+  createTitan1MWireframe,
   createBoxGeometry,
   createCylinderGeometry,
   createSphereGeometry,
@@ -262,6 +266,8 @@ export default function App() {
   const [isSetupSheetOpen, setIsSetupSheetOpen] = useState(false);
   const [isHelpGuideOpen, setIsHelpGuideOpen] = useState(false);
   const [editingOperation, setEditingOperation] = useState(null);
+  const [isMastercamToolpathModalOpen, setIsMastercamToolpathModalOpen] = useState(false);
+  const [isMastercamChainingModalOpen, setIsMastercamChainingModalOpen] = useState(false);
 
   // In-Viewport Backplot & Solid Verify Simulation State
   const [isBackplotActive, setIsBackplotActive] = useState(false);
@@ -886,7 +892,7 @@ export default function App() {
 
   const handleEditOp = (op) => {
     setEditingOperation(op);
-    setIsOperationModalOpen(true);
+    setIsMastercamToolpathModalOpen(true);
   };
 
   const handleSaveOperation = (updatedOp) => {
@@ -1240,6 +1246,236 @@ export default function App() {
       setActiveMachineId('haas_vf2');
       setActiveRibbonTab('Toolpaths');
       showToast('Loaded Mastercam Base Structure-ALU Part with 3D Contour Toolpaths', 'success');
+    } else if (type === 'titan_1m' || type === 'titan1m' || type === 'titan') {
+      const titanPart = createTitan1MPart();
+      setCurrentModel(titanPart);
+      setCurrentProjectName('TITAN-1M_Mastercam_Benchmark.mcam');
+      setActiveMachineId('haas_vf2');
+      setActiveWcs('G54');
+      setActiveRibbonTab('Toolpaths');
+
+      setStockConfig({
+        shape: 'box',
+        allowanceTop: 0.508,
+        allowanceSides: 1.27,
+        material: 'Alu 6061-T6',
+        originPoint: 'top-left',
+        massKg: '0.42',
+        rawDimensions: { x: 104.14, y: 25.4, z: 50.8 }
+      });
+
+      const titanTools = [
+        {
+          id: 1,
+          number: 1,
+          name: '2" Face Mill (Shell Mill)',
+          type: 'face',
+          diameter: 50.8,
+          cornerRad: 0,
+          fluteLength: 25,
+          overallLength: 75,
+          flutes: 5,
+          cuttingSpeedVc: 399,
+          rpm: 2500,
+          feedPerTooth: 0.09,
+          feedRate: 1143,
+          plungeRate: 350,
+          coolant: 'Flood'
+        },
+        {
+          id: 2,
+          number: 2,
+          name: '3/8" Carbide Flat Endmill',
+          type: 'flat',
+          diameter: 9.525,
+          cornerRad: 0,
+          fluteLength: 28,
+          overallLength: 75,
+          flutes: 3,
+          cuttingSpeedVc: 135,
+          rpm: 4500,
+          feedPerTooth: 0.11,
+          feedRate: 1524,
+          plungeRate: 400,
+          coolant: 'Flood'
+        },
+        {
+          id: 3,
+          number: 3,
+          name: '1/2" 90° Spot / Chamfer Mill',
+          type: 'chamfer',
+          diameter: 12.7,
+          cornerRad: 0,
+          fluteLength: 15,
+          overallLength: 70,
+          flutes: 2,
+          cuttingSpeedVc: 140,
+          rpm: 3500,
+          feedPerTooth: 0.12,
+          feedRate: 889,
+          plungeRate: 250,
+          coolant: 'Flood'
+        },
+        {
+          id: 4,
+          number: 4,
+          name: '#21 Drill (0.159" Tap Drill)',
+          type: 'drill',
+          diameter: 4.039,
+          cornerRad: 0,
+          fluteLength: 35,
+          overallLength: 70,
+          flutes: 2,
+          cuttingSpeedVc: 35,
+          rpm: 2800,
+          feedPerTooth: 0.08,
+          feedRate: 457,
+          plungeRate: 457,
+          coolant: 'Through'
+        },
+        {
+          id: 5,
+          number: 5,
+          name: '10-32 UNF Form / Roll Tap',
+          type: 'tap',
+          diameter: 4.826,
+          cornerRad: 0,
+          fluteLength: 20,
+          overallLength: 65,
+          flutes: 4,
+          cuttingSpeedVc: 15,
+          rpm: 1000,
+          feedPerTooth: 0.198,
+          feedRate: 793.75,
+          plungeRate: 793.75,
+          coolant: 'Flood',
+          pitchTpi: 32,
+          pitchMm: 0.79375
+        }
+      ];
+      setTools(titanTools);
+
+      const titanOps = [
+        {
+          id: 1,
+          name: '1 - Facing (Top Z: 0.00)',
+          toolId: 1,
+          toolName: 'T1 - 2" Face Mill',
+          badgeClass: 'face',
+          badgeText: 'FM',
+          visible: true,
+          stepoverPct: 70,
+          stepdown: 0.508,
+          totalDepth: 0.508,
+          stockToLeaveXY: 0.0,
+          stockToLeaveZ: 0.0,
+          rapidHeight: 25.0
+        },
+        {
+          id: 2,
+          name: '2 - 2D Dynamic Mill (Rough Outside & Pocket)',
+          toolId: 2,
+          toolName: 'T2 - 3/8" Flat Endmill',
+          badgeClass: 'adaptive',
+          badgeText: 'DM',
+          visible: true,
+          stepoverPct: 25,
+          stepdown: 19.05,
+          totalDepth: 19.05,
+          stockToLeaveXY: 0.254,
+          stockToLeaveZ: 0.0,
+          rapidHeight: 25.0
+        },
+        {
+          id: 3,
+          name: '3 - 2D Contour (Finish Outside Profile)',
+          toolId: 2,
+          toolName: 'T2 - 3/8" Flat Endmill',
+          badgeClass: 'contour',
+          badgeText: 'CT',
+          visible: true,
+          stepoverPct: 40,
+          stepdown: 9.525,
+          totalDepth: 19.05,
+          stockToLeaveXY: 0.0,
+          stockToLeaveZ: 0.0,
+          rapidHeight: 25.0
+        },
+        {
+          id: 4,
+          name: '4 - 2D Pocket (Finish Inside Pocket)',
+          toolId: 2,
+          toolName: 'T2 - 3/8" Flat Endmill',
+          badgeClass: 'pocket',
+          badgeText: 'PK',
+          visible: true,
+          stepoverPct: 45,
+          stepdown: 6.35,
+          totalDepth: 12.7,
+          stockToLeaveXY: 0.0,
+          stockToLeaveZ: 0.0,
+          rapidHeight: 25.0
+        },
+        {
+          id: 5,
+          name: '5 - Model Chamfer (0.020" Chamfer Outside & Pocket)',
+          toolId: 3,
+          toolName: 'T3 - 1/2" Chamfer Mill',
+          badgeClass: 'chamfer',
+          badgeText: 'CH',
+          visible: true,
+          chamferWidth: 0.508,
+          tipOffset: 1.27,
+          totalDepth: 1.778,
+          rapidHeight: 25.0
+        },
+        {
+          id: 6,
+          name: '6 - Spot Drill (7x Holes Chamfer)',
+          toolId: 3,
+          toolName: 'T3 - 1/2" 90° Spot Drill',
+          badgeClass: 'spotdrill',
+          badgeText: 'SD',
+          visible: true,
+          totalDepth: 1.8,
+          rapidHeight: 15.0
+        },
+        {
+          id: 7,
+          name: '7 - Peck Drill G83 (7x #21 Tap Drill to Z-0.580)',
+          toolId: 4,
+          toolName: 'T4 - #21 Tap Drill',
+          badgeClass: 'drill',
+          badgeText: 'DR',
+          visible: true,
+          stepdown: 1.27,
+          totalDepth: 14.732,
+          rapidHeight: 15.0
+        },
+        {
+          id: 8,
+          name: '8 - Rigid Tap G84 (7x 10-32 UNF to Z-0.480)',
+          toolId: 5,
+          toolName: 'T5 - 10-32 Form Tap',
+          badgeClass: 'tap',
+          badgeText: 'TP',
+          visible: true,
+          pitch: 0.79375,
+          totalDepth: 12.192,
+          rapidHeight: 15.0
+        }
+      ];
+      setOperations(titanOps);
+      setActiveOpId(1);
+
+      const wireframes = createTitan1MWireframe();
+      setCustomGeometry(wireframes);
+
+      setSolidsList([
+        { id: 1, name: 'Solid 1 - TITAN-1M Workpiece', material: '6061-T6 Aluminum', volumeCm3: 88.4, isPrimary: true, visible: true, active: true, color: '#38bdf8' }
+      ]);
+
+      showToast('Loaded TITANS of CNC: TITAN-1M Benchmark Project with 8 Standard Operations', 'success');
     } else if (type === 'mastercam2019_tutorial' || type === 'mastercam_tutorial' || type === 'milling_tutorial') {
       const tutorialPart = createMastercam2019TutorialPart();
       setCurrentModel(tutorialPart);
@@ -1606,6 +1842,23 @@ export default function App() {
       case 'optirough':
         setIsAdaptiveModalOpen(true);
         break;
+      case 'chaining':
+      case 'chain':
+        setIsMastercamChainingModalOpen(true);
+        break;
+      case 'toolpath_parameters':
+      case 'parameters':
+        if (activeOpId) {
+          const targetOp = operations.find((o) => o.id === activeOpId) || operations[0];
+          setEditingOperation(targetOp);
+          setIsMastercamToolpathModalOpen(true);
+        } else if (operations.length > 0) {
+          setEditingOperation(operations[0]);
+          setIsMastercamToolpathModalOpen(true);
+        } else {
+          showToast('No active toolpath operation selected to edit parameters', 'warning');
+        }
+        break;
       default:
         showToast(`Command executed: ${cmdId}`, 'info');
         break;
@@ -1651,6 +1904,8 @@ export default function App() {
       setIsSketchModeActive(true);
       setSketchTool('rect');
       showToast("✏️ Blank Mastercam Drawing Canvas Ready! Click & drag to draw Rectangle (R), Circle (C), Line (L).", "success");
+    } else if (t === 'titan_1m' || t === 'titan1m' || t === 'titan') {
+      handleSelectSampleModel('titan_1m');
     } else if (t === 'mastercam2019_tutorial' || t === 'milling_tutorial' || t === 'mastercam_tutorial') {
       handleSelectSampleModel('mastercam2019_tutorial');
     } else if (t === 'vmc3x' || t === 'blank_billet' || t === 'billet') {
@@ -2453,6 +2708,7 @@ export default function App() {
         onOpenEntityAnalyzer={() => setIsEntityAnalyzerOpen(true)}
         onOpenDistanceCaliper={() => setIsDistanceCaliperOpen(true)}
         onOpenWireframeModal={handleOpenWireframeModal}
+        onOpenChaining={() => setIsMastercamChainingModalOpen(true)}
         onStartInteractiveSketch={handleStartInteractiveSketch}
         isSketchModeActive={isSketchModeActive}
         onOpenSurfacesModal={handleOpenSurfacesModal}
@@ -2606,6 +2862,7 @@ export default function App() {
           onOpenHSMFilter={() => setIsHSMFilterModalOpen(true)}
           onOpenHelpGuide={() => setIsHelpGuideOpen(true)}
           onOpenWireframeModal={handleOpenWireframeModal}
+        onOpenChaining={() => setIsMastercamChainingModalOpen(true)}
           onOpenMachineConfig={() => setIsMachineConfigModalOpen(true)}
           onOpenFeedsSpeeds={handleOpenFeedsSpeeds}
           onMoveOpUp={(id) => handleMoveOp(id, -1)}
@@ -3306,6 +3563,28 @@ export default function App() {
         operation={editingOperation}
         tools={tools}
         onSaveOperation={handleSaveOperation}
+      />
+
+      {/* 1:1 Mastercam Toolpath Parameters Modal (Classic Tree & Property Page) */}
+      <MastercamToolpathParametersModal
+        isOpen={isMastercamToolpathModalOpen}
+        onClose={() => setIsMastercamToolpathModalOpen(false)}
+        operation={editingOperation}
+        tools={tools}
+        stockConfig={stockConfig}
+        onSaveOperation={handleSaveOperation}
+        onRegenerateToolpath={handleRegenerateAll}
+        onNotify={showToast}
+      />
+
+      {/* 1:1 Mastercam Chaining Modal */}
+      <MastercamChainingModal
+        isOpen={isMastercamChainingModalOpen}
+        onClose={() => setIsMastercamChainingModalOpen(false)}
+        onAcceptChains={(chains) => {
+          showToast(`Chaining: Selected ${chains.length} closed contour loops`, 'success');
+        }}
+        onNotify={showToast}
       />
 
       {/* 11. G-Code Inspector & Multi-Controller NC Exporter Modal */}
