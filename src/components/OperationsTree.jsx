@@ -192,8 +192,8 @@ export default function OperationsTree({
     setContextMenu((prev) => ({ ...prev, visible: false }));
   };
 
-  // Bottom Tabs matching user screenshot
-  const tabs = ['Toolpaths', 'Solids', 'Planes', 'Levels', 'Recent Functions'];
+  // Tabs matching Mastercam screenshot
+  const tabs = ['Toolpaths', 'Planes', 'Solids', 'Levels'];
 
   const displayPlanes = planes && planes.length > 0 ? planes : [
     { id: 'plane_top', name: 'Top (G17)', code: 'G17', desc: 'Spindle along Z, XY Table', isStandard: true, wcsCode: 'G54' },
@@ -247,7 +247,7 @@ export default function OperationsTree({
       {/* ================= 1. MASTERCAM PANEL HEADER ================= */}
       <div
         style={{
-          height: '28px',
+          height: '26px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -256,7 +256,7 @@ export default function OperationsTree({
           background: '#f1f5f9'
         }}
       >
-        <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#334155' }}>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
           {currentTab === 'Toolpaths' && 'Toolpaths'}
           {currentTab === 'Solids' && 'Solids'}
           {currentTab === 'Planes' && 'Planes'}
@@ -270,6 +270,46 @@ export default function OperationsTree({
           <span style={{ cursor: 'pointer', transform: 'rotate(45deg)' }} title="Pin Panel">📌</span>
           <span style={{ cursor: 'pointer', fontSize: '12px' }} title="Close Panel">✕</span>
         </div>
+      </div>
+
+      {/* ================= 1b. TOP TABS (MATCHING SCREENSHOT) ================= */}
+      <div
+        style={{
+          height: '24px',
+          background: '#f1f5f9',
+          display: 'flex',
+          alignItems: 'center',
+          overflowX: 'auto',
+          borderBottom: '1px solid #cbd5e1',
+          padding: '0 4px',
+          gap: '2px'
+        }}
+      >
+        {tabs.map((tab) => {
+          const isActive = currentTab === tab;
+          return (
+            <button
+              key={tab}
+              onClick={() => handleTabClick(tab)}
+              style={{
+                background: isActive ? '#ffffff' : 'transparent',
+                color: isActive ? '#0f172a' : '#64748b',
+                fontWeight: isActive ? 600 : 400,
+                fontSize: '11px',
+                border: isActive ? '1px solid #cbd5e1' : '1px solid transparent',
+                borderBottom: isActive ? '1px solid #ffffff' : '1px solid transparent',
+                borderRadius: '3px 3px 0 0',
+                padding: '2px 7px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                position: 'relative',
+                top: '1px'
+              }}
+            >
+              {tab}
+            </button>
+          );
+        })}
       </div>
 
       {/* ================= 2. MASTERCAM 2-ROW ACTION TOOLBAR (ONLY ON TOOLPATHS TAB) ================= */}
@@ -517,9 +557,13 @@ export default function OperationsTree({
       >
         {/* ==================== A. TOOLPATHS TREE VIEW ==================== */}
         {currentTab === 'Toolpaths' && (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {/* Root: Machine Group-1 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 600, color: '#0f172a' }}>
+          operations.length === 0 ? (
+            /* Blank Project: clean empty canvas list matching screenshot */
+            <div style={{ flex: 1, minHeight: '100%', padding: '8px' }} />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {/* Root: Machine Group-1 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 600, color: '#0f172a' }}>
               <span
                 onClick={() => setMachineGroupExpanded(!machineGroupExpanded)}
                 style={{ cursor: 'pointer', fontFamily: 'monospace', fontSize: '10px', color: '#64748b', width: '12px', textAlign: 'center' }}
@@ -715,7 +759,7 @@ export default function OperationsTree({
               </div>
             )}
           </div>
-        )}
+        ))}
 
         {/* ==================== B. SOLIDS TREE VIEW ==================== */}
         {currentTab === 'Solids' && (
@@ -945,44 +989,7 @@ export default function OperationsTree({
         <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0 }}>▶</button>
       </div>
 
-      {/* ================= 5. BOTTOM NAVIGATION TABS (MATCHING USER SCREENSHOT) ================= */}
-      <div
-        style={{
-          height: '26px',
-          background: '#f1f5f9',
-          display: 'flex',
-          alignItems: 'center',
-          overflowX: 'auto',
-          borderTop: '1px solid #e2e8f0',
-          padding: '0 2px'
-        }}
-      >
-        {tabs.map((tab) => {
-          const isActive = currentTab === tab;
-          return (
-            <button
-              key={tab}
-              onClick={() => handleTabClick(tab)}
-              style={{
-                background: isActive ? '#ffffff' : 'transparent',
-                color: isActive ? '#0f172a' : '#64748b',
-                fontWeight: isActive ? 700 : 500,
-                fontSize: '11px',
-                border: isActive ? '1px solid #cbd5e1' : '1px solid transparent',
-                borderBottom: isActive ? '1px solid #ffffff' : '1px solid transparent',
-                borderRadius: '3px 3px 0 0',
-                padding: '3px 8px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                position: 'relative',
-                top: isActive ? '1px' : '0'
-              }}
-            >
-              {tab}
-            </button>
-          );
-        })}
-      </div>
+
 
       {/* ================= 6. MASTERCAM RIGHT-CLICK CONTEXT MENU ================= */}
       {contextMenu.visible && (

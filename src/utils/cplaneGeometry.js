@@ -215,9 +215,29 @@ export function projectCPlaneToWorld(uCoord, vCoord, plane) {
 }
 
 /**
+ * Helper to build text sprites for 3D coordinate labels ('X', 'Y', 'Z')
+ */
+function createTextSprite(text, color = '#991b1b') {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.font = 'bold 44px system-ui, sans-serif';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 32, 32);
+  const texture = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(8, 8, 1);
+  return sprite;
+}
+
+/**
  * Builds an oriented Three.js Group containing a local CPlane grid and 3D coordinate triad (X_p Red, Y_p Green, Z_p Blue)
  */
-export function buildCPlaneHelperGroup(plane, size = 260, isLight = true) {
+export function buildCPlaneHelperGroup(plane, size = 260, isLight = true, showGrid = false) {
   const group = new THREE.Group();
   group.name = `CPlane_Helper_${plane.id}`;
 
@@ -226,41 +246,70 @@ export function buildCPlaneHelperGroup(plane, size = 260, isLight = true) {
   const v = new THREE.Vector3(plane.vAxis.x, plane.vAxis.y, plane.vAxis.z).normalize();
   const n = new THREE.Vector3(plane.normal.x, plane.normal.y, plane.normal.z).normalize();
 
-  // 1. Oriented Grid (adapts subline contrast to light vs dark theme)
-  const subGridColor = isLight ? 0xcbd5e1 : 0x1e293b;
-  const gridHelper = new THREE.GridHelper(size, 26, 0x0284c7, subGridColor);
-  gridHelper.position.set(0, 0, 0);
+  // 1. Oriented Grid (Optional in clean Mastercam blank mode)
+  if (showGrid) {
+    const subGridColor = isLight ? 0xcbd5e1 : 0x1e293b;
+    const gridHelper = new THREE.GridHelper(size, 26, 0x0284c7, subGridColor);
+    gridHelper.position.set(0, 0, 0);
 
-  // Align grid (default XZ plane in Three.js) with CPlane (U and V axes)
-  const rotMatrix = new THREE.Matrix4();
-  rotMatrix.makeBasis(u, n, v.clone().negate());
-  gridHelper.quaternion.setFromRotationMatrix(rotMatrix);
-  gridHelper.position.copy(origin);
-  group.add(gridHelper);
+    const rotMatrix = new THREE.Matrix4();
+    rotMatrix.makeBasis(u, n, v.clone().negate());
+    gridHelper.quaternion.setFromRotationMatrix(rotMatrix);
+    gridHelper.position.copy(origin);
+    group.add(gridHelper);
+  }
 
-  // 2. Local Coordinate Triad Arrows at Plane Origin
-  const arrowLen = 35;
-  const headLen = 6;
-  const headWidth = 3;
+  // 2. Translucent Quadrant Square in Active Plane (Mastercam CPlane Quadrant Marker)
+  const quadSize = 35;
+  const planeGeo = new THREE.PlaneGeometry(quadSize, quadSize);
+  planeGeo.translate(quadSize / 2, quadSize / 2, 0); // anchor at [0, 0]
 
-  // Xp (U axis - Red)
-  const xArrow = new THREE.ArrowHelper(u, origin, arrowLen, 0xef4444, headLen, headWidth);
+  const planeMat = new THREE.MeshBasicMaterial({
+    color: 0x818cf8,
+    opacity: 0.45,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  const quadMesh = new THREE.Mesh(planeGeo, planeMat);
+
+  // Align quad with U and V axes
+  const quadRotMatrix = new THREE.Matrix4();
+  quadRotMatrix.makeBasis(u, v, n);
+  quadMesh.quaternion.setFromRotationMatrix(quadRotMatrix);
+  quadMesh.position.copy(origin);
+  group.add(quadMesh);
+
+  // Subtle border around quadrant square
+  const edgesGeo = new THREE.EdgesGeometry(planeGeo);
+  const edgesMat = new THREE.LineBasicMaterial({ color: 0x6366f1, opacity: 0.7, transparent: true });
+  const quadWire = new THREE.LineSegments(edgesGeo, edgesMat);
+  quadWire.quaternion.setFromRotationMatrix(quadRotMatrix);
+  quadWire.position.copy(origin);
+  group.add(quadWire);
+
+  // 3. Coordinate Triad Arrows at Plane Origin
+  const arrowLen = 42;
+  const headLen = 8;
+  const headWidth = 4;
+
+  // X axis (Red)
+  const xArrow = new THREE.ArrowHelper(u, origin, arrowLen, 0x991b1b, headLen, headWidth);
   group.add(xArrow);
+  const xSprite = createTextSprite('X', '#991b1b');
+  xSprite.position.copy(origin).addScaledVector(u, arrowLen + 6);
+  group.add(xSprite);
 
-  // Normal N (Z_spindle axis - Blue)
-  const zArrow = new THREE.ArrowHelper(n, origin, arrowLen, 0x38bdf8, headLen, headWidth);
-  group.add(zArrow);
-
-  // Yp (V axis - Green)
-  const yArrow = new THREE.ArrowHelper(v, origin, arrowLen, 0x10b981, headLen, headWidth);
+  // Y axis (Red / Maroon in Mastercam Top view)
+  const yArrow = new THREE.ArrowHelper(v, origin, arrowLen, 0x881337, headLen, headWidth);
   group.add(yArrow);
+  const ySprite = createTextSprite('Y', '#881337');
+  ySprite.position.copy(origin).addScaledVector(v, arrowLen + 6);
+  group.add(ySprite);
 
-  // 3. Glowing Origin Datum Sphere
-  const sphereGeo = new THREE.SphereGeometry(2.5, 16, 16);
-  const sphereMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-  const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-  sphere.position.copy(origin);
-  group.add(sphere);
+  // Z axis (Spindle Normal)
+  const zArrow = new THREE.ArrowHelper(n, origin, arrowLen * 0.7, 0x991b1b, headLen * 0.8, headWidth * 0.8);
+  group.add(zArrow);
 
   return group;
 }

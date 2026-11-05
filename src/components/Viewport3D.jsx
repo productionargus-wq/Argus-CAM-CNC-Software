@@ -6,6 +6,10 @@ import {
 } from 'lucide-react';
 import { parseSTLFile, calculatePartMetrics, createWireframeLine, createWireframeRect, createWireframeCircle, createPointMarker } from '../utils/cadGeometry';
 import DrawingToolbarHUD from './DrawingToolbarHUD';
+import AutoCursorBar from './AutoCursorBar';
+import QuickMaskBar from './QuickMaskBar';
+import ScaleRulerHUD from './ScaleRulerHUD';
+import ViewGnomonHUD from './ViewGnomonHUD';
 import {
   createSketchPlane,
   snapToGrid,
@@ -48,6 +52,7 @@ export default function Viewport3D({
   currentModel,
   stockConfig,
   fixtureConfig = DEFAULT_FIXTURE_CONFIG,
+  unitSystem = 'imperial',
   operations,
   tools,
   activeOpId = null,
@@ -155,6 +160,11 @@ export default function Viewport3D({
   const [sketchAnchor, setSketchAnchor] = useState(null);
   const [cursorCoords, setCursorCoords] = useState({ x: 0, y: 0, z: 0 });
   const [dimensionFeedback, setDimensionFeedback] = useState(null);
+  const [currentViewName, setCurrentViewName] = useState('Top');
+  const [snapMode, setSnapMode] = useState('auto');
+  const [isSnapLocked, setIsSnapLocked] = useState(false);
+  const [activeQuickMask, setActiveQuickMask] = useState('all');
+  const [camDist, setCamDist] = useState(350);
 
   const sketchGhostGroupRef = useRef(null);
   const snapIndicatorGroupRef = useRef(null);
@@ -223,7 +233,7 @@ export default function Viewport3D({
     const scene = new THREE.Scene();
     sceneRef.current = scene;
     const isLightInit = theme === 'light';
-    scene.background = new THREE.Color(isLightInit ? 0xffffff : 0x131722);
+    scene.background = isLightInit ? null : new THREE.Color(0x131722);
     scene.fog = isLightInit ? null : new THREE.FogExp2(0x131722, 0.002);
 
     // Camera setup
@@ -569,17 +579,35 @@ export default function Viewport3D({
   const snapView = (preset) => {
     if (!cameraRef.current) return;
     const cam = cameraRef.current;
-    if (preset === 'iso') cam.position.set(220, 180, 260);
-    else if (preset === 'top') cam.position.set(0, 360, 1);
-    else if (preset === 'front') cam.position.set(0, 50, 360);
-    else if (preset === 'right') cam.position.set(360, 50, 0);
-    else if (preset === 'bottom') cam.position.set(0, -360, 1);
-    else if (preset === 'left') cam.position.set(-360, 50, 0);
-    else if (preset === 'back') cam.position.set(0, 50, -360);
-    else if (preset === 'fit') cam.position.set(200, 150, 240);
-    else if (preset === 'unzoom_50') cam.position.multiplyScalar(1.5);
+    if (preset === 'iso') {
+      cam.position.set(220, 180, 260);
+      setCurrentViewName('Isometric');
+    } else if (preset === 'top') {
+      cam.position.set(0, 360, 0.001);
+      setCurrentViewName('Top');
+    } else if (preset === 'front') {
+      cam.position.set(0, 50, 360);
+      setCurrentViewName('Front');
+    } else if (preset === 'right') {
+      cam.position.set(360, 50, 0);
+      setCurrentViewName('Right');
+    } else if (preset === 'bottom') {
+      cam.position.set(0, -360, 0.001);
+      setCurrentViewName('Bottom');
+    } else if (preset === 'left') {
+      cam.position.set(-360, 50, 0);
+      setCurrentViewName('Left');
+    } else if (preset === 'back') {
+      cam.position.set(0, 50, -360);
+      setCurrentViewName('Back');
+    } else if (preset === 'fit') {
+      cam.position.set(200, 150, 240);
+    } else if (preset === 'unzoom_50') cam.position.multiplyScalar(1.5);
     else if (preset === 'unzoom_80') cam.position.multiplyScalar(1.8);
-    cam.lookAt(0, 45, 0);
+
+    const centerY = currentModel ? 45 : 0;
+    cam.lookAt(0, centerY, 0);
+    setCamDist(cam.position.distanceTo(new THREE.Vector3(0, centerY, 0)));
   };
 
   useEffect(() => {
@@ -736,19 +764,19 @@ export default function Viewport3D({
 
     const isLight = theme === 'light';
     if (lightingMode === 'shop') {
-      scene.background = new THREE.Color(isLight ? 0xf8fafc : 0x0f172a);
+      scene.background = isLight ? null : new THREE.Color(0x0f172a);
       ambient.intensity = 1.0;
       l1.intensity = 1.6;
       l2.intensity = 0.8;
       l1.position.set(0, 400, 0);
     } else if (lightingMode === 'inspect') {
-      scene.background = new THREE.Color(isLight ? 0xf1f5f9 : 0x090d16);
+      scene.background = isLight ? null : new THREE.Color(0x090d16);
       ambient.intensity = 0.35;
       l1.intensity = 2.2;
       l2.intensity = 1.2;
       l1.position.set(150, 200, 300);
     } else {
-      scene.background = new THREE.Color(isLight ? 0xffffff : 0x131722);
+      scene.background = isLight ? null : new THREE.Color(0x131722);
       ambient.intensity = 0.75;
       l1.intensity = 1.3;
       l2.intensity = 0.5;
@@ -1183,7 +1211,7 @@ export default function Viewport3D({
     const allPlanes = planes && planes.length > 0 ? planes : DEFAULT_PLANES;
     const currentPlane = allPlanes.find((p) => p.name === activePlane) || allPlanes[0];
     if (currentPlane) {
-      const helperGroup = buildCPlaneHelperGroup(currentPlane, 240, theme === 'light');
+      const helperGroup = buildCPlaneHelperGroup(currentPlane, 240, theme === 'light', layerVisibility.bed !== false);
       scene.add(helperGroup);
       cplaneHelperGroupRef.current = helperGroup;
     }
@@ -1203,7 +1231,7 @@ export default function Viewport3D({
     const isLight = theme === 'light';
 
     // Canvas background & fog
-    scene.background = new THREE.Color(isLight ? 0xffffff : 0x131722);
+    scene.background = isLight ? null : new THREE.Color(0x131722);
     scene.fog = isLight ? null : new THREE.FogExp2(0x131722, 0.002);
 
     if (gridHelperRef.current) {
@@ -1218,10 +1246,10 @@ export default function Viewport3D({
       isLight ? 0xcbd5e1 : 0x1e293b
     );
     gridHelper.position.y = -20;
-    gridHelper.visible = layerVisibility.bed !== false;
+    gridHelper.visible = !!currentModel && layerVisibility.bed !== false;
     scene.add(gridHelper);
     gridHelperRef.current = gridHelper;
-  }, [theme]);
+  }, [theme, currentModel, layerVisibility.bed]);
 
   // 12. Backplot Trajectory Compilation & Scene Object Setup
   useEffect(() => {
@@ -1733,20 +1761,45 @@ export default function Viewport3D({
         </div>
       )}
 
-      {/* ViewCube Box */}
-      <div className="viewport-cube-controls">
-        <div className="viewcube-box" onClick={() => snapView('iso')} title="Reset to Isometric">
-          <Rotate3D size={20} color="#38bdf8" />
-          <span className="viewcube-text">ISOMETRIC</span>
-        </div>
-      </div>
+      {/* Mastercam AutoCursor Ribbon / Bar (Top-Center HUD) */}
+      <AutoCursorBar
+        snapMode={snapMode}
+        onSelectSnapMode={setSnapMode}
+        isLocked={isSnapLocked}
+        onToggleLock={() => setIsSnapLocked(l => !l)}
+        onOpenCoordinateEntry={() => {
+          const coordStr = prompt('Fast Point Coordinate (X, Y, Z):', `${cursorCoords.x}, ${cursorCoords.y}, ${cursorCoords.z}`);
+          if (coordStr) {
+            const parts = coordStr.split(',').map(s => parseFloat(s.trim()));
+            if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+              const pt = { x: parts[0], y: parts[1], z: parts[2] || 0 };
+              if (onCoordinateUpdate) onCoordinateUpdate(pt);
+            }
+          }
+        }}
+        cursorCoords={cursorCoords}
+        theme={theme}
+      />
 
-      {/* Metric Scale Indicator */}
-      <div className="viewport-scale-indicator">
-        <span>{partMetrics?.dimensions?.x ? `${partMetrics.dimensions.x} mm` : '95.530 mm'}</span>
-        <div className="scale-bar" />
-        <span style={{ fontSize: '8.5px', color: '#64748b' }}>Metric G21</span>
-      </div>
+      {/* Mastercam Quick Mask Toolbar (Right Edge Vertical HUD) */}
+      <QuickMaskBar
+        activeMask={activeQuickMask}
+        onSelectMask={setActiveQuickMask}
+        theme={theme}
+      />
+
+      {/* Mastercam View Orientation Gnomon (Bottom-Left Corner HUD) */}
+      <ViewGnomonHUD
+        activeView={currentViewName}
+        theme={theme}
+      />
+
+      {/* Mastercam Distance Scale Bracket Ruler (Bottom-Right Corner HUD) */}
+      <ScaleRulerHUD
+        cameraDistance={camDist}
+        unitSystem={unitSystem}
+        theme={theme}
+      />
 
       {/* ================= Mastercam Floating Backplot & Solid Verify HUD Controller ================= */}
       {isBackplotActive && (
