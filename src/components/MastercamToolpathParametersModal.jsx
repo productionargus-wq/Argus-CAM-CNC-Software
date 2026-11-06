@@ -34,7 +34,8 @@ export default function MastercamToolpathParametersModal({
   onSaveOperation,
   onRegenerateToolpath,
   onNotify,
-  onOpenChaining
+  onOpenChaining,
+  onAddTool
 }) {
   const [activeTab, setActiveTab] = useState('tool');
   const [formData, setFormData] = useState({});
@@ -750,13 +751,99 @@ export default function MastercamToolpathParametersModal({
             {/* ---------------- 2. TOOL & CUTTING DYNAMICS PAGE ---------------- */}
             {activeTab === 'tool' && (
               <div>
-                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px' }}>
-                  <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>
-                    Tool Selection & Cutting Dynamics
-                  </h3>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    Select cutting tool and configure spindle speeds and feed rates
-                  </span>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>
+                      Tool Selection & Cutting Dynamics
+                    </h3>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>
+                      Select cutting tool and configure spindle speeds and feed rates
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const maxNum = tools.reduce((max, t) => Math.max(max, t.number || 0), 0);
+                        const newTool = {
+                          id: Date.now(),
+                          number: maxNum + 1,
+                          name: '12mm 3-Flute Carbide Endmill',
+                          type: 'flat',
+                          diameter: 12,
+                          cornerRad: 0,
+                          fluteLength: 30,
+                          overallLength: 75,
+                          flutes: 3,
+                          cuttingSpeedVc: 220,
+                          rpm: 5835,
+                          feedPerTooth: 0.08,
+                          feedRate: 1400,
+                          plungeRate: 450,
+                          coolant: 'Flood'
+                        };
+                        if (onAddTool) onAddTool(newTool);
+                        handleSelectTool(newTool.id);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: '#e0f2fe',
+                        color: '#0369a1',
+                        border: '1px solid #bae6fd',
+                        borderRadius: '3px',
+                        padding: '5px 10px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                      title="Add 12mm Flat Endmill to Tool Library"
+                    >
+                      + Add 12mm Endmill
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const maxNum = tools.reduce((max, t) => Math.max(max, t.number || 0), 0);
+                        const newTool = {
+                          id: Date.now(),
+                          number: maxNum + 1,
+                          name: '50mm Face Mill (Shell Mill)',
+                          type: 'face',
+                          diameter: 50,
+                          cornerRad: 0,
+                          fluteLength: 25,
+                          overallLength: 75,
+                          flutes: 5,
+                          cuttingSpeedVc: 399,
+                          rpm: 2500,
+                          feedPerTooth: 0.09,
+                          feedRate: 1143,
+                          plungeRate: 350,
+                          coolant: 'Flood'
+                        };
+                        if (onAddTool) onAddTool(newTool);
+                        handleSelectTool(newTool.id);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: '#f1f5f9',
+                        color: '#334155',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '3px',
+                        padding: '5px 10px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                      title="Add 50mm Face Mill to Tool Library"
+                    >
+                      + Add 50mm Face Mill
+                    </button>
+                  </div>
                 </div>
 
                 {/* Tool List Table */}
