@@ -778,6 +778,34 @@ export async function parseAnyCADFile(file, _options = {}) {
       y: Math.round(size.z * 10) / 10,
       z: Math.round(size.y * 10) / 10
     };
+
+    // Attach raw CAD source payload for automatic workspace persistence across browser refreshes
+    try {
+      if (file instanceof Blob || (typeof File !== 'undefined' && file instanceof File)) {
+        const isBinary = ext === 'stl' || ext === 'dwg' || ext === 'sab' || ext === 'x_b';
+        if (isBinary) {
+          const buffer = await file.arrayBuffer();
+          modelGroup.userData.rawCadSource = {
+            type: 'file',
+            filename,
+            content: buffer,
+            isBinary: true,
+            format: modelGroup.userData.format || ext.toUpperCase()
+          };
+        } else {
+          const text = await file.text();
+          modelGroup.userData.rawCadSource = {
+            type: 'file',
+            filename,
+            content: text,
+            isBinary: false,
+            format: modelGroup.userData.format || ext.toUpperCase()
+          };
+        }
+      }
+    } catch (err) {
+      console.warn("Could not attach rawCadSource to modelGroup:", err);
+    }
   }
 
   return modelGroup;

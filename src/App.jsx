@@ -100,6 +100,12 @@ import {
   exportProjectMCAM,
   saveAutoSaveSnapshot
 } from './utils/projectStorage';
+import {
+  saveWorkspaceSession,
+  loadWorkspaceSession,
+  clearWorkspaceSession
+} from './utils/workspacePersistence';
+import { parseAnyCADFile } from './utils/universalCadParser';
 import { extractClosedChainsFromCAD } from './utils/cadDrawingEngine';
 import CNCDesignBoard from './components/CNCDesignBoard';
 import { convertBoardDiagramsToToolpaths, getCADTemplate } from './utils/cncBoardEngine';
@@ -144,6 +150,8 @@ export default function App() {
   const [customGeometry, setCustomGeometry] = useState([]);
   const [workspaceViewMode, setWorkspaceViewMode] = useState('3d'); // '3d' | '2d' | 'split'
   const [boardShapes, setBoardShapes] = useState(() => getCADTemplate('mounting-plate', 200, 150));
+  const [cadSource, setCadSource] = useState(null);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
 
   // View Tab & Viewsheets State
   const [materialStyle, setMaterialStyle] = useState('metallic');
@@ -581,23 +589,6 @@ export default function App() {
     );
   }, [customGeometry, operations]);
 
-  // Auto-Save Effect: Periodically saves snapshot to localStorage
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      saveAutoSaveSnapshot({
-        projectName: currentProjectName,
-        stockConfig,
-        tools,
-        operations,
-        activeMachine,
-        activeWcs,
-        workpieceColor,
-        partTransform
-      });
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [currentProjectName, stockConfig, tools, operations, activeMachine, activeWcs, workpieceColor, partTransform]);
-
   // ================= Toast Notification System =================
   const [toasts, setToasts] = useState([]);
 
@@ -608,6 +599,182 @@ export default function App() {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, duration);
   };
+
+  // Workspace Session Rehydration on Mount (from IndexedDB)
+  useEffect(() => {
+    let isMounted = true;
+
+    async function restoreWorkspace() {
+      try {
+        const session = await loadWorkspaceSession();
+        if (!isMounted) return;
+
+        if (session) {
+          if (session.projectName) setCurrentProjectName(session.projectName);
+          if (session.projectDescriptor) setProjectDescriptor(session.projectDescriptor);
+          if (session.unitSystem) setUnitSystem(session.unitSystem);
+          if (session.activeRibbonTab) setActiveRibbonTab(session.activeRibbonTab);
+          if (session.activeMachineId) setActiveMachineId(session.activeMachineId);
+          if (session.activeWcs) setActiveWcs(session.activeWcs);
+          if (session.activePlane) setActivePlane(session.activePlane);
+          if (session.workpieceColor) setWorkpieceColor(session.workpieceColor);
+          if (session.renderMode) setRenderMode(session.renderMode);
+          if (session.layerVisibility) setLayerVisibility(session.layerVisibility);
+          if (session.partTransform) setPartTransform(session.partTransform);
+          if (session.customGeometry) setCustomGeometry(session.customGeometry);
+          if (session.solidsList) setSolidsList(session.solidsList);
+          if (session.stockConfig) setStockConfig(session.stockConfig);
+          if (session.tools && Array.isArray(session.tools) && session.tools.length > 0) {
+            setTools(session.tools);
+          }
+          if (session.operations && Array.isArray(session.operations)) {
+            setOperations(session.operations);
+            if (session.operations.length > 0) {
+              setActiveOpId(session.operations[0].id);
+            } else {
+              setActiveOpId(null);
+            }
+          }
+          if (session.fixtureConfig) setFixtureConfig(session.fixtureConfig);
+
+          // Rebuild CAD model geometry
+          if (session.cadSource) {
+            setCadSource(session.cadSource);
+            const cs = session.cadSource;
+            if (cs.type === 'file' && cs.content) {
+              try {
+                const fileBlob = new Blob([cs.content], {
+                  type: cs.isBinary ? 'application/octet-stream' : 'text/plain'
+                });
+                fileBlob.name = cs.filename;
+                const modelGroup = await parseAnyCADFile(fileBlob);
+                if (isMounted && modelGroup) {
+                  setCurrentModel(modelGroup);
+                }
+              } catch (err) {
+                console.warn('Could not re-parse stored CAD file on refresh:', err);
+              }
+            } else if (cs.type === 'sample' && cs.sampleType) {
+              if (cs.sampleType === 'impeller') setCurrentModel(createImpellerGeometry());
+              else if (cs.sampleType === 'bracket') setCurrentModel(createAerospaceBracket());
+              else if (cs.sampleType === 'mold') setCurrentModel(createMoldCoreGeometry());
+              else if (cs.sampleType === 'titan_1m' || cs.sampleType === 'titan1m' || cs.sampleType === 'titan') setCurrentModel(createTitan1MPart());
+              else if (cs.sampleType === 'base_structure_alu' || cs.sampleType === 'base_structure') setCurrentModel(createMastercamBaseStructureALU());
+            }
+          }
+
+          showToast(`Workspace restored: ${session.projectName || 'Active Session'}`, 'success');
+        }
+      } catch (err) {
+        console.warn('Error rehydrating workspace session:', err);
+      } finally {
+        if (isMounted) {
+          setIsRestoringSession(false);
+        }
+      }
+    }
+
+    restoreWorkspace();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Ref tracking latest state for beforeunload flush
+  const latestSessionRef = React.useRef();
+  latestSessionRef.current = {
+    projectName: currentProjectName,
+    projectDescriptor,
+    unitSystem,
+    activeRibbonTab,
+    activeMachineId,
+    activeWcs,
+    activePlane,
+    workpieceColor,
+    renderMode,
+    layerVisibility,
+    partTransform,
+    customGeometry,
+    solidsList,
+    stockConfig,
+    tools,
+    operations,
+    fixtureConfig,
+    cadSource
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (latestSessionRef.current && !isRestoringSession) {
+        saveWorkspaceSession(latestSessionRef.current);
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isRestoringSession]);
+
+  // Debounced Auto-Save to IndexedDB and LocalStorage
+  useEffect(() => {
+    if (isRestoringSession) return;
+
+    const timer = setTimeout(() => {
+      saveWorkspaceSession({
+        projectName: currentProjectName,
+        projectDescriptor,
+        unitSystem,
+        activeRibbonTab,
+        activeMachineId,
+        activeWcs,
+        activePlane,
+        workpieceColor,
+        renderMode,
+        layerVisibility,
+        partTransform,
+        customGeometry,
+        solidsList,
+        stockConfig,
+        tools,
+        operations,
+        fixtureConfig,
+        cadSource
+      });
+
+      saveAutoSaveSnapshot({
+        projectName: currentProjectName,
+        stockConfig,
+        tools,
+        operations,
+        activeMachine,
+        activeWcs,
+        workpieceColor,
+        partTransform
+      });
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [
+    isRestoringSession,
+    currentProjectName,
+    projectDescriptor,
+    unitSystem,
+    activeRibbonTab,
+    activeMachineId,
+    activeWcs,
+    activePlane,
+    workpieceColor,
+    renderMode,
+    layerVisibility,
+    partTransform,
+    customGeometry,
+    solidsList,
+    stockConfig,
+    tools,
+    operations,
+    fixtureConfig,
+    cadSource,
+    activeMachine
+  ]);
 
   // Synchronize dynamic Theme attribute to root DOM element
   useEffect(() => {
@@ -1238,17 +1405,30 @@ export default function App() {
         setCurrentModel(group);
         setCurrentProjectName('Aerospace_5X_Bracket.step');
         setActiveMachineId('dmu50');
+        setCadSource({
+          type: 'file',
+          filename: 'Aerospace_5X_Bracket.step',
+          content: stepText,
+          isBinary: false,
+          format: 'STEP (ISO 10303-21)'
+        });
         showToast('Native ISO 10303-21 STEP Solid B-Rep Model Loaded', 'success');
       } catch (err) {
         showToast(`Failed to parse STEP: ${err.message}`, 'danger');
       }
-    } else if (type === 'base_structure_alu' || type === 'base_structure') {
-      setCurrentModel(createMastercamBaseStructureALU());
-      setCurrentProjectName('Base Structure-ALU.mcam');
-      setActiveMachineId('haas_vf2');
-      setActiveRibbonTab('Toolpaths');
-      showToast('Loaded Mastercam Base Structure-ALU Part with 3D Contour Toolpaths', 'success');
-    } else if (type === 'titan_1m' || type === 'titan1m' || type === 'titan') {
+      handleResetTransform();
+      return;
+    }
+
+    setCadSource({ type: 'sample', sampleType: type });
+
+    if (type === 'base_structure_alu' || type === 'base_structure') {
+        setCurrentModel(createMastercamBaseStructureALU());
+        setCurrentProjectName('Base Structure-ALU.mcam');
+        setActiveMachineId('haas_vf2');
+        setActiveRibbonTab('Toolpaths');
+        showToast('Loaded Mastercam Base Structure-ALU Part with 3D Contour Toolpaths', 'success');
+      } else if (type === 'titan_1m' || type === 'titan1m' || type === 'titan') {
       const titanPart = createTitan1MPart();
       setCurrentModel(titanPart);
       setCurrentProjectName('TITAN-1M_Mastercam_Benchmark.mcam');
@@ -1685,10 +1865,31 @@ export default function App() {
     handleResetTransform();
   };
 
-  const handleModelImported = (modelGroup, filename) => {
+  const handleModelImported = async (modelGroup, filename, rawFile = null) => {
     // 1. Set imported 3D CAD model and project name
     setCurrentModel(modelGroup);
     setCurrentProjectName(filename);
+
+    let srcPayload = modelGroup?.userData?.rawCadSource || null;
+    if (!srcPayload && rawFile) {
+      try {
+        const isBinary = filename.endsWith('.stl') || filename.endsWith('.dwg') || filename.endsWith('.sab') || filename.endsWith('.x_b');
+        const content = isBinary ? await rawFile.arrayBuffer() : await rawFile.text();
+        srcPayload = {
+          type: 'file',
+          filename,
+          content,
+          isBinary,
+          format: modelGroup?.userData?.format || filename.split('.').pop().toUpperCase()
+        };
+      } catch (err) {
+        console.warn('Failed reading rawFile for cadSource:', err);
+      }
+    }
+
+    if (srcPayload) {
+      setCadSource(srcPayload);
+    }
 
     // 2. Clear previous toolpaths & scratch wireframes (Standard clean CAM workflow)
     setOperations([]);
@@ -1703,7 +1904,7 @@ export default function App() {
 
     // 3. Register imported model as the primary solid in Solids Manager
     const fmt = modelGroup?.userData?.format || filename.split('.').pop().toUpperCase();
-    setSolidsList([
+    const newSolids = [
       {
         id: 1,
         name: `Solid 1 - ${filename}`,
@@ -1714,11 +1915,11 @@ export default function App() {
         active: true,
         color: '#64748b'
       }
-    ]);
+    ];
+    setSolidsList(newSolids);
 
     // 4. Configure clean CAD view: solid part model visible, no toolpaths, no fixture or stock obstruction
-    setLayerVisibility((prev) => ({
-      ...prev,
+    const cleanLayers = {
       part: true,
       wireframe: true,
       surfaces: true,
@@ -1729,10 +1930,34 @@ export default function App() {
       rapids: false,
       wcs: true,
       dimensions: false
-    }));
+    };
+    setLayerVisibility(cleanLayers);
 
     handleResetTransform();
     setCameraCommand({ preset: 'iso', timestamp: Date.now() });
+
+    // Immediate session flush to IndexedDB
+    saveWorkspaceSession({
+      projectName: filename,
+      projectDescriptor,
+      unitSystem,
+      activeRibbonTab,
+      activeMachineId,
+      activeWcs,
+      activePlane,
+      workpieceColor,
+      renderMode,
+      layerVisibility: cleanLayers,
+      partTransform: { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+      customGeometry: [],
+      solidsList: newSolids,
+      stockConfig,
+      tools,
+      operations: [],
+      fixtureConfig,
+      cadSource: srcPayload
+    });
+
     showToast(`Loaded ${filename} (${fmt} 3D Solid Model) - Clean View`, 'success');
   };
 
@@ -1911,7 +2136,14 @@ export default function App() {
   };
 
   // Create New Project Wizard Handler
-  const handleCreateNewProject = ({ template, projectName, unitSystem, customDimensions }) => {
+  const handleCreateNewProject = async ({ template, projectName, unitSystem, customDimensions }) => {
+    try {
+      await clearWorkspaceSession();
+    } catch (err) {
+      console.warn("Failed to clear workspace session on new project:", err);
+    }
+    setCadSource(null);
+
     // 1. Comprehensive State Teardown & Reset
     setIsBackplotActive(false);
     setActiveOpId(null);

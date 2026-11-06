@@ -297,7 +297,7 @@ export default function FileBackstageView({
       try {
         const modelGroup = await parseAnyCADFile(file);
         if (onModelImported) {
-          onModelImported(modelGroup, file.name);
+          onModelImported(modelGroup, file.name, file);
         }
         if (onNotify) onNotify(`Successfully opened ${file.name}`, 'success');
         onClose();

@@ -203,7 +203,7 @@ export default function RibbonBar({
       try {
         const modelGroup = await parseAnyCADFile(file);
         if (onModelImported) {
-          onModelImported(modelGroup, file.name);
+          onModelImported(modelGroup, file.name, file);
         }
       } catch (err) {
         console.error("Failed to parse CAD file:", err);
