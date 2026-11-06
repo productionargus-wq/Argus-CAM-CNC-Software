@@ -8,7 +8,6 @@ import { parseSTLFile, calculatePartMetrics, createWireframeLine, createWirefram
 import { parseAnyCADFile } from '../utils/universalCadParser';
 import DrawingToolbarHUD from './DrawingToolbarHUD';
 import AutoCursorBar from './AutoCursorBar';
-import QuickMaskBar from './QuickMaskBar';
 import ScaleRulerHUD from './ScaleRulerHUD';
 import ViewGnomonHUD from './ViewGnomonHUD';
 import {
@@ -163,7 +162,6 @@ export default function Viewport3D({
   const [currentViewName, setCurrentViewName] = useState('Top');
   const [snapMode, setSnapMode] = useState('auto');
   const [isSnapLocked, setIsSnapLocked] = useState(false);
-  const [activeQuickMask, setActiveQuickMask] = useState('all');
   const [camDist, setCamDist] = useState(350);
 
   const sketchGhostGroupRef = useRef(null);
@@ -1575,81 +1573,6 @@ export default function Viewport3D({
         </div>
       )}
 
-      {/* Top HUD Controls */}
-      <div className="viewport-top-hud">
-        <button
-          className={`hud-btn ${layerVisibility.toolpaths !== false ? 'active' : ''}`}
-          onClick={() => {
-            if (layerVisibility.toolpaths !== undefined) {
-              layerVisibility.toolpaths = !layerVisibility.toolpaths;
-            }
-          }}
-          title="Toggle Toolpath Lines Display"
-        >
-          <Layers size={13} />
-          <span>Toolpaths</span>
-        </button>
-
-        <button
-          className={`hud-btn ${layerVisibility.stock !== false ? 'active' : ''}`}
-          onClick={() => {
-            if (layerVisibility.stock !== undefined) {
-              layerVisibility.stock = !layerVisibility.stock;
-            }
-          }}
-          title="Toggle Translucent Stock Block"
-        >
-          <Box size={13} />
-          <span>Stock Box</span>
-        </button>
-
-        <button
-          className={`hud-btn ${renderMode === 'shaded' ? 'active' : ''}`}
-          onClick={onOpenViewStudioModal}
-          title="Open 3D View Studio"
-        >
-          <Sliders size={13} />
-          <span style={{ textTransform: 'capitalize' }}>{renderMode}</span>
-        </button>
-
-        <button
-          className="hud-btn"
-          onClick={() => onToggleCameraMode && onToggleCameraMode(cameraMode === 'orthographic' ? 'perspective' : 'orthographic')}
-          title="Toggle Perspective / Orthographic Camera"
-        >
-          <Camera size={13} color={cameraMode === 'orthographic' ? '#38bdf8' : 'inherit'} />
-          <span style={{ color: cameraMode === 'orthographic' ? '#38bdf8' : 'inherit' }}>
-            {cameraMode === 'orthographic' ? 'Ortho' : 'Persp'}
-          </span>
-        </button>
-
-        <button
-          className={`hud-btn ${clippingPlane?.enabled ? 'active' : ''}`}
-          onClick={() => onUpdateClippingPlane && onUpdateClippingPlane({ ...clippingPlane, enabled: !clippingPlane?.enabled })}
-          title="Toggle 3D Cross-Section Slicing Plane"
-        >
-          <Scissors size={13} color={clippingPlane?.enabled ? '#f472b6' : 'inherit'} />
-          <span style={{ color: clippingPlane?.enabled ? '#f472b6' : 'inherit' }}>
-            {clippingPlane?.enabled ? `Section (${clippingPlane.axis})` : 'Section'}
-          </span>
-        </button>
-
-        <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
-
-        <button className="hud-btn" onClick={() => snapView('iso')} title="Isometric (WCS G54)">
-          <span>Iso</span>
-        </button>
-        <button className="hud-btn" onClick={() => snapView('top')} title="Top View (G17 Plane)">
-          <span>Top</span>
-        </button>
-        <button className="hud-btn" onClick={() => snapView('front')} title="Front View (G18 Plane)">
-          <span>Front</span>
-        </button>
-        <button className="hud-btn" onClick={() => snapView('right')} title="Right View (G19 Plane)">
-          <span>Right</span>
-        </button>
-      </div>
-
       {/* CAD Sketcher HUD Floating Toolbar */}
       {isSketchModeActive && (
         <DrawingToolbarHUD
@@ -1706,40 +1629,6 @@ export default function Viewport3D({
         </div>
       )}
 
-      {/* Part Metrics & Stock Dimension HUD */}
-      {partMetrics && (
-        <div className="part-info-hud">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '3px', marginBottom: '2px' }}>
-            <Info size={12} color="#38bdf8" />
-            <span style={{ color: '#38bdf8', fontWeight: 700 }}>PART &amp; STOCK BOUNDS</span>
-          </div>
-          <div className="part-info-row">
-            <span className="part-info-label">Part Size (XYZ):</span>
-            <span className="part-info-val">
-              {partMetrics.dimensions?.x ?? 0} &times; {partMetrics.dimensions?.y ?? 0} &times; {partMetrics.dimensions?.z ?? 0} mm
-            </span>
-          </div>
-          <div className="part-info-row">
-            <span className="part-info-label">Stock Size:</span>
-            <span className="part-info-val" style={{ color: '#f59e0b' }}>
-              {(((partMetrics.dimensions?.x ?? 0) + (stockConfig?.allowanceSides || 4) * 2)).toFixed(1)} &times;{' '}
-              {(((partMetrics.dimensions?.y ?? 0) + (stockConfig?.allowanceTop || 2))).toFixed(1)} &times;{' '}
-              {(((partMetrics.dimensions?.z ?? 0) + (stockConfig?.allowanceSides || 4) * 2)).toFixed(1)} mm
-            </span>
-          </div>
-          <div className="part-info-row">
-            <span className="part-info-label">Material &amp; Mass:</span>
-            <span className="part-info-val">
-              {stockConfig?.material || '6061-T6'} &bull; {stockConfig?.massKg || '0.95'} kg
-            </span>
-          </div>
-          <div className="part-info-row">
-            <span className="part-info-label">Triangles:</span>
-            <span className="part-info-val">{(partMetrics.triangles || 0).toLocaleString()}</span>
-          </div>
-        </div>
-      )}
-
       {/* Mastercam AutoCursor Ribbon / Bar (Top-Center HUD) */}
       <AutoCursorBar
         snapMode={snapMode}
@@ -1757,13 +1646,6 @@ export default function Viewport3D({
           }
         }}
         cursorCoords={cursorCoords}
-        theme={theme}
-      />
-
-      {/* Mastercam Quick Mask Toolbar (Right Edge Vertical HUD) */}
-      <QuickMaskBar
-        activeMask={activeQuickMask}
-        onSelectMask={setActiveQuickMask}
         theme={theme}
       />
 
