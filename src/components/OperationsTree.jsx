@@ -101,6 +101,9 @@ export default function OperationsTree({
     }
   });
   const [isResizing, setIsResizing] = useState(false);
+  const [isPinned, setIsPinned] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isWindowMenuOpen, setIsWindowMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -222,9 +225,39 @@ export default function OperationsTree({
     rf.category.toLowerCase().includes(recentSearch.toLowerCase())
   );
 
+  if (isCollapsed) {
+    return (
+      <aside
+        style={{
+          width: '28px',
+          flexShrink: 0,
+          background: '#f1f5f9',
+          borderRight: '1px solid #cbd5e1',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          paddingTop: '8px',
+          gap: '12px',
+          cursor: 'pointer',
+          zIndex: 40
+        }}
+        onClick={() => setIsCollapsed(false)}
+        title="Click to restore Toolpaths Manager"
+      >
+        <span style={{ fontSize: '11px', transform: 'rotate(90deg)', whiteSpace: 'nowrap', fontWeight: 600, color: '#0284c7', marginTop: '30px' }}>
+          Toolpaths
+        </span>
+        <span style={{ fontSize: '12px', color: '#64748b', marginTop: 'auto', marginBottom: '12px' }} title="Restore Panel">
+          ▶
+        </span>
+      </aside>
+    );
+  }
+
   return (
     <aside
       className="ops-manager"
+      ref={sidebarRef}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -253,7 +286,8 @@ export default function OperationsTree({
           justifyContent: 'space-between',
           padding: '0 8px',
           borderBottom: '1px solid #cbd5e1',
-          background: '#f1f5f9'
+          background: '#f1f5f9',
+          position: 'relative'
         }}
       >
         <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
@@ -266,10 +300,73 @@ export default function OperationsTree({
 
         {/* Mastercam window mini controls: drop arrow, pushpin, close */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '11px' }}>
-          <span style={{ cursor: 'pointer' }} title="Window Options">▾</span>
-          <span style={{ cursor: 'pointer', transform: 'rotate(45deg)' }} title="Pin Panel">📌</span>
-          <span style={{ cursor: 'pointer', fontSize: '12px' }} title="Close Panel">✕</span>
+          <span
+            onClick={() => setIsWindowMenuOpen((prev) => !prev)}
+            style={{ cursor: 'pointer', padding: '0 2px' }}
+            title="Window Options"
+          >
+            ▾
+          </span>
+          <span
+            onClick={() => setIsPinned((prev) => !prev)}
+            style={{
+              cursor: 'pointer',
+              padding: '0 2px',
+              transform: isPinned ? 'rotate(45deg)' : 'rotate(0deg)',
+              color: isPinned ? '#0284c7' : '#94a3b8'
+            }}
+            title={isPinned ? "Pinned (Click to Unpin)" : "Unpinned (Click to Pin)"}
+          >
+            📌
+          </span>
+          <span
+            onClick={() => setIsCollapsed(true)}
+            style={{ cursor: 'pointer', fontSize: '12px', padding: '0 2px' }}
+            title="Close / Collapse Panel"
+          >
+            ✕
+          </span>
         </div>
+
+        {/* Window Options Dropdown Menu */}
+        {isWindowMenuOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '26px',
+              right: '8px',
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              borderRadius: '3px',
+              zIndex: 1000,
+              minWidth: '150px',
+              fontSize: '11px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <div
+              onClick={() => { setIsPinned(true); setIsWindowMenuOpen(false); }}
+              style={{ padding: '6px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}
+            >
+              <span>Dock Left</span>
+              {isPinned && <span style={{ color: '#0284c7' }}>✓</span>}
+            </div>
+            <div
+              onClick={() => { setSidebarWidth(320); setIsWindowMenuOpen(false); }}
+              style={{ padding: '6px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
+            >
+              Reset Width (320px)
+            </div>
+            <div
+              onClick={() => { setIsCollapsed(true); setIsWindowMenuOpen(false); }}
+              style={{ padding: '6px 12px', cursor: 'pointer', color: '#dc2626' }}
+            >
+              Collapse Panel
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ================= 1b. TOP TABS (MATCHING SCREENSHOT) ================= */}
