@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Check,
@@ -13,7 +13,16 @@ import {
   Play,
   Settings,
   ChevronRight,
-  Maximize2
+  Maximize2,
+  Wrench,
+  Shield,
+  Gauge,
+  Box,
+  Droplets,
+  Scissors,
+  CircleDot,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function MastercamToolpathParametersModal({
@@ -29,42 +38,159 @@ export default function MastercamToolpathParametersModal({
   const [activeTab, setActiveTab] = useState('tool');
   const [formData, setFormData] = useState({});
 
+  // Toolpath Types catalog matching Mastercam 2D Mill
+  const TOOLPATH_TYPES = [
+    {
+      id: 'face',
+      title: 'Face Milling',
+      desc: 'Clean top material face across workpiece boundary',
+      category: '2D Mill',
+      color: '#0284c7'
+    },
+    {
+      id: 'contour',
+      title: '2D Contour',
+      desc: 'Profile walls and external boundary contours with lead in/out',
+      category: '2D Mill',
+      color: '#0ea5e9'
+    },
+    {
+      id: 'pocket',
+      title: '2D Pocket',
+      desc: 'Clear enclosed cavities with parallel spiral / zigzag passes',
+      category: '2D Mill',
+      color: '#2563eb'
+    },
+    {
+      id: 'adaptive',
+      title: 'Dynamic Mill (2D HSM)',
+      desc: 'High-speed trochoidal roughing with constant tool engagement',
+      category: '2D High Speed',
+      color: '#7c3aed'
+    },
+    {
+      id: 'chamfer',
+      title: 'Model Chamfer',
+      desc: 'Deburr and bevel sharp edges with chamfer mills',
+      category: '2D Detail',
+      color: '#d97706'
+    },
+    {
+      id: 'spotdrill',
+      title: 'Spot Drill (G81)',
+      desc: 'Precision center spotting to prevent drill wandering',
+      category: 'Holemaking',
+      color: '#10b981'
+    },
+    {
+      id: 'drill',
+      title: 'Peck Drill (G83)',
+      desc: 'Deep hole peck cycle with full retract for chip clearing',
+      category: 'Holemaking',
+      color: '#059669'
+    },
+    {
+      id: 'tap',
+      title: 'Rigid Tap (G84)',
+      desc: 'Synchronized spindle/feed tapping for internal threads',
+      category: 'Holemaking',
+      color: '#4f46e5'
+    },
+    {
+      id: 'circlemill',
+      title: 'Circle Mill / Helical Bore',
+      desc: 'Helical ramp circular pocketing without specialized drill',
+      category: 'Holemaking',
+      color: '#0891b2'
+    }
+  ];
+
+  // Initialize and synchronize form data
   useEffect(() => {
     if (operation) {
+      const selectedTool = tools.find((t) => t.id === operation.toolId) || tools[0] || {};
+      const toolDiam = selectedTool.diameter || 10;
+      const flutes = selectedTool.flutes || 4;
+      const initRpm = operation.spindleSpeed || selectedTool.rpm || 3500;
+      const initFeed = operation.feedRate || selectedTool.feedRate || 1200;
+      const initPlunge = operation.plungeFeedRate || selectedTool.plungeRate || 400;
+
+      // Calculate initial surface speed and FPT
+      const surfaceSpeed = Math.round((Math.PI * toolDiam * initRpm) / 1000);
+      const fpt = Number((initFeed / (initRpm * Math.max(1, flutes))).toFixed(4));
+
       setFormData({
-        name: operation.name || '',
-        toolId: operation.toolId || (tools[0]?.id || 1),
+        name: operation.name || '2D Toolpath',
+        toolId: operation.toolId || selectedTool.id || 1,
         badgeClass: operation.badgeClass || 'contour',
-        stepoverPct: operation.stepoverPct || 40,
+        comment: operation.comment || operation.name || '',
+        
+        // Feeds & Speeds Dynamics
+        spindleSpeed: initRpm,
+        feedRate: initFeed,
+        plungeFeedRate: initPlunge,
+        surfaceSpeed: surfaceSpeed,
+        feedPerTooth: fpt,
+
+        // Depth Cuts
+        depthCutsEnabled: operation.depthCutsEnabled ?? true,
         stepdown: operation.stepdown || 2.5,
-        totalDepth: operation.totalDepth || 15.0,
+        finishCutsCount: operation.finishCutsCount ?? 1,
+        finishStep: operation.finishStep || 0.5,
+        keepToolDown: operation.keepToolDown ?? true,
+
+        // Tool Holder
+        holderType: operation.holderType || 'CAT40_ER32',
+        gaugeLength: operation.gaugeLength || 65,
+        stickoutLength: operation.stickoutLength || 35,
+        holderDiameter: operation.holderDiameter || 50,
+
+        // Cut Parameters
+        stepoverPct: operation.stepoverPct || 45,
         stockToLeaveXY: operation.stockToLeaveXY ?? 0.0,
         stockToLeaveZ: operation.stockToLeaveZ ?? 0.0,
-        rapidHeight: operation.rapidHeight || 25.0,
-        feedPlane: operation.feedPlane || 2.5,
-        retractHeight: operation.retractHeight || 5.0,
-        topOfStock: operation.topOfStock ?? 0.0,
-        depthMode: operation.depthMode || 'absolute',
-        clearanceMode: operation.clearanceMode || 'absolute',
-        retractMode: operation.retractMode || 'absolute',
-        feedPlaneMode: operation.feedPlaneMode || 'incremental',
-        topOfStockMode: operation.topOfStockMode || 'absolute',
         cuttingDirection: operation.cuttingDirection || 'climb',
         compensationType: operation.compensationType || 'computer',
         rollAroundCorners: operation.rollAroundCorners || 'sharp',
+        chamferWidth: operation.chamferWidth || 0.5,
+        tipOffset: operation.tipOffset || 1.25,
+        drillCycleType: operation.drillCycleType || (operation.badgeClass === 'tap' ? 'G84' : operation.badgeClass === 'spotdrill' ? 'G81' : 'G83'),
+        peckDepth: operation.peckDepth || 2.0,
+        pitch: operation.pitch || 0.79375,
+        dwellSec: operation.dwellSec || 0.0,
+
+        // Linking Parameters
+        clearanceMode: operation.clearanceMode || 'absolute',
+        rapidHeight: operation.rapidHeight || 25.0,
+        retractMode: operation.retractMode || 'absolute',
+        retractHeight: operation.retractHeight || 5.0,
+        feedPlaneMode: operation.feedPlaneMode || 'incremental',
+        feedPlane: operation.feedPlane || 2.5,
+        topOfStockMode: operation.topOfStockMode || 'absolute',
+        topOfStock: operation.topOfStock ?? 0.0,
+        depthMode: operation.depthMode || 'absolute',
+        totalDepth: operation.totalDepth || 15.0,
+
+        // Lead In / Out
         leadInLineLen: operation.leadInLineLen || 5.0,
         leadInArcRad: operation.leadInArcRad || 5.0,
         leadInSweepDeg: operation.leadInSweepDeg || 90,
-        chamferWidth: operation.chamferWidth || 0.508,
-        tipOffset: operation.tipOffset || 1.27,
-        drillCycleType: operation.drillCycleType || (operation.badgeClass === 'tap' ? 'G84' : operation.badgeClass === 'spotdrill' ? 'G81' : 'G83'),
-        peckDepth: operation.peckDepth || 2.0,
-        pitch: operation.pitch || 0.79375, // 10-32 UNF pitch (32 TPI)
-        dwellSec: operation.dwellSec || 0.0,
+        leadInOutOverlap: operation.leadInOutOverlap || 0.0,
+
+        // Break Through
+        breakThroughEnabled: operation.breakThroughEnabled ?? false,
+        breakThroughAmount: operation.breakThroughAmount || 1.0,
+
+        // Planes & Coolant
+        wcsPlane: operation.wcsPlane || 'Top (G54)',
+        toolPlane: operation.toolPlane || 'Top (G17)',
+        constructionPlane: operation.constructionPlane || 'Top (G17)',
+        workOffset: operation.workOffset ?? 0,
         coolant: operation.coolant || 'Flood',
-        comment: operation.comment || operation.name || ''
+        coolantTiming: operation.coolantTiming || 'With'
       });
-      // Select appropriate default tab for operation
+
+      // Default active tab
       if (operation.badgeClass === 'drill' || operation.badgeClass === 'spotdrill' || operation.badgeClass === 'tap') {
         setActiveTab('cut_parameters');
       } else {
@@ -76,17 +202,92 @@ export default function MastercamToolpathParametersModal({
   if (!isOpen || !operation) return null;
 
   const currentTool = tools.find((t) => t.id === formData.toolId) || tools[0] || {};
+  const toolDiam = currentTool.diameter || 10;
+  const toolFlutes = Math.max(1, currentTool.flutes || 4);
 
+  // Field change handler
   const handleFieldChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = (regenerate = true) => {
+  // Speed & Feed Synchronizers
+  const handleRpmChange = (rpmVal) => {
+    const rpm = Math.max(100, Number(rpmVal) || 0);
+    const sfm = Math.round((Math.PI * toolDiam * rpm) / 1000);
+    const feed = Math.round(rpm * toolFlutes * (formData.feedPerTooth || 0.05));
+    setFormData((prev) => ({
+      ...prev,
+      spindleSpeed: rpm,
+      surfaceSpeed: sfm,
+      feedRate: feed
+    }));
+  };
+
+  const handleSurfaceSpeedChange = (sfmVal) => {
+    const sfm = Math.max(10, Number(sfmVal) || 0);
+    const rpm = Math.round((sfm * 1000) / (Math.PI * toolDiam));
+    const feed = Math.round(rpm * toolFlutes * (formData.feedPerTooth || 0.05));
+    setFormData((prev) => ({
+      ...prev,
+      surfaceSpeed: sfm,
+      spindleSpeed: rpm,
+      feedRate: feed
+    }));
+  };
+
+  const handleFeedRateChange = (feedVal) => {
+    const feed = Math.max(10, Number(feedVal) || 0);
+    const rpm = formData.spindleSpeed || 3500;
+    const fpt = Number((feed / (rpm * toolFlutes)).toFixed(4));
+    setFormData((prev) => ({
+      ...prev,
+      feedRate: feed,
+      feedPerTooth: fpt
+    }));
+  };
+
+  const handleFptChange = (fptVal) => {
+    const fpt = Math.max(0.001, Number(fptVal) || 0);
+    const rpm = formData.spindleSpeed || 3500;
+    const feed = Math.round(rpm * toolFlutes * fpt);
+    setFormData((prev) => ({
+      ...prev,
+      feedPerTooth: fpt,
+      feedRate: feed
+    }));
+  };
+
+  // Switch Tool with recalculation
+  const handleSelectTool = (tId) => {
+    const newTool = tools.find((t) => t.id === tId);
+    if (!newTool) return;
+    const d = newTool.diameter || 10;
+    const fl = Math.max(1, newTool.flutes || 4);
+    const rpm = newTool.rpm || 3500;
+    const feed = newTool.feedRate || 1200;
+    const plunge = newTool.plungeRate || 350;
+    const sfm = Math.round((Math.PI * d * rpm) / 1000);
+    const fpt = Number((feed / (rpm * fl)).toFixed(4));
+
+    setFormData((prev) => ({
+      ...prev,
+      toolId: newTool.id,
+      spindleSpeed: rpm,
+      feedRate: feed,
+      plungeFeedRate: plunge,
+      surfaceSpeed: sfm,
+      feedPerTooth: fpt
+    }));
+  };
+
+  // Save changes
+  const handleSave = (closeAfterSave = true, regenerate = true) => {
     const updatedOp = {
       ...operation,
       ...formData,
       toolName: currentTool ? `T${currentTool.number} - ${currentTool.name}` : operation.toolName
     };
+
     if (onSaveOperation) {
       onSaveOperation(updatedOp);
     }
@@ -94,18 +295,20 @@ export default function MastercamToolpathParametersModal({
       onRegenerateToolpath(updatedOp.id);
     }
     if (onNotify) {
-      onNotify(`Mastercam: Updated parameters & regenerated ${updatedOp.name}`, 'success');
+      onNotify(`Mastercam: Updated parameters for ${updatedOp.name}`, 'success');
     }
-    onClose();
+    if (closeAfterSave) {
+      onClose();
+    }
   };
 
+  // Navigation Items
   const navItems = [
     { id: 'toolpath_type', label: 'Toolpath Type', badge: formData.badgeClass?.toUpperCase() },
     { id: 'tool', label: 'Tool', badge: `T${currentTool.number || 1}` },
-    { id: 'holder', label: 'Holder', badge: 'CAT40' },
+    { id: 'holder', label: 'Holder', badge: formData.holderType?.split('_')[0] || 'CAT40' },
     { id: 'cut_parameters', label: 'Cut Parameters' },
-    { id: 'transitions', label: 'Transitions / Entry' },
-    { id: 'depth_cuts', label: 'Depth Cuts' },
+    { id: 'depth_cuts', label: 'Depth Cuts', badge: formData.depthCutsEnabled ? `${formData.stepdown}mm` : 'OFF' },
     { id: 'lead_in_out', label: 'Lead In / Out' },
     { id: 'break_through', label: 'Break Through' },
     { id: 'linking', label: 'Linking Parameters', highlight: true },
@@ -119,8 +322,8 @@ export default function MastercamToolpathParametersModal({
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(3px)',
+        background: 'rgba(15, 23, 42, 0.72)',
+        backdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -129,28 +332,28 @@ export default function MastercamToolpathParametersModal({
     >
       <div
         style={{
-          width: '920px',
-          height: '660px',
-          background: '#f1f5f9',
+          width: '940px',
+          height: '670px',
+          background: '#ffffff',
           borderRadius: '6px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px #94a3b8',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.55), 0 0 0 1px #64748b',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
         }}
       >
-        {/* Mastercam Classic Window Title Bar */}
+        {/* ================= Mastercam Iconic Window Title Bar ================= */}
         <div
           style={{
-            height: '36px',
-            background: 'linear-gradient(to bottom, #1e3a8a, #172554)',
+            height: '38px',
+            background: 'linear-gradient(to bottom, #0f5a9e, #0a4073)',
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0 10px',
+            padding: '0 12px',
             userSelect: 'none',
-            borderBottom: '1px solid #0f172a'
+            borderBottom: '1px solid #082f55'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -160,119 +363,106 @@ export default function MastercamToolpathParametersModal({
             <span
               style={{
                 background: '#0284c7',
-                fontSize: '10.5px',
+                fontSize: '10px',
                 padding: '1px 6px',
                 borderRadius: '3px',
-                fontWeight: 600
+                fontWeight: 700
               }}
             >
               OP #{operation.id}
             </span>
           </div>
 
+          {/* Mastercam Standard Triple Action Buttons: OK (✓), Apply (→), Cancel (✕) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <button
-              onClick={() => handleSave(true)}
-              title="OK (Save & Regenerate Toolpath)"
+              onClick={() => handleSave(true, true)}
+              title="OK: Accept & Regenerate Toolpath (Enter)"
               style={{
                 background: '#16a34a',
-                border: 'none',
+                border: '1px solid #15803d',
                 borderRadius: '3px',
-                width: '24px',
+                width: '26px',
                 height: '24px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#fff',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
               }}
             >
-              <Check size={16} strokeWidth={2.5} />
+              <Check size={16} strokeWidth={3} />
             </button>
+
             <button
-              onClick={() => handleSave(false)}
-              title="Apply Changes"
+              onClick={() => handleSave(false, true)}
+              title="Apply Changes (Alt+A)"
               style={{
-                background: '#2563eb',
-                border: 'none',
+                background: '#0284c7',
+                border: '1px solid #0369a1',
                 borderRadius: '3px',
-                width: '24px',
+                width: '26px',
                 height: '24px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#fff',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
               }}
             >
-              <ArrowRight size={15} />
+              <ArrowRight size={15} strokeWidth={2.5} />
             </button>
+
             <button
               onClick={onClose}
               title="Cancel (Esc)"
               style={{
                 background: '#dc2626',
-                border: 'none',
+                border: '1px solid #b91c1c',
                 borderRadius: '3px',
-                width: '24px',
+                width: '26px',
                 height: '24px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#fff',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
               }}
             >
-              <X size={16} strokeWidth={2.5} />
+              <X size={16} strokeWidth={3} />
             </button>
           </div>
         </div>
 
-        {/* Mastercam Quick Action Toolbar */}
+        {/* ================= Mastercam Subheader Toolbar ================= */}
         <div
           style={{
-            height: '32px',
-            background: '#e2e8f0',
+            height: '34px',
+            background: '#f1f5f9',
             borderBottom: '1px solid #cbd5e1',
             display: 'flex',
             alignItems: 'center',
-            padding: '0 10px',
+            padding: '0 14px',
             gap: '12px',
             fontSize: '12px'
           }}
         >
-          <span style={{ color: '#475569', fontWeight: 600 }}>Operation Type:</span>
-          <select
-            value={formData.badgeClass}
-            onChange={(e) => handleFieldChange('badgeClass', e.target.value)}
-            style={{
-              fontSize: '12px',
-              padding: '2px 6px',
-              border: '1px solid #94a3b8',
-              borderRadius: '2px',
-              background: '#fff'
-            }}
-          >
-            <option value="face">Facing</option>
-            <option value="contour">2D Contour</option>
-            <option value="pocket">2D Pocket</option>
-            <option value="adaptive">2D Dynamic Mill (High-Speed)</option>
-            <option value="chamfer">Model Chamfer / 2D Chamfer</option>
-            <option value="spotdrill">Spot Drill (G81)</option>
-            <option value="drill">Peck Drill (G83)</option>
-            <option value="tap">Rigid Tap (G84)</option>
-            <option value="circlemill">Circle Mill / Helical Bore</option>
-          </select>
-
+          <span style={{ color: '#475569', fontWeight: 600 }}>Toolpath:</span>
+          <span style={{ color: '#0f5a9e', fontWeight: 700 }}>
+            {TOOLPATH_TYPES.find((t) => t.id === formData.badgeClass)?.title || formData.name}
+          </span>
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: '11px', color: '#64748b' }}>
-            Machine: Haas VF-2 TR (3-Axis) | WCS: G54 (Top-Left / Center)
+            Machine: Haas VF-2 (3-Axis) &bull; WCS: {formData.wcsPlane || 'G54'} &bull; Plane: Top (G17)
           </span>
         </div>
 
-        {/* Modal Main Body (Left Tree + Right Property Page) */}
+        {/* ================= Main Modal Body (Left Navigation Tree + Right Content) ================= */}
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-          {/* Left Navigation Tree */}
+          {/* Left Tree Page Selector */}
           <div
             style={{
               width: '210px',
@@ -289,12 +479,12 @@ export default function MastercamToolpathParametersModal({
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
                   style={{
-                    padding: '7px 12px',
-                    fontSize: '12.5px',
+                    padding: '8px 12px',
+                    fontSize: '12px',
                     fontWeight: isSelected ? 700 : 500,
-                    color: isSelected ? '#1e3a8a' : '#334155',
+                    color: isSelected ? '#0f5a9e' : '#334155',
                     background: isSelected ? '#e0f2fe' : 'transparent',
-                    borderLeft: isSelected ? '3px solid #0284c7' : '3px solid transparent',
+                    borderLeft: isSelected ? '3px solid #0f5a9e' : '3px solid transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -304,13 +494,13 @@ export default function MastercamToolpathParametersModal({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <ChevronRight size={13} color={isSelected ? '#0284c7' : '#94a3b8'} />
+                    <ChevronRight size={13} color={isSelected ? '#0f5a9e' : '#94a3b8'} />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
                     <span
                       style={{
-                        fontSize: '10px',
+                        fontSize: '9.5px',
                         fontWeight: 700,
                         padding: '1px 5px',
                         borderRadius: '3px',
@@ -331,11 +521,65 @@ export default function MastercamToolpathParametersModal({
             style={{
               flex: 1,
               background: '#ffffff',
-              padding: '18px 24px',
+              padding: '18px 22px',
               overflowY: 'auto'
             }}
           >
-            {/* 1. TOOL PAGE */}
+            {/* ---------------- 1. TOOLPATH TYPE GALLERY ---------------- */}
+            {activeTab === 'toolpath_type' && (
+              <div>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>
+                    Select Toolpath Strategy
+                  </h3>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    Choose the machining strategy for this operation group
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  {TOOLPATH_TYPES.map((type) => {
+                    const isSel = formData.badgeClass === type.id;
+                    return (
+                      <div
+                        key={type.id}
+                        onClick={() => handleFieldChange('badgeClass', type.id)}
+                        style={{
+                          border: isSel ? '2px solid #0f5a9e' : '1px solid #cbd5e1',
+                          background: isSel ? '#f0f9ff' : '#ffffff',
+                          borderRadius: '6px',
+                          padding: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontWeight: 700, fontSize: '13px', color: isSel ? '#0f5a9e' : '#0f172a' }}>
+                            {type.title}
+                          </span>
+                          <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '3px', background: isSel ? '#0f5a9e' : '#f1f5f9', color: isSel ? '#ffffff' : '#64748b', fontWeight: 600 }}>
+                            {type.category}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '11.5px', color: '#475569', lineHeight: 1.4 }}>
+                          {type.desc}
+                        </span>
+                        {isSel && (
+                          <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', color: '#0f5a9e', fontSize: '11px', fontWeight: 700 }}>
+                            <CheckCircle2 size={13} /> Active Strategy
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ---------------- 2. TOOL & CUTTING DYNAMICS PAGE ---------------- */}
             {activeTab === 'tool' && (
               <div>
                 <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px' }}>
@@ -343,12 +587,12 @@ export default function MastercamToolpathParametersModal({
                     Tool Selection & Cutting Dynamics
                   </h3>
                   <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    Select cutting tool from machine magazine or shop library
+                    Select cutting tool and configure spindle speeds and feed rates
                   </span>
                 </div>
 
                 {/* Tool List Table */}
-                <div style={{ border: '1px solid #cbd5e1', borderRadius: '3px', overflow: 'hidden', marginBottom: '16px' }}>
+                <div style={{ border: '1px solid #cbd5e1', borderRadius: '4px', overflow: 'hidden', marginBottom: '16px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                     <thead style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1' }}>
                       <tr>
@@ -358,7 +602,7 @@ export default function MastercamToolpathParametersModal({
                         <th style={{ padding: '6px 10px' }}>Diameter</th>
                         <th style={{ padding: '6px 10px' }}>Corner Rad</th>
                         <th style={{ padding: '6px 10px' }}>Flutes</th>
-                        <th style={{ padding: '6px 10px' }}>Action</th>
+                        <th style={{ padding: '6px 10px' }}>Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -367,7 +611,7 @@ export default function MastercamToolpathParametersModal({
                         return (
                           <tr
                             key={t.id}
-                            onClick={() => handleFieldChange('toolId', t.id)}
+                            onClick={() => handleSelectTool(t.id)}
                             style={{
                               background: isSel ? '#e0f2fe' : '#ffffff',
                               borderBottom: '1px solid #f1f5f9',
@@ -375,16 +619,18 @@ export default function MastercamToolpathParametersModal({
                             }}
                           >
                             <td style={{ padding: '6px 10px', fontWeight: isSel ? 700 : 500 }}>T{t.number}</td>
-                            <td style={{ padding: '6px 10px', color: isSel ? '#0369a1' : '#1e293b' }}>{t.name}</td>
+                            <td style={{ padding: '6px 10px', color: isSel ? '#0369a1' : '#1e293b', fontWeight: isSel ? 700 : 400 }}>{t.name}</td>
                             <td style={{ padding: '6px 10px' }}>{t.type}</td>
                             <td style={{ padding: '6px 10px' }}>{t.diameter} mm</td>
                             <td style={{ padding: '6px 10px' }}>{t.cornerRad || 0} mm</td>
-                            <td style={{ padding: '6px 10px' }}>{t.flutes || 2}</td>
+                            <td style={{ padding: '6px 10px' }}>{t.flutes || 4}</td>
                             <td style={{ padding: '6px 10px' }}>
-                              {isSel && (
-                                <span style={{ color: '#0284c7', fontWeight: 700, fontSize: '11px' }}>
+                              {isSel ? (
+                                <span style={{ color: '#0f5a9e', fontWeight: 700, fontSize: '11px' }}>
                                   ✓ ACTIVE
                                 </span>
+                              ) : (
+                                <span style={{ color: '#94a3b8', fontSize: '11px' }}>Select</span>
                               )}
                             </td>
                           </tr>
@@ -394,16 +640,17 @@ export default function MastercamToolpathParametersModal({
                   </table>
                 </div>
 
-                {/* Feeds and Speeds Grid */}
+                {/* Live Editable Feeds & Speeds Grid */}
                 <div
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr 1fr',
-                    gap: '16px',
+                    gap: '14px',
                     background: '#f8fafc',
                     padding: '14px',
-                    borderRadius: '4px',
-                    border: '1px solid #e2e8f0'
+                    borderRadius: '6px',
+                    border: '1px solid #e2e8f0',
+                    marginBottom: '14px'
                   }}
                 >
                   <div>
@@ -412,57 +659,70 @@ export default function MastercamToolpathParametersModal({
                     </label>
                     <input
                       type="number"
-                      value={currentTool.rpm || 3500}
-                      readOnly
+                      value={formData.spindleSpeed || 3500}
+                      onChange={(e) => handleRpmChange(e.target.value)}
                       style={{
                         width: '100%',
                         padding: '6px 10px',
                         fontSize: '13px',
-                        border: '1px solid #cbd5e1',
+                        border: '1px solid #0f5a9e',
                         borderRadius: '3px',
-                        background: '#f1f5f9'
+                        background: '#ffffff',
+                        fontWeight: 700,
+                        color: '#0f5a9e'
                       }}
                     />
+                    <span style={{ fontSize: '10.5px', color: '#64748b' }}>
+                      Surface Speed: <strong>{formData.surfaceSpeed || 110} m/min</strong>
+                    </span>
                   </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                      Feed Rate (mm/min / IPM):
+                      Feed Rate (mm/min):
                     </label>
                     <input
                       type="number"
-                      value={currentTool.feedRate || 1200}
-                      readOnly
+                      value={formData.feedRate || 1200}
+                      onChange={(e) => handleFeedRateChange(e.target.value)}
                       style={{
                         width: '100%',
                         padding: '6px 10px',
                         fontSize: '13px',
-                        border: '1px solid #cbd5e1',
+                        border: '1px solid #0f5a9e',
                         borderRadius: '3px',
-                        background: '#f1f5f9'
+                        background: '#ffffff',
+                        fontWeight: 700,
+                        color: '#0f5a9e'
                       }}
                     />
+                    <span style={{ fontSize: '10.5px', color: '#64748b' }}>
+                      Feed / Tooth (FPT): <strong>{formData.feedPerTooth || 0.05} mm/th</strong>
+                    </span>
                   </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                      Plunge Feed Rate:
+                      Plunge Feed Rate (mm/min):
                     </label>
                     <input
                       type="number"
-                      value={currentTool.plungeRate || 350}
-                      readOnly
+                      value={formData.plungeFeedRate || 400}
+                      onChange={(e) => handleFieldChange('plungeFeedRate', Number(e.target.value) || 350)}
                       style={{
                         width: '100%',
                         padding: '6px 10px',
                         fontSize: '13px',
                         border: '1px solid #cbd5e1',
                         borderRadius: '3px',
-                        background: '#f1f5f9'
+                        background: '#ffffff'
                       }}
                     />
                   </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                      Coolant:
+                      Coolant Mode:
                     </label>
                     <select
                       value={formData.coolant}
@@ -477,16 +737,145 @@ export default function MastercamToolpathParametersModal({
                       }}
                     >
                       <option value="Flood">Flood (M08)</option>
-                      <option value="Mist">Mist Coolant</option>
-                      <option value="Through">Through Spindle (TSC)</option>
+                      <option value="Mist">Mist (M07)</option>
+                      <option value="Through">Through Spindle / TSC (M88)</option>
+                      <option value="Air">Air Blast (M12)</option>
                       <option value="Off">Off (M09)</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* Operation G-Code Comment Field */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    Operation Comment (Output into NC Code):
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.comment || ''}
+                    onChange={(e) => handleFieldChange('comment', e.target.value)}
+                    placeholder="e.g. T1 - 10MM ENDMILL - 2D FACE"
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px',
+                      fontSize: '12.5px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '3px',
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* ---------------- 3. TOOL HOLDER & STICKOUT ---------------- */}
+            {activeTab === 'holder' && (
+              <div>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>
+                    Tool Holder Definition & Gauge Length
+                  </h3>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    Configure tool holder geometry to avoid spindle shank gouges during 3D simulation
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                        Holder Library Profile:
+                      </label>
+                      <select
+                        value={formData.holderType}
+                        onChange={(e) => handleFieldChange('holderType', e.target.value)}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      >
+                        <option value="CAT40_ER32">CAT40 ER32 Precision Collet Chuck</option>
+                        <option value="BT40_MILLING">BT40 High-Grip Milling Chuck</option>
+                        <option value="HSK63A_SHRINK">HSK-63A Precision Shrink Fit</option>
+                        <option value="BT30_COLLET">BT30 Compact Collet Holder</option>
+                      </select>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                          Tool Stickout Length (L1):
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          value={formData.stickoutLength || 35}
+                          onChange={(e) => handleFieldChange('stickoutLength', Number(e.target.value) || 30)}
+                          style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #0f5a9e', borderRadius: '3px', fontWeight: 700 }}
+                        />
+                        <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>mm protruding from holder</span>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                          Gauge Length (L2):
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          value={formData.gaugeLength || 65}
+                          onChange={(e) => handleFieldChange('gaugeLength', Number(e.target.value) || 60)}
+                          style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                        />
+                        <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>mm from spindle face</span>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                          Holder Diameter (D1):
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          value={formData.holderDiameter || 50}
+                          onChange={(e) => handleFieldChange('holderDiameter', Number(e.target.value) || 50)}
+                          style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                        />
+                        <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>mm outer collar width</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Visual SVG Silhouette Preview */}
+                  <div style={{ background: '#f1f5f9', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#475569', marginBottom: '8px' }}>
+                      Holder Assembly Profile
+                    </span>
+                    <svg width="180" height="230" viewBox="0 0 180 230">
+                      {/* Spindle Face */}
+                      <rect x="30" y="10" width="120" height="20" fill="#475569" rx="2" />
+                      <text x="90" y="24" fill="#ffffff" fontSize="9" textAnchor="middle" fontWeight="bold">SPINDLE FACE</text>
+                      
+                      {/* Holder Body */}
+                      <path d="M 45 30 L 135 30 L 125 70 L 115 110 L 65 110 L 55 70 Z" fill="#94a3b8" stroke="#334155" strokeWidth="1.5" />
+                      
+                      {/* Collet Nut */}
+                      <rect x="68" y="110" width="44" height="25" fill="#64748b" stroke="#1e293b" strokeWidth="1" rx="2" />
+                      <text x="90" y="126" fill="#ffffff" fontSize="8" textAnchor="middle">{formData.holderType?.split('_')[0] || 'CAT40'}</text>
+                      
+                      {/* Cutting Tool Endmill */}
+                      <rect x="85" y="135" width="10" height="65" fill="#0284c7" stroke="#0369a1" strokeWidth="1" />
+                      <text x="90" y="180" fill="#ffffff" fontSize="8" textAnchor="middle" transform="rotate(-90 90 180)">CUTTER</text>
+
+                      {/* Dimension L1 Stickout */}
+                      <line x1="110" y1="135" x2="135" y2="135" stroke="#0f5a9e" strokeWidth="1" strokeDasharray="2,2" />
+                      <line x1="110" y1="200" x2="135" y2="200" stroke="#0f5a9e" strokeWidth="1" strokeDasharray="2,2" />
+                      <line x1="130" y1="135" x2="130" y2="200" stroke="#0f5a9e" strokeWidth="1.5" />
+                      <text x="135" y="170" fill="#0f5a9e" fontSize="9" fontWeight="bold">L1: {formData.stickoutLength}mm</text>
+                    </svg>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* 2. CUT PARAMETERS PAGE */}
+            {/* ---------------- 4. CUT PARAMETERS ---------------- */}
             {activeTab === 'cut_parameters' && (
               <div>
                 <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px' }}>
@@ -498,11 +887,11 @@ export default function MastercamToolpathParametersModal({
                   </span>
                 </div>
 
-                {/* If Drill or Tap cycle */}
+                {/* Drill or Tap Cycles */}
                 {(formData.badgeClass === 'drill' || formData.badgeClass === 'spotdrill' || formData.badgeClass === 'tap') ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                      <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                         Cycle Type:
                       </label>
                       <select
@@ -510,32 +899,32 @@ export default function MastercamToolpathParametersModal({
                         onChange={(e) => handleFieldChange('drillCycleType', e.target.value)}
                         style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                       >
-                        <option value="G81">Drill / Counterbore (G81 - Simple Plunge)</option>
+                        <option value="G81">Drill / Spot (G81 - Direct Plunge)</option>
                         <option value="G83">Peck Drill (G83 - Full Retract for Deep Holes)</option>
-                        <option value="G73">Chip Break (G73 - High Speed Peck)</option>
-                        <option value="G84">Tap (G84 - Floating / Rigid Tapping)</option>
+                        <option value="G73">Chip Break (G73 - High Speed Incremental Peck)</option>
+                        <option value="G84">Rigid Tap (G84 - Synchronized Spindle/Feed)</option>
                       </select>
                     </div>
 
                     {formData.drillCycleType === 'G83' && (
                       <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                        <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                           Peck Increment (Q):
                         </label>
                         <input
                           type="number"
-                          step="0.1"
+                          step="0.5"
                           value={formData.peckDepth}
                           onChange={(e) => handleFieldChange('peckDepth', parseFloat(e.target.value) || 2.0)}
-                          style={{ width: '160px', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                          style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                         />
-                        <span style={{ fontSize: '11.5px', color: '#64748b', marginLeft: '10px' }}>mm per peck</span>
+                        <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>mm per peck</span>
                       </div>
                     )}
 
                     {formData.drillCycleType === 'G84' && (
                       <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                        <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                           Thread Pitch (F):
                         </label>
                         <input
@@ -543,88 +932,51 @@ export default function MastercamToolpathParametersModal({
                           step="0.001"
                           value={formData.pitch}
                           onChange={(e) => handleFieldChange('pitch', parseFloat(e.target.value) || 0.79375)}
-                          style={{ width: '160px', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                          style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                         />
-                        <span style={{ fontSize: '11.5px', color: '#64748b', marginLeft: '10px' }}>
-                          mm / pitch (0.79375mm for 10-32 UNF / 32 TPI)
+                        <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>
+                          mm / pitch (e.g. 0.79375 for 10-32 UNF / 32 TPI)
                         </span>
                       </div>
                     )}
                   </div>
                 ) : (
                   /* Standard Milling Cut Parameters */
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                      <div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                      <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
                           Compensation Type:
                         </label>
                         <select
                           value={formData.compensationType}
                           onChange={(e) => handleFieldChange('compensationType', e.target.value)}
-                          style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                          style={{ width: '100%', padding: '6px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                         >
-                          <option value="computer">Computer</option>
-                          <option value="control">Control (G41/G42)</option>
-                          <option value="wear">Wear</option>
-                          <option value="off">Off</option>
+                          <option value="computer">Computer (Calculated by Mastercam)</option>
+                          <option value="control">Control (Outputs G41/G42)</option>
+                          <option value="wear">Wear (Tool Wear Offsets)</option>
+                          <option value="off">Off (Centerline Toolpath)</option>
                         </select>
                       </div>
 
-                      <div>
+                      <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
                           Cutting Direction:
                         </label>
                         <select
                           value={formData.cuttingDirection}
                           onChange={(e) => handleFieldChange('cuttingDirection', e.target.value)}
-                          style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                          style={{ width: '100%', padding: '6px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                         >
-                          <option value="climb">Climb Milling</option>
+                          <option value="climb">Climb Milling (Recommended for CNC)</option>
                           <option value="conventional">Conventional Milling</option>
                         </select>
                       </div>
                     </div>
 
-                    {/* Chamfer Parameters if Chamfer Toolpath */}
-                    {formData.badgeClass === 'chamfer' && (
-                      <div style={{ background: '#fef3c7', padding: '14px', borderRadius: '4px', border: '1px solid #fde68a' }}>
-                        <div style={{ fontWeight: 700, fontSize: '13px', color: '#92400e', marginBottom: '10px' }}>
-                          2D Model Chamfer Dimensions:
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '4px' }}>
-                              Chamfer Width:
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={formData.chamferWidth}
-                              onChange={(e) => handleFieldChange('chamferWidth', parseFloat(e.target.value) || 0.508)}
-                              style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #d97706', borderRadius: '3px' }}
-                            />
-                            <span style={{ fontSize: '11px', color: '#b45309' }}>e.g. 0.508mm (0.020")</span>
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '4px' }}>
-                              Bottom Tip Offset:
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={formData.tipOffset}
-                              onChange={(e) => handleFieldChange('tipOffset', parseFloat(e.target.value) || 1.27)}
-                              style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #d97706', borderRadius: '3px' }}
-                            />
-                            <span style={{ fontSize: '11px', color: '#b45309' }}>e.g. 1.27mm (0.050")</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
                     {/* Stock to Leave XY and Z */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', background: '#f8fafc', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
                           Stock to Leave on Walls (XY):
@@ -655,333 +1007,504 @@ export default function MastercamToolpathParametersModal({
               </div>
             )}
 
-            {/* 3. LINKING PARAMETERS PAGE (THE MASTER SCREEN FROM THE VIDEO) */}
+            {/* ---------------- 5. DEPTH CUTS ---------------- */}
+            {activeTab === 'depth_cuts' && (
+              <div>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>
+                    Depth Cuts (Z Stepdown)
+                  </h3>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    Control roughing depth increments and finish pass spring cuts
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.depthCutsEnabled}
+                      onChange={(e) => handleFieldChange('depthCutsEnabled', e.target.checked)}
+                      style={{ width: '16px', height: '16px', accentColor: '#0f5a9e' }}
+                    />
+                    Enable Depth Cuts
+                  </label>
+
+                  {formData.depthCutsEnabled && (
+                    <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '6px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                            Max Rough Step (mm):
+                          </label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={formData.stepdown || 2.5}
+                            onChange={(e) => handleFieldChange('stepdown', parseFloat(e.target.value) || 2.5)}
+                            style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #0f5a9e', borderRadius: '3px', fontWeight: 700 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                            Number of Finish Cuts:
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="5"
+                            value={formData.finishCutsCount || 1}
+                            onChange={(e) => handleFieldChange('finishCutsCount', parseInt(e.target.value, 10) || 0)}
+                            style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#1e293b', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={formData.keepToolDown}
+                            onChange={(e) => handleFieldChange('keepToolDown', e.target.checked)}
+                            style={{ width: '15px', height: '15px', accentColor: '#0f5a9e' }}
+                          />
+                          <strong>Keep Tool Down</strong> (avoids rapid retract to clearance between depth steps)
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ---------------- 6. LINKING PARAMETERS (WITH MASTER GRAPHIC) ---------------- */}
             {activeTab === 'linking' && (
               <div>
                 <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px' }}>
                   <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>
-                    Linking Parameters
+                    Linking Parameters (Z-Levels)
                   </h3>
                   <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    Absolute / Incremental Z Planes matching Mastercam 2019/2024
+                    Absolute and incremental reference heights for tool entry, cutting, and clearance
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {/* Clearance */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 12px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ width: '130px', fontSize: '12.5px', fontWeight: 600, color: '#334155' }}>
-                      Clearance:
-                    </span>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={formData.rapidHeight}
-                      onChange={(e) => handleFieldChange('rapidHeight', parseFloat(e.target.value) || 25)}
-                      style={{ width: '90px', padding: '4px 8px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                    />
-                    <div style={{ display: 'flex', gap: '14px', fontSize: '12px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <input
-                          type="radio"
-                          name="clearanceMode"
-                          checked={formData.clearanceMode === 'absolute'}
-                          onChange={() => handleFieldChange('clearanceMode', 'absolute')}
-                        />
-                        Absolute
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <input
-                          type="radio"
-                          name="clearanceMode"
-                          checked={formData.clearanceMode === 'incremental'}
-                          onChange={() => handleFieldChange('clearanceMode', 'incremental')}
-                        />
-                        Incremental
-                      </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '16px' }}>
+                  {/* Parameter Rows */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {/* Clearance */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 10px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ width: '110px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        Clearance:
+                      </span>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={formData.rapidHeight}
+                        onChange={(e) => handleFieldChange('rapidHeight', parseFloat(e.target.value) || 25)}
+                        style={{ width: '75px', padding: '3px 6px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      />
+                      <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input type="radio" name="clrMode" checked={formData.clearanceMode === 'absolute'} onChange={() => handleFieldChange('clearanceMode', 'absolute')} />
+                          Abs
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input type="radio" name="clrMode" checked={formData.clearanceMode === 'incremental'} onChange={() => handleFieldChange('clearanceMode', 'incremental')} />
+                          Inc
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Retract */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 10px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ width: '110px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        Retract:
+                      </span>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={formData.retractHeight}
+                        onChange={(e) => handleFieldChange('retractHeight', parseFloat(e.target.value) || 5)}
+                        style={{ width: '75px', padding: '3px 6px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      />
+                      <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input type="radio" name="retMode" checked={formData.retractMode === 'absolute'} onChange={() => handleFieldChange('retractMode', 'absolute')} />
+                          Abs
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input type="radio" name="retMode" checked={formData.retractMode === 'incremental'} onChange={() => handleFieldChange('retractMode', 'incremental')} />
+                          Inc
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Feed Plane */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 10px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ width: '110px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        Feed Plane:
+                      </span>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={formData.feedPlane}
+                        onChange={(e) => handleFieldChange('feedPlane', parseFloat(e.target.value) || 2.5)}
+                        style={{ width: '75px', padding: '3px 6px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      />
+                      <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input type="radio" name="fpMode" checked={formData.feedPlaneMode === 'absolute'} onChange={() => handleFieldChange('feedPlaneMode', 'absolute')} />
+                          Abs
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input type="radio" name="fpMode" checked={formData.feedPlaneMode === 'incremental'} onChange={() => handleFieldChange('feedPlaneMode', 'incremental')} />
+                          Inc
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Top of Stock */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 10px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ width: '110px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                        Top of Stock:
+                      </span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={formData.topOfStock}
+                        onChange={(e) => handleFieldChange('topOfStock', parseFloat(e.target.value) || 0)}
+                        style={{ width: '75px', padding: '3px 6px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      />
+                      <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input type="radio" name="tosMode" checked={formData.topOfStockMode === 'absolute'} onChange={() => handleFieldChange('topOfStockMode', 'absolute')} />
+                          Abs
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input type="radio" name="tosMode" checked={formData.topOfStockMode === 'incremental'} onChange={() => handleFieldChange('topOfStockMode', 'incremental')} />
+                          Inc
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Depth */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 10px', background: '#f0fdf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
+                      <span style={{ width: '110px', fontSize: '12px', fontWeight: 700, color: '#166534' }}>
+                        Depth:
+                      </span>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={formData.totalDepth}
+                        onChange={(e) => handleFieldChange('totalDepth', parseFloat(e.target.value) || 0)}
+                        style={{ width: '75px', padding: '3px 6px', fontSize: '12px', border: '1px solid #86efac', borderRadius: '3px', fontWeight: 700 }}
+                      />
+                      <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input type="radio" name="dMode" checked={formData.depthMode === 'absolute'} onChange={() => handleFieldChange('depthMode', 'absolute')} />
+                          Abs
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input type="radio" name="dMode" checked={formData.depthMode === 'incremental'} onChange={() => handleFieldChange('depthMode', 'incremental')} />
+                          Inc
+                        </label>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Retract */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 12px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ width: '130px', fontSize: '12.5px', fontWeight: 600, color: '#334155' }}>
-                      Retract:
+                  {/* Mastercam Visual Z-Diagram */}
+                  <div style={{ background: '#f8fafc', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
+                      Mastercam Z-Plane Scheme
                     </span>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={formData.retractHeight}
-                      onChange={(e) => handleFieldChange('retractHeight', parseFloat(e.target.value) || 5)}
-                      style={{ width: '90px', padding: '4px 8px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                    />
-                    <div style={{ display: 'flex', gap: '14px', fontSize: '12px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <input
-                          type="radio"
-                          name="retractMode"
-                          checked={formData.retractMode === 'absolute'}
-                          onChange={() => handleFieldChange('retractMode', 'absolute')}
-                        />
-                        Absolute
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <input
-                          type="radio"
-                          name="retractMode"
-                          checked={formData.retractMode === 'incremental'}
-                          onChange={() => handleFieldChange('retractMode', 'incremental')}
-                        />
-                        Incremental
-                      </label>
-                    </div>
-                  </div>
+                    <svg width="200" height="200" viewBox="0 0 200 200">
+                      {/* Clearance Plane */}
+                      <line x1="20" y1="20" x2="180" y2="20" stroke="#f59e0b" strokeWidth="2" strokeDasharray="3,3" />
+                      <text x="185" y="24" fill="#b45309" fontSize="9" fontWeight="bold">CLR</text>
 
-                  {/* Feed Plane */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 12px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ width: '130px', fontSize: '12.5px', fontWeight: 600, color: '#334155' }}>
-                      Feed Plane:
-                    </span>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={formData.feedPlane}
-                      onChange={(e) => handleFieldChange('feedPlane', parseFloat(e.target.value) || 2.5)}
-                      style={{ width: '90px', padding: '4px 8px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                    />
-                    <div style={{ display: 'flex', gap: '14px', fontSize: '12px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <input
-                          type="radio"
-                          name="feedPlaneMode"
-                          checked={formData.feedPlaneMode === 'absolute'}
-                          onChange={() => handleFieldChange('feedPlaneMode', 'absolute')}
-                        />
-                        Absolute
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <input
-                          type="radio"
-                          name="feedPlaneMode"
-                          checked={formData.feedPlaneMode === 'incremental'}
-                          onChange={() => handleFieldChange('feedPlaneMode', 'incremental')}
-                        />
-                        Incremental
-                      </label>
-                    </div>
-                  </div>
+                      {/* Retract Plane */}
+                      <line x1="20" y1="60" x2="180" y2="60" stroke="#0284c7" strokeWidth="1.5" strokeDasharray="3,3" />
+                      <text x="185" y="64" fill="#0284c7" fontSize="9" fontWeight="bold">RET</text>
 
-                  {/* Top of Stock */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 12px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ width: '130px', fontSize: '12.5px', fontWeight: 600, color: '#334155' }}>
-                      Top of Stock:
-                    </span>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={formData.topOfStock}
-                      onChange={(e) => handleFieldChange('topOfStock', parseFloat(e.target.value) || 0)}
-                      style={{ width: '90px', padding: '4px 8px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                    />
-                    <div style={{ display: 'flex', gap: '14px', fontSize: '12px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <input
-                          type="radio"
-                          name="topOfStockMode"
-                          checked={formData.topOfStockMode === 'absolute'}
-                          onChange={() => handleFieldChange('topOfStockMode', 'absolute')}
-                        />
-                        Absolute
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <input
-                          type="radio"
-                          name="topOfStockMode"
-                          checked={formData.topOfStockMode === 'incremental'}
-                          onChange={() => handleFieldChange('topOfStockMode', 'incremental')}
-                        />
-                        Incremental
-                      </label>
-                    </div>
-                  </div>
+                      {/* Feed Plane */}
+                      <line x1="20" y1="90" x2="180" y2="90" stroke="#10b981" strokeWidth="1.5" strokeDasharray="2,2" />
+                      <text x="185" y="94" fill="#10b981" fontSize="9" fontWeight="bold">FEED</text>
 
-                  {/* Depth */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
-                    <span style={{ width: '130px', fontSize: '12.5px', fontWeight: 700, color: '#166534' }}>
-                      Depth:
-                    </span>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={formData.totalDepth}
-                      onChange={(e) => handleFieldChange('totalDepth', parseFloat(e.target.value) || 0)}
-                      style={{ width: '90px', padding: '4px 8px', fontSize: '12.5px', border: '1px solid #86efac', borderRadius: '3px', fontWeight: 700 }}
-                    />
-                    <div style={{ display: 'flex', gap: '14px', fontSize: '12px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <input
-                          type="radio"
-                          name="depthMode"
-                          checked={formData.depthMode === 'absolute'}
-                          onChange={() => handleFieldChange('depthMode', 'absolute')}
-                        />
-                        Absolute
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <input
-                          type="radio"
-                          name="depthMode"
-                          checked={formData.depthMode === 'incremental'}
-                          onChange={() => handleFieldChange('depthMode', 'incremental')}
-                        />
-                        Incremental
-                      </label>
-                    </div>
+                      {/* Top of Stock */}
+                      <line x1="20" y1="120" x2="180" y2="120" stroke="#78350f" strokeWidth="2" />
+                      <text x="185" y="124" fill="#78350f" fontSize="9" fontWeight="bold">STOCK</text>
+
+                      {/* Stock Block Graphic */}
+                      <rect x="40" y="120" width="120" height="50" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" opacity="0.6" />
+
+                      {/* Depth Plane */}
+                      <line x1="20" y1="170" x2="180" y2="170" stroke="#15803d" strokeWidth="2.5" />
+                      <text x="185" y="174" fill="#15803d" fontSize="9" fontWeight="bold">DEPTH</text>
+                    </svg>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* 4. LEAD IN / LEAD OUT PAGE */}
-            {activeTab === 'lead_in_out' && (
+            {/* ---------------- 7. PLANES (WCS) ---------------- */}
+            {activeTab === 'planes' && (
               <div>
                 <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px' }}>
                   <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>
-                    Lead In / Out (Entry & Exit Tangents)
+                    Coordinate Systems & Work Planes
                   </h3>
                   <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    Arc and line entry motions to prevent tool witness marks
+                    Select Work Coordinate System (WCS), Tool Plane (Tplane), and Construction Plane (Cplane)
                   </span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontWeight: 600, fontSize: '12.5px', marginBottom: '10px', color: '#0f172a' }}>
-                      Entry Motion:
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        WCS (Work Coordinate System):
+                      </label>
+                      <select
+                        value={formData.wcsPlane}
+                        onChange={(e) => handleFieldChange('wcsPlane', e.target.value)}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      >
+                        <option value="Top (G54)">Top (G54 - Fixture Offset 0)</option>
+                        <option value="Front (G55)">Front (G55 - Fixture Offset 1)</option>
+                        <option value="Right (G56)">Right (G56 - Fixture Offset 2)</option>
+                        <option value="ISO (G57)">Isometric (G57)</option>
+                      </select>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11.5px', color: '#475569' }}>Line Length:</label>
-                        <input
-                          type="number"
-                          value={formData.leadInLineLen}
-                          onChange={(e) => handleFieldChange('leadInLineLen', parseFloat(e.target.value) || 5)}
-                          style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11.5px', color: '#475569' }}>Arc Radius:</label>
-                        <input
-                          type="number"
-                          value={formData.leadInArcRad}
-                          onChange={(e) => handleFieldChange('leadInArcRad', parseFloat(e.target.value) || 5)}
-                          style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11.5px', color: '#475569' }}>Sweep Angle (°):</label>
-                        <input
-                          type="number"
-                          value={formData.leadInSweepDeg}
-                          onChange={(e) => handleFieldChange('leadInSweepDeg', parseFloat(e.target.value) || 90)}
-                          style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                        />
-                      </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        Tool Plane (Tplane):
+                      </label>
+                      <select
+                        value={formData.toolPlane}
+                        onChange={(e) => handleFieldChange('toolPlane', e.target.value)}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      >
+                        <option value="Top (G17)">Top (G17 - Standard Vertical Milling)</option>
+                        <option value="Front (G18)">Front (G18 - ZX Plane)</option>
+                        <option value="Right (G19)">Right (G19 - YZ Plane)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        Construction Plane (Cplane):
+                      </label>
+                      <select
+                        value={formData.constructionPlane}
+                        onChange={(e) => handleFieldChange('constructionPlane', e.target.value)}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      >
+                        <option value="Top (G17)">Top (G17)</option>
+                        <option value="Front (G18)">Front (G18)</option>
+                        <option value="Right (G19)">Right (G19)</option>
+                      </select>
                     </div>
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontWeight: 600, fontSize: '12.5px', marginBottom: '10px', color: '#0f172a' }}>
-                      Exit Motion:
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0', fontSize: '12px', color: '#475569', lineHeight: 1.6 }}>
+                    <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+                      Active G-Code Output:
                     </div>
-                    <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5 }}>
-                      Copying Entry Parameters enabled.
-                      <div style={{ marginTop: '8px', color: '#10b981', fontWeight: 600 }}>
-                        ✓ Symmetrical Exit Arc & Line Active
-                      </div>
+                    <div>&bull; Work Offset: <strong>G54</strong> (X0 Y0 Z0 set on stock top-left)</div>
+                    <div>&bull; Arc Interpolation Plane: <strong>G17 (XY)</strong></div>
+                    <div>&bull; Spindle Axis Vector: <strong>(0, 0, 1)</strong> Vertical Z</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ---------------- 8. COOLANT ---------------- */}
+            {activeTab === 'coolant' && (
+              <div>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>
+                    Coolant & Chip Evacuation Control
+                  </h3>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    Select coolant pressure, delivery method, and trigger timing
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        Primary Coolant Delivery:
+                      </label>
+                      <select
+                        value={formData.coolant}
+                        onChange={(e) => handleFieldChange('coolant', e.target.value)}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      >
+                        <option value="Flood">Flood (M08)</option>
+                        <option value="Mist">Mist Coolant (M07)</option>
+                        <option value="Through">Through Spindle / High Pressure (M88)</option>
+                        <option value="Air">Air Blast (M12)</option>
+                        <option value="Off">Off (M09)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        Activation Timing:
+                      </label>
+                      <select
+                        value={formData.coolantTiming}
+                        onChange={(e) => handleFieldChange('coolantTiming', e.target.value)}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      >
+                        <option value="With">With Spindle Start (M03 / M08 on same block)</option>
+                        <option value="Before">Before Motion (M08 before plunge)</option>
+                        <option value="After">After Rapid Approach</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0', fontSize: '12px', color: '#475569', lineHeight: 1.6 }}>
+                    <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+                      Status:
+                    </div>
+                    <div>Coolant command <strong>{formData.coolant === 'Through' ? 'M88' : formData.coolant === 'Air' ? 'M12' : formData.coolant === 'Off' ? 'M09' : 'M08'}</strong> will be inserted automatically into post-processed NC output.</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ---------------- 9. LEAD IN / LEAD OUT ---------------- */}
+            {activeTab === 'lead_in_out' && (
+              <div>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>
+                    Lead In / Out (Tangent Entry & Exit)
+                  </h3>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    Arc and line entry motions to prevent tool witness marks on workpiece finish walls
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '12.5px', color: '#0f172a' }}>Entry Motion:</div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', color: '#475569' }}>Line Length (mm):</label>
+                      <input
+                        type="number"
+                        value={formData.leadInLineLen}
+                        onChange={(e) => handleFieldChange('leadInLineLen', parseFloat(e.target.value) || 5)}
+                        style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', color: '#475569' }}>Arc Radius (mm):</label>
+                      <input
+                        type="number"
+                        value={formData.leadInArcRad}
+                        onChange={(e) => handleFieldChange('leadInArcRad', parseFloat(e.target.value) || 5)}
+                        style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', color: '#475569' }}>Sweep Angle (&deg;):</label>
+                      <input
+                        type="number"
+                        value={formData.leadInSweepDeg}
+                        onChange={(e) => handleFieldChange('leadInSweepDeg', parseFloat(e.target.value) || 90)}
+                        style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '12.5px', color: '#0f172a' }}>Exit Motion:</div>
+                    <div style={{ fontSize: '12px', color: '#475569', lineHeight: 1.6 }}>
+                      Symmetrical Exit Motion enabled. Exit tangency will mirror the entry arc radius ({formData.leadInArcRad}mm) and line length ({formData.leadInLineLen}mm) to smoothly step off finished walls.
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Fallback for other tabs */}
-            {!['tool', 'cut_parameters', 'linking', 'lead_in_out'].includes(activeTab) && (
+            {/* ---------------- 10. BREAK THROUGH ---------------- */}
+            {activeTab === 'break_through' && (
               <div>
                 <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px' }}>
                   <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>
-                    {navItems.find((n) => n.id === activeTab)?.label || 'Parameters'}
+                    Break Through (Tool Tip Overcut)
                   </h3>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    Extend final depth past stock floor to clear drill points or endmill chamfer rads
+                  </span>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '4px', border: '1px solid #e2e8f0', fontSize: '12.5px', color: '#64748b' }}>
-                  Standard Mastercam default settings applied for this operation branch.
+
+                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: '#0f172a', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.breakThroughEnabled}
+                      onChange={(e) => handleFieldChange('breakThroughEnabled', e.target.checked)}
+                      style={{ width: '16px', height: '16px', accentColor: '#0f5a9e' }}
+                    />
+                    Enable Break Through
+                  </label>
+
+                  {formData.breakThroughEnabled && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        Break Through Amount (mm):
+                      </label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={formData.breakThroughAmount || 1.0}
+                        onChange={(e) => handleFieldChange('breakThroughAmount', parseFloat(e.target.value) || 1.0)}
+                        style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #0f5a9e', borderRadius: '3px', fontWeight: 700 }}
+                      />
+                      <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>
+                        mm past programmed Z depth
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Mastercam Footer Action Buttons */}
+        {/* ================= Authentic Mastercam Status Footer ================= */}
         <div
           style={{
-            height: '48px',
-            background: '#e2e8f0',
+            height: '32px',
+            background: '#f1f5f9',
             borderTop: '1px solid #cbd5e1',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'flex-end',
-            padding: '0 16px',
-            gap: '10px'
+            justifyContent: 'space-between',
+            padding: '0 14px',
+            fontSize: '11px',
+            color: '#475569'
           }}
         >
-          <button
-            onClick={() => handleSave(true)}
-            style={{
-              padding: '6px 16px',
-              fontSize: '12.5px',
-              fontWeight: 700,
-              background: '#0284c7',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <Check size={15} />
-            OK & Regenerate
-          </button>
-          <button
-            onClick={() => handleSave(false)}
-            style={{
-              padding: '6px 14px',
-              fontSize: '12.5px',
-              fontWeight: 600,
-              background: '#ffffff',
-              color: '#334155',
-              border: '1px solid #94a3b8',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Apply
-          </button>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '6px 14px',
-              fontSize: '12.5px',
-              fontWeight: 600,
-              background: '#ffffff',
-              color: '#dc2626',
-              border: '1px solid #fca5a5',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Cancel
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span>Active Tool: <strong style={{ color: '#0f5a9e' }}>T{currentTool.number} &bull; {currentTool.name}</strong></span>
+            <span>&bull;</span>
+            <span>RPM: <strong style={{ color: '#0f5a9e' }}>{formData.spindleSpeed}</strong></span>
+            <span>&bull;</span>
+            <span>Feed: <strong style={{ color: '#0f5a9e' }}>{formData.feedRate} mm/min</strong></span>
+            <span>&bull;</span>
+            <span>Coolant: <strong style={{ color: '#16a34a' }}>{formData.coolant}</strong></span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b' }}>
+            <span>Press <kbd style={{ padding: '1px 4px', background: '#e2e8f0', borderRadius: '2px', border: '1px solid #cbd5e1', fontSize: '10px' }}>Enter</kbd> to Save & Regenerate</span>
+          </div>
         </div>
       </div>
     </div>
