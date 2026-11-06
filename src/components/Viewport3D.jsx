@@ -7,7 +7,6 @@ import {
 import { parseSTLFile, calculatePartMetrics, createWireframeLine, createWireframeRect, createWireframeCircle, createPointMarker } from '../utils/cadGeometry';
 import { parseAnyCADFile } from '../utils/universalCadParser';
 import DrawingToolbarHUD from './DrawingToolbarHUD';
-import AutoCursorBar from './AutoCursorBar';
 import ScaleRulerHUD from './ScaleRulerHUD';
 import ViewGnomonHUD from './ViewGnomonHUD';
 import {
@@ -1628,26 +1627,6 @@ export default function Viewport3D({
           <span>Section Slice: {clippingPlane.axis}-Axis ({clippingPlane.offset > 0 ? `+${clippingPlane.offset}` : clippingPlane.offset} mm)</span>
         </div>
       )}
-
-      {/* Mastercam AutoCursor Ribbon / Bar (Top-Center HUD) */}
-      <AutoCursorBar
-        snapMode={snapMode}
-        onSelectSnapMode={setSnapMode}
-        isLocked={isSnapLocked}
-        onToggleLock={() => setIsSnapLocked(l => !l)}
-        onOpenCoordinateEntry={() => {
-          const coordStr = prompt('Fast Point Coordinate (X, Y, Z):', `${cursorCoords.x}, ${cursorCoords.y}, ${cursorCoords.z}`);
-          if (coordStr) {
-            const parts = coordStr.split(',').map(s => parseFloat(s.trim()));
-            if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-              const pt = { x: parts[0], y: parts[1], z: parts[2] || 0 };
-              if (onCoordinateUpdate) onCoordinateUpdate(pt);
-            }
-          }
-        }}
-        cursorCoords={cursorCoords}
-        theme={theme}
-      />
 
       {/* Mastercam View Orientation Gnomon (Bottom-Left Corner HUD) */}
       <ViewGnomonHUD
