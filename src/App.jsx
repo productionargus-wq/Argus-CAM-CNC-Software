@@ -222,7 +222,7 @@ export default function App() {
   const [isStatisticsModalOpen, setIsStatisticsModalOpen] = useState(false);
   const [constructionZ, setConstructionZ] = useState(0.0);
   const [constructionMode, setConstructionMode] = useState('3d');
-  const [showArcCenters, setShowArcCenters] = useState(true);
+  const [showArcCenters, setShowArcCenters] = useState(false);
   const [showEndpoints, setShowEndpoints] = useState(false);
   const [deletedEntitiesStack, setDeletedEntitiesStack] = useState([]);
   const [fixtureConfig, setFixtureConfig] = useState(DEFAULT_FIXTURE_CONFIG);
@@ -1692,11 +1692,53 @@ export default function App() {
   };
 
   const handleModelImported = (modelGroup, filename) => {
+    // 1. Set imported 3D CAD model and project name
     setCurrentModel(modelGroup);
     setCurrentProjectName(filename);
-    handleResetTransform();
+
+    // 2. Clear previous toolpaths & scratch wireframes (Standard clean CAM workflow)
+    setOperations([]);
+    setCustomGeometry([]);
+    setIsBackplotActive(false);
+    setActiveOpId(null);
+    setHistory([]);
+    setHistoryIndex(0);
+    setDeletedEntitiesStack([]);
+    setShowArcCenters(false);
+    setShowEndpoints(false);
+
+    // 3. Register imported model as the primary solid in Solids Manager
     const fmt = modelGroup?.userData?.format || filename.split('.').pop().toUpperCase();
-    showToast(`Loaded ${filename} (${fmt} 3D Solid Model)`, 'success');
+    setSolidsList([
+      {
+        id: 1,
+        name: `Solid 1 - ${filename}`,
+        material: 'Alu 6061-T6',
+        volumeCm3: 185.0,
+        isPrimary: true,
+        visible: true,
+        active: true,
+        color: '#64748b'
+      }
+    ]);
+
+    // 4. Configure clean CAD view: solid part model visible, no toolpaths, no fixture or stock obstruction
+    setLayerVisibility((prev) => ({
+      ...prev,
+      part: true,
+      wireframe: true,
+      surfaces: true,
+      fixture: false,
+      bed: false,
+      stock: false,
+      toolpaths: false,
+      rapids: false,
+      wcs: true,
+      dimensions: false
+    }));
+
+    handleResetTransform();
+    showToast(`Loaded ${filename} (${fmt} 3D Solid Model) - Clean View`, 'success');
   };
 
   const handleAddDefinedTool = (newTool) => {
@@ -1883,6 +1925,8 @@ export default function App() {
     setDeletedEntitiesStack([]);
     handleResetTransform();
     setCustomGeometry([]);
+    setShowArcCenters(false);
+    setShowEndpoints(false);
 
     const projName = projectName || 'Mastercam_Part1.mcam';
     setCurrentProjectName(projName);

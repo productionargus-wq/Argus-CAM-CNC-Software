@@ -112,7 +112,6 @@ export default function Viewport3D({
   const partHolderGroupRef = useRef(null);
   const fixtureGroupRef = useRef(null);
   const gridHelperRef = useRef(null);
-  const axesHelperRef = useRef(null);
   const stockMeshRef = useRef(null);
   const stockWireframeRef = useRef(null);
   const customGeoGroupRef = useRef(null);
@@ -298,13 +297,6 @@ export default function Viewport3D({
     partHolderGroup.position.set(0, 49, 0);
     scene.add(partHolderGroup);
     partHolderGroupRef.current = partHolderGroup;
-
-    // Coordinate Axes at Workpiece WCS (G54 Origin)
-    const axesHelper = new THREE.AxesHelper(45);
-    axesHelper.position.set(0, 85, 0);
-    axesHelper.visible = Boolean(currentModel);
-    scene.add(axesHelper);
-    axesHelperRef.current = axesHelper;
 
     // Dynamic Toolpaths Group
     const toolpathGroup = new THREE.Group();
@@ -810,7 +802,7 @@ export default function Viewport3D({
     }
   }, [customGeometry]);
 
-  // 6b. Arc Center Points & Curve Endpoints Indicators
+  // 6b. Arc Center Points & Curve Endpoints Indicators (Real CAD entities only)
   useEffect(() => {
     if (!arcCentersGroupRef.current) return;
     const group = arcCentersGroupRef.current;
@@ -818,26 +810,16 @@ export default function Viewport3D({
       group.remove(group.children[0]);
     }
 
-    if (showArcCenters && currentModel) {
+    if (showArcCenters && customGeometry && customGeometry.length > 0) {
       const centerMat = new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 });
       const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide });
       const ringGeo = new THREE.RingGeometry(1.2, 1.8, 16);
 
-      const centers = [
-        new THREE.Vector3(65, 49, 0),
-        new THREE.Vector3(75, 49 + 25, 0),
-        new THREE.Vector3(75, 49 - 25, 0),
-        new THREE.Vector3(75, 49, 25),
-        new THREE.Vector3(75, 49, -25),
-        new THREE.Vector3(75, 49 + 17.7, 17.7),
-        new THREE.Vector3(75, 49 - 17.7, 17.7),
-        new THREE.Vector3(75, 49 + 17.7, -17.7),
-        new THREE.Vector3(75, 49 - 17.7, -17.7)
-      ];
-
-      centers.forEach((pt) => {
+      const arcEntities = customGeometry.filter((g) => g.type === 'circle' || g.type === 'arc');
+      arcEntities.forEach((arc) => {
+        if (!arc.center) return;
         const marker = new THREE.Group();
-        marker.position.copy(pt);
+        marker.position.set(arc.center.x || 0, arc.center.y || 0, arc.center.z || 0);
 
         const crossGeo = new THREE.BufferGeometry().setFromPoints([
           new THREE.Vector3(-3.5, 0, 0), new THREE.Vector3(3.5, 0, 0),
@@ -855,18 +837,20 @@ export default function Viewport3D({
       });
     }
 
-    if (showEndpoints && currentModel) {
-      const ptMat = new THREE.PointsMaterial({ color: 0xf59e0b, size: 5, sizeAttenuation: false });
-      const ptGeo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-40, 49, -35),
-        new THREE.Vector3(40, 49, -35),
-        new THREE.Vector3(40, 49, 35),
-        new THREE.Vector3(-40, 49, 35)
-      ]);
-      const pts = new THREE.Points(ptGeo, ptMat);
-      group.add(pts);
+    if (showEndpoints && customGeometry && customGeometry.length > 0) {
+      const points = [];
+      customGeometry.forEach((g) => {
+        if (g.start) points.push(new THREE.Vector3(g.start.x, g.start.y, g.start.z || 0));
+        if (g.end) points.push(new THREE.Vector3(g.end.x, g.end.y, g.end.z || 0));
+      });
+      if (points.length > 0) {
+        const ptMat = new THREE.PointsMaterial({ color: 0xf59e0b, size: 5, sizeAttenuation: false });
+        const ptGeo = new THREE.BufferGeometry().setFromPoints(points);
+        const pts = new THREE.Points(ptGeo, ptMat);
+        group.add(pts);
+      }
     }
-  }, [showArcCenters, showEndpoints, currentModel]);
+  }, [showArcCenters, showEndpoints, customGeometry]);
 
   // 7. Layer Visibility Updates (Part Solid, Wireframe, Fixture, Bed, WCS, Stock, Rapids)
   useEffect(() => {
@@ -890,9 +874,6 @@ export default function Viewport3D({
     }
     if (gridHelperRef.current) {
       gridHelperRef.current.visible = layerVisibility.bed !== false;
-    }
-    if (axesHelperRef.current) {
-      axesHelperRef.current.visible = Boolean(currentModel) && layerVisibility.wcs !== false;
     }
     if (stockMeshRef.current) {
       stockMeshRef.current.visible = layerVisibility.stock !== false;
