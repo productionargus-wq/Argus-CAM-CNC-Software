@@ -257,7 +257,6 @@ export default function OperationsTree({
   return (
     <aside
       className="ops-manager"
-      ref={sidebarRef}
       style={{
         display: 'flex',
         flexDirection: 'column',
