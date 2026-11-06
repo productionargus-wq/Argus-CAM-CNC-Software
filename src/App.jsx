@@ -3865,6 +3865,7 @@ export default function App() {
         onSaveOperation={handleSaveOperation}
         onRegenerateToolpath={handleRegenerateAll}
         onNotify={showToast}
+        onOpenChaining={() => setIsMastercamChainingModalOpen(true)}
       />
 
       {/* 1:1 Mastercam Chaining Modal */}

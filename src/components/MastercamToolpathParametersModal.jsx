@@ -33,7 +33,8 @@ export default function MastercamToolpathParametersModal({
   stockConfig = {},
   onSaveOperation,
   onRegenerateToolpath,
-  onNotify
+  onNotify,
+  onOpenChaining
 }) {
   const [activeTab, setActiveTab] = useState('tool');
   const [formData, setFormData] = useState({});
@@ -144,6 +145,13 @@ export default function MastercamToolpathParametersModal({
         gaugeLength: operation.gaugeLength || 65,
         stickoutLength: operation.stickoutLength || 35,
         holderDiameter: operation.holderDiameter || 50,
+
+        // Machining Boundaries & Geometry
+        machiningRegion: operation.machiningRegion || 'Outer boundary of the part (Silhouette)',
+        machiningStrategy: operation.machiningStrategy || 'from_outside',
+        avoidanceRegion: operation.avoidanceRegion || 'Clamping fixtures & vise jaws (Level 30)',
+        avoidanceAllowance: operation.avoidanceAllowance || 5.0,
+        airRegion: operation.airRegion || 'Automatic stock boundary expansion',
 
         // Cut Parameters
         cutStyle: operation.cutStyle || (operation.badgeClass === 'face' ? 'zigzag' : 'constant_overlap'),
@@ -307,6 +315,7 @@ export default function MastercamToolpathParametersModal({
   // Navigation Items
   const navItems = [
     { id: 'toolpath_type', label: 'Toolpath Type', badge: formData.badgeClass?.toUpperCase() },
+    { id: 'geometry', label: 'Machining Geometry', badge: formData.badgeClass === 'face' ? 'TOP FACE' : 'BOUNDARIES' },
     { id: 'tool', label: 'Tool', badge: `T${currentTool.number || 1}` },
     { id: 'holder', label: 'Holder', badge: formData.holderType?.split('_')[0] || 'CAT40' },
     { id: 'cut_parameters', label: 'Cut Parameters' },
@@ -577,6 +586,163 @@ export default function MastercamToolpathParametersModal({
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* ---------------- 1.5. MACHINING GEOMETRY & BOUNDARIES PAGE ---------------- */}
+            {activeTab === 'geometry' && (
+              <div>
+                <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', fontWeight: 700 }}>
+                      Machining Geometry & Boundaries
+                    </h3>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>
+                      Select drive geometry, machining regions, and fixture avoidance boundaries
+                    </span>
+                  </div>
+                  {onOpenChaining && (
+                    <button
+                      onClick={onOpenChaining}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: '#0284c7',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      <Layers size={14} />
+                      Chaining Manager...
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {/* 1. Machining Region Card */}
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Box size={16} color="#0284c7" />
+                        <label style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+                          Machining Region (Drive Geometry):
+                        </label>
+                      </div>
+                      <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '3px', fontWeight: 600 }}>
+                        Active Target
+                      </span>
+                    </div>
+
+                    <select
+                      value={formData.machiningRegion}
+                      onChange={(e) => handleFieldChange('machiningRegion', e.target.value)}
+                      style={{ width: '100%', padding: '7px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px', background: '#ffffff', marginBottom: '10px' }}
+                    >
+                      <option value="Outer boundary of the part (Silhouette)">Outer boundary of the part (Solid Silhouette)</option>
+                      <option value="Chain #1 - Exterior Stepped Profile (Closed loop)">Chain #1 - Exterior Stepped Profile (Closed loop)</option>
+                      <option value="Chain #2 - Center Triangular Pocket (Closed)">Chain #2 - Center Triangular Pocket (Closed)</option>
+                      <option value="All Solid Faces (Automatic 3D Feature Detection)">All Solid Faces (Automatic 3D Feature Detection)</option>
+                      <option value="Raw Stock Bounding Perimeter">Raw Stock Bounding Perimeter (Envelope)</option>
+                    </select>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#ffffff', padding: '10px', borderRadius: '3px', border: '1px solid #e2e8f0' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+                          Machining Strategy (Approach):
+                        </label>
+                        <select
+                          value={formData.machiningStrategy}
+                          onChange={(e) => handleFieldChange('machiningStrategy', e.target.value)}
+                          style={{ width: '100%', padding: '5px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                        >
+                          <option value="from_outside">From Outside (Start outside stock - Recommended for Dynamic Roughing)</option>
+                          <option value="stay_inside">Stay Inside (Machine enclosed cavity only)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+                          Region Containment:
+                        </label>
+                        <span style={{ display: 'block', fontSize: '12px', color: '#0f172a', paddingTop: '6px' }}>
+                          <strong>145.0 mm &times; 70.0 mm</strong> (Z: 0.0 to -35.0 mm)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Avoidance Region Card */}
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Shield size={16} color="#f59e0b" />
+                        <label style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+                          Avoidance Region (Clamps & Fixtures):
+                        </label>
+                      </div>
+                      <span style={{ fontSize: '11px', background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '3px', fontWeight: 600 }}>
+                        Collision Protection
+                      </span>
+                    </div>
+
+                    <select
+                      value={formData.avoidanceRegion}
+                      onChange={(e) => handleFieldChange('avoidanceRegion', e.target.value)}
+                      style={{ width: '100%', padding: '7px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px', background: '#ffffff', marginBottom: '10px' }}
+                    >
+                      <option value="Clamping fixtures & vise jaws (Level 30)">Clamping fixtures & vise jaws (Level 30)</option>
+                      <option value="Table Bed & VMC T-Slots (Level 30)">Table Bed & VMC T-Slots (Level 30)</option>
+                      <option value="Custom Clamp Wireframe Chain">Custom Clamp Wireframe Chain</option>
+                      <option value="None">None (Clear Full Envelope)</option>
+                    </select>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#ffffff', padding: '10px', borderRadius: '3px', border: '1px solid #e2e8f0', alignItems: 'center' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+                          Avoidance Clearance Allowance:
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            value={formData.avoidanceAllowance}
+                            onChange={(e) => handleFieldChange('avoidanceAllowance', parseFloat(e.target.value) || 0)}
+                            style={{ width: '100px', padding: '5px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                          />
+                          <span style={{ fontSize: '12px', color: '#64748b' }}>mm</span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.4 }}>
+                        Tool and holder maintain minimum <strong>{formData.avoidanceAllowance || 5.0} mm</strong> safety distance from all fixture jaws and clamps.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Air Region Card */}
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <Compass size={16} color="#10b981" />
+                      <label style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+                        Air Region (Initial Cutter Entry):
+                      </label>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#334155', background: '#ffffff', padding: '10px', borderRadius: '3px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>
+                        Stock Envelope: <strong>Level 20 Raw Stock Block</strong> (Entry vectors approach from air outside raw block)
+                      </span>
+                      <span style={{ color: '#10b981', fontWeight: 600, fontSize: '11px' }}>
+                        &check; Enabled
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
