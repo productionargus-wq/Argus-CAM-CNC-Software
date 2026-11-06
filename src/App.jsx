@@ -269,6 +269,7 @@ export default function App() {
   const [isHelpGuideOpen, setIsHelpGuideOpen] = useState(false);
   const [editingOperation, setEditingOperation] = useState(null);
   const [isMastercamToolpathModalOpen, setIsMastercamToolpathModalOpen] = useState(false);
+  const [isNewOperation, setIsNewOperation] = useState(false);
   const [isMastercamChainingModalOpen, setIsMastercamChainingModalOpen] = useState(false);
 
   // In-Viewport Backplot & Solid Verify Simulation State
@@ -880,10 +881,21 @@ export default function App() {
 
   const handleEditOp = (op) => {
     setEditingOperation(op);
+    setIsNewOperation(false);
     setIsMastercamToolpathModalOpen(true);
   };
 
+  const handleCloseToolpathModal = () => {
+    if (isNewOperation && editingOperation) {
+      setOperations((prev) => prev.filter((o) => o.id !== editingOperation.id));
+      setActiveOpId(null);
+    }
+    setIsNewOperation(false);
+    setIsMastercamToolpathModalOpen(false);
+  };
+
   const handleSaveOperation = (updatedOp) => {
+    setIsNewOperation(false);
     const assignedTool = tools.find((t) => t.id === Number(updatedOp.toolId));
     setOperations((prev) =>
       prev.map((op) =>
@@ -1154,7 +1166,9 @@ export default function App() {
     if (newOp) {
       setOperations((prev) => [...prev, newOp]);
       setActiveOpId(newOp.id);
-      showToast(`⚡ Generated Toolpath: ${newOp.name}`, 'success');
+      setEditingOperation(newOp);
+      setIsNewOperation(true);
+      setIsMastercamToolpathModalOpen(true);
     }
   };
 
@@ -3612,7 +3626,7 @@ export default function App() {
       {/* 1:1 Mastercam Toolpath Parameters Modal (Classic Tree & Property Page) */}
       <MastercamToolpathParametersModal
         isOpen={isMastercamToolpathModalOpen}
-        onClose={() => setIsMastercamToolpathModalOpen(false)}
+        onClose={handleCloseToolpathModal}
         operation={editingOperation}
         tools={tools}
         stockConfig={stockConfig}
