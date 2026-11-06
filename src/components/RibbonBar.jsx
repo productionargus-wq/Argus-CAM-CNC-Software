@@ -141,7 +141,6 @@ export default function RibbonBar({
   onSelectWcs,
   activeWcs,
   onOpenFileBackstage,
-  onOpenMastercamOpenDialog,
   onOpenDefineToolModal,
   onOpenSurfaceFinishContour,
   onCopyViewportImage,
@@ -429,14 +428,8 @@ export default function RibbonBar({
               <div className="ribbon-group-items">
                 <button
                   className="ribbon-btn-large"
-                  onClick={() => {
-                    if (onOpenMastercamOpenDialog) {
-                      onOpenMastercamOpenDialog();
-                    } else {
-                      fileInputRef.current?.click();
-                    }
-                  }}
-                  title="Open / Import CAD File (Supports All 25 Mastercam Formats)"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Open / Import CAD File from Laptop (STEP, STL, MCAM, IGES, etc.)"
                 >
                   <Upload size={22} color="#06b6d4" />
                   <span className="btn-label" style={{ color: '#06b6d4', fontWeight: 600 }}>Open / Import<br />CAD (25 Fmt)</span>

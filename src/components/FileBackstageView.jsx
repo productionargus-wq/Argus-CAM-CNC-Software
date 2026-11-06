@@ -47,7 +47,6 @@ export default function FileBackstageView({
   onLoadProject,
   onModelImported,
   onSaveAs,
-  onOpenMastercamOpenDialog,
   onNotify
 }) {
   const [activeTab, setActiveTab] = useState('Info');
@@ -1109,13 +1108,7 @@ export default function FileBackstageView({
               {/* Browse Buttons Bar */}
               <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
                 <button
-                  onClick={() => {
-                    if (onOpenMastercamOpenDialog) {
-                      onOpenMastercamOpenDialog();
-                    } else {
-                      openCadInputRef.current?.click();
-                    }
-                  }}
+                  onClick={() => openCadInputRef.current?.click()}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
