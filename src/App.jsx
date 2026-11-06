@@ -113,13 +113,13 @@ export default function App() {
     return 'light';
   });
   const [activeRibbonTab, setActiveRibbonTab] = useState('Toolpaths');
-  const [currentModel, setCurrentModel] = useState(null);
-  const [currentProjectName, setCurrentProjectName] = useState('Mastercam_Part1.mcam');
-  const [unitSystem, setUnitSystem] = useState('imperial');
+  const [currentModel, setCurrentModel] = useState(() => createMastercamBaseStructureALU());
+  const [currentProjectName, setCurrentProjectName] = useState('Base Structure-ALU.mcam');
+  const [unitSystem, setUnitSystem] = useState('metric');
   const [isFileBackstageOpen, setIsFileBackstageOpen] = useState(false);
   const [isMastercamOpenDialogOpen, setIsMastercamOpenDialogOpen] = useState(false);
-  const [projectDescriptor, setProjectDescriptor] = useState('Mastercam CNC Milling Project');
-  const [projectCreatedDate, setProjectCreatedDate] = useState(() => new Date());
+  const [projectDescriptor, setProjectDescriptor] = useState('Mastercam 5-Axis Multi-Surface Machining Project for DMU 50 VMC');
+  const [projectCreatedDate, setProjectCreatedDate] = useState(() => new Date(Date.now() - 3600000 * 24 * 2));
   const [projectLastModifiedDate, setProjectLastModifiedDate] = useState(() => new Date());
   const [autoSaveIntervalMinutes, setAutoSaveIntervalMinutes] = useState(5);
 
@@ -130,15 +130,15 @@ export default function App() {
     part: true,
     wireframe: true,
     surfaces: true,
-    fixture: false,
-    bed: false,
-    stock: false,
+    fixture: true,
+    bed: true,
+    stock: true,
     toolpaths: true,
     rapids: true,
     wcs: true,
     dimensions: false
   });
-  const [cameraCommand, setCameraCommand] = useState({ preset: 'top' });
+  const [cameraCommand, setCameraCommand] = useState(null);
   const [partTransform, setPartTransform] = useState({
     position: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0 },
@@ -254,7 +254,11 @@ export default function App() {
   const [isOperationsWizardOpen, setIsOperationsWizardOpen] = useState(false);
   const [operationsWizardTab, setOperationsWizardTab] = useState('create');
 
-  const [solidsList, setSolidsList] = useState([]);
+  const [solidsList, setSolidsList] = useState([
+    { id: 1, name: 'Solid 1 - Finished Workpiece', material: '6061-T6 Aluminum', volumeCm3: 184.2, isPrimary: true, visible: true, active: true, color: '#38bdf8' },
+    { id: 2, name: 'Solid 2 - Raw Stock Billet', material: 'Alu Billet (Allowance)', volumeCm3: 245.0, isPrimary: false, visible: true, active: false, color: '#f59e0b' },
+    { id: 3, name: 'Solid 3 - ZeroClamp Fixture Vise', material: 'Hardened Tool Steel', volumeCm3: 520.0, isPrimary: false, visible: true, active: false, color: '#94a3b8' }
+  ]);
 
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isSimModalOpen, setIsSimModalOpen] = useState(false);
@@ -479,7 +483,83 @@ export default function App() {
   });
 
   // Active CAM Operations List
-  const [operations, setOperations] = useState([]);
+  const [operations, setOperations] = useState([
+    {
+      id: 1,
+      name: 'Face Milling (Top Z: 0.00)',
+      toolId: 1,
+      toolName: 'T1 - 10mm Face Mill',
+      badgeClass: 'face',
+      badgeText: 'FM',
+      visible: true,
+      stepoverPct: 65,
+      stepdown: 1.0,
+      totalDepth: 2.0,
+      stockToLeaveXY: 0.0,
+      stockToLeaveZ: 0.0,
+      rapidHeight: 15.0
+    },
+    {
+      id: 2,
+      name: '2D Dynamic Adaptive Pocket',
+      toolId: 2,
+      toolName: 'T2 - 8mm Endmill',
+      badgeClass: 'pocket',
+      badgeText: 'PK',
+      visible: true,
+      stepoverPct: 50,
+      stepdown: 5.0,
+      totalDepth: 15.0,
+      stockToLeaveXY: 0.2,
+      stockToLeaveZ: 0.0,
+      rapidHeight: 15.0
+    },
+    {
+      id: 3,
+      name: '3D Waterline Surface Finishing',
+      toolId: 3,
+      toolName: 'T3 - 6mm Ballnose',
+      badgeClass: 'contour',
+      badgeText: 'WL',
+      visible: true,
+      stepoverPct: 15,
+      stepdown: 2.5,
+      totalDepth: 30.0,
+      stockToLeaveXY: 0.0,
+      stockToLeaveZ: 0.0,
+      rapidHeight: 15.0
+    },
+    {
+      id: 4,
+      name: '5-Axis Simultaneous Swarf Contour',
+      toolId: 4,
+      toolName: 'T4 - 6mm Bullnose R1',
+      badgeClass: 'swarf',
+      badgeText: '5X',
+      visible: true,
+      stepoverPct: 40,
+      stepdown: 4.0,
+      totalDepth: 20.0,
+      stockToLeaveXY: 0.0,
+      stockToLeaveZ: 0.0,
+      rapidHeight: 20.0
+    },
+    {
+      id: 5,
+      name: 'Drilling Cycle (G83 Deep Hole)',
+      toolId: 5,
+      toolName: 'T5 - 5mm Drill',
+      badgeClass: 'drill',
+      badgeText: 'DR',
+      visible: false,
+      stepoverPct: 0,
+      stepdown: 5.0,
+      totalDepth: 25.0,
+      stockToLeaveXY: 0.0,
+      stockToLeaveZ: 0.0,
+      rapidHeight: 10.0
+    }
+  ]);
 
   const activeMachine = machines.find((m) => m.id === activeMachineId) || machines[0];
 
@@ -644,6 +724,9 @@ export default function App() {
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
         e.preventDefault();
         handleRedo();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setIsNewProjectModalOpen(true);
       }
     };
 
@@ -2955,10 +3038,10 @@ export default function App() {
       {/* 5. Bottom Status Bar */}
       <StatusBar
         coords={coords}
-        activeWcs={activeWcs}
-        activeCPlane="Top"
+        activeWcs={currentModel ? activeWcs : 'Top'}
+        activeCPlane={currentModel ? activePlane : 'Top'}
         activeTPlane="Top"
-        selectedCount={0}
+        selectedCount={currentModel ? 1 : 0}
         isSectionView={clippingPlane?.enabled}
         onToggleSectionView={() => setClippingPlane(cp => ({ ...cp, enabled: !cp?.enabled }))}
         unitSystem={unitSystem}

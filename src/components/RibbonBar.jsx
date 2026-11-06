@@ -384,7 +384,7 @@ export default function RibbonBar({
                 <button
                   className="ribbon-btn-large"
                   onClick={onOpenNewProjectModal}
-                  title="New CAM Project Wizard (Presets & Templates)"
+                  title="New CAM Project Wizard (Presets & Templates) - Ctrl+N"
                 >
                   <Plus size={22} color="#38bdf8" />
                   <span className="btn-label" style={{ color: '#38bdf8', fontWeight: 600 }}>New<br />Project</span>
