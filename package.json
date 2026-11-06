@@ -1,13 +1,19 @@
 {
-  "name": "argus_ui",
+  "name": "argus-master-cam",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Argus Master CAM CNC Software - 5-Axis CAD/CAM Suite",
+  "author": "Argus Technologies",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:start": "electron .",
+    "electron:pack": "vite build && electron-builder --win --dir",
+    "electron:build": "vite build && electron-builder --win"
   },
   "dependencies": {
     "clipper-lib": "^6.4.2",
@@ -24,8 +30,45 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0",
     "oxlint": "^1.88.0",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.4"
+  },
+  "build": {
+    "appId": "com.argus.mastercam",
+    "productName": "Argus Master CAM CNC Software",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Argus Master CAM"
+    }
   }
 }
