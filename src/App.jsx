@@ -99,8 +99,7 @@ import {
 } from './utils/cadGeometry';
 import {
   exportProjectMCAM,
-  saveAutoSaveSnapshot,
-  getAutoSaveSnapshot
+  saveAutoSaveSnapshot
 } from './utils/projectStorage';
 import { extractClosedChainsFromCAD } from './utils/cadDrawingEngine';
 import CNCDesignBoard from './components/CNCDesignBoard';
@@ -610,23 +609,6 @@ export default function App() {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, duration);
   };
-
-  // On startup: Check for Auto-Saved session recovery
-  useEffect(() => {
-    const snapshot = getAutoSaveSnapshot();
-    if (snapshot && snapshot.operations && snapshot.operations.length > 0) {
-      const timeStr = snapshot.timestamp ? new Date(snapshot.timestamp).toLocaleTimeString() : 'earlier';
-      showToast(
-        `Previous project session found from ${timeStr} (${snapshot.operations.length} operations).`,
-        'info',
-        12000,
-        {
-          label: 'Restore Work',
-          onClick: () => handleRestoreAutoSave(snapshot)
-        }
-      );
-    }
-  }, []);
 
   // Synchronize dynamic Theme attribute to root DOM element
   useEffect(() => {
