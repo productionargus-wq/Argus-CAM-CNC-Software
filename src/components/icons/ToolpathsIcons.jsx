@@ -483,6 +483,38 @@ export function TpUtilFilterIcon({ size = 16, className = '' }) {
   );
 }
 
+export function TpVerifyBackplotIcon({ size = 26, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>
+      <path d="M4 14 C 8 8, 12 8, 16 14 C 20 20, 24 20, 28 14" stroke="#0284c7" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M4 8 C 8 3, 12 3, 16 8 C 20 13, 24 13, 28 8" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3 2" />
+      <polygon points="12,18 23,23 12,28" fill="#16a34a" stroke="#15803d" strokeWidth="1" />
+    </svg>
+  );
+}
+
+export function TpVerifySolidIcon({ size = 26, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>
+      <path d="M16 3 L28 9 L28 23 L16 29 L4 23 L4 9 Z" fill="#22c55e" fillOpacity="0.25" stroke="#16a34a" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M16 3 L16 29" stroke="#16a34a" strokeWidth="1.5" />
+      <path d="M4 9 L16 15 L28 9" stroke="#16a34a" strokeWidth="1.5" />
+      <polyline points="10,18 14,22 22,12" stroke="#15803d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function TpVerifyPostIcon({ size = 26, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>
+      <rect x="5" y="4" width="22" height="24" rx="3" fill="#eff6ff" stroke="#2563eb" strokeWidth="2" />
+      <rect x="9" y="8" width="14" height="2" rx="1" fill="#93c5fd" />
+      <rect x="9" y="12" width="10" height="2" rx="1" fill="#93c5fd" />
+      <text x="16" y="24" textAnchor="middle" fill="#1d4ed8" fontSize="10" fontWeight="900" fontFamily="monospace">G1</text>
+    </svg>
+  );
+}
+
 // ==================== EXPORT MAP ====================
 
 export const TOOLPATHS_ICON_MAP = {
@@ -523,5 +555,8 @@ export const TOOLPATHS_ICON_MAP = {
   TpUtilTransform: TpUtilTransformIcon,
   TpUtilCheckSurface: TpUtilCheckSurfaceIcon,
   TpUtilTrim: TpUtilTrimIcon,
-  TpUtilFilter: TpUtilFilterIcon
+  TpUtilFilter: TpUtilFilterIcon,
+  TpVerifyBackplot: TpVerifyBackplotIcon,
+  TpVerifySolid: TpVerifySolidIcon,
+  TpVerifyPost: TpVerifyPostIcon
 };

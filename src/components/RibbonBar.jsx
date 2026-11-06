@@ -1746,6 +1746,20 @@ export default function RibbonBar({
                 onOpenHSMFilterStudio();
                 return;
               }
+
+              // Verify & Post Group (Direct One-Click Simulation)
+              if (action === 'tp_verify_backplot') {
+                if (onStartBackplot) onStartBackplot();
+                return;
+              }
+              if (action === 'tp_verify_solid') {
+                if (onStartVerify) onStartVerify(null, 'verify');
+                return;
+              }
+              if (action === 'tp_verify_post') {
+                if (onOpenPostModal) onOpenPostModal();
+                return;
+              }
             }}
           />
         )}

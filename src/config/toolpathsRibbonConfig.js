@@ -376,5 +376,38 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         tooltip: 'HSM Look-Ahead Tolerance & Arc Filtering Studio'
       }
     ]
+  },
+
+  // 6. VERIFY & POST GROUP (Standard Mastercam Simulation & Code Generation)
+  {
+    id: 'group_verify',
+    title: 'Verify',
+    type: 'standard',
+    items: [
+      {
+        id: 'verify_backplot',
+        type: 'large',
+        label: 'Backplot',
+        icon: 'TpVerifyBackplot',
+        action: 'tp_verify_backplot',
+        tooltip: 'Backplot Selected Operations (Alt+S) - 3D Wireframe Simulation'
+      },
+      {
+        id: 'verify_solid',
+        type: 'large',
+        label: 'Verify',
+        icon: 'TpVerifySolid',
+        action: 'tp_verify_solid',
+        tooltip: 'Verify Selected Operations - 3D Solid Material Removal Simulation'
+      },
+      {
+        id: 'verify_post',
+        type: 'large',
+        label: 'Post (G1)',
+        icon: 'TpVerifyPost',
+        action: 'tp_verify_post',
+        tooltip: 'Post Process Selected Operations to CNC G-Code (G1)'
+      }
+    ]
   }
 ];
