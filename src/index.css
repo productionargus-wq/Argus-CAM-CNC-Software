@@ -251,7 +251,8 @@ body {
   background-color: var(--ribbon-body-bg);
   border-bottom: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
-  z-index: 10;
+  z-index: 1000;
+  position: relative;
 }
 
 .ribbon-tabs {
@@ -307,8 +308,9 @@ body {
   height: 94px;
   padding: 4px 6px;
   gap: 6px;
-  overflow-x: auto;
+  overflow: visible;
   background: var(--ribbon-body-bg);
+  position: relative;
 }
 
 .ribbon-group {

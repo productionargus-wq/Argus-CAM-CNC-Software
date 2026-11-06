@@ -146,7 +146,9 @@ export default function MastercamToolpathParametersModal({
         holderDiameter: operation.holderDiameter || 50,
 
         // Cut Parameters
-        stepoverPct: operation.stepoverPct || 45,
+        cutStyle: operation.cutStyle || (operation.badgeClass === 'face' ? 'zigzag' : 'constant_overlap'),
+        stepoverPct: operation.stepoverPct ?? (operation.badgeClass === 'face' ? 70 : 45),
+        cutAngle: operation.cutAngle ?? 0,
         stockToLeaveXY: operation.stockToLeaveXY ?? 0.0,
         stockToLeaveZ: operation.stockToLeaveZ ?? 0.0,
         cuttingDirection: operation.cuttingDirection || 'climb',
@@ -943,6 +945,90 @@ export default function MastercamToolpathParametersModal({
                 ) : (
                   /* Standard Milling Cut Parameters */
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {/* 1. Style / Pattern & Stepover Controls for Face Milling, Pocket, Dynamic */}
+                    {(formData.badgeClass === 'face' || formData.badgeClass === 'pocket' || formData.badgeClass === 'dynamic') && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                        {/* Style / Pattern */}
+                        <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                            {formData.badgeClass === 'face' ? 'Style (Cutting Pattern):' : 'Cutting Method:'}
+                          </label>
+                          <select
+                            value={formData.cutStyle || (formData.badgeClass === 'face' ? 'zigzag' : 'constant_overlap')}
+                            onChange={(e) => handleFieldChange('cutStyle', e.target.value)}
+                            style={{ width: '100%', padding: '6px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                          >
+                            {formData.badgeClass === 'face' ? (
+                              <>
+                                <option value="zigzag">Zigzag (Bi-directional Face Milling)</option>
+                                <option value="one_way">One Way (Climb Milling Across Face)</option>
+                                <option value="one_pass">One Pass (Single Center Pass)</option>
+                                <option value="dynamic">Dynamic (High Speed Trochoidal Face)</option>
+                              </>
+                            ) : (
+                              <>
+                                <option value="constant_overlap">Constant Overlap Spiral</option>
+                                <option value="parallel_spiral">Parallel Spiral</option>
+                                <option value="morph_spiral">Morph Spiral</option>
+                                <option value="zigzag">Zigzag</option>
+                                <option value="dynamic">Dynamic High Speed</option>
+                              </>
+                            )}
+                          </select>
+                        </div>
+
+                        {/* Stepover % and Stepover Distance */}
+                        <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                              Stepover Percentage:
+                            </label>
+                            <span style={{ fontSize: '11px', color: '#64748b' }}>
+                              Distance: <strong style={{ color: '#0f5a9e' }}>{((toolDiam * (formData.stepoverPct || (formData.badgeClass === 'face' ? 70 : 45))) / 100).toFixed(1)} mm</strong>
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                              type="number"
+                              min="5"
+                              max="100"
+                              step="5"
+                              value={formData.stepoverPct ?? (formData.badgeClass === 'face' ? 70 : 45)}
+                              onChange={(e) => handleFieldChange('stepoverPct', parseFloat(e.target.value) || 70)}
+                              style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                            />
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>%</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 2. Auto Cut Angle for Face Milling */}
+                    {formData.badgeClass === 'face' && (
+                      <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', alignItems: 'center' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                            Auto Cut Angle (Degrees):
+                          </label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                              type="number"
+                              step="15"
+                              value={formData.cutAngle ?? 0}
+                              onChange={(e) => handleFieldChange('cutAngle', parseFloat(e.target.value) || 0)}
+                              style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
+                            />
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>&deg;</span>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: '#64748b', lineHeight: '1.4' }}>
+                          &bull; <strong>0&deg;</strong>: Toolpath traverses along X axis (Standard)<br />
+                          &bull; <strong>90&deg;</strong>: Toolpath traverses across Y axis
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. Compensation & Direction */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                       <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
