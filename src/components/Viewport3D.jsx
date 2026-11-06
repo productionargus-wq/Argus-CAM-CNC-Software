@@ -301,6 +301,7 @@ export default function Viewport3D({
     // Coordinate Axes at Workpiece WCS (G54 Origin)
     const axesHelper = new THREE.AxesHelper(45);
     axesHelper.position.set(0, 85, 0);
+    axesHelper.visible = Boolean(currentModel);
     scene.add(axesHelper);
     axesHelperRef.current = axesHelper;
 
@@ -816,7 +817,7 @@ export default function Viewport3D({
       group.remove(group.children[0]);
     }
 
-    if (showArcCenters) {
+    if (showArcCenters && currentModel) {
       const centerMat = new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 });
       const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide });
       const ringGeo = new THREE.RingGeometry(1.2, 1.8, 16);
@@ -853,7 +854,7 @@ export default function Viewport3D({
       });
     }
 
-    if (showEndpoints) {
+    if (showEndpoints && currentModel) {
       const ptMat = new THREE.PointsMaterial({ color: 0xf59e0b, size: 5, sizeAttenuation: false });
       const ptGeo = new THREE.BufferGeometry().setFromPoints([
         new THREE.Vector3(-40, 49, -35),
@@ -890,7 +891,7 @@ export default function Viewport3D({
       gridHelperRef.current.visible = layerVisibility.bed !== false;
     }
     if (axesHelperRef.current) {
-      axesHelperRef.current.visible = layerVisibility.wcs !== false;
+      axesHelperRef.current.visible = Boolean(currentModel) && layerVisibility.wcs !== false;
     }
     if (stockMeshRef.current) {
       stockMeshRef.current.visible = layerVisibility.stock !== false;
@@ -912,7 +913,7 @@ export default function Viewport3D({
         }
       });
     }
-  }, [layerVisibility]);
+  }, [layerVisibility, currentModel]);
 
   // 7b. Update Dynamic Workholding Fixture Mesh
   useEffect(() => {
