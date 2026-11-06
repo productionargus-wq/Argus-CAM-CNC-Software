@@ -5,6 +5,7 @@ import {
   Music, Image, Film, FileCode, Upload, Box, Cpu
 } from 'lucide-react';
 import { CAD_FILE_FORMATS, parseAnyCADFile, ALL_SUPPORTED_EXTENSIONS_STRING } from '../utils/universalCadParser';
+import { generateSampleSTEPString } from '../utils/stepIgesParser';
 
 export default function MastercamOpenFileDialog({
   isOpen,
@@ -102,7 +103,11 @@ export default function MastercamOpenFileDialog({
     const targetFile = mockCadFiles.find((f) => f.name === selectedFileName);
     if (targetFile) {
       try {
-        const dummyBlob = new Blob([`CAD_DATA_${targetFile.format}`], { type: 'text/plain' });
+        let content = `CAD_DATA_${targetFile.format}`;
+        if (targetFile.format === 'step') {
+          content = generateSampleSTEPString('aerospace_bracket');
+        }
+        const dummyBlob = new Blob([content], { type: 'text/plain' });
         const fileObj = new File([dummyBlob], targetFile.name, { type: 'application/octet-stream' });
         const modelGroup = await parseAnyCADFile(fileObj);
         if (onFileSelected) {

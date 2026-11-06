@@ -5,6 +5,7 @@ import {
   Play, Pause, SkipForward, SkipBack, RotateCcw, X, AlertTriangle, CheckCircle2, Gauge
 } from 'lucide-react';
 import { parseSTLFile, calculatePartMetrics, createWireframeLine, createWireframeRect, createWireframeCircle, createPointMarker } from '../utils/cadGeometry';
+import { parseAnyCADFile } from '../utils/universalCadParser';
 import DrawingToolbarHUD from './DrawingToolbarHUD';
 import AutoCursorBar from './AutoCursorBar';
 import QuickMaskBar from './QuickMaskBar';
@@ -1560,18 +1561,14 @@ export default function Viewport3D({
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      if (file.name.toLowerCase().endsWith('.stl')) {
-        try {
-          const modelGroup = await parseSTLFile(file);
-          if (onModelImported) {
-            onModelImported(modelGroup, file.name);
-          }
-        } catch (err) {
-          console.error("Failed to parse STL:", err);
-          alert("Error parsing STL file. Ensure it is a valid binary or ASCII STL.");
+      try {
+        const modelGroup = await parseAnyCADFile(file);
+        if (onModelImported) {
+          onModelImported(modelGroup, file.name);
         }
-      } else {
-        alert("Please drop a valid .STL 3D model file.");
+      } catch (err) {
+        console.error("Failed to parse CAD file:", err);
+        alert(`Error parsing CAD file (${file.name}): ${err.message}`);
       }
     }
   };
@@ -1590,7 +1587,7 @@ export default function Viewport3D({
       {isDragOver && (
         <div className="dropzone-overlay">
           <UploadCloud size={48} color="#38bdf8" />
-          <span className="dropzone-text">Drop STL or OBJ 3D Model Here to Import</span>
+          <span className="dropzone-text">Drop STEP, IGES, STL, OBJ or CAD File Here to Import</span>
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>
             Automatic Stock Bounding Box will be calculated
           </span>
