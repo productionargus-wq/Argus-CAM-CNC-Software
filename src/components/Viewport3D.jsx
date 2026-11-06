@@ -1645,29 +1645,28 @@ export default function Viewport3D({
       {isBackplotActive && (
         <div className="backplot-hud-container" style={{
           position: 'absolute',
-          bottom: '22px',
+          bottom: '20px',
           left: '50%',
           transform: 'translateX(-50%)',
-          background: isLight ? 'rgba(255, 255, 255, 0.97)' : 'rgba(15, 23, 42, 0.95)',
-          border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(56, 189, 248, 0.4)',
-          boxShadow: isLight ? '0 12px 36px rgba(0,0,0,0.14)' : '0 20px 45px rgba(0,0,0,0.7)',
-          borderRadius: '10px',
-          padding: '12px 18px',
+          background: isLight ? 'rgba(255, 255, 255, 0.98)' : 'rgba(15, 23, 42, 0.96)',
+          border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(56, 189, 248, 0.3)',
+          boxShadow: isLight ? '0 8px 28px rgba(0,0,0,0.12)' : '0 16px 40px rgba(0,0,0,0.6)',
+          borderRadius: '8px',
+          padding: '10px 14px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px',
+          gap: '8px',
           zIndex: 1000,
-          width: '720px',
-          backdropFilter: 'blur(14px)',
+          width: '640px',
+          backdropFilter: 'blur(12px)',
           userSelect: 'none',
           color: isLight ? '#0f172a' : '#f8fafc'
         }}>
           {/* Header Row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Play size={15} color="#0284c7" />
-              <span style={{ fontSize: '11px', fontWeight: 700, color: isLight ? '#0f172a' : '#f8fafc', letterSpacing: '0.5px' }}>
-                {backplotInternalMode === 'heatmap' ? 'IN-PROCESS TOLERANCE DEVIATION HEATMAP' : backplotInternalMode === 'verify' ? 'SOLID MATERIAL REMOVAL VERIFY' : '3D TOOLPATH WIREFRAME BACKPLOT'}
+              <span style={{ fontSize: '11px', fontWeight: 700, color: isLight ? '#0f172a' : '#f8fafc', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                {backplotInternalMode === 'heatmap' ? 'Tolerance Heatmap' : backplotInternalMode === 'verify' ? 'Solid Verify' : 'Backplot'}
               </span>
 
               {/* Operation Scope Selector */}
@@ -1681,14 +1680,14 @@ export default function Viewport3D({
                 }}
                 style={{
                   background: isLight ? '#f1f5f9' : '#090d14',
-                  color: isLight ? '#0284c7' : '#38bdf8',
+                  color: isLight ? '#0f5a9e' : '#38bdf8',
                   border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(56, 189, 248, 0.4)',
                   borderRadius: '4px',
-                  padding: '2px 8px',
-                  fontSize: '10px',
+                  padding: '2px 6px',
+                  fontSize: '11px',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  maxWidth: '190px'
+                  maxWidth: '170px'
                 }}
                 title="Select operation to simulate"
               >
@@ -1702,41 +1701,41 @@ export default function Viewport3D({
 
               <span style={{
                 fontSize: '9.5px',
-                padding: '2px 7px',
-                borderRadius: '4px',
+                padding: '2px 6px',
+                borderRadius: '3px',
                 background: holderCollisionAlert ? (isLight ? '#fee2e2' : 'rgba(239, 68, 68, 0.25)') : (isLight ? '#dcfce7' : 'rgba(16, 185, 129, 0.2)'),
                 border: `1px solid ${holderCollisionAlert ? '#ef4444' : '#10b981'}`,
                 color: holderCollisionAlert ? '#b91c1c' : '#15803d',
                 fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px'
+                gap: '3px'
               }}>
                 {holderCollisionAlert ? (
                   <>
-                    <AlertTriangle size={11} />
-                    <span>HOLDER GOUGE WARNING</span>
+                    <AlertTriangle size={10} />
+                    <span>Gouge Alert</span>
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 size={11} />
-                    <span>CLEARANCE OK</span>
+                    <CheckCircle2 size={10} />
+                    <span>Clearance OK</span>
                   </>
                 )}
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {/* Mode Switcher */}
               <div style={{ display: 'flex', background: isLight ? '#f1f5f9' : '#0a0d14', padding: '2px', borderRadius: '4px', border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b' }}>
                 <button
                   onClick={() => setBackplotInternalMode('backplot')}
                   style={{
-                    background: backplotInternalMode === 'backplot' ? '#0284c7' : 'transparent',
+                    background: backplotInternalMode === 'backplot' ? '#0f5a9e' : 'transparent',
                     color: backplotInternalMode === 'backplot' ? '#fff' : (isLight ? '#475569' : '#94a3b8'),
                     border: 'none',
-                    padding: '2px 9px',
-                    fontSize: '10px',
+                    padding: '2px 8px',
+                    fontSize: '10.5px',
                     fontWeight: 600,
                     borderRadius: '3px',
                     cursor: 'pointer'
@@ -1747,17 +1746,17 @@ export default function Viewport3D({
                 <button
                   onClick={() => setBackplotInternalMode('verify')}
                   style={{
-                    background: backplotInternalMode === 'verify' ? '#10b981' : 'transparent',
+                    background: backplotInternalMode === 'verify' ? '#0f5a9e' : 'transparent',
                     color: backplotInternalMode === 'verify' ? '#fff' : (isLight ? '#475569' : '#94a3b8'),
                     border: 'none',
-                    padding: '2px 9px',
-                    fontSize: '10px',
+                    padding: '2px 8px',
+                    fontSize: '10.5px',
                     fontWeight: 600,
                     borderRadius: '3px',
                     cursor: 'pointer'
                   }}
                 >
-                  Solid Verify
+                  Verify
                 </button>
                 <button
                   onClick={() => setBackplotInternalMode('heatmap')}
@@ -1765,28 +1764,28 @@ export default function Viewport3D({
                     background: backplotInternalMode === 'heatmap' ? '#f59e0b' : 'transparent',
                     color: backplotInternalMode === 'heatmap' ? '#fff' : (isLight ? '#475569' : '#94a3b8'),
                     border: 'none',
-                    padding: '2px 9px',
-                    fontSize: '10px',
+                    padding: '2px 8px',
+                    fontSize: '10.5px',
                     fontWeight: 600,
                     borderRadius: '3px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '3px'
                   }}
-                  title="Inspect Tolerance Deviation Heatmap (Gouges vs Excess Stock)"
+                  title="Inspect Tolerance Deviation Heatmap"
                 >
-                  <Gauge size={11} />
+                  <Gauge size={10} />
                   Heatmap
                 </button>
               </div>
 
               <button
                 onClick={onCloseBackplot}
-                style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer', padding: '2px' }}
+                style={{ background: 'transparent', border: 'none', color: isLight ? '#64748b' : '#94a3b8', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
                 title="Exit Backplot (Esc)"
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
           </div>
@@ -1796,66 +1795,63 @@ export default function Viewport3D({
             <div style={{
               background: isLight ? '#f8fafc' : 'rgba(15, 23, 42, 0.75)',
               border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '6px',
-              padding: '8px 12px',
+              borderRadius: '5px',
+              padding: '6px 10px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '6px',
-              fontSize: '10.5px'
+              gap: '4px',
+              fontSize: '10px'
             }}>
-              {/* Spectrum & Presets Row */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: '#ef4444', fontWeight: 700 }}>■ Gouge (&lt; -{heatmapTolerance}mm)</span>
-                  <span style={{ color: '#10b981', fontWeight: 700 }}>■ Nominal (&plusmn;{heatmapTolerance}mm)</span>
-                  <span style={{ color: '#eab308', fontWeight: 600 }}>■ Near Tol</span>
-                  <span style={{ color: '#0284c7', fontWeight: 700 }}>■ Excess Stock (&gt; +{(heatmapTolerance * 2.5).toFixed(3)}mm)</span>
-                </div>
-
-                {/* Tolerance Presets */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
-                  <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '9.5px' }}>Band:</span>
-                  {[0.01, 0.02, 0.05, 0.10].map((tol) => (
-                    <button
-                      key={tol}
-                      onClick={() => setHeatmapTolerance(tol)}
-                      style={{
-                        background: heatmapTolerance === tol ? '#0284c7' : (isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)'),
-                        color: heatmapTolerance === tol ? '#fff' : (isLight ? '#334155' : '#fff'),
-                        border: 'none',
-                        padding: '1px 6px',
-                        borderRadius: '3px',
-                        fontSize: '9.5px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      &plusmn;{tol}mm
-                    </button>
-                  ))}
-                </div>
+              {/* Spectrum labels */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: isLight ? '#64748b' : '#94a3b8', fontSize: '9.5px', fontWeight: 600 }}>
+                <span style={{ color: '#ef4444' }}>&lt; -{heatmapTolerance}mm (Gouge)</span>
+                <span style={{ color: '#10b981' }}>&plusmn;{heatmapTolerance}mm (Nominal)</span>
+                <span style={{ color: '#0284c7' }}>&gt; +{(heatmapTolerance * 2.5).toFixed(2)}mm (Excess)</span>
               </div>
 
               {/* Color Gradient Legend Strip */}
               <div style={{
-                height: '6px',
+                height: '5px',
                 borderRadius: '3px',
                 background: 'linear-gradient(to right, #dc2626 0%, #f97316 20%, #10b981 40%, #10b981 60%, #eab308 80%, #0284c7 100%)',
                 width: '100%'
               }} />
 
-              {/* Live Inspection Stats */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: isLight ? '#475569' : '#cbd5e1' }}>
-                <span>In-Tolerance: <strong style={{ color: '#10b981' }}>{heatmapStats?.inTolerancePct ?? 86.4}%</strong></span>
-                <span>Excess Unmachined: <strong style={{ color: '#0284c7' }}>{heatmapStats?.excessStockPct ?? 13.6}%</strong></span>
-                <span>Gouges Detected: <strong style={{ color: (heatmapStats?.gougeCount || 0) > 0 ? '#ef4444' : '#10b981' }}>{heatmapStats?.gougeCount || 0}</strong></span>
-                <span>Max Excess: <strong style={{ color: '#d97706' }}>+{heatmapStats?.maxExcessStock ?? 1.85}mm</strong></span>
+              {/* Stats & Band Selector */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: isLight ? '#475569' : '#cbd5e1', paddingTop: '2px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>In-Tol: <strong style={{ color: '#10b981' }}>{heatmapStats?.inTolerancePct ?? 86.4}%</strong></span>
+                  <span>Excess: <strong style={{ color: '#0284c7' }}>{heatmapStats?.excessStockPct ?? 13.6}%</strong></span>
+                  <span>Gouges: <strong style={{ color: (heatmapStats?.gougeCount || 0) > 0 ? '#ef4444' : '#10b981' }}>{heatmapStats?.gougeCount || 0}</strong></span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '9.5px' }}>Tol:</span>
+                  {[0.01, 0.02, 0.05, 0.10].map((tol) => (
+                    <button
+                      key={tol}
+                      onClick={() => setHeatmapTolerance(tol)}
+                      style={{
+                        background: heatmapTolerance === tol ? '#0f5a9e' : (isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)'),
+                        color: heatmapTolerance === tol ? '#fff' : (isLight ? '#334155' : '#cbd5e1'),
+                        border: 'none',
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        fontSize: '9px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      &plusmn;{tol}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
           {/* Scrub Progress Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <input
               type="range"
               min="0"
@@ -1867,17 +1863,17 @@ export default function Viewport3D({
                 backplotProgressRef.current = p;
                 setBackplotProgress(p);
               }}
-              style={{ flex: 1, cursor: 'pointer', accentColor: '#0284c7' }}
+              style={{ flex: 1, cursor: 'pointer', accentColor: '#0f5a9e', height: '4px' }}
             />
-            <span style={{ fontSize: '11px', color: '#0284c7', fontFamily: 'monospace', minWidth: '45px', textAlign: 'right' }}>
+            <span style={{ fontSize: '10.5px', color: isLight ? '#0f5a9e' : '#38bdf8', fontFamily: 'monospace', minWidth: '40px', textAlign: 'right', fontWeight: 600 }}>
               {(backplotProgress * 100).toFixed(1)}%
             </span>
           </div>
 
           {/* Controls & Telemetry Row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
             {/* Playback Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <button
                 className="btn-secondary"
                 onClick={() => {
@@ -1885,10 +1881,10 @@ export default function Viewport3D({
                   backplotProgressRef.current = 0.0;
                   setBackplotProgress(0.0);
                 }}
-                title="Rewind to Start (Home)"
-                style={{ padding: '5px 8px' }}
+                title="Rewind (Home)"
+                style={{ padding: '4px 7px' }}
               >
-                <RotateCcw size={13} />
+                <RotateCcw size={12} />
               </button>
 
               <button
@@ -1900,9 +1896,9 @@ export default function Viewport3D({
                   setBackplotProgress(p);
                 }}
                 title="Step Backward (Left Arrow)"
-                style={{ padding: '5px 8px' }}
+                style={{ padding: '4px 7px' }}
               >
-                <SkipBack size={13} />
+                <SkipBack size={12} />
               </button>
 
               <button
@@ -1916,15 +1912,19 @@ export default function Viewport3D({
                   setIsBackplotPlaying(!isBackplotPlaying);
                 }}
                 style={{
-                  padding: '5px 14px',
-                  background: isBackplotPlaying ? '#e11d48' : '#0284c7',
-                  borderColor: isBackplotPlaying ? '#f43f5e' : '#0284c7',
-                  fontWeight: 700
+                  padding: '4px 10px',
+                  background: isBackplotPlaying ? '#dc2626' : '#0f5a9e',
+                  borderColor: isBackplotPlaying ? '#ef4444' : '#0f5a9e',
+                  fontWeight: 600,
+                  fontSize: '11px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
                 }}
                 title="Play / Pause (Spacebar)"
               >
-                {isBackplotPlaying ? <Pause size={13} /> : <Play size={13} />}
-                <span style={{ marginLeft: '4px' }}>{isBackplotPlaying ? 'Pause' : 'Play'}</span>
+                {isBackplotPlaying ? <Pause size={12} /> : <Play size={12} />}
+                <span>{isBackplotPlaying ? 'Pause' : 'Play'}</span>
               </button>
 
               <button
@@ -1936,9 +1936,9 @@ export default function Viewport3D({
                   setBackplotProgress(p);
                 }}
                 title="Step Forward (Right Arrow)"
-                style={{ padding: '5px 8px' }}
+                style={{ padding: '4px 7px' }}
               >
-                <SkipForward size={13} />
+                <SkipForward size={12} />
               </button>
 
               <button
@@ -1946,55 +1946,59 @@ export default function Viewport3D({
                 onClick={() => setBackplotLoop(!backplotLoop)}
                 title="Toggle Repeat Loop"
                 style={{
-                  padding: '5px 8px',
-                  color: backplotLoop ? '#0284c7' : (isLight ? '#475569' : '#94a3b8'),
-                  borderColor: backplotLoop ? '#0284c7' : (isLight ? '#cbd5e1' : 'rgba(255,255,255,0.1)')
+                  padding: '4px 7px',
+                  fontSize: '11px',
+                  color: backplotLoop ? '#0f5a9e' : (isLight ? '#475569' : '#94a3b8'),
+                  borderColor: backplotLoop ? '#0f5a9e' : (isLight ? '#cbd5e1' : 'rgba(255,255,255,0.1)'),
+                  fontWeight: backplotLoop ? 700 : 500
                 }}
               >
                 Loop
               </button>
-            </div>
 
-            {/* Speed Multipliers */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {[0.5, 1, 2, 5, 10].map((spd) => (
-                <button
-                  key={spd}
-                  onClick={() => setBackplotSpeed(spd)}
-                  style={{
-                    padding: '3px 7px',
-                    fontSize: '10px',
-                    borderRadius: '3px',
-                    border: backplotSpeed === spd ? '1px solid #0284c7' : (isLight ? '1px solid #cbd5e1' : '1px solid #334155'),
-                    background: backplotSpeed === spd ? (isLight ? '#e0f2fe' : 'rgba(56,189,248,0.2)') : (isLight ? '#f8fafc' : '#0f172a'),
-                    color: backplotSpeed === spd ? '#0284c7' : (isLight ? '#475569' : '#94a3b8'),
-                    cursor: 'pointer',
-                    fontWeight: backplotSpeed === spd ? 700 : 500
-                  }}
-                >
-                  {spd}x
-                </button>
-              ))}
+              {/* Speed Selector */}
+              <select
+                value={backplotSpeed}
+                onChange={(e) => setBackplotSpeed(Number(e.target.value))}
+                style={{
+                  background: isLight ? '#f1f5f9' : '#090d14',
+                  color: isLight ? '#334155' : '#e2e8f0',
+                  border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+                  borderRadius: '4px',
+                  padding: '3px 5px',
+                  fontSize: '10.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginLeft: '4px'
+                }}
+                title="Playback Speed"
+              >
+                <option value={0.5}>0.5x</option>
+                <option value={1}>1.0x</option>
+                <option value={2}>2.0x</option>
+                <option value={5}>5.0x</option>
+                <option value={10}>10x</option>
+              </select>
             </div>
 
             {/* Live Tool Telemetry Readout */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
+              gap: '8px',
               fontFamily: 'monospace',
-              fontSize: '10.5px',
+              fontSize: '10px',
               color: isLight ? '#0f172a' : '#f8fafc',
               background: isLight ? '#f1f5f9' : '#090d14',
-              padding: '4px 10px',
+              padding: '3px 8px',
               borderRadius: '4px',
               border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b'
             }}>
-              <span>X: <strong style={{ color: '#0284c7' }}>{currentSample.pos.x.toFixed(2)}</strong></span>
+              <span>X: <strong style={{ color: '#0f5a9e' }}>{currentSample.pos.x.toFixed(2)}</strong></span>
               <span>Y: <strong style={{ color: '#10b981' }}>{currentSample.pos.y.toFixed(2)}</strong></span>
               <span>Z: <strong style={{ color: '#d97706' }}>{currentSample.pos.z.toFixed(2)}</strong></span>
-              <span style={{ color: currentSample.isRapid ? '#0284c7' : '#10b981', fontWeight: 600 }}>
-                {currentSample.isRapid ? 'G0 RAPID' : 'G1 CUT'}
+              <span style={{ color: currentSample.isRapid ? '#0f5a9e' : '#10b981', fontWeight: 700 }}>
+                {currentSample.isRapid ? 'G0' : 'G1'}
               </span>
             </div>
           </div>

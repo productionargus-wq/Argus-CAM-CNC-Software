@@ -1120,7 +1120,7 @@ export default function FileBackstageView({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
-                    padding: '12px 22px',
+                    padding: '12px 24px',
                     background: '#0f5a9e',
                     color: '#ffffff',
                     border: 'none',
@@ -1132,54 +1132,8 @@ export default function FileBackstageView({
                   }}
                 >
                   <FolderOpen size={18} />
-                  Mastercam Open Dialog (All 25 Formats)...
+                  Open Project or CAD File...
                 </button>
-
-                <button
-                  onClick={() => openCadInputRef.current?.click()}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '12px 20px',
-                    background: '#f1f5f9',
-                    color: '#334155',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '4px',
-                    fontWeight: 600,
-                    fontSize: '13.5px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Upload size={16} color="#0f5a9e" />
-                  Direct File Picker (All Formats)
-                </button>
-              </div>
-
-              {/* Supported Formats Banner */}
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '12px 16px', marginBottom: '28px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Supported CAD/CAM Formats ({CAD_FILE_FORMATS.length} Formats):
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {CAD_FILE_FORMATS.slice(0, 24).map((fmt) => (
-                    <span
-                      key={fmt.id}
-                      style={{
-                        fontSize: '10.5px',
-                        padding: '2px 8px',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '3px',
-                        color: '#475569',
-                        fontFamily: 'monospace'
-                      }}
-                      title={fmt.description}
-                    >
-                      {fmt.label.split('(')[0].trim()} ({fmt.extensions.slice(0, 2).map(e => `.${e}`).join(', ')})
-                    </span>
-                  ))}
-                </div>
               </div>
 
               {/* Recent Files Section */}
