@@ -261,10 +261,10 @@ export default function StockSetupModal({
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
           {/* Top Bar: Shape Selection & Units Selector */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a', padding: '10px 14px', borderRadius: '6px', border: '1px solid #1e293b' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
             {/* Shape Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.5px' }}>Stock Shape:</span>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: '#475569', fontWeight: 700, letterSpacing: '0.5px' }}>Stock Shape:</span>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button
                   type="button"
@@ -274,11 +274,15 @@ export default function StockSetupModal({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
-                    padding: '4px 10px',
+                    padding: '5px 12px',
                     fontSize: '11px',
-                    backgroundColor: shape === 'box' ? '#0284c7' : '#1e293b',
-                    color: shape === 'box' ? '#ffffff' : '#cbd5e1',
-                    border: shape === 'box' ? '1px solid #38bdf8' : '1px solid #334155'
+                    fontWeight: shape === 'box' ? 600 : 500,
+                    backgroundColor: shape === 'box' ? '#0284c7' : '#ffffff',
+                    color: shape === 'box' ? '#ffffff' : '#334155',
+                    border: shape === 'box' ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                    borderRadius: '4px',
+                    boxShadow: shape === 'box' ? '0 1px 2px rgba(2, 132, 199, 0.25)' : 'none',
+                    cursor: 'pointer'
                   }}
                 >
                   <Square size={13} />
@@ -293,11 +297,15 @@ export default function StockSetupModal({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
-                    padding: '4px 10px',
+                    padding: '5px 12px',
                     fontSize: '11px',
-                    backgroundColor: shape === 'cylinder' ? '#0284c7' : '#1e293b',
-                    color: shape === 'cylinder' ? '#ffffff' : '#cbd5e1',
-                    border: shape === 'cylinder' ? '1px solid #38bdf8' : '1px solid #334155'
+                    fontWeight: shape === 'cylinder' ? 600 : 500,
+                    backgroundColor: shape === 'cylinder' ? '#0284c7' : '#ffffff',
+                    color: shape === 'cylinder' ? '#ffffff' : '#334155',
+                    border: shape === 'cylinder' ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                    borderRadius: '4px',
+                    boxShadow: shape === 'cylinder' ? '0 1px 2px rgba(2, 132, 199, 0.25)' : 'none',
+                    cursor: 'pointer'
                   }}
                 >
                   <Circle size={13} />
@@ -312,11 +320,15 @@ export default function StockSetupModal({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
-                    padding: '4px 10px',
+                    padding: '5px 12px',
                     fontSize: '11px',
-                    backgroundColor: shape === 'tube' ? '#0284c7' : '#1e293b',
-                    color: shape === 'tube' ? '#ffffff' : '#cbd5e1',
-                    border: shape === 'tube' ? '1px solid #38bdf8' : '1px solid #334155'
+                    fontWeight: shape === 'tube' ? 600 : 500,
+                    backgroundColor: shape === 'tube' ? '#0284c7' : '#ffffff',
+                    color: shape === 'tube' ? '#ffffff' : '#334155',
+                    border: shape === 'tube' ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                    borderRadius: '4px',
+                    boxShadow: shape === 'tube' ? '0 1px 2px rgba(2, 132, 199, 0.25)' : 'none',
+                    cursor: 'pointer'
                   }}
                 >
                   <Circle size={13} style={{ strokeDasharray: '2,2' }} />
@@ -327,19 +339,20 @@ export default function StockSetupModal({
 
             {/* Units Segmented Switcher */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
-              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.5px' }}>Unit System:</span>
-              <div style={{ display: 'flex', background: '#020617', borderRadius: '4px', padding: '2px', border: '1px solid #334155' }}>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: '#475569', fontWeight: 700, letterSpacing: '0.5px' }}>Unit System:</span>
+              <div style={{ display: 'flex', background: '#e2e8f0', borderRadius: '4px', padding: '2px', border: '1px solid #cbd5e1' }}>
                 <button
                   type="button"
                   onClick={() => handleUnitToggle('metric')}
                   style={{
-                    padding: '3px 10px',
+                    padding: '4px 12px',
                     fontSize: '11px',
                     fontWeight: 600,
                     borderRadius: '3px',
                     border: 'none',
                     backgroundColor: isMetric ? '#0284c7' : 'transparent',
-                    color: isMetric ? '#ffffff' : '#94a3b8',
+                    color: isMetric ? '#ffffff' : '#475569',
+                    boxShadow: isMetric ? '0 1px 2px rgba(2, 132, 199, 0.25)' : 'none',
                     cursor: 'pointer'
                   }}
                 >
@@ -349,13 +362,14 @@ export default function StockSetupModal({
                   type="button"
                   onClick={() => handleUnitToggle('imperial')}
                   style={{
-                    padding: '3px 10px',
+                    padding: '4px 12px',
                     fontSize: '11px',
                     fontWeight: 600,
                     borderRadius: '3px',
                     border: 'none',
                     backgroundColor: !isMetric ? '#0284c7' : 'transparent',
-                    color: !isMetric ? '#ffffff' : '#94a3b8',
+                    color: !isMetric ? '#ffffff' : '#475569',
+                    boxShadow: !isMetric ? '0 1px 2px rgba(2, 132, 199, 0.25)' : 'none',
                     cursor: 'pointer'
                   }}
                 >
@@ -466,10 +480,10 @@ export default function StockSetupModal({
               </div>
 
               {/* Calculated Raw Stock Block Result */}
-              <div style={{ background: '#0a0d12', padding: '8px 12px', borderRadius: '4px', border: '1px solid #1e293b', marginTop: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'monospace', fontSize: '12px', color: '#38bdf8' }}>
+              <div style={{ background: '#f0f9ff', padding: '8px 12px', borderRadius: '4px', border: '1px solid #bae6fd', marginTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'monospace', fontSize: '12px', color: '#0369a1' }}>
                   <span>RAW STOCK BLOCK:</span>
-                  <span style={{ fontWeight: 700 }}>{rawX} &times; {rawY} &times; {rawZ} {unitLabel}</span>
+                  <span style={{ fontWeight: 700, color: '#0284c7' }}>{rawX} &times; {rawY} &times; {rawZ} {unitLabel}</span>
                 </div>
               </div>
             </div>
@@ -550,10 +564,10 @@ export default function StockSetupModal({
               )}
 
               {/* Calculated Cylindrical Raw Stock Result */}
-              <div style={{ background: '#0a0d12', padding: '8px 12px', borderRadius: '4px', border: '1px solid #1e293b' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'monospace', fontSize: '12px', color: '#38bdf8' }}>
+              <div style={{ background: '#f0f9ff', padding: '8px 12px', borderRadius: '4px', border: '1px solid #bae6fd' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'monospace', fontSize: '12px', color: '#0369a1' }}>
                   <span>ROUND STOCK BAR:</span>
-                  <span style={{ fontWeight: 700 }}>
+                  <span style={{ fontWeight: 700, color: '#0284c7' }}>
                     &empty;{cylDiameter} &times; {cylLength} {unitLabel} (Axis: {axis})
                   </span>
                 </div>
@@ -611,7 +625,7 @@ export default function StockSetupModal({
                     </button>
                   ))}
                 </div>
-                <span style={{ fontSize: '9px', color: '#38bdf8', fontFamily: 'monospace' }}>
+                <span style={{ fontSize: '9px', color: '#0284c7', fontWeight: 600, fontFamily: 'monospace' }}>
                   {originPoint.toUpperCase()}
                 </span>
               </div>
@@ -619,7 +633,7 @@ export default function StockSetupModal({
           </div>
 
           {/* Modal Actions */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
             <button type="button" className="btn-secondary" onClick={onClose}>
               Cancel
             </button>
