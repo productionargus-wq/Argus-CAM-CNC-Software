@@ -117,6 +117,12 @@ function resolvePoint(id, entityMap, scale = 1.0) {
     if (refMatch) {
       return resolvePoint(parseInt(refMatch[1], 10), entityMap, scale);
     }
+  } else if (entity.type === 'EDGE_CURVE') {
+    // Edge curve references start and end vertices: rawParams e.g.: '', #22, #24, #26, .T.
+    const refs = [...entity.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
+    if (refs.length > 0) {
+      return resolvePoint(refs[0], entityMap, scale);
+    }
   }
   return new THREE.Vector3(0, 0, 0);
 }
@@ -135,8 +141,174 @@ function resolveDirection(id, entityMap) {
       const v = new THREE.Vector3(parts[0] || 0, parts[1] || 0, parts[2] || 0);
       return v.lengthSq() > 0 ? v.normalize() : new THREE.Vector3(0, 0, 1);
     }
+  } else if (entity.type === 'VECTOR') {
+    const refMatch = entity.rawParams.match(/#(\d+)/);
+    if (refMatch) {
+      return resolveDirection(parseInt(refMatch[1], 10), entityMap);
+    }
   }
   return new THREE.Vector3(0, 0, 1);
+}
+
+/**
+ * Resolves an AXIS2_PLACEMENT_3D coordinate frame.
+ */
+function resolveAxisPlacement(id, entityMap, scale = 1.0) {
+  const entity = entityMap.get(id);
+  if (!entity || entity.type !== 'AXIS2_PLACEMENT_3D') return null;
+  const refs = [...entity.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
+  const location = resolvePoint(refs[0], entityMap, scale) || new THREE.Vector3(0, 0, 0);
+  let axis = new THREE.Vector3(0, 0, 1);
+  let refDir = new THREE.Vector3(1, 0, 0);
+  if (refs[1]) axis = resolveDirection(refs[1], entityMap);
+  if (refs[2]) refDir = resolveDirection(refs[2], entityMap);
+  return { location, axis, refDir };
+}
+
+/**
+ * Discretizes a STEP ORIENTED_EDGE -> EDGE_CURVE into 3D points.
+ * Correctly evaluates circular arcs (discretized into smooth segments) and linear edges.
+ */
+function discretizeEdge(oeEnt, entityMap, scale = 1.0) {
+  const isForward = !oeEnt.rawParams.includes('.F.');
+  const m = oeEnt.rawParams.match(/#(\d+)/);
+  if (!m) return [];
+  const curveEnt = entityMap.get(parseInt(m[1], 10));
+  if (!curveEnt) return [];
+
+  const refs = [...curveEnt.rawParams.matchAll(/#(\d+)/g)].map(x => parseInt(x[1], 10));
+  const v1 = resolvePoint(refs[0], entityMap, scale);
+  const v2 = resolvePoint(refs[1], entityMap, scale);
+  const geomEnt = refs[2] ? entityMap.get(refs[2]) : null;
+
+  const startPt = isForward ? v1 : v2;
+  const endPt = isForward ? v2 : v1;
+  if (!startPt) return [];
+
+  if (geomEnt && geomEnt.type === 'CIRCLE') {
+    const circRefs = [...geomEnt.rawParams.matchAll(/#(\d+)/g)].map(x => parseInt(x[1], 10));
+    const radMatch = geomEnt.rawParams.match(/,\s*([0-9\.\+\-eE]+)\s*\)?$/);
+    const radius = (radMatch ? parseFloat(radMatch[1]) : 1.0) * scale;
+    const placement = circRefs[0] ? resolveAxisPlacement(circRefs[0], entityMap, scale) : null;
+
+    if (placement) {
+      const u = placement.refDir.clone().normalize();
+      const v = new THREE.Vector3().crossVectors(placement.axis, u).normalize();
+
+      const isClosed = !endPt || startPt.distanceTo(endPt) < 0.001;
+      const steps = 16;
+      const pts = [];
+
+      if (isClosed) {
+        for (let i = 0; i < steps; i++) {
+          const angle = (i / steps) * Math.PI * 2 * (isForward ? 1 : -1);
+          const pt = placement.location.clone()
+            .addScaledVector(u, radius * Math.cos(angle))
+            .addScaledVector(v, radius * Math.sin(angle));
+          pts.push(pt);
+        }
+        return pts;
+      } else {
+        const dStart = startPt.clone().sub(placement.location);
+        const dEnd = endPt.clone().sub(placement.location);
+        let a1 = Math.atan2(dStart.dot(v), dStart.dot(u));
+        let a2 = Math.atan2(dEnd.dot(v), dEnd.dot(u));
+
+        let sweep = a2 - a1;
+        if (isForward) {
+          while (sweep < 0) sweep += Math.PI * 2;
+        } else {
+          while (sweep > 0) sweep -= Math.PI * 2;
+        }
+
+        const arcSteps = 8;
+        for (let i = 0; i < arcSteps; i++) {
+          const frac = i / arcSteps;
+          const angle = a1 + sweep * frac;
+          const pt = placement.location.clone()
+            .addScaledVector(u, radius * Math.cos(angle))
+            .addScaledVector(v, radius * Math.sin(angle));
+          pts.push(pt);
+        }
+        return pts;
+      }
+    }
+  }
+
+  return [startPt];
+}
+
+/**
+ * Tessellates a CYLINDRICAL_SURFACE CAD face into smooth 3D quad strips.
+ */
+function tessellateCylindricalSurface(face, entityMap, surfEnt, scale = 1.0) {
+  const circRefs = [...surfEnt.rawParams.matchAll(/#(\d+)/g)].map(x => parseInt(x[1], 10));
+  const radMatch = surfEnt.rawParams.match(/,\s*([0-9\.\+\-eE]+)\s*\)?$/);
+  const radius = (radMatch ? parseFloat(radMatch[1]) : 1.0) * scale;
+  const placement = circRefs[0] ? resolveAxisPlacement(circRefs[0], entityMap, scale) : null;
+  if (!placement) return { positions: [], normals: [] };
+
+  // Calculate extent along the cylinder axis from bounding edge loops
+  const boundRefs = [];
+  const boundMatch = face.rawParams.match(/\(\s*([^)]*)\s*\)/);
+  if (boundMatch) {
+    for (const m of boundMatch[1].matchAll(/#(\d+)/g)) boundRefs.push(parseInt(m[1], 10));
+  }
+
+  let minAxisDist = Infinity, maxAxisDist = -Infinity;
+  for (const bId of boundRefs) {
+    const boundEnt = entityMap.get(bId);
+    if (!boundEnt) continue;
+    const loopMatch = boundEnt.rawParams.match(/#(\d+)/);
+    if (!loopMatch) continue;
+    const loopEnt = entityMap.get(parseInt(loopMatch[1], 10));
+    if (!loopEnt) continue;
+    const oeRefs = [...loopEnt.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
+    for (const oeId of oeRefs) {
+      const oeEnt = entityMap.get(oeId);
+      if (!oeEnt) continue;
+      const pts = discretizeEdge(oeEnt, entityMap, scale);
+      for (const pt of pts) {
+        const dist = pt.clone().sub(placement.location).dot(placement.axis);
+        minAxisDist = Math.min(minAxisDist, dist);
+        maxAxisDist = Math.max(maxAxisDist, dist);
+      }
+    }
+  }
+
+  if (!isFinite(minAxisDist) || !isFinite(maxAxisDist) || Math.abs(maxAxisDist - minAxisDist) < 0.001) {
+    minAxisDist = 0;
+    maxAxisDist = 35 * scale;
+  }
+
+  const positions = [];
+  const normals = [];
+  const u = placement.refDir.clone().normalize();
+  const v = new THREE.Vector3().crossVectors(placement.axis, u).normalize();
+  const steps = 32;
+
+  for (let i = 0; i < steps; i++) {
+    const a1 = (i / steps) * Math.PI * 2;
+    const a2 = ((i + 1) / steps) * Math.PI * 2;
+
+    const radial1 = u.clone().multiplyScalar(Math.cos(a1)).addScaledVector(v, Math.sin(a1));
+    const radial2 = u.clone().multiplyScalar(Math.cos(a2)).addScaledVector(v, Math.sin(a2));
+
+    const p1 = placement.location.clone().addScaledVector(placement.axis, minAxisDist).addScaledVector(radial1, radius);
+    const p2 = placement.location.clone().addScaledVector(placement.axis, maxAxisDist).addScaledVector(radial1, radius);
+    const p3 = placement.location.clone().addScaledVector(placement.axis, maxAxisDist).addScaledVector(radial2, radius);
+    const p4 = placement.location.clone().addScaledVector(placement.axis, minAxisDist).addScaledVector(radial2, radius);
+
+    // Tri 1: p1 -> p2 -> p3
+    positions.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z);
+    normals.push(radial1.x, radial1.y, radial1.z, radial1.x, radial1.y, radial1.z, radial2.x, radial2.y, radial2.z);
+
+    // Tri 2: p1 -> p3 -> p4
+    positions.push(p1.x, p1.y, p1.z, p3.x, p3.y, p3.z, p4.x, p4.y, p4.z);
+    normals.push(radial1.x, radial1.y, radial1.z, radial2.x, radial2.y, radial2.z, radial2.x, radial2.y, radial2.z);
+  }
+
+  return { positions, normals };
 }
 
 /**
@@ -199,63 +371,167 @@ export async function parseSTEPText(stepText) {
   const normals = [];
   let faceCount = 0;
 
-  // Search for AP242 Triangulated Facets or Meshes first
-  const triangulatedEntities = [];
+  // 1. TIER 1: Standard B-Rep ADVANCED_FACE entities (AP203 / AP214 / AP242 Solid Models)
+  const advancedFaces = [];
   for (const [id, entity] of entityMap.entries()) {
-    if (entity.type === 'TRIANGULATED_FACE' || entity.type === 'TRIANGULATED_SURFACE_SET' || entity.type === 'FACETED_BREP') {
-      triangulatedEntities.push(entity);
+    if (entity.type === 'ADVANCED_FACE') {
+      advancedFaces.push(entity);
     }
   }
 
-  // Find all POLY_LOOP entities (Standard B-Rep polygon loops in AP203/AP214)
-  const polyLoops = [];
-  for (const [id, entity] of entityMap.entries()) {
-    if (entity.type === 'POLY_LOOP') {
-      polyLoops.push(entity);
-    }
-  }
+  if (advancedFaces.length > 0) {
+    for (const face of advancedFaces) {
+      const parts = face.rawParams.split(',');
+      const surfaceId = parseInt(parts[parts.length - 2].replace(/[^0-9]/g, ''), 10);
+      const surfEnt = entityMap.get(surfaceId);
 
-  if (polyLoops.length > 0) {
-    for (const loopEntity of polyLoops) {
-      // rawParams: 'NAME', (#10, #11, #12, ...)
-      const refMatches = [...loopEntity.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
-      if (refMatches.length >= 3) {
-        const loopVerts = refMatches.map(refId => resolvePoint(refId, entityMap, scale));
-        const tris = triangulate3DPolygon(loopVerts);
-        for (const [v1, v2, v3] of tris) {
-          const edgeA = new THREE.Vector3().subVectors(v2, v1);
-          const edgeB = new THREE.Vector3().subVectors(v3, v1);
-          const triNorm = new THREE.Vector3().crossVectors(edgeA, edgeB).normalize();
-
-          positions.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
-          normals.push(triNorm.x, triNorm.y, triNorm.z, triNorm.x, triNorm.y, triNorm.z, triNorm.x, triNorm.y, triNorm.z);
-        }
+      // A. Cylindrical Surface Feature
+      if (surfEnt && surfEnt.type === 'CYLINDRICAL_SURFACE') {
+        const cylRes = tessellateCylindricalSurface(face, entityMap, surfEnt, scale);
+        positions.push(...cylRes.positions);
+        normals.push(...cylRes.normals);
         faceCount++;
+        continue;
       }
+
+      // B. Planar / General 3D B-Rep Faces with Inner Holes & Island Pockets
+      const isSameSense = !face.rawParams.includes('.F.');
+      const boundRefs = [];
+      const boundMatch = face.rawParams.match(/\(\s*([^)]*)\s*\)/);
+      if (boundMatch) {
+        for (const m of boundMatch[1].matchAll(/#(\d+)/g)) {
+          boundRefs.push(parseInt(m[1], 10));
+        }
+      }
+      if (boundRefs.length === 0) continue;
+
+      const allBoundLoops = [];
+      for (const bId of boundRefs) {
+        const boundEnt = entityMap.get(bId);
+        if (!boundEnt) continue;
+        const loopMatch = boundEnt.rawParams.match(/#(\d+)/);
+        if (!loopMatch) continue;
+        const loopEnt = entityMap.get(parseInt(loopMatch[1], 10));
+        if (!loopEnt) continue;
+
+        const oeRefs = [...loopEnt.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
+        let pts = [];
+        for (const oeId of oeRefs) {
+          const oeEnt = entityMap.get(oeId);
+          if (oeEnt) pts = pts.concat(discretizeEdge(oeEnt, entityMap, scale));
+        }
+        if (pts.length >= 3) {
+          const clean = [];
+          for (let i = 0; i < pts.length; i++) {
+            const cur = pts[i];
+            const prev = clean[clean.length - 1];
+            if (!prev || cur.distanceTo(prev) > 0.0001) clean.push(cur);
+          }
+          if (clean.length >= 3) allBoundLoops.push(clean);
+        }
+      }
+
+      if (allBoundLoops.length === 0) continue;
+      const outer3D = allBoundLoops[0];
+      const holes3D = allBoundLoops.slice(1);
+
+      // Face normal using Newell's method
+      const normal = new THREE.Vector3();
+      const n = outer3D.length;
+      for (let i = 0; i < n; i++) {
+        const cur = outer3D[i];
+        const nxt = outer3D[(i + 1) % n];
+        normal.x += (cur.y - nxt.y) * (cur.z + nxt.z);
+        normal.y += (cur.z - nxt.z) * (cur.x + nxt.x);
+        normal.z += (cur.x - nxt.x) * (cur.y + nxt.y);
+      }
+      if (normal.lengthSq() > 0) normal.normalize(); else normal.set(0, 0, 1);
+      if (!isSameSense) normal.negate();
+
+      // Orthonormal 2D projection basis
+      let arb = Math.abs(normal.z) < 0.9 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
+      const uBasis = new THREE.Vector3().crossVectors(arb, normal).normalize();
+      const vBasis = new THREE.Vector3().crossVectors(normal, uBasis).normalize();
+      const origin = outer3D[0];
+
+      const to2D = (p3) => {
+        const diff = new THREE.Vector3().subVectors(p3, origin);
+        return new THREE.Vector2(diff.dot(uBasis), diff.dot(vBasis));
+      };
+
+      let outer2D = outer3D.map(to2D);
+      let holes2D = holes3D.map(h => h.map(to2D));
+
+      if (THREE.ShapeUtils.isClockWise(outer2D)) {
+        outer2D.reverse();
+        outer3D.reverse();
+      }
+      for (let hi = 0; hi < holes2D.length; hi++) {
+        if (!THREE.ShapeUtils.isClockWise(holes2D[hi])) {
+          holes2D[hi].reverse();
+          holes3D[hi].reverse();
+        }
+      }
+
+      const flat3D = [...outer3D];
+      for (const h of holes3D) flat3D.push(...h);
+
+      let triIndices = [];
+      try {
+        triIndices = THREE.ShapeUtils.triangulateShape(outer2D, holes2D);
+      } catch (e) {
+        triIndices = [];
+      }
+
+      if (!triIndices || triIndices.length === 0) {
+        // Fallback to center-fan triangulation
+        const center = new THREE.Vector3();
+        for (const p of outer3D) center.add(p);
+        center.divideScalar(outer3D.length);
+        for (let i = 0; i < outer3D.length; i++) {
+          const v1 = outer3D[i];
+          const v2 = outer3D[(i + 1) % outer3D.length];
+          const triNorm = new THREE.Vector3().subVectors(v2, v1).cross(new THREE.Vector3().subVectors(center, v1));
+          if (triNorm.dot(normal) > 0) {
+            positions.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, center.x, center.y, center.z);
+          } else {
+            positions.push(v2.x, v2.y, v2.z, v1.x, v1.y, v1.z, center.x, center.y, center.z);
+          }
+          normals.push(normal.x, normal.y, normal.z, normal.x, normal.y, normal.z, normal.x, normal.y, normal.z);
+        }
+      } else {
+        for (const [i1, i2, i3] of triIndices) {
+          const v1 = flat3D[i1];
+          const v2 = flat3D[i2];
+          const v3 = flat3D[i3];
+          if (!v1 || !v2 || !v3) continue;
+          const triNorm = new THREE.Vector3().subVectors(v2, v1).cross(new THREE.Vector3().subVectors(v3, v1));
+          if (triNorm.dot(normal) < 0) {
+            positions.push(v1.x, v1.y, v1.z, v3.x, v3.y, v3.z, v2.x, v2.y, v2.z);
+          } else {
+            positions.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+          }
+          normals.push(normal.x, normal.y, normal.z, normal.x, normal.y, normal.z, normal.x, normal.y, normal.z);
+        }
+      }
+      faceCount++;
     }
   }
 
-  // If no polyloops or modern ADVANCED_FACE / EDGE_LOOP hierarchy is used:
+  // 2. TIER 2: Direct EDGE_LOOP traversal (if no ADVANCED_FACE or produced 0 facets)
   if (positions.length === 0) {
     const edgeLoops = [];
     for (const [id, entity] of entityMap.entries()) {
-      if (entity.type === 'EDGE_LOOP') {
-        edgeLoops.push(entity);
-      }
+      if (entity.type === 'EDGE_LOOP') edgeLoops.push(entity);
     }
 
     for (const el of edgeLoops) {
       const edgeRefs = [...el.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
-      const loopVerts = [];
-
+      let loopVerts = [];
       for (const edgeId of edgeRefs) {
         const edgeEnt = entityMap.get(edgeId);
         if (edgeEnt) {
-          // ORIENTED_EDGE or EDGE_CURVE
-          const vertMatches = [...edgeEnt.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
-          if (vertMatches.length >= 1) {
-            loopVerts.push(resolvePoint(vertMatches[0], entityMap, scale));
-          }
+          loopVerts = loopVerts.concat(discretizeEdge(edgeEnt, entityMap, scale));
         }
       }
 
@@ -274,7 +550,32 @@ export async function parseSTEPText(stepText) {
     }
   }
 
-  // Fallback if raw Cartesian points exist (e.g. point cloud or minimal STEP mesh)
+  // 3. TIER 3: Legacy Faceted POLY_LOOP (Standard in AP203 test parts)
+  if (positions.length === 0) {
+    const polyLoops = [];
+    for (const [id, entity] of entityMap.entries()) {
+      if (entity.type === 'POLY_LOOP') polyLoops.push(entity);
+    }
+
+    for (const loopEntity of polyLoops) {
+      const refMatches = [...loopEntity.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
+      if (refMatches.length >= 3) {
+        const loopVerts = refMatches.map(refId => resolvePoint(refId, entityMap, scale));
+        const tris = triangulate3DPolygon(loopVerts);
+        for (const [v1, v2, v3] of tris) {
+          const edgeA = new THREE.Vector3().subVectors(v2, v1);
+          const edgeB = new THREE.Vector3().subVectors(v3, v1);
+          const triNorm = new THREE.Vector3().crossVectors(edgeA, edgeB).normalize();
+
+          positions.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+          normals.push(triNorm.x, triNorm.y, triNorm.z, triNorm.x, triNorm.y, triNorm.z, triNorm.x, triNorm.y, triNorm.z);
+        }
+        faceCount++;
+      }
+    }
+  }
+
+  // 4. TIER 4: Minimal Point Cloud / Convex Facet Fallback
   if (positions.length === 0) {
     const points = [];
     for (const [id, entity] of entityMap.entries()) {
@@ -283,7 +584,6 @@ export async function parseSTEPText(stepText) {
       }
     }
     if (points.length >= 3) {
-      // Construct a convex hull or bounding faceted geometry
       const tris = triangulate3DPolygon(points.slice(0, Math.min(points.length, 120)));
       for (const [v1, v2, v3] of tris) {
         const edgeA = new THREE.Vector3().subVectors(v2, v1);

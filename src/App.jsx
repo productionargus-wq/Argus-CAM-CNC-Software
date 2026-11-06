@@ -1718,6 +1718,7 @@ export default function App() {
     }));
 
     handleResetTransform();
+    setCameraCommand({ preset: 'iso', timestamp: Date.now() });
     showToast(`Loaded ${filename} (${fmt} 3D Solid Model) - Clean View`, 'success');
   };
 
