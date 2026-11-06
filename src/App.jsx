@@ -3561,6 +3561,8 @@ export default function App() {
         partMetrics={partMetrics}
         stockConfig={stockConfig}
         onUpdateStock={setStockConfig}
+        unitSystem={unitSystem}
+        onUpdateUnitSystem={setUnitSystem}
       />
 
       {/* 9. Mill Tool Manager Modal */}

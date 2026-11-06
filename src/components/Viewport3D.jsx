@@ -924,11 +924,35 @@ export default function Viewport3D({
     if (stockWireframeRef.current) scene.remove(stockWireframeRef.current);
 
     const dim = partMetrics.dimensions;
-    const stockW = dim.x + (stockConfig.allowanceSides || 4) * 2;
-    const stockH = dim.y + (stockConfig.allowanceTop || 2);
-    const stockD = dim.z + (stockConfig.allowanceSides || 4) * 2;
+    const shape = stockConfig?.shape || 'box';
+    const axis = stockConfig?.axis || 'X';
 
-    const stockGeo = new THREE.BoxGeometry(stockW, stockH, stockD);
+    let stockGeo;
+    let posY = 49;
+
+    if (shape === 'cylinder' || shape === 'tube') {
+      const dia = stockConfig.diameter || (Math.max(dim.y, dim.z) + (stockConfig.allowanceSides || 4) * 2);
+      const rad = dia / 2;
+      const len = stockConfig.length || (dim.x + (stockConfig.allowanceTop || 2) * 2);
+
+      stockGeo = new THREE.CylinderGeometry(rad, rad, len, 48);
+      if (axis === 'X') {
+        stockGeo.rotateZ(Math.PI / 2);
+        posY = 49 + rad;
+      } else if (axis === 'Z') {
+        stockGeo.rotateX(Math.PI / 2);
+        posY = 49 + rad;
+      } else {
+        posY = 49 + len / 2;
+      }
+    } else {
+      const stockW = dim.x + (stockConfig.allowanceSides || 4) * 2;
+      const stockH = dim.y + (stockConfig.allowanceTop || 2);
+      const stockD = dim.z + (stockConfig.allowanceSides || 4) * 2;
+      stockGeo = new THREE.BoxGeometry(stockW, stockH, stockD);
+      posY = 49 + stockH / 2;
+    }
+
     const stockMat = new THREE.MeshStandardMaterial({
       color: 0x38bdf8,
       transparent: true,
@@ -939,12 +963,12 @@ export default function Viewport3D({
     });
 
     const stockMesh = new THREE.Mesh(stockGeo, stockMat);
-    stockMesh.position.set(0, 49 + stockH / 2, 0);
+    stockMesh.position.set(0, posY, 0);
     stockMesh.visible = layerVisibility.stock !== false;
     scene.add(stockMesh);
     stockMeshRef.current = stockMesh;
 
-    const edges = new THREE.EdgesGeometry(stockGeo);
+    const edges = new THREE.EdgesGeometry(stockGeo, shape === 'cylinder' || shape === 'tube' ? 24 : 1);
     const edgeMat = new THREE.LineBasicMaterial({ color: 0x06b6d4, linewidth: 2 });
     const wireframe = new THREE.LineSegments(edges, edgeMat);
     wireframe.position.copy(stockMesh.position);

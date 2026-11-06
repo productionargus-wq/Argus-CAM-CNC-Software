@@ -279,29 +279,7 @@ export default function RibbonBar({
                 }
               }}
               className={`ribbon-tab ${tab === 'File' ? 'file-tab' : ''} ${activeTab === tab ? 'active' : ''}`}
-              style={{ position: 'relative' }}
             >
-              {tab === 'Toolpaths' && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '-7px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: '#d32f2f',
-                    color: '#ffffff',
-                    fontSize: '8px',
-                    fontWeight: 'bold',
-                    padding: '0 4px',
-                    borderRadius: '2px',
-                    lineHeight: '11px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                    letterSpacing: '0.5px'
-                  }}
-                >
-                  MILL
-                </span>
-              )}
               {tab}
             </button>
           ))}
