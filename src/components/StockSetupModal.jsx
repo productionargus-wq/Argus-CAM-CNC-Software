@@ -261,100 +261,152 @@ export default function StockSetupModal({
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
           {/* Top Bar: Shape Selection & Units Selector */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#f8fafc',
+              padding: '6px 12px',
+              borderRadius: '5px',
+              border: '1px solid #cbd5e1'
+            }}
+          >
             {/* Shape Buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: '#475569', fontWeight: 700, letterSpacing: '0.5px' }}>Stock Shape:</span>
-              <div style={{ display: 'flex', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  fontSize: '9.5px',
+                  textTransform: 'uppercase',
+                  color: '#64748b',
+                  fontWeight: 700,
+                  letterSpacing: '0.4px'
+                }}
+              >
+                Shape:
+              </span>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '3px',
+                  background: '#f1f5f9',
+                  padding: '2px',
+                  borderRadius: '4px',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => setShape('box')}
-                  className={`btn-secondary ${shape === 'box' ? 'active-shape' : ''}`}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '5px',
-                    padding: '5px 12px',
-                    fontSize: '11px',
+                    gap: '4px',
+                    padding: '3px 8px',
+                    fontSize: '10.5px',
                     fontWeight: shape === 'box' ? 600 : 500,
-                    backgroundColor: shape === 'box' ? '#0284c7' : '#ffffff',
-                    color: shape === 'box' ? '#ffffff' : '#334155',
-                    border: shape === 'box' ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                    borderRadius: '4px',
+                    backgroundColor: shape === 'box' ? '#0284c7' : 'transparent',
+                    color: shape === 'box' ? '#ffffff' : '#475569',
+                    border: 'none',
+                    borderRadius: '3px',
                     boxShadow: shape === 'box' ? '0 1px 2px rgba(2, 132, 199, 0.25)' : 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
                   }}
+                  title="Rectangular prismatic stock block"
                 >
-                  <Square size={13} />
+                  <Square size={11} strokeWidth={shape === 'box' ? 2.5 : 2} />
                   <span>Rectangular Box</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setShape('cylinder')}
-                  className={`btn-secondary ${shape === 'cylinder' ? 'active-shape' : ''}`}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '5px',
-                    padding: '5px 12px',
-                    fontSize: '11px',
+                    gap: '4px',
+                    padding: '3px 8px',
+                    fontSize: '10.5px',
                     fontWeight: shape === 'cylinder' ? 600 : 500,
-                    backgroundColor: shape === 'cylinder' ? '#0284c7' : '#ffffff',
-                    color: shape === 'cylinder' ? '#ffffff' : '#334155',
-                    border: shape === 'cylinder' ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                    borderRadius: '4px',
+                    backgroundColor: shape === 'cylinder' ? '#0284c7' : 'transparent',
+                    color: shape === 'cylinder' ? '#ffffff' : '#475569',
+                    border: 'none',
+                    borderRadius: '3px',
                     boxShadow: shape === 'cylinder' ? '0 1px 2px rgba(2, 132, 199, 0.25)' : 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
                   }}
+                  title="Cylindrical round bar billet"
                 >
-                  <Circle size={13} />
+                  <Circle size={11} strokeWidth={shape === 'cylinder' ? 2.5 : 2} />
                   <span>Cylinder</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setShape('tube')}
-                  className={`btn-secondary ${shape === 'tube' ? 'active-shape' : ''}`}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '5px',
-                    padding: '5px 12px',
-                    fontSize: '11px',
+                    gap: '4px',
+                    padding: '3px 8px',
+                    fontSize: '10.5px',
                     fontWeight: shape === 'tube' ? 600 : 500,
-                    backgroundColor: shape === 'tube' ? '#0284c7' : '#ffffff',
-                    color: shape === 'tube' ? '#ffffff' : '#334155',
-                    border: shape === 'tube' ? '1px solid #0284c7' : '1px solid #cbd5e1',
-                    borderRadius: '4px',
+                    backgroundColor: shape === 'tube' ? '#0284c7' : 'transparent',
+                    color: shape === 'tube' ? '#ffffff' : '#475569',
+                    border: 'none',
+                    borderRadius: '3px',
                     boxShadow: shape === 'tube' ? '0 1px 2px rgba(2, 132, 199, 0.25)' : 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
                   }}
+                  title="Hollow tube or pipe stock"
                 >
-                  <Circle size={13} style={{ strokeDasharray: '2,2' }} />
+                  <Circle size={11} strokeWidth={shape === 'tube' ? 2.5 : 2} style={{ strokeDasharray: '2,2' }} />
                   <span>Tube / Pipe</span>
                 </button>
               </div>
             </div>
 
             {/* Units Segmented Switcher */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
-              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: '#475569', fontWeight: 700, letterSpacing: '0.5px' }}>Unit System:</span>
-              <div style={{ display: 'flex', background: '#e2e8f0', borderRadius: '4px', padding: '2px', border: '1px solid #cbd5e1' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  fontSize: '9.5px',
+                  textTransform: 'uppercase',
+                  color: '#64748b',
+                  fontWeight: 700,
+                  letterSpacing: '0.4px'
+                }}
+              >
+                Units:
+              </span>
+              <div
+                style={{
+                  display: 'flex',
+                  background: '#f1f5f9',
+                  borderRadius: '4px',
+                  padding: '2px',
+                  border: '1px solid #cbd5e1'
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => handleUnitToggle('metric')}
                   style={{
-                    padding: '4px 12px',
-                    fontSize: '11px',
-                    fontWeight: 600,
+                    padding: '2.5px 8px',
+                    fontSize: '10.5px',
+                    fontWeight: isMetric ? 700 : 500,
                     borderRadius: '3px',
-                    border: 'none',
+                    border: isMetric ? '1px solid #0284c7' : '1px solid transparent',
                     backgroundColor: isMetric ? '#0284c7' : 'transparent',
-                    color: isMetric ? '#ffffff' : '#475569',
+                    color: isMetric ? '#ffffff' : '#64748b',
                     boxShadow: isMetric ? '0 1px 2px rgba(2, 132, 199, 0.25)' : 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
                   }}
+                  title="Switch to Metric (millimeters)"
                 >
                   Metric (mm)
                 </button>
@@ -362,16 +414,18 @@ export default function StockSetupModal({
                   type="button"
                   onClick={() => handleUnitToggle('imperial')}
                   style={{
-                    padding: '4px 12px',
-                    fontSize: '11px',
-                    fontWeight: 600,
+                    padding: '2.5px 8px',
+                    fontSize: '10.5px',
+                    fontWeight: !isMetric ? 700 : 500,
                     borderRadius: '3px',
-                    border: 'none',
+                    border: !isMetric ? '1px solid #0284c7' : '1px solid transparent',
                     backgroundColor: !isMetric ? '#0284c7' : 'transparent',
-                    color: !isMetric ? '#ffffff' : '#475569',
+                    color: !isMetric ? '#ffffff' : '#64748b',
                     boxShadow: !isMetric ? '0 1px 2px rgba(2, 132, 199, 0.25)' : 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
                   }}
+                  title="Switch to Imperial (inches)"
                 >
                   Imperial (inch)
                 </button>
@@ -405,7 +459,7 @@ export default function StockSetupModal({
                     className="text-input"
                     value={dimX}
                     onChange={(e) => setDimX(e.target.value)}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, minWidth: 0 }}
                   />
                   <span style={{ fontSize: '11px', color: '#94a3b8', width: '22px' }}>{unitLabel}</span>
                 </div>
@@ -420,7 +474,7 @@ export default function StockSetupModal({
                     className="text-input"
                     value={dimY}
                     onChange={(e) => setDimY(e.target.value)}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, minWidth: 0 }}
                   />
                   <span style={{ fontSize: '11px', color: '#94a3b8', width: '22px' }}>{unitLabel}</span>
                 </div>
@@ -435,7 +489,7 @@ export default function StockSetupModal({
                     className="text-input"
                     value={dimZ}
                     onChange={(e) => setDimZ(e.target.value)}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, minWidth: 0 }}
                   />
                   <span style={{ fontSize: '11px', color: '#94a3b8', width: '22px' }}>{unitLabel}</span>
                 </div>
@@ -457,7 +511,7 @@ export default function StockSetupModal({
                       className="text-input"
                       value={allowanceTop}
                       onChange={(e) => setAllowanceTop(e.target.value)}
-                      style={{ flex: 1 }}
+                      style={{ flex: 1, minWidth: 0 }}
                     />
                     <span style={{ fontSize: '11px', color: '#94a3b8', width: '22px' }}>{unitLabel}</span>
                   </div>
@@ -472,7 +526,7 @@ export default function StockSetupModal({
                       className="text-input"
                       value={allowanceSides}
                       onChange={(e) => setAllowanceSides(e.target.value)}
-                      style={{ flex: 1 }}
+                      style={{ flex: 1, minWidth: 0 }}
                     />
                     <span style={{ fontSize: '11px', color: '#94a3b8', width: '22px' }}>{unitLabel}</span>
                   </div>
