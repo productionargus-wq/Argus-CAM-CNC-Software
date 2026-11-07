@@ -711,23 +711,99 @@ export default function App() {
                 feedRate: 1528,
                 plungeRate: 450,
                 coolant: 'Flood'
+              },
+              {
+                id: 4,
+                number: 4,
+                name: '8mm 3-Flute Roughing Endmill',
+                type: 'flat',
+                diameter: 8,
+                cornerRad: 0,
+                fluteLength: 20,
+                overallLength: 60,
+                flutes: 3,
+                cuttingSpeedVc: 180,
+                rpm: 7162,
+                feedPerTooth: 0.05,
+                feedRate: 1074,
+                plungeRate: 350,
+                coolant: 'Flood'
+              },
+              {
+                id: 5,
+                number: 5,
+                name: '6mm 2-Flute Ball Nose',
+                type: 'ball',
+                diameter: 6,
+                cornerRad: 3.0,
+                fluteLength: 18,
+                overallLength: 60,
+                flutes: 2,
+                cuttingSpeedVc: 160,
+                rpm: 8488,
+                feedPerTooth: 0.04,
+                feedRate: 679,
+                plungeRate: 250,
+                coolant: 'Mist'
+              },
+              {
+                id: 6,
+                number: 6,
+                name: '12mm 90° Spot / Chamfer Drill',
+                type: 'chamfer',
+                diameter: 12,
+                cornerRad: 0,
+                fluteLength: 15,
+                overallLength: 70,
+                flutes: 2,
+                cuttingSpeedVc: 140,
+                rpm: 3500,
+                feedPerTooth: 0.12,
+                feedRate: 889,
+                plungeRate: 250,
+                coolant: 'Flood'
+              },
+              {
+                id: 7,
+                number: 7,
+                name: '5mm Carbide Twist Drill',
+                type: 'drill',
+                diameter: 5,
+                cornerRad: 0,
+                fluteLength: 35,
+                overallLength: 80,
+                flutes: 2,
+                cuttingSpeedVc: 80,
+                rpm: 5093,
+                feedPerTooth: 0.07,
+                feedRate: 713,
+                plungeRate: 713,
+                coolant: 'Through'
               }
             ];
 
-            const t1 = loadedTools.find((t) => t.number === 1);
-            const t2 = loadedTools.find((t) => t.number === 2);
-            const t3 = loadedTools.find((t) => t.number === 3);
+            const t7 = loadedTools.find((t) => t.number === 7 || (t.type === 'drill' && t.diameter === 5));
+            const hasFullLibrary = loadedTools.length >= 7 && loadedTools.some((t) => t.number === 7);
 
-            const needsUpgrade =
-              !t1 || t1.diameter !== 50 ||
-              !t2 || t2.diameter !== 12 ||
-              !t3 || t3.diameter !== 10 || t3.type !== 'flat';
-
-            if (needsUpgrade) {
-              const otherTools = loadedTools.filter(
-                (t) => ![1, 2, 3].includes(t.number) && ![1, 2, 3].includes(t.id)
-              );
-              loadedTools = [...standardTools, ...otherTools].sort((a, b) => a.number - b.number);
+            if (!hasFullLibrary) {
+              const probeTool = loadedTools.find((t) => t.number === 99 || t.type === 'probe') || {
+                id: 99,
+                number: 99,
+                name: 'Renishaw OMP60 Optical Touch Probe',
+                type: 'probe',
+                diameter: 6.0,
+                cornerRad: 3.0,
+                fluteLength: 10,
+                overallLength: 50,
+                flutes: 4,
+                cuttingSpeedVc: 0,
+                rpm: 0,
+                feedPerTooth: 0,
+                feedRate: 500,
+                plungeRate: 250,
+                coolant: 'Off'
+              };
+              loadedTools = [...standardTools, probeTool];
             }
             setTools(loadedTools);
           }

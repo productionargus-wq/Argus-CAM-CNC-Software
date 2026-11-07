@@ -826,6 +826,51 @@ export default function MastercamToolpathParametersModal({
                     <button
                       type="button"
                       onClick={() => {
+                        const existingDrill = tools.find((t) => t.type === 'drill' || (t.diameter === 5 && t.type === 'drill'));
+                        if (existingDrill) {
+                          handleSelectTool(existingDrill.id, existingDrill);
+                          return;
+                        }
+                        const newTool = {
+                          id: 7,
+                          number: 7,
+                          name: '5mm Carbide Twist Drill',
+                          type: 'drill',
+                          diameter: 5,
+                          cornerRad: 0,
+                          fluteLength: 35,
+                          overallLength: 80,
+                          flutes: 2,
+                          cuttingSpeedVc: 80,
+                          rpm: 5093,
+                          feedPerTooth: 0.07,
+                          feedRate: 713,
+                          plungeRate: 713,
+                          coolant: 'Through'
+                        };
+                        if (onAddTool) onAddTool(newTool);
+                        handleSelectTool(newTool.id, newTool);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: '#fef3c7',
+                        color: '#92400e',
+                        border: '1px solid #fde68a',
+                        borderRadius: '3px',
+                        padding: '5px 10px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                      title="Add or Select 5mm Carbide Twist Drill"
+                    >
+                      + Add / Select 5mm Drill
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         const existing10 = tools.find((t) => (t.diameter === 10 && t.type === 'flat') || t.number === 3);
                         if (existing10) {
                           handleSelectTool(existing10.id, existing10);
