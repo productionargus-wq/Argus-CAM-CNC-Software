@@ -292,7 +292,7 @@ export default function CAMOperationsWizardModal({
   // Compute total cycle time and metrics
   const totalCuttingTimeMinutes = operations.reduce((acc, op) => {
     const assignedTool = tools.find((t) => t.id === op.toolId) || { diameter: 10 };
-    const depth = Number(op.totalDepth || op.stepdown || 10);
+    const depth = Math.abs(Number(op.totalDepth || op.stepdown || 10));
     const passes = Math.max(1, Math.ceil(depth / (op.stepdown || 2)));
     const perimeterMm = partMetrics ? (partMetrics.dimensions.x + partMetrics.dimensions.z) * 2 : 250;
     const estimatedDistance = perimeterMm * passes * 1.5;

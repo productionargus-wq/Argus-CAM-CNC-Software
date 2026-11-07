@@ -336,7 +336,10 @@ export function generatePocketToolpath(bounds, tool, params = {}, model = null) 
   const pocketWidth = Math.max(10, (bounds.max.x - bounds.min.x) * 0.55 - toolRadius * 2);
   const pocketDepth = Math.max(10, (bounds.max.z - bounds.min.z) * 0.55 - toolRadius * 2);
 
-  for (let curDepth = stepdown; curDepth <= totalDepth; curDepth += stepdown) {
+  const safeTotalDepth = Math.abs(Number(totalDepth)) || 15.0;
+  const safeStepdown = Math.abs(Number(stepdown)) || 5.0;
+
+  for (let curDepth = safeStepdown; curDepth <= safeTotalDepth; curDepth += safeStepdown) {
     const cutY = topY - curDepth;
 
     // 1. Helical Ramp Entry into the center of the pocket
@@ -545,14 +548,16 @@ export function generateCircleMillToolpath(bounds, tool, params = {}) {
 
   // Helical entry spiral down to depth
   const spiralR = Math.min(finalR * 0.5, toolRadius * 0.8);
-  const totalRampLevels = Math.ceil(totalDepth / stepdown);
+  const safeTotalDepth = Math.abs(Number(totalDepth)) || 50.8;
+  const safeStepdown = Math.abs(Number(stepdown)) || 6.35;
+  const totalRampLevels = Math.ceil(safeTotalDepth / safeStepdown);
   const segmentsPerRev = 32;
 
   let lastPoint = new THREE.Vector3(center.x + spiralR, topY, center.z);
   cuttingLines.push([new THREE.Vector3(center.x, topY + 2.0, center.z), lastPoint]);
 
   for (let lvl = 1; lvl <= totalRampLevels; lvl++) {
-    const curZ = Math.min(totalDepth, lvl * stepdown);
+    const curZ = Math.min(safeTotalDepth, lvl * safeStepdown);
     const prevZ = (lvl - 1) * stepdown;
     for (let s = 1; s <= segmentsPerRev; s++) {
       const theta = (s / segmentsPerRev) * Math.PI * 2;
@@ -757,7 +762,8 @@ export function generateTapToolpath(bounds, tool, params = {}, model = null) {
 
     // 2. Synchronized Helical Plunge Down to Thread Depth (G84)
     const threadRadius = (tool.diameter || 4.8) / 2;
-    const revolutions = Math.max(2, totalDepth / pitch);
+    const safeTotalDepth = Math.abs(Number(totalDepth)) || 12.19;
+    const revolutions = Math.max(2, safeTotalDepth / pitch);
     const segmentsPerRev = 12;
     const totalSegments = Math.max(12, Math.floor(revolutions * segmentsPerRev));
 
@@ -770,7 +776,7 @@ export function generateTapToolpath(bounds, tool, params = {}, model = null) {
 
     for (let s = 1; s <= totalSegments; s++) {
       const frac = s / totalSegments;
-      const currentY = topY - (frac * totalDepth);
+      const currentY = topY - (frac * safeTotalDepth);
       const angle = frac * revolutions * Math.PI * 2;
       const r = threadRadius * 0.4; // subtle thread envelope
       const nextPoint = new THREE.Vector3(
@@ -783,7 +789,7 @@ export function generateTapToolpath(bounds, tool, params = {}, model = null) {
     }
 
     // Bottom dwell to center
-    const bottomCenter = new THREE.Vector3(hole.x, topY - totalDepth, hole.z);
+    const bottomCenter = new THREE.Vector3(hole.x, topY - safeTotalDepth, hole.z);
     cuttingLines.push([prevPoint, bottomCenter]);
 
     // 3. Spindle reversal & synchronized helical retract back up
@@ -880,7 +886,7 @@ export function detectToolpathCollisions3D(operations = [], tools = [], bounds =
       overallLength: 75
     };
 
-    const totalDepth = Number(op.totalDepth || op.stepdown || 10);
+    const totalDepth = Math.abs(Number(op.totalDepth || op.stepdown || 10));
     const fluteLength = Number(assignedTool.fluteLength || 25);
     const overallLength = Number(assignedTool.overallLength || 75);
     const rapidHeight = Number(op.rapidHeight ?? 15.0);
@@ -1149,8 +1155,10 @@ export function generateRestMillingToolpath(bounds, tool, params = {}, model = n
     { cx: centerX - insetX, cz: centerZ + insetZ, startAngle: Math.PI * 0.5, endAngle: Math.PI }
   ];
 
-  let currentY = topY - stepdown;
-  const finalY = topY - totalDepth;
+  const safeTotalDepth = Math.abs(Number(totalDepth)) || 15.0;
+  const safeStepdown = Math.abs(Number(stepdown)) || 2.5;
+  let currentY = topY - safeStepdown;
+  const finalY = topY - safeTotalDepth;
 
   while (currentY >= finalY - 0.001) {
     const depthY = Math.max(currentY, finalY);
@@ -1236,7 +1244,8 @@ export function generatePencilTracingToolpath(bounds, tool, params = {}, model =
 
   const toolRadius = (tool.diameter || 6) / 2;
   const topY = bounds.max.y;
-  const floorY = topY - totalDepth;
+  const safeTotalDepth = Math.abs(Number(totalDepth)) || 15.0;
+  const floorY = topY - safeTotalDepth;
 
   // Inset perimeter bounds representing the pocket fillet seam
   const filletInset = Math.max(toolRadius, biTangencyRadius);

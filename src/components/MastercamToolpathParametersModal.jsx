@@ -293,9 +293,24 @@ export default function MastercamToolpathParametersModal({
 
   // Save changes
   const handleSave = (closeAfterSave = true, regenerate = true) => {
+    const parseNum = (val, defaultVal = 0) => {
+      if (val === '' || val === '-' || val === null || val === undefined) return defaultVal;
+      const parsed = parseFloat(val);
+      return isNaN(parsed) ? defaultVal : parsed;
+    };
+
     const updatedOp = {
       ...operation,
       ...formData,
+      totalDepth: parseNum(formData.totalDepth, -35.0),
+      topOfStock: parseNum(formData.topOfStock, 0),
+      feedPlane: parseNum(formData.feedPlane, 2.5),
+      retractHeight: parseNum(formData.retractHeight, 5.0),
+      rapidHeight: parseNum(formData.rapidHeight, 25.0),
+      stepdown: parseNum(formData.stepdown, 2.5),
+      stepoverPct: parseNum(formData.stepoverPct, 70),
+      stockToLeaveXY: parseNum(formData.stockToLeaveXY, 0),
+      stockToLeaveZ: parseNum(formData.stockToLeaveZ, 0),
       toolName: currentTool ? `T${currentTool.number} - ${currentTool.name}` : operation.toolName
     };
 
@@ -1329,10 +1344,15 @@ export default function MastercamToolpathParametersModal({
                           Stock to Leave on Walls (XY):
                         </label>
                         <input
-                          type="number"
-                          step="0.05"
-                          value={formData.stockToLeaveXY}
-                          onChange={(e) => handleFieldChange('stockToLeaveXY', parseFloat(e.target.value) || 0)}
+                          type="text"
+                          inputMode="decimal"
+                          value={formData.stockToLeaveXY ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || val === '-' || !isNaN(val)) {
+                              handleFieldChange('stockToLeaveXY', val);
+                            }
+                          }}
                           style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                         />
                       </div>
@@ -1341,10 +1361,15 @@ export default function MastercamToolpathParametersModal({
                           Stock to Leave on Floors (Z):
                         </label>
                         <input
-                          type="number"
-                          step="0.05"
-                          value={formData.stockToLeaveZ}
-                          onChange={(e) => handleFieldChange('stockToLeaveZ', parseFloat(e.target.value) || 0)}
+                          type="text"
+                          inputMode="decimal"
+                          value={formData.stockToLeaveZ ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || val === '-' || !isNaN(val)) {
+                              handleFieldChange('stockToLeaveZ', val);
+                            }
+                          }}
                           style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                         />
                       </div>
@@ -1446,10 +1471,15 @@ export default function MastercamToolpathParametersModal({
                         Clearance:
                       </span>
                       <input
-                        type="number"
-                        step="0.5"
-                        value={formData.rapidHeight}
-                        onChange={(e) => handleFieldChange('rapidHeight', parseFloat(e.target.value) || 25)}
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.rapidHeight ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || val === '-' || !isNaN(val)) {
+                            handleFieldChange('rapidHeight', val);
+                          }
+                        }}
                         style={{ width: '75px', padding: '3px 6px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                       />
                       <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px' }}>
@@ -1470,10 +1500,15 @@ export default function MastercamToolpathParametersModal({
                         Retract:
                       </span>
                       <input
-                        type="number"
-                        step="0.5"
-                        value={formData.retractHeight}
-                        onChange={(e) => handleFieldChange('retractHeight', parseFloat(e.target.value) || 5)}
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.retractHeight ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || val === '-' || !isNaN(val)) {
+                            handleFieldChange('retractHeight', val);
+                          }
+                        }}
                         style={{ width: '75px', padding: '3px 6px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                       />
                       <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px' }}>
@@ -1494,10 +1529,15 @@ export default function MastercamToolpathParametersModal({
                         Feed Plane:
                       </span>
                       <input
-                        type="number"
-                        step="0.5"
-                        value={formData.feedPlane}
-                        onChange={(e) => handleFieldChange('feedPlane', parseFloat(e.target.value) || 2.5)}
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.feedPlane ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || val === '-' || !isNaN(val)) {
+                            handleFieldChange('feedPlane', val);
+                          }
+                        }}
                         style={{ width: '75px', padding: '3px 6px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                       />
                       <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px' }}>
@@ -1518,10 +1558,15 @@ export default function MastercamToolpathParametersModal({
                         Top of Stock:
                       </span>
                       <input
-                        type="number"
-                        step="0.1"
-                        value={formData.topOfStock}
-                        onChange={(e) => handleFieldChange('topOfStock', parseFloat(e.target.value) || 0)}
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.topOfStock ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || val === '-' || !isNaN(val)) {
+                            handleFieldChange('topOfStock', val);
+                          }
+                        }}
                         style={{ width: '75px', padding: '3px 6px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                       />
                       <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px' }}>
@@ -1537,26 +1582,89 @@ export default function MastercamToolpathParametersModal({
                     </div>
 
                     {/* Depth */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 10px', background: '#f0fdf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
-                      <span style={{ width: '110px', fontSize: '12px', fontWeight: 700, color: '#166534' }}>
-                        Depth:
-                      </span>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={formData.totalDepth}
-                        onChange={(e) => handleFieldChange('totalDepth', parseFloat(e.target.value) || 0)}
-                        style={{ width: '75px', padding: '3px 6px', fontSize: '12px', border: '1px solid #86efac', borderRadius: '3px', fontWeight: 700 }}
-                      />
-                      <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
-                          <input type="radio" name="dMode" checked={formData.depthMode === 'absolute'} onChange={() => handleFieldChange('depthMode', 'absolute')} />
-                          Abs
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
-                          <input type="radio" name="dMode" checked={formData.depthMode === 'incremental'} onChange={() => handleFieldChange('depthMode', 'incremental')} />
-                          Inc
-                        </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '8px 10px', background: '#f0fdf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ width: '110px', fontSize: '12px', fontWeight: 700, color: '#166534' }}>
+                          Depth:
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={formData.totalDepth ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || val === '-' || !isNaN(val)) {
+                              handleFieldChange('totalDepth', val);
+                            }
+                          }}
+                          placeholder="-35.0"
+                          style={{ width: '75px', padding: '4px 6px', fontSize: '12.5px', border: '1px solid #86efac', borderRadius: '3px', fontWeight: 700, background: '#ffffff', color: '#15803d' }}
+                        />
+                        <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                            <input type="radio" name="dMode" checked={formData.depthMode === 'absolute'} onChange={() => handleFieldChange('depthMode', 'absolute')} />
+                            Abs
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                            <input type="radio" name="dMode" checked={formData.depthMode === 'incremental'} onChange={() => handleFieldChange('depthMode', 'incremental')} />
+                            Inc
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Depth Quick Presets (Pocket Bottom / Stock Floor) */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '122px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleFieldChange('totalDepth', -35.0)}
+                          style={{
+                            padding: '2px 7px',
+                            fontSize: '11px',
+                            background: '#dcfce7',
+                            border: '1px solid #86efac',
+                            borderRadius: '3px',
+                            color: '#15803d',
+                            cursor: 'pointer',
+                            fontWeight: 600
+                          }}
+                          title="Set depth to pocket bottom (-35.0 mm)"
+                        >
+                          &bull; Pocket Bottom (-35.0 mm)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleFieldChange('totalDepth', -50.8)}
+                          style={{
+                            padding: '2px 7px',
+                            fontSize: '11px',
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '3px',
+                            color: '#475569',
+                            cursor: 'pointer',
+                            fontWeight: 500
+                          }}
+                          title="Set depth to stock floor (-50.8 mm)"
+                        >
+                          Floor (-50.8 mm)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleFieldChange('totalDepth', 0)}
+                          style={{
+                            padding: '2px 7px',
+                            fontSize: '11px',
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '3px',
+                            color: '#475569',
+                            cursor: 'pointer',
+                            fontWeight: 500
+                          }}
+                          title="Set depth to top face (0 mm)"
+                        >
+                          Top (0 mm)
+                        </button>
                       </div>
                     </div>
                   </div>

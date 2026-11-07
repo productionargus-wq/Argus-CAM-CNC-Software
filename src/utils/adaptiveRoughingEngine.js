@@ -189,12 +189,14 @@ export function generateAdaptiveTrochoidalToolpath(bounds, tool = {}, params = {
     });
   }
 
-  // Loop through depth levels (supports high axial depth ap in 1-2 passes)
+  // Loop through depth levels (supports high axial depth ap in 1-2 passes, handles negative Z values e.g. -35mm)
+  const safeDepth = Math.abs(Number(totalDepth)) || 20.0;
+  const safeStepdown = Math.abs(Number(stepdown)) || 6.0;
   const depthLevels = [];
-  for (let d = stepdown; d < totalDepth; d += stepdown) {
+  for (let d = safeStepdown; d < safeDepth; d += safeStepdown) {
     depthLevels.push(d);
   }
-  depthLevels.push(totalDepth);
+  depthLevels.push(safeDepth);
 
   const centerX = (minX + maxX) / 2;
   const centerZ = (minZ + maxZ) / 2;
