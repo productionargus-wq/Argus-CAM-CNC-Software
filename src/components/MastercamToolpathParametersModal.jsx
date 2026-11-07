@@ -269,8 +269,8 @@ export default function MastercamToolpathParametersModal({
   };
 
   // Switch Tool with recalculation
-  const handleSelectTool = (tId) => {
-    const newTool = tools.find((t) => t.id === tId);
+  const handleSelectTool = (tId, directToolObj = null) => {
+    const newTool = directToolObj || tools.find((t) => t.id === tId);
     if (!newTool) return;
     const d = newTool.diameter || 10;
     const fl = Math.max(1, newTool.flutes || 4);
@@ -764,26 +764,30 @@ export default function MastercamToolpathParametersModal({
                     <button
                       type="button"
                       onClick={() => {
-                        const maxNum = tools.reduce((max, t) => Math.max(max, t.number || 0), 0);
+                        const existing12 = tools.find((t) => t.diameter === 12 && t.type === 'flat');
+                        if (existing12) {
+                          handleSelectTool(existing12.id, existing12);
+                          return;
+                        }
                         const newTool = {
-                          id: Date.now(),
-                          number: maxNum + 1,
-                          name: '12mm 3-Flute Carbide Endmill',
+                          id: 2,
+                          number: 2,
+                          name: '12mm Flat Endmill (Carbide Rougher)',
                           type: 'flat',
                           diameter: 12,
                           cornerRad: 0,
-                          fluteLength: 30,
+                          fluteLength: 28,
                           overallLength: 75,
                           flutes: 3,
                           cuttingSpeedVc: 220,
-                          rpm: 5835,
+                          rpm: 5500,
                           feedPerTooth: 0.08,
-                          feedRate: 1400,
+                          feedRate: 1800,
                           plungeRate: 450,
                           coolant: 'Flood'
                         };
                         if (onAddTool) onAddTool(newTool);
-                        handleSelectTool(newTool.id);
+                        handleSelectTool(newTool.id, newTool);
                       }}
                       style={{
                         display: 'flex',
@@ -798,17 +802,21 @@ export default function MastercamToolpathParametersModal({
                         fontWeight: 600,
                         cursor: 'pointer'
                       }}
-                      title="Add 12mm Flat Endmill to Tool Library"
+                      title="Add or Select 12mm Flat Endmill"
                     >
-                      + Add 12mm Endmill
+                      + Add / Select 12mm Endmill
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        const maxNum = tools.reduce((max, t) => Math.max(max, t.number || 0), 0);
+                        const existing50 = tools.find((t) => t.diameter === 50 && t.type === 'face');
+                        if (existing50) {
+                          handleSelectTool(existing50.id, existing50);
+                          return;
+                        }
                         const newTool = {
-                          id: Date.now(),
-                          number: maxNum + 1,
+                          id: 1,
+                          number: 1,
                           name: '50mm Face Mill (Shell Mill)',
                           type: 'face',
                           diameter: 50,
@@ -817,14 +825,14 @@ export default function MastercamToolpathParametersModal({
                           overallLength: 75,
                           flutes: 5,
                           cuttingSpeedVc: 399,
-                          rpm: 2500,
+                          rpm: 3500,
                           feedPerTooth: 0.09,
-                          feedRate: 1143,
+                          feedRate: 1200,
                           plungeRate: 350,
                           coolant: 'Flood'
                         };
                         if (onAddTool) onAddTool(newTool);
-                        handleSelectTool(newTool.id);
+                        handleSelectTool(newTool.id, newTool);
                       }}
                       style={{
                         display: 'flex',
@@ -839,9 +847,9 @@ export default function MastercamToolpathParametersModal({
                         fontWeight: 600,
                         cursor: 'pointer'
                       }}
-                      title="Add 50mm Face Mill to Tool Library"
+                      title="Add or Select 50mm Face Mill"
                     >
-                      + Add 50mm Face Mill
+                      + Add / Select 50mm Face Mill
                     </button>
                   </div>
                 </div>

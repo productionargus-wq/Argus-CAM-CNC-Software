@@ -375,7 +375,41 @@ export default function App() {
     {
       id: 1,
       number: 1,
-      name: '10mm 4-Flute Flat Endmill',
+      name: '50mm Face Mill (Shell Mill)',
+      type: 'face',
+      diameter: 50,
+      cornerRad: 0,
+      fluteLength: 25,
+      overallLength: 75,
+      flutes: 5,
+      cuttingSpeedVc: 399,
+      rpm: 3500,
+      feedPerTooth: 0.09,
+      feedRate: 1200,
+      plungeRate: 350,
+      coolant: 'Flood'
+    },
+    {
+      id: 2,
+      number: 2,
+      name: '12mm Flat Endmill (Carbide Rougher)',
+      type: 'flat',
+      diameter: 12,
+      cornerRad: 0,
+      fluteLength: 28,
+      overallLength: 75,
+      flutes: 3,
+      cuttingSpeedVc: 220,
+      rpm: 5500,
+      feedPerTooth: 0.08,
+      feedRate: 1800,
+      plungeRate: 450,
+      coolant: 'Flood'
+    },
+    {
+      id: 3,
+      number: 3,
+      name: '10mm 4-Flute Flat Endmill (Finisher)',
       type: 'flat',
       diameter: 10,
       cornerRad: 0,
@@ -383,15 +417,15 @@ export default function App() {
       overallLength: 75,
       flutes: 4,
       cuttingSpeedVc: 200,
-      rpm: 6366,
+      rpm: 6000,
       feedPerTooth: 0.06,
       feedRate: 1528,
       plungeRate: 450,
       coolant: 'Flood'
     },
     {
-      id: 2,
-      number: 2,
+      id: 4,
+      number: 4,
       name: '8mm 3-Flute Roughing Endmill',
       type: 'flat',
       diameter: 8,
@@ -407,8 +441,8 @@ export default function App() {
       coolant: 'Flood'
     },
     {
-      id: 3,
-      number: 3,
+      id: 5,
+      number: 5,
       name: '6mm 2-Flute Ball Nose',
       type: 'ball',
       diameter: 6,
@@ -424,25 +458,25 @@ export default function App() {
       coolant: 'Mist'
     },
     {
-      id: 4,
-      number: 4,
-      name: '6mm Bullnose R1.0 (5-Axis)',
-      type: 'bull',
-      diameter: 6,
-      cornerRad: 1.0,
-      fluteLength: 18,
-      overallLength: 65,
-      flutes: 4,
-      cuttingSpeedVc: 190,
-      rpm: 10079,
-      feedPerTooth: 0.04,
-      feedRate: 1612,
-      plungeRate: 400,
-      coolant: 'Through'
+      id: 6,
+      number: 6,
+      name: '12mm 90° Spot / Chamfer Drill',
+      type: 'chamfer',
+      diameter: 12,
+      cornerRad: 0,
+      fluteLength: 15,
+      overallLength: 70,
+      flutes: 2,
+      cuttingSpeedVc: 140,
+      rpm: 3500,
+      feedPerTooth: 0.12,
+      feedRate: 889,
+      plungeRate: 250,
+      coolant: 'Flood'
     },
     {
-      id: 5,
-      number: 5,
+      id: 7,
+      number: 7,
       name: '5mm Carbide Twist Drill',
       type: 'drill',
       diameter: 5,
@@ -625,7 +659,32 @@ export default function App() {
           if (session.solidsList) setSolidsList(session.solidsList);
           if (session.stockConfig) setStockConfig(session.stockConfig);
           if (session.tools && Array.isArray(session.tools) && session.tools.length > 0) {
-            setTools(session.tools);
+            let loadedTools = [...session.tools];
+            const has12mm = loadedTools.some((t) => t.diameter === 12 && t.type === 'flat');
+            if (!has12mm) {
+              const upgradedT2 = {
+                id: 2,
+                number: 2,
+                name: '12mm Flat Endmill (Carbide Rougher)',
+                type: 'flat',
+                diameter: 12,
+                cornerRad: 0,
+                fluteLength: 28,
+                overallLength: 75,
+                flutes: 3,
+                cuttingSpeedVc: 220,
+                rpm: 5500,
+                feedPerTooth: 0.08,
+                feedRate: 1800,
+                plungeRate: 450,
+                coolant: 'Flood'
+              };
+              loadedTools = [
+                ...loadedTools.filter((t) => t.id !== 2 && t.number !== 2),
+                upgradedT2
+              ].sort((a, b) => a.number - b.number);
+            }
+            setTools(loadedTools);
           }
           if (session.operations && Array.isArray(session.operations)) {
             setOperations(session.operations);
