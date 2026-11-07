@@ -155,8 +155,8 @@ export default function MastercamToolpathParametersModal({
         airRegion: operation.airRegion || 'Automatic stock boundary expansion',
 
         // Cut Parameters
-        cutStyle: operation.cutStyle || (operation.badgeClass === 'face' ? 'zigzag' : 'constant_overlap'),
-        stepoverPct: operation.stepoverPct ?? (operation.badgeClass === 'face' ? 70 : 45),
+        cutStyle: operation.cutStyle || (operation.badgeClass === 'face' ? 'zigzag' : (operation.badgeClass === 'adaptive' || operation.badgeClass === 'dynamic') ? 'dynamic' : 'constant_overlap'),
+        stepoverPct: operation.stepoverPct ?? (operation.badgeClass === 'face' ? 70 : (operation.badgeClass === 'adaptive' || operation.badgeClass === 'dynamic') ? 25 : 45),
         cutAngle: operation.cutAngle ?? 0,
         stockToLeaveXY: operation.stockToLeaveXY ?? 0.0,
         stockToLeaveZ: operation.stockToLeaveZ ?? 0.0,
@@ -1357,7 +1357,8 @@ export default function MastercamToolpathParametersModal({
                   /* Standard Milling Cut Parameters */
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     {/* 1. Style / Pattern & Stepover Controls for Face Milling, Pocket, Dynamic */}
-                    {(formData.badgeClass === 'face' || formData.badgeClass === 'pocket' || formData.badgeClass === 'dynamic') && (
+                    {/* 1. Style / Pattern & Stepover Controls for Face Milling, Pocket, Dynamic, Adaptive */}
+                    {(formData.badgeClass === 'face' || formData.badgeClass === 'pocket' || formData.badgeClass === 'dynamic' || formData.badgeClass === 'adaptive' || formData.badgeClass === 'rest' || formData.badgeClass === 'contour') && (
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                         {/* Style / Pattern */}
                         <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
@@ -1365,7 +1366,7 @@ export default function MastercamToolpathParametersModal({
                             {formData.badgeClass === 'face' ? 'Style (Cutting Pattern):' : 'Cutting Method:'}
                           </label>
                           <select
-                            value={formData.cutStyle || (formData.badgeClass === 'face' ? 'zigzag' : 'constant_overlap')}
+                            value={formData.cutStyle || (formData.badgeClass === 'face' ? 'zigzag' : (formData.badgeClass === 'adaptive' || formData.badgeClass === 'dynamic') ? 'dynamic' : 'constant_overlap')}
                             onChange={(e) => handleFieldChange('cutStyle', e.target.value)}
                             style={{ width: '100%', padding: '6px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                           >
@@ -1375,6 +1376,14 @@ export default function MastercamToolpathParametersModal({
                                 <option value="one_way">One Way (Climb Milling Across Face)</option>
                                 <option value="one_pass">One Pass (Single Center Pass)</option>
                                 <option value="dynamic">Dynamic (High Speed Trochoidal Face)</option>
+                              </>
+                            ) : (formData.badgeClass === 'adaptive' || formData.badgeClass === 'dynamic') ? (
+                              <>
+                                <option value="dynamic">Dynamic High Speed (Trochoidal HSM)</option>
+                                <option value="constant_overlap">Constant Overlap Spiral</option>
+                                <option value="parallel_spiral">Parallel Spiral</option>
+                                <option value="morph_spiral">Morph Spiral</option>
+                                <option value="zigzag">Zigzag</option>
                               </>
                             ) : (
                               <>
@@ -1395,14 +1404,14 @@ export default function MastercamToolpathParametersModal({
                               Stepover Percentage:
                             </label>
                             <span style={{ fontSize: '11px', color: '#64748b' }}>
-                              Distance: <strong style={{ color: '#0f5a9e' }}>{((toolDiam * (formData.stepoverPct || (formData.badgeClass === 'face' ? 70 : 45))) / 100).toFixed(1)} mm</strong>
+                              Distance: <strong style={{ color: '#0f5a9e' }}>{((toolDiam * (parseFloat(formData.stepoverPct) || (formData.badgeClass === 'face' ? 70 : (formData.badgeClass === 'adaptive' || formData.badgeClass === 'dynamic') ? 25 : 45))) / 100).toFixed(1)} mm</strong>
                             </span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <input
                               type="text"
                               inputMode="decimal"
-                              value={formData.stepoverPct ?? (formData.badgeClass === 'face' ? 70 : 45)}
+                              value={formData.stepoverPct ?? (formData.badgeClass === 'face' ? 70 : (formData.badgeClass === 'adaptive' || formData.badgeClass === 'dynamic') ? 25 : 45)}
                               onChange={(e) => {
                                 const val = e.target.value;
                                 if (val === '' || val === '-' || !isNaN(val)) {
@@ -1410,11 +1419,66 @@ export default function MastercamToolpathParametersModal({
                                 }
                               }}
                               onBlur={() => {
-                                if (!formData.stepoverPct) handleFieldChange('stepoverPct', formData.badgeClass === 'face' ? 70 : 45);
+                                if (!formData.stepoverPct) handleFieldChange('stepoverPct', formData.badgeClass === 'face' ? 70 : (formData.badgeClass === 'adaptive' || formData.badgeClass === 'dynamic') ? 25 : 45);
                               }}
                               style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                             />
                             <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>%</span>
+                          </div>
+
+                          {/* Quick Stepover Presets */}
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleFieldChange('stepoverPct', 25)}
+                              style={{
+                                padding: '2px 7px',
+                                fontSize: '10.5px',
+                                background: Number(formData.stepoverPct) === 25 ? '#0284c7' : '#ffffff',
+                                color: Number(formData.stepoverPct) === 25 ? '#ffffff' : '#0369a1',
+                                border: '1px solid #bae6fd',
+                                borderRadius: '3px',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                              }}
+                              title="Set 25% stepover (recommended for Dynamic HSM milling)"
+                            >
+                              25% (Dynamic HSM)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleFieldChange('stepoverPct', 45)}
+                              style={{
+                                padding: '2px 7px',
+                                fontSize: '10.5px',
+                                background: Number(formData.stepoverPct) === 45 ? '#0284c7' : '#ffffff',
+                                color: Number(formData.stepoverPct) === 45 ? '#ffffff' : '#475569',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '3px',
+                                cursor: 'pointer',
+                                fontWeight: 500
+                              }}
+                              title="Set 45% stepover (standard pocketing)"
+                            >
+                              45%
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleFieldChange('stepoverPct', 70)}
+                              style={{
+                                padding: '2px 7px',
+                                fontSize: '10.5px',
+                                background: Number(formData.stepoverPct) === 70 ? '#0284c7' : '#ffffff',
+                                color: Number(formData.stepoverPct) === 70 ? '#ffffff' : '#475569',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '3px',
+                                cursor: 'pointer',
+                                fontWeight: 500
+                              }}
+                              title="Set 70% stepover (face milling)"
+                            >
+                              70%
+                            </button>
                           </div>
                         </div>
                       </div>
