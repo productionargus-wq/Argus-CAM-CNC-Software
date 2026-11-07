@@ -221,51 +221,83 @@ export default function MastercamToolpathParametersModal({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Speed & Feed Synchronizers
+  // Speed & Feed Synchronizers (free-form typing with live sync when valid numbers)
   const handleRpmChange = (rpmVal) => {
-    const rpm = Math.max(100, Number(rpmVal) || 0);
-    const sfm = Math.round((Math.PI * toolDiam * rpm) / 1000);
-    const feed = Math.round(rpm * toolFlutes * (formData.feedPerTooth || 0.05));
-    setFormData((prev) => ({
-      ...prev,
-      spindleSpeed: rpm,
-      surfaceSpeed: sfm,
-      feedRate: feed
-    }));
+    if (rpmVal === '' || rpmVal === '-') {
+      setFormData((prev) => ({ ...prev, spindleSpeed: rpmVal }));
+      return;
+    }
+    const rpmNum = parseFloat(rpmVal);
+    if (!isNaN(rpmNum) && rpmNum > 0) {
+      const sfm = Math.round((Math.PI * toolDiam * rpmNum) / 1000);
+      const feed = Math.round(rpmNum * toolFlutes * (parseFloat(formData.feedPerTooth) || 0.05));
+      setFormData((prev) => ({
+        ...prev,
+        spindleSpeed: rpmVal,
+        surfaceSpeed: sfm,
+        feedRate: feed
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, spindleSpeed: rpmVal }));
+    }
   };
 
   const handleSurfaceSpeedChange = (sfmVal) => {
-    const sfm = Math.max(10, Number(sfmVal) || 0);
-    const rpm = Math.round((sfm * 1000) / (Math.PI * toolDiam));
-    const feed = Math.round(rpm * toolFlutes * (formData.feedPerTooth || 0.05));
-    setFormData((prev) => ({
-      ...prev,
-      surfaceSpeed: sfm,
-      spindleSpeed: rpm,
-      feedRate: feed
-    }));
+    if (sfmVal === '' || sfmVal === '-') {
+      setFormData((prev) => ({ ...prev, surfaceSpeed: sfmVal }));
+      return;
+    }
+    const sfmNum = parseFloat(sfmVal);
+    if (!isNaN(sfmNum) && sfmNum > 0) {
+      const rpm = Math.round((sfmNum * 1000) / (Math.PI * toolDiam));
+      const feed = Math.round(rpm * toolFlutes * (parseFloat(formData.feedPerTooth) || 0.05));
+      setFormData((prev) => ({
+        ...prev,
+        surfaceSpeed: sfmVal,
+        spindleSpeed: rpm,
+        feedRate: feed
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, surfaceSpeed: sfmVal }));
+    }
   };
 
   const handleFeedRateChange = (feedVal) => {
-    const feed = Math.max(10, Number(feedVal) || 0);
-    const rpm = formData.spindleSpeed || 3500;
-    const fpt = Number((feed / (rpm * toolFlutes)).toFixed(4));
-    setFormData((prev) => ({
-      ...prev,
-      feedRate: feed,
-      feedPerTooth: fpt
-    }));
+    if (feedVal === '' || feedVal === '-') {
+      setFormData((prev) => ({ ...prev, feedRate: feedVal }));
+      return;
+    }
+    const feedNum = parseFloat(feedVal);
+    const rpm = parseFloat(formData.spindleSpeed) || 3500;
+    if (!isNaN(feedNum) && feedNum > 0) {
+      const fpt = Number((feedNum / (rpm * toolFlutes)).toFixed(4));
+      setFormData((prev) => ({
+        ...prev,
+        feedRate: feedVal,
+        feedPerTooth: fpt
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, feedRate: feedVal }));
+    }
   };
 
   const handleFptChange = (fptVal) => {
-    const fpt = Math.max(0.001, Number(fptVal) || 0);
-    const rpm = formData.spindleSpeed || 3500;
-    const feed = Math.round(rpm * toolFlutes * fpt);
-    setFormData((prev) => ({
-      ...prev,
-      feedPerTooth: fpt,
-      feedRate: feed
-    }));
+    if (fptVal === '' || fptVal === '-') {
+      setFormData((prev) => ({ ...prev, feedPerTooth: fptVal }));
+      return;
+    }
+    const fptNum = parseFloat(fptVal);
+    const rpm = parseFloat(formData.spindleSpeed) || 3500;
+    if (!isNaN(fptNum) && fptNum > 0) {
+      const feed = Math.round(rpm * toolFlutes * fptNum);
+      setFormData((prev) => ({
+        ...prev,
+        feedPerTooth: fptVal,
+        feedRate: feed
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, feedPerTooth: fptVal }));
+    }
   };
 
   // Switch Tool with recalculation
@@ -302,6 +334,9 @@ export default function MastercamToolpathParametersModal({
     const updatedOp = {
       ...operation,
       ...formData,
+      spindleSpeed: parseNum(formData.spindleSpeed, 3500),
+      feedRate: parseNum(formData.feedRate, 1200),
+      plungeFeedRate: parseNum(formData.plungeFeedRate, 400),
       totalDepth: parseNum(formData.totalDepth, -35.0),
       topOfStock: parseNum(formData.topOfStock, 0),
       feedPlane: parseNum(formData.feedPlane, 2.5),
@@ -311,6 +346,14 @@ export default function MastercamToolpathParametersModal({
       stepoverPct: parseNum(formData.stepoverPct, 70),
       stockToLeaveXY: parseNum(formData.stockToLeaveXY, 0),
       stockToLeaveZ: parseNum(formData.stockToLeaveZ, 0),
+      stickoutLength: parseNum(formData.stickoutLength, 35),
+      gaugeLength: parseNum(formData.gaugeLength, 65),
+      holderDiameter: parseNum(formData.holderDiameter, 50),
+      peckDepth: parseNum(formData.peckDepth, 2.0),
+      pitch: parseNum(formData.pitch, 0.79375),
+      finishCutsCount: Math.round(parseNum(formData.finishCutsCount, 1)),
+      cutAngle: parseNum(formData.cutAngle, 0),
+      breakThroughAmount: parseNum(formData.breakThroughAmount, 1.0),
       toolName: currentTool ? `T${currentTool.number} - ${currentTool.name}` : operation.toolName
     };
 
@@ -726,11 +769,15 @@ export default function MastercamToolpathParametersModal({
                         </label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <input
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            value={formData.avoidanceAllowance}
-                            onChange={(e) => handleFieldChange('avoidanceAllowance', parseFloat(e.target.value) || 0)}
+                            type="text"
+                            inputMode="decimal"
+                            value={formData.avoidanceAllowance ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || val === '-' || !isNaN(val)) {
+                                handleFieldChange('avoidanceAllowance', val);
+                              }
+                            }}
                             style={{ width: '100px', padding: '5px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                           />
                           <span style={{ fontSize: '12px', color: '#64748b' }}>mm</span>
@@ -776,6 +823,51 @@ export default function MastercamToolpathParametersModal({
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const existing10 = tools.find((t) => (t.diameter === 10 && t.type === 'flat') || t.number === 3);
+                        if (existing10) {
+                          handleSelectTool(existing10.id, existing10);
+                          return;
+                        }
+                        const newTool = {
+                          id: 3,
+                          number: 3,
+                          name: '10mm 4-Flute Flat Endmill (Finisher)',
+                          type: 'flat',
+                          diameter: 10,
+                          cornerRad: 0,
+                          fluteLength: 30,
+                          overallLength: 75,
+                          flutes: 4,
+                          cuttingSpeedVc: 200,
+                          rpm: 6000,
+                          feedPerTooth: 0.06,
+                          feedRate: 1528,
+                          plungeRate: 450,
+                          coolant: 'Flood'
+                        };
+                        if (onAddTool) onAddTool(newTool);
+                        handleSelectTool(newTool.id, newTool);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: '#f0fdf4',
+                        color: '#15803d',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: '3px',
+                        padding: '5px 10px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                      title="Add or Select 10mm Flat Endmill"
+                    >
+                      + Add / Select 10mm Endmill
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
@@ -936,9 +1028,15 @@ export default function MastercamToolpathParametersModal({
                       Spindle Speed (RPM):
                     </label>
                     <input
-                      type="number"
-                      value={formData.spindleSpeed || 3500}
+                      type="text"
+                      inputMode="numeric"
+                      value={formData.spindleSpeed ?? ''}
                       onChange={(e) => handleRpmChange(e.target.value)}
+                      onBlur={() => {
+                        if (formData.spindleSpeed === '' || formData.spindleSpeed === '-') {
+                          handleRpmChange(3500);
+                        }
+                      }}
                       style={{
                         width: '100%',
                         padding: '6px 10px',
@@ -960,9 +1058,15 @@ export default function MastercamToolpathParametersModal({
                       Feed Rate (mm/min):
                     </label>
                     <input
-                      type="number"
-                      value={formData.feedRate || 1200}
+                      type="text"
+                      inputMode="numeric"
+                      value={formData.feedRate ?? ''}
                       onChange={(e) => handleFeedRateChange(e.target.value)}
+                      onBlur={() => {
+                        if (formData.feedRate === '' || formData.feedRate === '-') {
+                          handleFeedRateChange(1200);
+                        }
+                      }}
                       style={{
                         width: '100%',
                         padding: '6px 10px',
@@ -984,9 +1088,15 @@ export default function MastercamToolpathParametersModal({
                       Plunge Feed Rate (mm/min):
                     </label>
                     <input
-                      type="number"
-                      value={formData.plungeFeedRate || 400}
-                      onChange={(e) => handleFieldChange('plungeFeedRate', Number(e.target.value) || 350)}
+                      type="text"
+                      inputMode="numeric"
+                      value={formData.plungeFeedRate ?? ''}
+                      onChange={(e) => handleFieldChange('plungeFeedRate', e.target.value)}
+                      onBlur={() => {
+                        if (formData.plungeFeedRate === '' || formData.plungeFeedRate === '-') {
+                          handleFieldChange('plungeFeedRate', 400);
+                        }
+                      }}
                       style={{
                         width: '100%',
                         padding: '6px 10px',
@@ -1082,10 +1192,13 @@ export default function MastercamToolpathParametersModal({
                           Tool Stickout Length (L1):
                         </label>
                         <input
-                          type="number"
-                          step="1"
-                          value={formData.stickoutLength || 35}
-                          onChange={(e) => handleFieldChange('stickoutLength', Number(e.target.value) || 30)}
+                          type="text"
+                          inputMode="decimal"
+                          value={formData.stickoutLength ?? ''}
+                          onChange={(e) => handleFieldChange('stickoutLength', e.target.value)}
+                          onBlur={() => {
+                            if (!formData.stickoutLength) handleFieldChange('stickoutLength', 35);
+                          }}
                           style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #0f5a9e', borderRadius: '3px', fontWeight: 700 }}
                         />
                         <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>mm protruding from holder</span>
@@ -1096,10 +1209,13 @@ export default function MastercamToolpathParametersModal({
                           Gauge Length (L2):
                         </label>
                         <input
-                          type="number"
-                          step="1"
-                          value={formData.gaugeLength || 65}
-                          onChange={(e) => handleFieldChange('gaugeLength', Number(e.target.value) || 60)}
+                          type="text"
+                          inputMode="decimal"
+                          value={formData.gaugeLength ?? ''}
+                          onChange={(e) => handleFieldChange('gaugeLength', e.target.value)}
+                          onBlur={() => {
+                            if (!formData.gaugeLength) handleFieldChange('gaugeLength', 65);
+                          }}
                           style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                         />
                         <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>mm from spindle face</span>
@@ -1110,10 +1226,13 @@ export default function MastercamToolpathParametersModal({
                           Holder Diameter (D1):
                         </label>
                         <input
-                          type="number"
-                          step="1"
-                          value={formData.holderDiameter || 50}
-                          onChange={(e) => handleFieldChange('holderDiameter', Number(e.target.value) || 50)}
+                          type="text"
+                          inputMode="decimal"
+                          value={formData.holderDiameter ?? ''}
+                          onChange={(e) => handleFieldChange('holderDiameter', e.target.value)}
+                          onBlur={() => {
+                            if (!formData.holderDiameter) handleFieldChange('holderDiameter', 50);
+                          }}
                           style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                         />
                         <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>mm outer collar width</span>
@@ -1190,10 +1309,18 @@ export default function MastercamToolpathParametersModal({
                           Peck Increment (Q):
                         </label>
                         <input
-                          type="number"
-                          step="0.5"
-                          value={formData.peckDepth}
-                          onChange={(e) => handleFieldChange('peckDepth', parseFloat(e.target.value) || 2.0)}
+                          type="text"
+                          inputMode="decimal"
+                          value={formData.peckDepth ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || val === '-' || !isNaN(val)) {
+                              handleFieldChange('peckDepth', val);
+                            }
+                          }}
+                          onBlur={() => {
+                            if (!formData.peckDepth) handleFieldChange('peckDepth', 2.0);
+                          }}
                           style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                         />
                         <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>mm per peck</span>
@@ -1206,10 +1333,18 @@ export default function MastercamToolpathParametersModal({
                           Thread Pitch (F):
                         </label>
                         <input
-                          type="number"
-                          step="0.001"
-                          value={formData.pitch}
-                          onChange={(e) => handleFieldChange('pitch', parseFloat(e.target.value) || 0.79375)}
+                          type="text"
+                          inputMode="decimal"
+                          value={formData.pitch ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || val === '-' || !isNaN(val)) {
+                              handleFieldChange('pitch', val);
+                            }
+                          }}
+                          onBlur={() => {
+                            if (!formData.pitch) handleFieldChange('pitch', 0.79375);
+                          }}
                           style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                         />
                         <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>
@@ -1265,12 +1400,18 @@ export default function MastercamToolpathParametersModal({
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <input
-                              type="number"
-                              min="5"
-                              max="100"
-                              step="5"
+                              type="text"
+                              inputMode="decimal"
                               value={formData.stepoverPct ?? (formData.badgeClass === 'face' ? 70 : 45)}
-                              onChange={(e) => handleFieldChange('stepoverPct', parseFloat(e.target.value) || 70)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || val === '-' || !isNaN(val)) {
+                                  handleFieldChange('stepoverPct', val);
+                                }
+                              }}
+                              onBlur={() => {
+                                if (!formData.stepoverPct) handleFieldChange('stepoverPct', formData.badgeClass === 'face' ? 70 : 45);
+                              }}
                               style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                             />
                             <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>%</span>
@@ -1288,10 +1429,15 @@ export default function MastercamToolpathParametersModal({
                           </label>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <input
-                              type="number"
-                              step="15"
+                              type="text"
+                              inputMode="decimal"
                               value={formData.cutAngle ?? 0}
-                              onChange={(e) => handleFieldChange('cutAngle', parseFloat(e.target.value) || 0)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || val === '-' || !isNaN(val)) {
+                                  handleFieldChange('cutAngle', val);
+                                }
+                              }}
                               style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                             />
                             <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>&deg;</span>
@@ -1410,10 +1556,18 @@ export default function MastercamToolpathParametersModal({
                             Max Rough Step (mm):
                           </label>
                           <input
-                            type="number"
-                            step="0.5"
-                            value={formData.stepdown || 2.5}
-                            onChange={(e) => handleFieldChange('stepdown', parseFloat(e.target.value) || 2.5)}
+                            type="text"
+                            inputMode="decimal"
+                            value={formData.stepdown ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || val === '-' || !isNaN(val)) {
+                                handleFieldChange('stepdown', val);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (!formData.stepdown) handleFieldChange('stepdown', 2.5);
+                            }}
                             style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #0f5a9e', borderRadius: '3px', fontWeight: 700 }}
                           />
                         </div>
@@ -1423,11 +1577,18 @@ export default function MastercamToolpathParametersModal({
                             Number of Finish Cuts:
                           </label>
                           <input
-                            type="number"
-                            min="0"
-                            max="5"
-                            value={formData.finishCutsCount || 1}
-                            onChange={(e) => handleFieldChange('finishCutsCount', parseInt(e.target.value, 10) || 0)}
+                            type="text"
+                            inputMode="numeric"
+                            value={formData.finishCutsCount ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || !isNaN(val)) {
+                                handleFieldChange('finishCutsCount', val);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (formData.finishCutsCount === '') handleFieldChange('finishCutsCount', 1);
+                            }}
                             style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                           />
                         </div>
@@ -1851,27 +2012,54 @@ export default function MastercamToolpathParametersModal({
                     <div>
                       <label style={{ display: 'block', fontSize: '11.5px', color: '#475569' }}>Line Length (mm):</label>
                       <input
-                        type="number"
-                        value={formData.leadInLineLen}
-                        onChange={(e) => handleFieldChange('leadInLineLen', parseFloat(e.target.value) || 5)}
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.leadInLineLen ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || val === '-' || !isNaN(val)) {
+                            handleFieldChange('leadInLineLen', val);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!formData.leadInLineLen) handleFieldChange('leadInLineLen', 5);
+                        }}
                         style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                       />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '11.5px', color: '#475569' }}>Arc Radius (mm):</label>
                       <input
-                        type="number"
-                        value={formData.leadInArcRad}
-                        onChange={(e) => handleFieldChange('leadInArcRad', parseFloat(e.target.value) || 5)}
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.leadInArcRad ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || val === '-' || !isNaN(val)) {
+                            handleFieldChange('leadInArcRad', val);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!formData.leadInArcRad) handleFieldChange('leadInArcRad', 5);
+                        }}
                         style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                       />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '11.5px', color: '#475569' }}>Sweep Angle (&deg;):</label>
                       <input
-                        type="number"
-                        value={formData.leadInSweepDeg}
-                        onChange={(e) => handleFieldChange('leadInSweepDeg', parseFloat(e.target.value) || 90)}
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.leadInSweepDeg ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || val === '-' || !isNaN(val)) {
+                            handleFieldChange('leadInSweepDeg', val);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!formData.leadInSweepDeg) handleFieldChange('leadInSweepDeg', 90);
+                        }}
                         style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                       />
                     </div>
@@ -1916,10 +2104,18 @@ export default function MastercamToolpathParametersModal({
                         Break Through Amount (mm):
                       </label>
                       <input
-                        type="number"
-                        step="0.5"
-                        value={formData.breakThroughAmount || 1.0}
-                        onChange={(e) => handleFieldChange('breakThroughAmount', parseFloat(e.target.value) || 1.0)}
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.breakThroughAmount ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || val === '-' || !isNaN(val)) {
+                            handleFieldChange('breakThroughAmount', val);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!formData.breakThroughAmount) handleFieldChange('breakThroughAmount', 1.0);
+                        }}
                         style={{ width: '140px', padding: '6px 10px', fontSize: '13px', border: '1px solid #0f5a9e', borderRadius: '3px', fontWeight: 700 }}
                       />
                       <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>

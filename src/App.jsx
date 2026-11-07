@@ -660,9 +660,25 @@ export default function App() {
           if (session.stockConfig) setStockConfig(session.stockConfig);
           if (session.tools && Array.isArray(session.tools) && session.tools.length > 0) {
             let loadedTools = [...session.tools];
-            const has12mm = loadedTools.some((t) => t.diameter === 12 && t.type === 'flat');
-            if (!has12mm) {
-              const upgradedT2 = {
+            const standardTools = [
+              {
+                id: 1,
+                number: 1,
+                name: '50mm Face Mill (Shell Mill)',
+                type: 'face',
+                diameter: 50,
+                cornerRad: 0,
+                fluteLength: 25,
+                overallLength: 75,
+                flutes: 5,
+                cuttingSpeedVc: 399,
+                rpm: 3500,
+                feedPerTooth: 0.09,
+                feedRate: 1200,
+                plungeRate: 350,
+                coolant: 'Flood'
+              },
+              {
                 id: 2,
                 number: 2,
                 name: '12mm Flat Endmill (Carbide Rougher)',
@@ -678,11 +694,40 @@ export default function App() {
                 feedRate: 1800,
                 plungeRate: 450,
                 coolant: 'Flood'
-              };
-              loadedTools = [
-                ...loadedTools.filter((t) => t.id !== 2 && t.number !== 2),
-                upgradedT2
-              ].sort((a, b) => a.number - b.number);
+              },
+              {
+                id: 3,
+                number: 3,
+                name: '10mm 4-Flute Flat Endmill (Finisher)',
+                type: 'flat',
+                diameter: 10,
+                cornerRad: 0,
+                fluteLength: 30,
+                overallLength: 75,
+                flutes: 4,
+                cuttingSpeedVc: 200,
+                rpm: 6000,
+                feedPerTooth: 0.06,
+                feedRate: 1528,
+                plungeRate: 450,
+                coolant: 'Flood'
+              }
+            ];
+
+            const t1 = loadedTools.find((t) => t.number === 1);
+            const t2 = loadedTools.find((t) => t.number === 2);
+            const t3 = loadedTools.find((t) => t.number === 3);
+
+            const needsUpgrade =
+              !t1 || t1.diameter !== 50 ||
+              !t2 || t2.diameter !== 12 ||
+              !t3 || t3.diameter !== 10 || t3.type !== 'flat';
+
+            if (needsUpgrade) {
+              const otherTools = loadedTools.filter(
+                (t) => ![1, 2, 3].includes(t.number) && ![1, 2, 3].includes(t.id)
+              );
+              loadedTools = [...standardTools, ...otherTools].sort((a, b) => a.number - b.number);
             }
             setTools(loadedTools);
           }
