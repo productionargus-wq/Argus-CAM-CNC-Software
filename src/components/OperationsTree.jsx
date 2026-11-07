@@ -467,13 +467,29 @@ export default function OperationsTree({
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2"><path d="M2 12c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /><path d="M2 6c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /><path d="M2 18c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /></svg>
             </button>
 
-            {/* 6. Toggle Stock Display */}
+            {/* 6. Select All Operations */}
             <button
-              onClick={onOpenStockModal}
-              style={{ width: '22px', height: '22px', background: 'transparent', border: '1px solid transparent', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              title="Toggle stock display / Stock setup"
+              onClick={() => {
+                if (activeOpId === 'all') {
+                  onSelectOp?.(operations[0]?.id || null);
+                } else {
+                  onSelectOp?.('all');
+                }
+              }}
+              style={{
+                width: '22px',
+                height: '22px',
+                background: activeOpId === 'all' ? '#dbeafe' : 'transparent',
+                border: activeOpId === 'all' ? '1px solid #93c5fd' : '1px solid transparent',
+                borderRadius: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+              title={activeOpId === 'all' ? "Unselect all operations" : "Select all operations (Toolpath Group-1)"}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#fbbf24" stroke="#b45309" strokeWidth="1"><rect x="3" y="4" width="18" height="16" rx="2" /><polyline points="7 12 10 15 17 8" stroke="#16a34a" strokeWidth="2" fill="none" /></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#fbbf24" stroke="#b45309" strokeWidth="1"><rect x="3" y="4" width="18" height="16" rx="2" /><polyline points="7 12 10 15 17 8" stroke="#16a34a" strokeWidth="2.5" fill="none" /></svg>
             </button>
 
             {/* 7. Toggle Shaded Display */}
@@ -659,9 +675,34 @@ export default function OperationsTree({
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {/* Root: Machine Group-1 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 600, color: '#0f172a' }}>
+              <div
+                onClick={() => {
+                  if (activeOpId === 'all') {
+                    onSelectOp?.(operations[0]?.id || null);
+                  } else {
+                    onSelectOp?.('all');
+                  }
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  fontWeight: 600,
+                  color: '#0f172a',
+                  cursor: 'pointer',
+                  background: activeOpId === 'all' ? '#dbeafe' : 'transparent',
+                  border: activeOpId === 'all' ? '1px solid #93c5fd' : '1px solid transparent',
+                  borderRadius: '2px',
+                  padding: '1px 3px',
+                  userSelect: 'none'
+                }}
+                title="Click to select all operations in Machine Group-1"
+              >
               <span
-                onClick={() => setMachineGroupExpanded(!machineGroupExpanded)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMachineGroupExpanded(!machineGroupExpanded);
+                }}
                 style={{ cursor: 'pointer', fontFamily: 'monospace', fontSize: '10px', color: '#64748b', width: '12px', textAlign: 'center' }}
               >
                 {machineGroupExpanded ? '[-]' : '[+]'}
@@ -717,9 +758,34 @@ export default function OperationsTree({
                 )}
 
                 {/* 2. Toolpath Group-1 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '4px' }}>
+                <div
+                  onClick={() => {
+                    if (activeOpId === 'all') {
+                      onSelectOp?.(operations[0]?.id || null);
+                    } else {
+                      onSelectOp?.('all');
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    marginTop: '4px',
+                    cursor: 'pointer',
+                    background: activeOpId === 'all' ? '#dbeafe' : 'transparent',
+                    border: activeOpId === 'all' ? '1px solid #93c5fd' : '1px solid transparent',
+                    borderRadius: '2px',
+                    padding: '2px 4px',
+                    userSelect: 'none',
+                    transition: 'background-color 0.15s'
+                  }}
+                  title="Click to select all operations in Toolpath Group-1"
+                >
                   <span
-                    onClick={() => setToolpathGroupExpanded(!toolpathGroupExpanded)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setToolpathGroupExpanded(!toolpathGroupExpanded);
+                    }}
                     style={{ cursor: 'pointer', fontFamily: 'monospace', fontSize: '10px', color: '#64748b', width: '12px', textAlign: 'center' }}
                   >
                     {toolpathGroupExpanded ? '[-]' : '[+]'}
@@ -727,13 +793,18 @@ export default function OperationsTree({
                   {/* Cyan circles cluster icon */}
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="#06b6d4"><circle cx="7" cy="7" r="4" /><circle cx="17" cy="7" r="4" /><circle cx="7" cy="17" r="4" /><circle cx="17" cy="17" r="4" /></svg>
                   <span style={{ fontWeight: 600, color: '#0f172a' }}>Toolpath Group-1</span>
+                  {activeOpId === 'all' && (
+                    <span style={{ marginLeft: 'auto', fontSize: '9px', fontWeight: 700, color: '#1e40af', background: '#bfdbfe', padding: '1px 5px', borderRadius: '3px', letterSpacing: '0.2px' }}>
+                      ALL SELECTED ({operations.length})
+                    </span>
+                  )}
                 </div>
 
                 {/* Operations List */}
                 {toolpathGroupExpanded && (
                   <div style={{ paddingLeft: '14px', borderLeft: '1px dotted #cbd5e1', marginLeft: '6px' }}>
                     {operations.map((op, idx) => {
-                      const isSelected = activeOpId === op.id;
+                      const isSelected = activeOpId === op.id || activeOpId === 'all';
                       const isExpanded = expandedOps[op.id] !== false;
 
                       return (
@@ -763,6 +834,11 @@ export default function OperationsTree({
                             >
                               {isExpanded ? '[-]' : '[+]'}
                             </span>
+
+                            {/* Checkmark when operation is selected */}
+                            {isSelected && (
+                              <span style={{ color: '#16a34a', fontWeight: 900, fontSize: '11px', marginRight: '1px', lineHeight: 1 }} title="Selected for backplot, verification and posting">✓</span>
+                            )}
 
                             {/* Folder Icon with Green/Yellow tab */}
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="#facc15" stroke="#ca8a04" strokeWidth="1"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><path d="M2 10h20" stroke="#16a34a" strokeWidth="2" /></svg>

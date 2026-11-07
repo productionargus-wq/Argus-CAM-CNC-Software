@@ -285,20 +285,24 @@ export default function App() {
   const [backplotMode, setBackplotMode] = useState('backplot'); // 'backplot' | 'verify'
 
   const handleStartBackplot = (opId = null) => {
-    const validOpId = typeof opId === 'number' ? opId : null;
+    const validOpId = (typeof opId === 'number' || opId === 'all') ? opId : null;
     if (validOpId) setActiveOpId(validOpId);
     setBackplotMode('backplot');
     setIsBackplotActive(true);
-    showToast("Backplot: In-Viewport 3D tool tracing initialized", "info");
+    showToast(validOpId === 'all' ? "Backplot: Tracing all operations in sequence" : "Backplot: In-Viewport 3D tool tracing initialized", "info");
   };
 
   const handleStartVerify = (opId = null, mode = 'verify') => {
-    const validOpId = typeof opId === 'number' ? opId : null;
+    const validOpId = (typeof opId === 'number' || opId === 'all') ? opId : null;
     if (validOpId) setActiveOpId(validOpId);
-    const targetMode = typeof opId === 'string' ? opId : (typeof mode === 'string' ? mode : 'verify');
+    const targetMode = (typeof opId === 'string' && opId !== 'all') ? opId : (typeof mode === 'string' ? mode : 'verify');
     setBackplotMode(targetMode);
     setIsBackplotActive(true);
-    showToast(targetMode === 'heatmap' ? "Tolerance Heatmap: Gouge & Excess inspection active" : "Solid Verify: Material removal simulation initialized", "info");
+    showToast(validOpId === 'all'
+      ? "Solid Verify: Material removal simulation across ALL operations initialized"
+      : (targetMode === 'heatmap' ? "Tolerance Heatmap: Gouge & Excess inspection active" : "Solid Verify: Material removal simulation initialized"),
+      "info"
+    );
   };
 
   // Feeds & Speeds Calculator State
@@ -1064,6 +1068,13 @@ export default function App() {
 
   // ================= Handlers =================
   const handleToggleOp = (id) => {
+    if (id === 'all' || id === null) {
+      setOperations((prev) => {
+        const anyVisible = prev.some((op) => op.visible !== false);
+        return prev.map((op) => ({ ...op, visible: !anyVisible }));
+      });
+      return;
+    }
     setOperations((prev) =>
       prev.map((op) => (op.id === id ? { ...op, visible: !op.visible } : op))
     );

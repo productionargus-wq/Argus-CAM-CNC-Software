@@ -146,6 +146,14 @@ export default function Viewport3D({
     setBackplotInternalMode(backplotMode || 'backplot');
   }, [backplotMode]);
 
+  useEffect(() => {
+    if (activeOpId === 'all' || activeOpId === null) {
+      setBackplotSelectedOpFilter('all');
+    } else if (typeof activeOpId === 'number') {
+      setBackplotSelectedOpFilter(String(activeOpId));
+    }
+  }, [activeOpId, isBackplotActive]);
+
   const [isDragOver, setIsDragOver] = useState(false);
   const [partMetrics, setPartMetrics] = useState(null);
 
