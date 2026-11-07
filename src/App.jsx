@@ -3977,6 +3977,7 @@ export default function App() {
         activeMachine={activeMachine}
         activeWcs={activeWcs}
         onNotify={showToast}
+        currentProjectName={currentProjectName}
       />
 
       {/* 7. Machine Kinematics Simulator Modal */}
@@ -4079,6 +4080,7 @@ export default function App() {
         stockConfig={stockConfig}
         partMetrics={partMetrics}
         currentModel={currentModel}
+        currentProjectName={currentProjectName}
       />
 
       {/* 12. Entity Analyzer CAD Inspector Modal */}

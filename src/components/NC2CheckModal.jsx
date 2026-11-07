@@ -19,9 +19,16 @@ export default function NC2CheckModal({
   currentModel = null,
   activeMachine = { name: "DMG MORI DMU 50", type: "5-Axis Mill-Turn" },
   activeWcs = 'G54',
-  onNotify = null
+  onNotify = null,
+  currentProjectName = 'Base_Structure-ALU.step'
 }) {
   const dialogRef = useRef(null);
+
+  const cleanProgName = useMemo(() => {
+    return currentProjectName
+      ? currentProjectName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_')
+      : 'Base_Structure_ALU';
+  }, [currentProjectName]);
 
   const [controller, setController] = useState(CONTROLLER_DIALECTS.HEIDENHAIN);
   const [tolerance, setTolerance] = useState('0.02');
@@ -108,7 +115,7 @@ export default function NC2CheckModal({
         stockConfig: stockConfig || {},
         partMetrics: partMetrics,
         controller: controller,
-        programName: 'DMU50_ZeroClamp_Job',
+        programName: cleanProgName,
         model: currentModel
       });
 
@@ -136,11 +143,11 @@ export default function NC2CheckModal({
       stockConfig,
       partMetrics,
       controller,
-      programName: 'DMU50_ZeroClamp_Job',
+      programName: cleanProgName,
       model: currentModel
     });
 
-    const filename = `DMU50_ZeroClamp_Job${active.fileExtension}`;
+    const filename = `${cleanProgName}${active.fileExtension}`;
     downloadNCFile(active.gcodeText, filename);
     if (onNotify) onNotify(`Downloaded ${filename}`, 'info');
   };
@@ -457,7 +464,7 @@ export default function NC2CheckModal({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <CheckCircle2 size={14} color="#10b981" />
                     <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      DMU50_ZeroClamp_Job{ncResult.fileExtension} &bull; Generated Successfully
+                      {cleanProgName}{ncResult.fileExtension} &bull; Generated Successfully
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '10px', fontSize: '10.5px', color: 'var(--text-secondary)' }}>

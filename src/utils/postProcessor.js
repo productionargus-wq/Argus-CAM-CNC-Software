@@ -88,7 +88,7 @@ export function generateNCProgram({
   }
 
   // 2. Process each enabled CAM Operation
-  operations.filter((op) => op.visible).forEach((op, opIndex) => {
+  operations.filter((op) => op.visible !== false).forEach((op, opIndex) => {
     // Probing cycle operations (Renishaw Inspection Plus / Haas WIPS)
     if (op.badgeClass === 'probe') {
       lines.push(``);

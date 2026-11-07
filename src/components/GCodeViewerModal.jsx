@@ -9,9 +9,14 @@ export default function GCodeViewerModal({
   tools,
   stockConfig,
   partMetrics,
-  defaultController = CONTROLLER_DIALECTS.HEIDENHAIN
+  defaultController = CONTROLLER_DIALECTS.HEIDENHAIN,
+  currentProjectName = 'Base_Structure-ALU.step'
 }) {
   const dialogRef = useRef(null);
+
+  const cleanProgName = currentProjectName
+    ? currentProjectName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_')
+    : 'Base_Structure_ALU';
 
   const [selectedController, setSelectedController] = useState(defaultController);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,11 +32,11 @@ export default function GCodeViewerModal({
         stockConfig,
         partMetrics,
         controller: selectedController,
-        programName: 'DMU50_ZeroClamp_Job'
+        programName: cleanProgName
       });
       setNcData(generated);
     }
-  }, [isOpen, selectedController, operations, tools, stockConfig, partMetrics]);
+  }, [isOpen, selectedController, operations, tools, stockConfig, partMetrics, cleanProgName]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -67,7 +72,7 @@ export default function GCodeViewerModal({
 
   const handleDownload = () => {
     if (!ncData) return;
-    const filename = `DMU50_ZeroClamp_Job${ncData.fileExtension}`;
+    const filename = `${cleanProgName}${ncData.fileExtension}`;
     downloadNCFile(ncData.gcodeText, filename);
   };
 
