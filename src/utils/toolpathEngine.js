@@ -405,27 +405,57 @@ export function generatePocketToolpath(bounds, tool, params = {}, model = null) 
 export function generateWaterlineToolpath(bounds, tool, params = {}, model = null) {
   bounds = resolveSafeBounds(bounds);
   const {
-    stepdown = 3.0,
-    rapidHeight = 15.0
+    stepdown = 1.0,
+    totalDepth = 5.0,
+    rapidHeight = 15.0,
+    chain = null
   } = params;
 
-  const toolRadius = (tool.diameter || 6) / 2;
+  const toolRadius = (tool.diameter || 10) / 2;
   const topY = bounds.max.y;
-  const bottomY = bounds.min.y;
+  const safeTotalDepth = Math.abs(Number(totalDepth)) || 5.0;
+  const safeStepdown = Math.abs(Number(stepdown)) || 1.0;
+  const bottomY = topY - safeTotalDepth;
 
   const cuttingLines = [];
   const rapidLines = [];
 
-  const centerX = (bounds.max.x + bounds.min.x) / 2;
-  const centerZ = (bounds.max.z + bounds.min.z) / 2;
+  const centerX = chain?.center?.x ?? ((bounds.max.x + bounds.min.x) / 2);
+  const centerZ = chain?.center?.z ?? ((bounds.max.z + bounds.min.z) / 2);
   const halfX = (bounds.max.x - bounds.min.x) / 2 + toolRadius;
   const halfZ = (bounds.max.z - bounds.min.z) / 2 + toolRadius;
 
-  for (let curY = topY; curY >= bottomY; curY -= stepdown) {
+  for (let curY = topY - safeStepdown; curY >= bottomY - 0.001; curY -= safeStepdown) {
     let slicedLoops = [];
 
-    // Attempt real 3D mesh slicing if model is present
-    if (model) {
+    // 1. Direct 2D Sketch Chain (Circle or Rectangle)
+    if (chain && chain.type === 'circle_loop' && chain.radius) {
+      const segs = 48;
+      const r = chain.radius + toolRadius;
+      const circleLoop = [];
+      for (let s = 0; s <= segs; s++) {
+        const theta = (s / segs) * Math.PI * 2;
+        circleLoop.push(new THREE.Vector3(
+          centerX + Math.cos(theta) * r,
+          curY,
+          centerZ + Math.sin(theta) * r
+        ));
+      }
+      slicedLoops = [circleLoop];
+    } else if (chain && chain.type === 'rectangle_loop' && chain.bounds) {
+      const bSize = chain.bounds.getSize(new THREE.Vector3());
+      const rectHalfW = (bSize.x / 2) + toolRadius;
+      const rectHalfD = (bSize.z / 2) + toolRadius;
+      const rectLoop = [
+        new THREE.Vector3(centerX - rectHalfW, curY, centerZ - rectHalfD),
+        new THREE.Vector3(centerX + rectHalfW, curY, centerZ - rectHalfD),
+        new THREE.Vector3(centerX + rectHalfW, curY, centerZ + rectHalfD),
+        new THREE.Vector3(centerX - rectHalfW, curY, centerZ + rectHalfD),
+        new THREE.Vector3(centerX - rectHalfW, curY, centerZ - rectHalfD)
+      ];
+      slicedLoops = [rectLoop];
+    } else if (model) {
+      // 2. Attempt real 3D mesh slicing if 3D model is present
       const segments = sliceMeshAtY(model, curY);
       if (segments.length > 0) {
         slicedLoops = chainSegmentsIntoLoops(segments, 0.8);
@@ -433,7 +463,7 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
     }
 
     if (slicedLoops.length > 0) {
-      // Use real sliced geometry contours with smooth lead-in / lead-out transitions
+      // Use real sliced / 2D sketch geometry contours with smooth lead-in / lead-out transitions
       slicedLoops.forEach((loop) => {
         if (loop.length < 2) return;
         const closedLoop = [...loop];
@@ -526,46 +556,50 @@ export function generateDrillingToolpath(bounds, tool, params = {}, model = null
  */
 export function generateCircleMillToolpath(bounds, tool, params = {}) {
   bounds = resolveSafeBounds(bounds);
-  const toolRadius = (tool.diameter || 12.0) / 2;
+  const toolRadius = (tool.diameter || 10.0) / 2;
   const {
     diameter = 50.8,
-    totalDepth = 50.8,
-    stepdown = 6.35,
+    totalDepth = 5.0,
+    stepdown = 1.0,
     rapidHeight = 15.0,
+    chain = null,
     center = { x: (bounds.min.x + bounds.max.x) / 2, y: bounds.max.y, z: (bounds.min.z + bounds.max.z) / 2 }
   } = params;
+
+  const actualDiameter = chain?.radius ? (chain.radius * 2) : diameter;
+  const actualCenter = chain?.center ? { x: chain.center.x, y: bounds.max.y, z: chain.center.z } : center;
 
   const cuttingLines = [];
   const rapidLines = [];
   const topY = bounds.max.y;
-  const finalR = Math.max(toolRadius * 1.05, (diameter / 2) - toolRadius);
+  const finalR = Math.max(toolRadius * 1.05, (actualDiameter / 2) - toolRadius);
 
   // Rapid approach to center
   rapidLines.push([
-    new THREE.Vector3(center.x, topY + rapidHeight, center.z),
-    new THREE.Vector3(center.x, topY + 2.0, center.z)
+    new THREE.Vector3(actualCenter.x, topY + rapidHeight, actualCenter.z),
+    new THREE.Vector3(actualCenter.x, topY + 2.0, actualCenter.z)
   ]);
 
   // Helical entry spiral down to depth
   const spiralR = Math.min(finalR * 0.5, toolRadius * 0.8);
-  const safeTotalDepth = Math.abs(Number(totalDepth)) || 50.8;
-  const safeStepdown = Math.abs(Number(stepdown)) || 6.35;
+  const safeTotalDepth = Math.abs(Number(totalDepth)) || 5.0;
+  const safeStepdown = Math.abs(Number(stepdown)) || 1.0;
   const totalRampLevels = Math.ceil(safeTotalDepth / safeStepdown);
   const segmentsPerRev = 32;
 
-  let lastPoint = new THREE.Vector3(center.x + spiralR, topY, center.z);
-  cuttingLines.push([new THREE.Vector3(center.x, topY + 2.0, center.z), lastPoint]);
+  let lastPoint = new THREE.Vector3(actualCenter.x + spiralR, topY, actualCenter.z);
+  cuttingLines.push([new THREE.Vector3(actualCenter.x, topY + 2.0, actualCenter.z), lastPoint]);
 
   for (let lvl = 1; lvl <= totalRampLevels; lvl++) {
     const curZ = Math.min(safeTotalDepth, lvl * safeStepdown);
-    const prevZ = (lvl - 1) * stepdown;
+    const prevZ = (lvl - 1) * safeStepdown;
     for (let s = 1; s <= segmentsPerRev; s++) {
       const theta = (s / segmentsPerRev) * Math.PI * 2;
       const interpZ = prevZ + (curZ - prevZ) * (s / segmentsPerRev);
       const pt = new THREE.Vector3(
-        center.x + Math.cos(theta) * spiralR,
+        actualCenter.x + Math.cos(theta) * spiralR,
         topY - interpZ,
-        center.z + Math.sin(theta) * spiralR
+        actualCenter.z + Math.sin(theta) * spiralR
       );
       cuttingLines.push([lastPoint, pt]);
       lastPoint = pt;
@@ -573,20 +607,20 @@ export function generateCircleMillToolpath(bounds, tool, params = {}) {
   }
 
   // Circular pocket expanding passes at each level
-  for (let curDepth = stepdown; curDepth <= totalDepth; curDepth += stepdown) {
+  for (let curDepth = safeStepdown; curDepth <= safeTotalDepth; curDepth += safeStepdown) {
     const yLevel = topY - curDepth;
     const radialPasses = Math.max(2, Math.ceil(finalR / (toolRadius * 0.75)));
     for (let p = 1; p <= radialPasses; p++) {
       const passR = (p / radialPasses) * finalR;
-      const passStart = new THREE.Vector3(center.x + passR, yLevel, center.z);
+      const passStart = new THREE.Vector3(actualCenter.x + passR, yLevel, actualCenter.z);
       cuttingLines.push([lastPoint, passStart]);
       lastPoint = passStart;
       for (let s = 1; s <= segmentsPerRev; s++) {
         const theta = (s / segmentsPerRev) * Math.PI * 2;
         const pt = new THREE.Vector3(
-          center.x + Math.cos(theta) * passR,
+          actualCenter.x + Math.cos(theta) * passR,
           yLevel,
-          center.z + Math.sin(theta) * passR
+          actualCenter.z + Math.sin(theta) * passR
         );
         cuttingLines.push([lastPoint, pt]);
         lastPoint = pt;

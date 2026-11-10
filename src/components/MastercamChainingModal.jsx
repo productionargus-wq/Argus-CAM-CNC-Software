@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import * as THREE from 'three';
 import {
   X,
   Check,
@@ -12,21 +13,53 @@ import {
   MoveDown,
   MousePointer
 } from 'lucide-react';
+import { extractClosedChainsFromCAD } from '../utils/cadDrawingEngine';
 
 export default function MastercamChainingModal({
   isOpen,
   onClose,
   onAcceptChains,
-  onNotify
+  onNotify,
+  customGeometry = []
 }) {
   const [chainMode, setChainMode] = useState('wireframe'); // 'wireframe' | 'solids'
   const [selectMethod, setSelectMethod] = useState('chain'); // 'chain' | 'partial' | 'window' | 'point'
-  const [chains, setChains] = useState([
-    { id: 1, name: 'Chain 1 - Exterior Stepped Profile (Closed)', direction: 'Climb (CW)', entities: 8, color: '#38bdf8' },
-    { id: 2, name: 'Chain 2 - Center Triangular Pocket (Closed)', direction: 'Climb (CCW)', entities: 3, color: '#a855f7' },
-    { id: 3, name: 'Chain 3 - 7x Bolt Hole Points (Pattern)', direction: 'Point Order', entities: 7, color: '#10b981' }
-  ]);
+  const [chains, setChains] = useState([]);
   const [activeChainId, setActiveChainId] = useState(1);
+
+  useEffect(() => {
+    if (customGeometry && customGeometry.length > 0) {
+      const realChains = extractClosedChainsFromCAD(customGeometry);
+      if (realChains.length > 0) {
+        const formatted = realChains.map((rc, idx) => {
+          let desc = rc.name || `Chain ${idx + 1}`;
+          if (rc.type === 'circle_loop') {
+            desc = `Chain ${idx + 1} - Circle (Ø${(rc.radius * 2).toFixed(1)}mm, Center X${rc.center.x.toFixed(1)} Y${rc.center.z.toFixed(1)})`;
+          } else if (rc.type === 'rectangle_loop') {
+            const size = rc.bounds.getSize(new THREE.Vector3());
+            desc = `Chain ${idx + 1} - Rectangle (${size.x.toFixed(1)} x ${size.z.toFixed(1)}mm)`;
+          }
+          return {
+            id: idx + 1,
+            name: desc,
+            direction: 'Climb (CW)',
+            entities: rc.points?.length || 4,
+            color: rc.type === 'circle_loop' ? '#0284c7' : '#10b981',
+            rawChain: rc
+          };
+        });
+        setChains(formatted);
+        setActiveChainId(1);
+        return;
+      }
+    }
+    // Fallback if no custom geometry
+    setChains([
+      { id: 1, name: 'Chain 1 - Exterior Stepped Profile (Closed)', direction: 'Climb (CW)', entities: 8, color: '#38bdf8' },
+      { id: 2, name: 'Chain 2 - Center Triangular Pocket (Closed)', direction: 'Climb (CCW)', entities: 3, color: '#a855f7' },
+      { id: 3, name: 'Chain 3 - 7x Bolt Hole Points (Pattern)', direction: 'Point Order', entities: 7, color: '#10b981' }
+    ]);
+  }, [customGeometry, isOpen]);
 
   if (!isOpen) return null;
 

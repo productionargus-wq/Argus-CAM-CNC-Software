@@ -1283,6 +1283,17 @@ export default function App() {
     let newOp;
 
     const s = String(strategy || 'pocket').toLowerCase();
+    const chains = extractClosedChainsFromCAD(customGeometry);
+    const latestChain = chains.length > 0 ? chains[chains.length - 1] : null;
+
+    if (latestChain && latestChain.bounds && !partMetrics) {
+      setPartMetrics({
+        box: latestChain.bounds,
+        bounds: latestChain.bounds,
+        dimensions: latestChain.bounds.getSize(new THREE.Vector3()),
+        triangles: 12
+      });
+    }
 
     if (s === 'facing' || s === 'face') {
       newOp = {
@@ -1303,35 +1314,41 @@ export default function App() {
     } else if (s === 'contour' || s === 'wireframe_contour') {
       newOp = {
         id: nextId,
-        name: `2D Contour Profile ${nextId}`,
-        toolId: 2,
-        toolName: 'T2 - 8mm Endmill',
+        name: latestChain ? `2D Contour (${latestChain.name || 'Drawn Sketch'})` : `2D Contour Profile ${nextId}`,
+        toolId: 1,
+        toolName: 'T1 - 10mm Flat Endmill',
         badgeClass: 'contour',
         badgeText: 'CT',
         visible: true,
+        chain: latestChain,
+        bounds: latestChain?.bounds,
         stepoverPct: 40,
-        stepdown: 3.0,
-        totalDepth: 12.0,
-        stockToLeaveXY: 0.1,
+        stepdown: 1.0,
+        totalDepth: 5.0,
+        stockToLeaveXY: 0.0,
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
     } else if (s === 'circlemill' || s === 'circle_mill') {
+      const circDia = latestChain?.radius ? (latestChain.radius * 2) : 50.0;
       newOp = {
         id: nextId,
-        name: `Circle Mill / Bore ${nextId}`,
-        toolId: 2,
-        toolName: 'T2 - 1/2" Flat Endmill',
+        name: `Circle Mill / Bore Ø${circDia.toFixed(1)}mm ${nextId}`,
+        toolId: 1,
+        toolName: 'T1 - 10mm Flat Endmill',
         badgeClass: 'circlemill',
         badgeText: 'CM',
         visible: true,
-        diameter: 50.8,
+        diameter: circDia,
+        chain: latestChain,
+        bounds: latestChain?.bounds,
+        center: latestChain?.center,
         stepoverPct: 50,
-        stepdown: 6.35,
-        totalDepth: 50.8,
+        stepdown: 1.0,
+        totalDepth: 5.0,
         stockToLeaveXY: 0.0,
         stockToLeaveZ: 0.0,
-        rapidHeight: 25.0
+        rapidHeight: 15.0
       };
     } else if (s === 'spotdrill' || s === 'spot_drill' || s === 'spot') {
       newOp = {
@@ -1516,16 +1533,18 @@ export default function App() {
       // Default: Dynamic Pocket Pass
       newOp = {
         id: nextId,
-        name: `Dynamic Pocket Pass ${nextId}`,
-        toolId: 2,
-        toolName: 'T2 - 8mm Endmill',
+        name: latestChain ? `Dynamic Pocket (${latestChain.name || 'Drawn Sketch'})` : `Dynamic Pocket Pass ${nextId}`,
+        toolId: 1,
+        toolName: 'T1 - 10mm Flat Endmill',
         badgeClass: 'pocket',
         badgeText: 'PK',
         visible: true,
+        chain: latestChain,
+        bounds: latestChain?.bounds,
         stepoverPct: 50,
-        stepdown: 4.0,
-        totalDepth: 12.0,
-        stockToLeaveXY: 0.2,
+        stepdown: 1.0,
+        totalDepth: 5.0,
+        stockToLeaveXY: 0.0,
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
@@ -2925,7 +2944,7 @@ export default function App() {
     }
 
     if (drillPoints.length > 0 && chains.length === 0) {
-      const nextId = operations.length + 1;
+      const nextId = operations.length > 0 ? Math.max(...operations.map((o) => o.id)) + 1 : 1;
       const newOp = {
         id: nextId,
         name: `Drill Cycle (${drillPoints.length} Holes) - Custom Sketch`,
@@ -2934,8 +2953,8 @@ export default function App() {
         badgeClass: 'drill',
         badgeText: 'DR',
         visible: true,
-        stepdown: 4.0,
-        totalDepth: 20.0,
+        stepdown: 1.0,
+        totalDepth: 5.0,
         rapidHeight: 15.0
       };
       setOperations((prev) => [...prev, newOp]);
@@ -2947,18 +2966,35 @@ export default function App() {
     }
 
     const chain = chains[chains.length - 1];
-    const nextId = operations.length + 1;
+    const isCircle = chain.type === 'circle_loop';
+    const nextId = operations.length > 0 ? Math.max(...operations.map((o) => o.id)) + 1 : 1;
+    const diameter = isCircle ? (chain.radius * 2) : 50;
+
+    if (chain.bounds) {
+      setPartMetrics({
+        box: chain.bounds,
+        bounds: chain.bounds,
+        dimensions: chain.bounds.getSize(new THREE.Vector3()),
+        triangles: 12
+      });
+    }
+
     const newOp = {
       id: nextId,
-      name: `Dynamic Pocket (${chain.name || 'Drawn Sketch'})`,
-      toolId: 2,
-      toolName: 'T2 - 8mm Endmill',
-      badgeClass: 'pocket',
-      badgeText: 'PK',
+      name: isCircle
+        ? `Circle Mill (Ø${diameter.toFixed(1)}mm) - Sketch`
+        : `2D Contour (${chain.name || 'Drawn Rectangle'})`,
+      toolId: 1,
+      toolName: 'T1 - 10mm Flat Endmill',
+      badgeClass: isCircle ? 'circlemill' : 'contour',
+      badgeText: isCircle ? 'CM' : 'CT',
       visible: true,
-      stepoverPct: 50,
-      stepdown: 4.0,
-      totalDepth: 12.0,
+      chain: chain,
+      bounds: chain.bounds,
+      center: chain.center,
+      diameter: diameter,
+      stepdown: 1.0,
+      totalDepth: 5.0,
       stockToLeaveXY: 0.0,
       stockToLeaveZ: 0.0,
       rapidHeight: 15.0
@@ -2967,7 +3003,49 @@ export default function App() {
     setActiveOpId(nextId);
     setActiveRibbonTab('Toolpaths');
     setIsSketchModeActive(false);
-    showToast(`Generated CNC Dynamic Pocket from sketched ${chain.type.replace('_', ' ')}!`, 'success');
+    showToast(`Generated CNC ${isCircle ? 'Circle Mill' : 'Contour'} Toolpath from sketched ${chain.type.replace('_', ' ')}! Ready for G-code posting.`, 'success');
+  };
+
+  const handleAcceptChains = (acceptedChains) => {
+    if (!acceptedChains || acceptedChains.length === 0) return;
+    const newOps = [];
+    acceptedChains.forEach((c, idx) => {
+      const raw = c.rawChain;
+      const nextId = operations.length > 0 ? Math.max(...operations.map((o) => o.id)) + 1 + idx : 1 + idx;
+      const isCircle = raw?.type === 'circle_loop';
+      const diameter = isCircle ? (raw.radius * 2) : 50;
+
+      if (raw?.bounds) {
+        setPartMetrics({
+          box: raw.bounds,
+          bounds: raw.bounds,
+          dimensions: raw.bounds.getSize(new THREE.Vector3()),
+          triangles: 12
+        });
+      }
+
+      newOps.push({
+        id: nextId,
+        name: isCircle ? `Circle Mill (Ø${diameter.toFixed(1)}mm) - Chain ${c.id}` : `2D Contour (${raw?.name || `Chain ${c.id}`})`,
+        toolId: 1,
+        toolName: 'T1 - 10mm Flat Endmill',
+        badgeClass: isCircle ? 'circlemill' : 'contour',
+        badgeText: isCircle ? 'CM' : 'CT',
+        visible: true,
+        chain: raw,
+        bounds: raw?.bounds,
+        center: raw?.center,
+        diameter: diameter,
+        stepdown: 1.0,
+        totalDepth: 5.0,
+        rapidHeight: 15.0
+      });
+    });
+
+    setOperations((prev) => [...prev, ...newOps]);
+    if (newOps.length > 0) setActiveOpId(newOps[0].id);
+    setActiveRibbonTab('Toolpaths');
+    showToast(`Mastercam Chaining: Created ${newOps.length} Toolpath Operation(s) from Sketch!`, 'success');
   };
 
   const handleGenerateToolpathsFromBoard = (shapes, boardStock) => {
@@ -4155,6 +4233,7 @@ export default function App() {
         activeWcs={activeWcs}
         onNotify={showToast}
         currentProjectName={currentProjectName}
+        customGeometry={customGeometry}
       />
 
       {/* 7. Machine Kinematics Simulator Modal */}
@@ -4242,9 +4321,8 @@ export default function App() {
       <MastercamChainingModal
         isOpen={isMastercamChainingModalOpen}
         onClose={() => setIsMastercamChainingModalOpen(false)}
-        onAcceptChains={(chains) => {
-          showToast(`Chaining: Selected ${chains.length} closed contour loops`, 'success');
-        }}
+        customGeometry={customGeometry}
+        onAcceptChains={handleAcceptChains}
         onNotify={showToast}
       />
 

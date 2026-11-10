@@ -113,69 +113,75 @@ export function generateNCProgram({
       feedRate: 1200
     };
 
+    const effectiveBounds = op.bounds || bounds;
+
     // Calculate trajectory data
     let toolpathData;
     if (op.badgeClass === 'face') {
-      toolpathData = generateFacingToolpath(bounds, tool, {
+      toolpathData = generateFacingToolpath(effectiveBounds, tool, {
         stepoverPct: op.stepoverPct || 65,
         faceAllowance: stockConfig?.allowanceTop || 2.0,
         depthOfCut: op.stepdown || 1.0,
         rapidHeight: op.rapidHeight || 15.0
       });
     } else if (op.badgeClass === 'pocket') {
-      toolpathData = generatePocketToolpath(bounds, tool, {
+      toolpathData = generatePocketToolpath(effectiveBounds, tool, {
         stepoverPct: op.stepoverPct || 50,
         totalDepth: op.totalDepth || 15.0,
         stepdown: op.stepdown || 5.0,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
     } else if (op.badgeClass === 'circlemill') {
-      toolpathData = generateCircleMillToolpath(bounds, tool, {
-        diameter: op.diameter || 50.8,
-        totalDepth: op.totalDepth || 50.8,
-        stepdown: op.stepdown || 6.35,
-        rapidHeight: op.rapidHeight || 15.0
+      toolpathData = generateCircleMillToolpath(effectiveBounds, tool, {
+        diameter: op.diameter || (op.chain?.radius ? op.chain.radius * 2 : 50.8),
+        totalDepth: op.totalDepth || 5.0,
+        stepdown: op.stepdown || 1.0,
+        rapidHeight: op.rapidHeight || 15.0,
+        chain: op.chain,
+        center: op.center || op.chain?.center
       });
     } else if (op.badgeClass === 'contour') {
-      toolpathData = generateWaterlineToolpath(bounds, tool, {
-        stepdown: op.stepdown || 3.0,
-        rapidHeight: op.rapidHeight || 15.0
+      toolpathData = generateWaterlineToolpath(effectiveBounds, tool, {
+        stepdown: op.stepdown || 1.0,
+        totalDepth: op.totalDepth || 5.0,
+        rapidHeight: op.rapidHeight || 15.0,
+        chain: op.chain
       }, model);
     } else if (op.badgeClass === 'swarf') {
-      toolpathData = generateSwarfToolpath(bounds, tool, {
+      toolpathData = generateSwarfToolpath(effectiveBounds, tool, {
         tiltAngleDeg: 15.0,
         passes: 2
       }, model);
     } else if (op.badgeClass === 'drill') {
-      toolpathData = generateDrillingToolpath(bounds, tool, {
+      toolpathData = generateDrillingToolpath(effectiveBounds, tool, {
         drillDepth: op.totalDepth || 25.0,
         peckDepth: op.stepdown || 5.0,
         rapidHeight: op.rapidHeight || 10.0
       }, model);
     } else if (op.badgeClass === 'spotdrill') {
-      toolpathData = generateSpotDrillToolpath(bounds, tool, {
+      toolpathData = generateSpotDrillToolpath(effectiveBounds, tool, {
         spotDepth: op.stepdown || op.totalDepth || 3.8,
         rapidHeight: op.rapidHeight || 10.0
       }, model);
     } else if (op.badgeClass === 'chamfer') {
-      toolpathData = generateChamferToolpath(bounds, tool, {
+      toolpathData = generateChamferToolpath(effectiveBounds, tool, {
         chamferWidth: op.chamferWidth || op.stepdown || 0.508,
         tipOffset: op.tipOffset || 1.27,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
     } else if (op.badgeClass === 'tap') {
-      toolpathData = generateTapToolpath(bounds, tool, {
+      toolpathData = generateTapToolpath(effectiveBounds, tool, {
         pitch: op.pitch || 0.79375,
         totalDepth: op.totalDepth || 12.19,
         rapidHeight: op.rapidHeight || 10.0
       }, model);
     } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
-      toolpathData = generateSurfaceParallelToolpath(bounds, tool, {
+      toolpathData = generateSurfaceParallelToolpath(effectiveBounds, tool, {
         stepoverPct: op.stepoverPct || 20,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
     } else if (op.badgeClass === 'adaptive' || op.badgeClass === 'dynamic') {
-      toolpathData = generateAdaptiveRoughingToolpath(bounds, tool, {
+      toolpathData = generateAdaptiveRoughingToolpath(effectiveBounds, tool, {
         stepoverPct: op.stepoverPct || 25,
         stepdown: op.stepdown || 18.0,
         totalDepth: op.totalDepth || 20.0,
@@ -226,21 +232,32 @@ export function generateNCProgram({
       }
     }
 
-    let lastPos = new THREE.Vector3(0, bounds.max.y + 50, 0);
+    // Top of workpiece coordinate datum (WCS Z=0)
+    // On CNC machines, Z0 is typically at the top surface of the workpiece.
+    const isWcsTop = stockConfig?.wcsZZero !== 'model_origin' || !model || !!op.chain;
+    const zOffset = isWcsTop ? effectiveBounds.max.y : 0;
+
+    let lastPos = new THREE.Vector3(0, effectiveBounds.max.y + (op.rapidHeight || 15.0), 0);
 
     // Initial Rapid Approach Move
     if (toolpathData.rapidLines.length > 0) {
       const firstRapid = toolpathData.rapidLines[0][0];
+      const rapidZ = (firstRapid.y - zOffset).toFixed(3);
       if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
-        lines.push(`${nextN()} L X${firstRapid.x.toFixed(3)} Y${firstRapid.z.toFixed(3)} Z${firstRapid.y.toFixed(3)} FMAX M08`);
+        lines.push(`${nextN()} L X${firstRapid.x.toFixed(3)} Y${firstRapid.z.toFixed(3)} FMAX M08`);
+        lines.push(`${nextN()} L Z+${rapidZ} FMAX`);
+      } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
+        lines.push(`${nextN()} G00 X${firstRapid.x.toFixed(3)} Y${firstRapid.z.toFixed(3)}`);
+        lines.push(`${nextN()} G00 Z${rapidZ}`);
       } else {
-        lines.push(`${nextN()} G00 X${firstRapid.x.toFixed(3)} Y${firstRapid.z.toFixed(3)} Z${firstRapid.y.toFixed(3)}`);
+        lines.push(`${nextN()} G00 X${firstRapid.x.toFixed(3)} Y${firstRapid.z.toFixed(3)}`);
+        lines.push(`${nextN()} G00 Z${rapidZ}`);
       }
       lastPos = firstRapid;
     }
 
-    // Emit Cutting Passes (G01 / G02 / G03)
-    toolpathData.cuttingLines.slice(0, 80).forEach(([p1, p2], idx) => {
+    // Emit Cutting Passes (G01 / G02 / G03) - full cutting passes emitted without cutoff
+    toolpathData.cuttingLines.forEach(([p1, p2], idx) => {
       const dist = p1.distanceTo(p2);
       totalCuttingDistanceMm += dist;
 
@@ -259,7 +276,7 @@ export function generateNCProgram({
       // Coordinate mapping: Three.js Y is CNC Vertical Z; Three.js Z is CNC Table Y!
       const cncX = p2.x.toFixed(3);
       const cncY = p2.z.toFixed(3);
-      const cncZ = p2.y.toFixed(3);
+      const cncZ = (p2.y - zOffset).toFixed(3);
 
       const tp = toolpathData.trajectoryPoints?.[idx];
 
@@ -293,22 +310,25 @@ export function generateNCProgram({
     });
 
     // Operation Retract
+    const retractZ = isWcsTop ? (op.rapidHeight || 15.0).toFixed(3) : (effectiveBounds.max.y + 40).toFixed(3);
     if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} FUNCTION RESET TCPM`);
         lines.push(`${nextN()} PLANE RESET STAY`);
       }
-      lines.push(`${nextN()} L Z+${(bounds.max.y + 40).toFixed(3)} FMAX M09`);
+      lines.push(`${nextN()} L Z+${retractZ} FMAX M09`);
     } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} TRAFOOF ; TCP OFF`);
       }
-      lines.push(`${nextN()} G00 Z${(bounds.max.y + 40).toFixed(3)} M09`);
+      lines.push(`${nextN()} G00 Z${retractZ} M09`);
     } else {
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} G49 ; CANCEL 5-AXIS TCPM`);
+      } else if (op.badgeClass === 'contour' || op.badgeClass === 'chamfer') {
+        lines.push(`${nextN()} G40 ; CANCEL CUTTER RADIUS COMPENSATION`);
       }
-      lines.push(`${nextN()} G00 Z${(bounds.max.y + 40).toFixed(3)} M09`);
+      lines.push(`${nextN()} G00 Z${retractZ} M09`);
     }
   });
 

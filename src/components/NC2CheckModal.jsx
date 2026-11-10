@@ -6,6 +6,7 @@ import {
 import { CONTROLLER_DIALECTS, generateNCProgram, downloadNCFile } from '../utils/postProcessor';
 import { checkToolpathCollisions } from '../utils/toolpathEngine';
 import { MACHINE_KINEMATICS } from '../utils/machineKinematics.js';
+import { extractClosedChainsFromCAD } from '../utils/cadDrawingEngine';
 
 export default function NC2CheckModal({
   isOpen,
@@ -20,7 +21,8 @@ export default function NC2CheckModal({
   activeMachine = { name: "DMG MORI DMU 50", type: "5-Axis Mill-Turn" },
   activeWcs = 'G54',
   onNotify = null,
-  currentProjectName = 'Base_Structure-ALU.step'
+  currentProjectName = 'Base_Structure-ALU.step',
+  customGeometry = []
 }) {
   const dialogRef = useRef(null);
 
@@ -101,16 +103,46 @@ export default function NC2CheckModal({
     }
   }, [partMetrics, limits]);
 
+  const effectiveOperations = useMemo(() => {
+    if (operations && operations.length > 0) return operations;
+    if (customGeometry && customGeometry.length > 0) {
+      const chains = extractClosedChainsFromCAD(customGeometry);
+      if (chains.length > 0) {
+        return chains.map((c, idx) => {
+          const isCircle = c.type === 'circle_loop';
+          const diameter = isCircle ? (c.radius * 2) : 50;
+          return {
+            id: idx + 1,
+            name: isCircle ? `Circle Mill (Ø${diameter.toFixed(1)}mm)` : `2D Contour (${c.name || `Chain ${idx + 1}`})`,
+            toolId: 1,
+            toolName: 'T1 - 10mm Flat Endmill',
+            badgeClass: isCircle ? 'circlemill' : 'contour',
+            badgeText: isCircle ? 'CM' : 'CT',
+            visible: true,
+            chain: c,
+            bounds: c.bounds,
+            center: c.center,
+            diameter: diameter,
+            stepdown: 1.0,
+            totalDepth: 5.0,
+            rapidHeight: 15.0
+          };
+        });
+      }
+    }
+    return [
+      { id: 1, name: '2D Facing Leveling', badgeClass: 'face', toolId: 1, visible: true },
+      { id: 2, name: '3D Waterline Contour', badgeClass: 'contour', toolId: 1, visible: true }
+    ];
+  }, [operations, customGeometry]);
+
   // Run Post-Processor
   const handleRunPost = () => {
     try {
       const result = generateNCProgram({
-        operations: operations.length > 0 ? operations : [
-          { id: 1, name: '2D Facing Leveling', badgeClass: 'face', toolId: 1, visible: true },
-          { id: 2, name: '3D Waterline Contour', badgeClass: 'contour', toolId: 1, visible: true }
-        ],
+        operations: effectiveOperations,
         tools: tools.length > 0 ? tools : [
-          { id: 1, number: 1, name: '10mm Endmill', diameter: 10, rpm: 8000, feedRate: 1500 }
+          { id: 1, number: 1, name: '10mm Flat Endmill', diameter: 10, rpm: 6000, feedRate: 1200 }
         ],
         stockConfig: stockConfig || {},
         partMetrics: partMetrics,
@@ -138,8 +170,10 @@ export default function NC2CheckModal({
       handleRunPost();
     }
     const active = ncResult || generateNCProgram({
-      operations,
-      tools,
+      operations: effectiveOperations,
+      tools: tools.length > 0 ? tools : [
+        { id: 1, number: 1, name: '10mm Flat Endmill', diameter: 10, rpm: 6000, feedRate: 1200 }
+      ],
       stockConfig,
       partMetrics,
       controller,
