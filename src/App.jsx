@@ -236,6 +236,16 @@ export default function App() {
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
   const [isSketchModeActive, setIsSketchModeActive] = useState(false);
   const [sketchTool, setSketchTool] = useState('line');
+  const [activeDrawingTool, setActiveDrawingTool] = useState(null);
+  const [circleParams, setCircleParams] = useState({
+    radius: 25.0,
+    diameter: 50.0,
+    isLocked: false,
+    entityMethod: 'manual',
+    center: { x: 0, y: 0, z: 0 }
+  });
+  const [activeCircleId, setActiveCircleId] = useState(null);
+  const [reselectTrigger, setReselectTrigger] = useState(0);
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
   const [surfacesModalTool, setSurfacesModalTool] = useState('plane');
   const [isSolidsModalOpen, setIsSolidsModalOpen] = useState(false);
@@ -2768,7 +2778,139 @@ export default function App() {
   const handleStartInteractiveSketch = (tool = 'line') => {
     setSketchTool(tool);
     setIsSketchModeActive(true);
-    showToast(`✏️ CAD Sketcher Active: Click & drag on 3D Viewport to draw ${tool.toUpperCase()} (Esc to exit)`, 'info');
+    if (tool === 'circle') {
+      setActiveDrawingTool('circle');
+      setActiveManagerTab('Circle Cent...');
+      setCircleParams((prev) => ({
+        ...prev,
+        radius: prev.radius || 25.0,
+        diameter: (prev.radius || 25.0) * 2
+      }));
+      setActiveCircleId(null);
+      showToast('Circle Center Point: Click and drag on canvas to draw circle', 'info');
+    } else {
+      setActiveDrawingTool(null);
+      showToast(`✏️ CAD Sketcher Active: Click & drag on 3D Viewport to draw ${tool.toUpperCase()} (Esc to exit)`, 'info');
+    }
+  };
+
+  const handleDrawingUpdate = (data) => {
+    if (data.tool === 'circle') {
+      setCircleParams((prev) => ({
+        ...prev,
+        radius: data.radius,
+        diameter: data.diameter,
+        center: data.center ? { x: data.center.x, y: data.center.y, z: data.center.z } : prev.center
+      }));
+      if (data.completed) {
+        setTimeout(() => {
+          setCustomGeometry((currentList) => {
+            const lastEntity = currentList[currentList.length - 1];
+            if (lastEntity && (lastEntity.userData?.type === 'circle' || lastEntity.name?.startsWith('Wireframe_Circle'))) {
+              setActiveCircleId(lastEntity.id || lastEntity.uuid || lastEntity.name);
+            }
+            return currentList;
+          });
+        }, 10);
+      }
+    }
+  };
+
+  const handleChangeCircleRadius = (newRadius) => {
+    setCircleParams((prev) => ({
+      ...prev,
+      radius: newRadius,
+      diameter: newRadius * 2
+    }));
+
+    if (activeCircleId) {
+      setCustomGeometry((prevList) => {
+        const targetIndex = prevList.findIndex(
+          (item) => (item.id || item.uuid || item.name) === activeCircleId
+        );
+        if (targetIndex >= 0) {
+          const oldEntity = prevList[targetIndex];
+          const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
+          const cx = Array.isArray(center) ? center[0] : (center.x || 0);
+          const cz = Array.isArray(center) ? center[1] : (center.z || 0);
+          const y = oldEntity.position?.y || center.y || 0;
+
+          const updatedCircle = createWireframeCircle(
+            newRadius,
+            y,
+            [cx, cz],
+            0,
+            360,
+            'G17',
+            { color: 0x38bdf8, name: `Wireframe_Circle_R${newRadius.toFixed(1)}` }
+          );
+          updatedCircle.id = activeCircleId;
+          const newList = [...prevList];
+          newList[targetIndex] = updatedCircle;
+          return newList;
+        }
+        return prevList;
+      });
+    }
+  };
+
+  const handleToggleCircleRadiusLock = () => {
+    setCircleParams((prev) => ({
+      ...prev,
+      isLocked: !prev.isLocked
+    }));
+  };
+
+  const handleChangeCircleEntityMethod = (method) => {
+    setCircleParams((prev) => ({
+      ...prev,
+      entityMethod: method
+    }));
+  };
+
+  const handleReselectCircleCenter = () => {
+    setReselectTrigger((prev) => prev + 1);
+    showToast('Click on canvas to pick new circle center point', 'info');
+  };
+
+  const handleApplyCircle = () => {
+    if (activeCircleId) {
+      setCustomGeometry((prevList) =>
+        prevList.map((item) => {
+          if ((item.id || item.uuid || item.name) === activeCircleId) {
+            if (item.material) item.material.color.setHex(0x1d4ed8);
+            return item;
+          }
+          return item;
+        })
+      );
+      setActiveCircleId(null);
+      showToast('Circle committed to Level 10. Ready for next circle.', 'success');
+    }
+  };
+
+  const handleOkCircle = () => {
+    handleApplyCircle();
+    setIsSketchModeActive(false);
+    setActiveDrawingTool(null);
+    setActiveManagerTab('Toolpaths');
+    showToast('Circle Center Point accepted on Level 10.', 'success');
+  };
+
+  const handleCancelCircle = () => {
+    if (activeCircleId) {
+      setCustomGeometry((prevList) =>
+        prevList.filter((item) => (item.id || item.uuid || item.name) !== activeCircleId)
+      );
+      setLevels((prev) =>
+        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
+      );
+    }
+    setActiveCircleId(null);
+    setIsSketchModeActive(false);
+    setActiveDrawingTool(null);
+    setActiveManagerTab('Toolpaths');
+    showToast('Circle creation cancelled.', 'info');
   };
 
   const handleGenerateToolpathFromSketch = () => {
@@ -2883,6 +3025,22 @@ export default function App() {
   };
 
   const handleAddCustomEntity = (entity) => {
+    // If drawing circles and another circle was active, commit previous circle to dark blue (Image 4)
+    if (activeDrawingTool === 'circle' && activeCircleId) {
+      setCustomGeometry((prev) =>
+        prev.map((item) => {
+          if ((item.id || item.uuid || item.name) === activeCircleId) {
+            if (item.material) item.material.color.setHex(0x1d4ed8);
+          }
+          return item;
+        })
+      );
+    }
+
+    if (activeDrawingTool === 'circle') {
+      setActiveCircleId(entity.id || entity.uuid || entity.name);
+    }
+
     setCustomGeometry((prev) => [...prev, entity]);
     const isWireframe = entity.name?.startsWith('Wireframe_') || entity.name?.startsWith('Drill_') || entity.name?.startsWith('Hole_') || entity.userData?.type === 'line' || entity.userData?.type === 'circle' || entity.userData?.type === 'arc' || entity.userData?.type === 'spline';
     if (isWireframe) {
@@ -3191,6 +3349,7 @@ export default function App() {
         onOpenChaining={() => setIsMastercamChainingModalOpen(true)}
         onStartInteractiveSketch={handleStartInteractiveSketch}
         isSketchModeActive={isSketchModeActive}
+        sketchTool={sketchTool}
         onOpenSurfacesModal={handleOpenSurfacesModal}
         onOpenSolidsModal={handleOpenSolidsModal}
         onOpenModelPrepModal={handleOpenModelPrepModal}
@@ -3366,6 +3525,15 @@ export default function App() {
           onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
           onOpenSurfaceFinishContour={() => setIsSurfaceFinishContourOpen(true)}
           onExportStockSTL={handleExportStockSTL}
+          activeDrawingTool={activeDrawingTool}
+          circleParams={circleParams}
+          onChangeCircleRadius={handleChangeCircleRadius}
+          onToggleCircleRadiusLock={handleToggleCircleRadiusLock}
+          onChangeCircleEntityMethod={handleChangeCircleEntityMethod}
+          onReselectCircleCenter={handleReselectCircleCenter}
+          onApplyCircle={handleApplyCircle}
+          onOkCircle={handleOkCircle}
+          onCancelCircle={handleCancelCircle}
         />
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
@@ -3433,6 +3601,10 @@ export default function App() {
                 onToggleCameraMode={setCameraMode}
                 onUpdateClippingPlane={setClippingPlane}
                 onChangeRenderMode={setRenderMode}
+                activeDrawingRadius={circleParams.radius}
+                isRadiusLocked={circleParams.isLocked}
+                onDrawingUpdate={handleDrawingUpdate}
+                reselectTrigger={reselectTrigger}
               />
             </div>
           </div>
@@ -3480,6 +3652,10 @@ export default function App() {
             onToggleCameraMode={setCameraMode}
             onUpdateClippingPlane={setClippingPlane}
             onChangeRenderMode={setRenderMode}
+            activeDrawingRadius={circleParams.radius}
+            isRadiusLocked={circleParams.isLocked}
+            onDrawingUpdate={handleDrawingUpdate}
+            reselectTrigger={reselectTrigger}
           />
         )}
       </div>
@@ -3506,6 +3682,7 @@ export default function App() {
         isSectionView={clippingPlane?.enabled}
         onToggleSectionView={() => setClippingPlane(cp => ({ ...cp, enabled: !cp?.enabled }))}
         unitSystem={unitSystem}
+        activeRadius={isSketchModeActive && (sketchTool === 'circle' || activeDrawingTool === 'circle') ? circleParams.radius : null}
         theme={theme}
       />
 

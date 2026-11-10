@@ -7,6 +7,7 @@ import {
   Wrench, CircleDot, Circle, Clock, Search, Ghost
 } from 'lucide-react';
 import ToolpathsContextMenu from './ToolpathsContextMenu';
+import CircleCenterPointPanel from './CircleCenterPointPanel';
 
 export default function OperationsTree({
   operations = [],
@@ -67,7 +68,16 @@ export default function OperationsTree({
   onOpenProbingStudio,
   onOpenSetupSheet,
   onOpenSurfaceFinishContour,
-  onExportStockSTL
+  onExportStockSTL,
+  activeDrawingTool = null,
+  circleParams = { radius: 25, isLocked: false, entityMethod: 'manual' },
+  onChangeCircleRadius,
+  onToggleCircleRadiusLock,
+  onChangeCircleEntityMethod,
+  onReselectCircleCenter,
+  onApplyCircle,
+  onOkCircle,
+  onCancelCircle
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
   const currentTab = activeManagerTab || localTab;
@@ -76,6 +86,17 @@ export default function OperationsTree({
     setLocalTab(tab);
     if (onSelectManagerTab) onSelectManagerTab(tab);
   };
+
+  // Sync tab with active drawing tool
+  useEffect(() => {
+    if (activeDrawingTool === 'circle') {
+      setLocalTab('Circle Cent...');
+      if (onSelectManagerTab) onSelectManagerTab('Circle Cent...');
+    } else if (localTab === 'Circle Cent...') {
+      setLocalTab('Toolpaths');
+      if (onSelectManagerTab) onSelectManagerTab('Toolpaths');
+    }
+  }, [activeDrawingTool]);
 
   // Tree Expansion States
   const [machineGroupExpanded, setMachineGroupExpanded] = useState(true);
@@ -196,7 +217,13 @@ export default function OperationsTree({
   };
 
   // Tabs matching Mastercam screenshot
-  const tabs = ['Toolpaths', 'Planes', 'Solids', 'Levels'];
+  const tabs = useMemo(() => {
+    const list = ['Toolpaths', 'Planes', 'Solids', 'Levels'];
+    if (activeDrawingTool === 'circle' || currentTab === 'Circle Cent...') {
+      list.push('Circle Cent...');
+    }
+    return list;
+  }, [activeDrawingTool, currentTab]);
 
   const displayPlanes = planes && planes.length > 0 ? planes : [
     { id: 'plane_top', name: 'Top (G17)', code: 'G17', desc: 'Spindle along Z, XY Table', isStandard: true, wcsCode: 'G54' },
@@ -408,7 +435,24 @@ export default function OperationsTree({
         })}
       </div>
 
-      {/* ================= 2. MASTERCAM 2-ROW ACTION TOOLBAR (ONLY ON TOOLPATHS TAB) ================= */}
+      {currentTab === 'Circle Cent...' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <CircleCenterPointPanel
+            radius={circleParams?.radius || 25}
+            onChangeRadius={onChangeCircleRadius}
+            isLocked={circleParams?.isLocked || false}
+            onToggleLock={onToggleCircleRadiusLock}
+            entityMethod={circleParams?.entityMethod || 'manual'}
+            onChangeEntityMethod={onChangeCircleEntityMethod}
+            onReselectCenter={onReselectCircleCenter}
+            onApply={onApplyCircle}
+            onOk={onOkCircle}
+            onCancel={onCancelCircle}
+          />
+        </div>
+      ) : (
+        <>
+          {/* ================= 2. MASTERCAM 2-ROW ACTION TOOLBAR (ONLY ON TOOLPATHS TAB) ================= */}
       {currentTab === 'Toolpaths' && (
         <div
           style={{
@@ -1141,6 +1185,8 @@ export default function OperationsTree({
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* ================= 4. HORIZONTAL SCROLLBAR CONTROLS ================= */}
       <div

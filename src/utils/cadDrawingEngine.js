@@ -155,7 +155,7 @@ export function createGhostPreview(tool, startPt, currentPt, options = {}) {
     group.add(line);
   } else if (tool === 'circle') {
     const radius = Math.max(0.5, startPt.distanceTo(currentPt));
-    const segments = 48;
+    const segments = 64;
     const pts = [];
     for (let i = 0; i <= segments; i++) {
       const theta = (i / segments) * Math.PI * 2;
@@ -166,8 +166,16 @@ export function createGhostPreview(tool, startPt, currentPt, options = {}) {
       ));
     }
     const geo = new THREE.BufferGeometry().setFromPoints(pts);
-    const circle = new THREE.Line(geo, solidMaterial);
+    const circle = new THREE.Line(geo, dashedMaterial);
+    circle.computeLineDistances();
     group.add(circle);
+
+    // Center point marker dot
+    const centerDotGeo = new THREE.SphereGeometry(0.8, 8, 8);
+    const centerDotMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
+    const centerDot = new THREE.Mesh(centerDotGeo, centerDotMat);
+    centerDot.position.copy(startPt);
+    group.add(centerDot);
 
     // Radius guideline
     const radGeo = new THREE.BufferGeometry().setFromPoints([startPt, currentPt]);

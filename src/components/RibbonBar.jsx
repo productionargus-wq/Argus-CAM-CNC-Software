@@ -58,6 +58,7 @@ export default function RibbonBar({
   onOpenWireframeModal,
   onStartInteractiveSketch,
   isSketchModeActive = false,
+  sketchTool = 'line',
   onOpenSurfacesModal,
   onOpenSolidsModal,
   onOpenModelPrepModal,
@@ -947,7 +948,7 @@ export default function RibbonBar({
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
-                  className="ribbon-btn-large"
+                  className={`ribbon-btn-large ${isSketchModeActive && sketchTool === 'line' ? 'active' : ''}`}
                   onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('line') : (onOpenWireframeModal && onOpenWireframeModal('line'))}
                   title="Line Endpoints (L) - Create 2D/3D wireframe line between endpoints"
                 >
@@ -999,7 +1000,7 @@ export default function RibbonBar({
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
-                  className="ribbon-btn-large"
+                  className={`ribbon-btn-large ${isSketchModeActive && sketchTool === 'circle' ? 'active' : ''}`}
                   onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('circle') : (onOpenWireframeModal && onOpenWireframeModal('circle'))}
                   title="Circle Center Point (C) - Create circle by center coordinates and radius"
                 >
@@ -1059,7 +1060,7 @@ export default function RibbonBar({
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
-                  className="ribbon-btn-large"
+                  className={`ribbon-btn-large ${isSketchModeActive && sketchTool === 'rect' ? 'active' : ''}`}
                   onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('rect') : (onOpenWireframeModal && onOpenWireframeModal('rect'))}
                   title="Rectangle (R) - Create 2D wireframe rectangle or pocket boundary"
                 >

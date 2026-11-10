@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { parseSTLFile, calculatePartMetrics, createWireframeLine, createWireframeRect, createWireframeCircle, createPointMarker } from '../utils/cadGeometry';
 import { parseAnyCADFile } from '../utils/universalCadParser';
-import DrawingToolbarHUD from './DrawingToolbarHUD';
 import ScaleRulerHUD from './ScaleRulerHUD';
 import ViewGnomonHUD from './ViewGnomonHUD';
 import {
@@ -99,7 +98,11 @@ export default function Viewport3D({
   onUpdateClippingPlane,
   onChangeRenderMode,
   showArcCenters = true,
-  showEndpoints = false
+  showEndpoints = false,
+  activeDrawingRadius = null,
+  isRadiusLocked = false,
+  onDrawingUpdate = null,
+  reselectTrigger = 0
 }) {
   const isLight = theme !== 'dark';
   const mountRef = useRef(null);
@@ -166,6 +169,8 @@ export default function Viewport3D({
   const [sketchAnchor, setSketchAnchor] = useState(null);
   const [cursorCoords, setCursorCoords] = useState({ x: 0, y: 0, z: 0 });
   const [dimensionFeedback, setDimensionFeedback] = useState(null);
+  const [mouseScreenPos, setMouseScreenPos] = useState({ x: 0, y: 0 });
+  const [sketchPromptText, setSketchPromptText] = useState('Enter the center point');
   const [currentViewName, setCurrentViewName] = useState('Top');
   const [snapMode, setSnapMode] = useState('auto');
   const [isSnapLocked, setIsSnapLocked] = useState(false);
@@ -176,6 +181,9 @@ export default function Viewport3D({
   const sketchAnchorRef = useRef(null);
   const isSketchModeRef = useRef(isSketchModeActive);
   const activeSketchToolRef = useRef(sketchTool || 'line');
+  const activeDrawingRadiusRef = useRef(activeDrawingRadius);
+  const isRadiusLockedRef = useRef(isRadiusLocked);
+  const onDrawingUpdateRef = useRef(onDrawingUpdate);
   const gridSnapRef = useRef(true);
   const gridStepRef = useRef(5.0);
   const objectSnapRef = useRef(true);
@@ -183,10 +191,25 @@ export default function Viewport3D({
   const customGeometryRef = useRef(customGeometry);
   const onAddCustomEntityRef = useRef(onAddCustomEntity);
 
+  useEffect(() => { activeDrawingRadiusRef.current = activeDrawingRadius; }, [activeDrawingRadius]);
+  useEffect(() => { isRadiusLockedRef.current = isRadiusLocked; }, [isRadiusLocked]);
+  useEffect(() => { onDrawingUpdateRef.current = onDrawingUpdate; }, [onDrawingUpdate]);
+
+  useEffect(() => {
+    if (reselectTrigger > 0) {
+      sketchAnchorRef.current = null;
+      setSketchAnchor(null);
+      if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+      setDimensionFeedback(null);
+      setSketchPromptText('Enter the center point');
+    }
+  }, [reselectTrigger]);
+
   useEffect(() => {
     isSketchModeRef.current = isSketchModeActive;
     if (isSketchModeActive) {
       snapView('top');
+      setSketchPromptText(sketchTool === 'circle' ? 'Enter the center point' : 'Click & drag on canvas');
     } else {
       if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
       if (snapIndicatorGroupRef.current) snapIndicatorGroupRef.current.clear();
@@ -194,7 +217,7 @@ export default function Viewport3D({
       setSketchAnchor(null);
       setDimensionFeedback(null);
     }
-  }, [isSketchModeActive]);
+  }, [isSketchModeActive, sketchTool]);
 
   useEffect(() => {
     setActiveSketchTool(sketchTool);
@@ -362,6 +385,9 @@ export default function Viewport3D({
     // Mouse Drag Orbit & Pan
     let isDragging = false;
     let isPanning = false;
+    let isDrawingDrag = false;
+    let dragStartScreenX = 0;
+    let dragStartScreenY = 0;
     let prevMouseX = 0;
     let prevMouseY = 0;
     let spherical = new THREE.Spherical(340, Math.PI / 3.4, Math.PI / 4);
@@ -383,6 +409,9 @@ export default function Viewport3D({
 
         // Left-Click: CAD In-Viewport Drawing
         if (e.button === 0) {
+          dragStartScreenX = e.clientX;
+          dragStartScreenY = e.clientY;
+
           const localPt = getSketchIntersection(e);
           if (!localPt) return;
 
@@ -409,25 +438,42 @@ export default function Viewport3D({
             if (!sketchAnchorRef.current) {
               sketchAnchorRef.current = finalPt.clone();
               setSketchAnchor(finalPt.clone());
+              isDrawingDrag = true;
+              if (onDrawingUpdateRef.current) {
+                onDrawingUpdateRef.current({
+                  tool,
+                  center: finalPt.clone(),
+                  radius: (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) ? activeDrawingRadiusRef.current : 0,
+                  diameter: (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) ? activeDrawingRadiusRef.current * 2 : 0,
+                  isDragging: true
+                });
+              }
             } else {
+              // 2nd click of click-move-click
               const anchor = sketchAnchorRef.current;
               let newEntity = null;
 
-              if (tool === 'line') {
-                newEntity = createWireframeLine(
-                  [anchor.x, anchor.y, anchor.z],
-                  [finalPt.x, finalPt.y, finalPt.z],
-                  { color: 0xf43f5e }
-                );
+              if (tool === 'circle') {
+                let radius = Math.max(0.5, anchor.distanceTo(finalPt));
+                if (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) {
+                  radius = activeDrawingRadiusRef.current;
+                }
+                newEntity = createWireframeCircle(radius, anchor.y, [anchor.x, anchor.z], 0, 360, 'G17', { color: 0x38bdf8 });
+                if (onDrawingUpdateRef.current) {
+                  onDrawingUpdateRef.current({ tool, radius, diameter: radius * 2, center: anchor, completed: true });
+                }
               } else if (tool === 'rect') {
                 const w = Math.max(1, Math.abs(finalPt.x - anchor.x));
                 const d = Math.max(1, Math.abs(finalPt.z - anchor.z));
                 const cx = (anchor.x + finalPt.x) / 2;
                 const cz = (anchor.z + finalPt.z) / 2;
                 newEntity = createWireframeRect(w, d, anchor.y, 0, [cx, cz], { color: 0x4ade80 });
-              } else if (tool === 'circle') {
-                const radius = Math.max(1, anchor.distanceTo(finalPt));
-                newEntity = createWireframeCircle(radius, anchor.y, [anchor.x, anchor.z], 0, 360, 'G17', { color: 0x38bdf8 });
+              } else if (tool === 'line') {
+                newEntity = createWireframeLine(
+                  [anchor.x, anchor.y, anchor.z],
+                  [finalPt.x, finalPt.y, finalPt.z],
+                  { color: 0xf43f5e }
+                );
               }
 
               if (newEntity && onAddCustomEntityRef.current) {
@@ -438,9 +484,10 @@ export default function Viewport3D({
               setSketchAnchor(null);
               setDimensionFeedback(null);
               if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+              setSketchPromptText('Enter the center point');
             }
+            return;
           }
-          return;
         }
       }
 
@@ -468,6 +515,7 @@ export default function Viewport3D({
 
       // Sketch Mode Hover & Ghost Preview
       if (isSketchModeRef.current) {
+        setMouseScreenPos({ x: e.clientX, y: e.clientY });
         const localPt = getSketchIntersection(e);
         if (localPt) {
           let finalPt = localPt;
@@ -496,19 +544,51 @@ export default function Viewport3D({
             const anchor = sketchAnchorRef.current;
             const tool = activeSketchToolRef.current;
             sketchGhostGroupRef.current.clear();
-            const ghost = createGhostPreview(tool, anchor, finalPt);
-            sketchGhostGroupRef.current.add(ghost);
 
-            if (tool === 'line') {
-              const len = anchor.distanceTo(finalPt).toFixed(1);
-              setDimensionFeedback(`L: ${len} mm`);
-            } else if (tool === 'rect') {
-              const w = Math.abs(finalPt.x - anchor.x).toFixed(1);
-              const d = Math.abs(finalPt.z - anchor.z).toFixed(1);
-              setDimensionFeedback(`W: ${w} mm, D: ${d} mm`);
-            } else if (tool === 'circle') {
-              const r = anchor.distanceTo(finalPt).toFixed(1);
-              setDimensionFeedback(`R: ${r} mm (Ø ${(r * 2).toFixed(1)} mm)`);
+            if (tool === 'circle') {
+              let r = Math.max(0.5, anchor.distanceTo(finalPt));
+              if (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) {
+                r = activeDrawingRadiusRef.current;
+              }
+              const ghost = createGhostPreview(tool, anchor, finalPt);
+              sketchGhostGroupRef.current.add(ghost);
+
+              setDimensionFeedback(`R: ${r.toFixed(3)} mm (Ø ${(r * 2).toFixed(3)} mm)`);
+              setSketchPromptText(`Enter radius point (R: ${r.toFixed(3)} mm)`);
+
+              if (onDrawingUpdateRef.current) {
+                onDrawingUpdateRef.current({
+                  tool: 'circle',
+                  radius: r,
+                  diameter: r * 2,
+                  center: anchor,
+                  isDragging: isDrawingDrag
+                });
+              }
+            } else {
+              const ghost = createGhostPreview(tool, anchor, finalPt);
+              sketchGhostGroupRef.current.add(ghost);
+
+              if (tool === 'line') {
+                const len = anchor.distanceTo(finalPt).toFixed(1);
+                setDimensionFeedback(`L: ${len} mm`);
+                setSketchPromptText(`Enter end point (L: ${len} mm)`);
+              } else if (tool === 'rect') {
+                const w = Math.abs(finalPt.x - anchor.x).toFixed(1);
+                const d = Math.abs(finalPt.z - anchor.z).toFixed(1);
+                setDimensionFeedback(`W: ${w} mm, D: ${d} mm`);
+                setSketchPromptText(`Enter opposite corner (${w} x ${d} mm)`);
+              }
+            }
+          } else {
+            if (activeSketchToolRef.current === 'circle') {
+              setSketchPromptText('Enter the center point');
+            } else if (activeSketchToolRef.current === 'rect') {
+              setSketchPromptText('Enter first corner');
+            } else if (activeSketchToolRef.current === 'line') {
+              setSketchPromptText('Enter first point');
+            } else {
+              setSketchPromptText('Select point');
             }
           }
         }
@@ -523,9 +603,60 @@ export default function Viewport3D({
       }
     };
 
-    const onMouseUp = () => {
+    const onMouseUp = (e) => {
       isDragging = false;
       isPanning = false;
+
+      if (isSketchModeRef.current && isDrawingDrag) {
+        isDrawingDrag = false;
+        const dragDist = Math.hypot(e.clientX - dragStartScreenX, e.clientY - dragStartScreenY);
+
+        if (dragDist > 6 && sketchAnchorRef.current) {
+          const anchor = sketchAnchorRef.current;
+          const localPt = getSketchIntersection(e);
+          let finalPt = localPt || anchor;
+          if (objectSnapRef.current) {
+            const snap = snapToEntityPoints(finalPt, customGeometryRef.current, 5.0);
+            if (snap.snapped) finalPt = snap.point;
+          }
+
+          const tool = activeSketchToolRef.current;
+          let newEntity = null;
+
+          if (tool === 'circle') {
+            let radius = Math.max(0.5, anchor.distanceTo(finalPt));
+            if (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) {
+              radius = activeDrawingRadiusRef.current;
+            }
+            newEntity = createWireframeCircle(radius, anchor.y, [anchor.x, anchor.z], 0, 360, 'G17', { color: 0x38bdf8 });
+            if (onDrawingUpdateRef.current) {
+              onDrawingUpdateRef.current({ tool, radius, diameter: radius * 2, center: anchor, completed: true });
+            }
+          } else if (tool === 'rect') {
+            const w = Math.max(1, Math.abs(finalPt.x - anchor.x));
+            const d = Math.max(1, Math.abs(finalPt.z - anchor.z));
+            const cx = (anchor.x + finalPt.x) / 2;
+            const cz = (anchor.z + finalPt.z) / 2;
+            newEntity = createWireframeRect(w, d, anchor.y, 0, [cx, cz], { color: 0x4ade80 });
+          } else if (tool === 'line') {
+            newEntity = createWireframeLine(
+              [anchor.x, anchor.y, anchor.z],
+              [finalPt.x, finalPt.y, finalPt.z],
+              { color: 0xf43f5e }
+            );
+          }
+
+          if (newEntity && onAddCustomEntityRef.current) {
+            onAddCustomEntityRef.current(newEntity);
+          }
+
+          sketchAnchorRef.current = null;
+          setSketchAnchor(null);
+          setDimensionFeedback(null);
+          if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+          setSketchPromptText('Enter the center point');
+        }
+      }
     };
 
     const onWheel = (e) => {
@@ -1604,36 +1735,28 @@ export default function Viewport3D({
         </div>
       )}
 
-      {/* CAD Sketcher HUD Floating Toolbar */}
-      {isSketchModeActive && (
-        <DrawingToolbarHUD
-          theme={theme}
-          activeTool={activeSketchTool}
-          onChangeTool={(tool) => {
-            setActiveSketchTool(tool);
-            if (onChangeSketchTool) onChangeSketchTool(tool);
+      {/* Floating AutoCursor Prompt Tooltip (Matching Mastercam Image 3) */}
+      {isSketchModeActive && mouseScreenPos.x > 0 && mouseScreenPos.y > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            left: mouseScreenPos.x + 15,
+            top: mouseScreenPos.y + 15,
+            background: isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.92)',
+            border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+            padding: '2px 8px',
+            borderRadius: '3px',
+            fontSize: '11px',
+            fontWeight: 600,
+            color: isLight ? '#0f172a' : '#f8fafc',
+            pointerEvents: 'none',
+            zIndex: 9999,
+            whiteSpace: 'nowrap'
           }}
-          gridSnap={gridSnap}
-          onToggleGridSnap={() => setGridSnap(g => !g)}
-          gridStep={gridStep}
-          onChangeGridStep={(step) => setGridStep(step)}
-          objectSnap={objectSnap}
-          onToggleObjectSnap={() => setObjectSnap(o => !o)}
-          orthoLock={orthoLock}
-          onToggleOrthoLock={() => setOrthoLock(o => !o)}
-          drawnCount={customGeometry.length}
-          onClearDrawing={() => {
-            if (onClearWireframes) onClearWireframes();
-          }}
-          onFinishSketch={() => {
-            if (onToggleSketchMode) onToggleSketchMode(false);
-          }}
-          onGenerateToolpathFromSketch={() => {
-            if (onGenerateToolpathFromSketch) onGenerateToolpathFromSketch();
-          }}
-          cursorCoords={cursorCoords}
-          dimensionFeedback={dimensionFeedback}
-        />
+        >
+          {sketchPromptText}
+        </div>
       )}
 
       {/* Floating Section Cut Indicator Badge */}

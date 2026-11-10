@@ -13,11 +13,24 @@ export default function StatusBar({
   isSectionView = false,
   onToggleSectionView,
   unitSystem = 'imperial',
+  activeRadius = null,
   theme = 'light'
 }) {
   return (
     <footer className="app-statusbar" aria-label="Status Bar">
       <div className="status-left">
+        {/* Dynamic Radius Indicator (Mastercam CAD Mode) */}
+        {activeRadius !== null && activeRadius !== undefined && (
+          <>
+            <div className="status-item" style={{ background: 'rgba(2, 132, 199, 0.25)', padding: '2px 6px', borderRadius: '3px' }}>
+              <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: 700, fontFamily: 'monospace' }}>
+                Radius = {Number(activeRadius).toFixed(3)}
+              </span>
+            </div>
+            <div style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.2)' }} />
+          </>
+        )}
+
         {/* Section View */}
         <div className="status-item" style={{ cursor: 'pointer' }} onClick={onToggleSectionView}>
           <span style={{ color: '#94a3b8', fontSize: '10px' }}>SECTION VIEW:</span>
