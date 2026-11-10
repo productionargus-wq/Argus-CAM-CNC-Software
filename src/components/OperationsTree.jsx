@@ -118,10 +118,12 @@ export default function OperationsTree({
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
   const currentTab = activeManagerTab || localTab;
+  const isWireframeTool = ['Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent'].includes(currentTab);
 
   const handleTabClick = (tab) => {
-    setLocalTab(tab);
-    if (onSelectManagerTab) onSelectManagerTab(tab);
+    const mapped = tab === 'Recent Fu...' ? 'Recent Functions' : tab;
+    setLocalTab(mapped);
+    if (onSelectManagerTab) onSelectManagerTab(mapped);
   };
 
   // Sync tab with active drawing tool
@@ -135,7 +137,7 @@ export default function OperationsTree({
     } else if (activeDrawingTool === 'line') {
       setLocalTab('Line Endp...');
       if (onSelectManagerTab) onSelectManagerTab('Line Endp...');
-    } else if (activeDrawingTool === 'arctangent' || activeDrawingTool === 'arc') {
+    } else if (activeDrawingTool === 'arc_tangent' || activeDrawingTool === 'arctangent' || activeDrawingTool === 'arc') {
       setLocalTab('Arc Tangent');
       if (onSelectManagerTab) onSelectManagerTab('Arc Tangent');
     } else if (['Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent'].includes(localTab)) {
@@ -274,9 +276,10 @@ export default function OperationsTree({
     if (activeDrawingTool === 'line' || currentTab === 'Line Endp...') {
       list.push('Line Endp...');
     }
-    if (activeDrawingTool === 'arctangent' || activeDrawingTool === 'arc' || currentTab === 'Arc Tangent') {
+    if (activeDrawingTool === 'arc_tangent' || activeDrawingTool === 'arctangent' || activeDrawingTool === 'arc' || currentTab === 'Arc Tangent') {
       list.push('Arc Tangent');
     }
+    list.push('Recent Fu...');
     return list;
   }, [activeDrawingTool, currentTab]);
 
@@ -359,6 +362,7 @@ export default function OperationsTree({
       aria-label="Mastercam Toolpaths Manager"
     >
       {/* ================= 1. MASTERCAM PANEL HEADER ================= */}
+      {!isWireframeTool && (
       <div
         style={{
           height: '26px',
@@ -368,7 +372,8 @@ export default function OperationsTree({
           padding: '0 8px',
           borderBottom: '1px solid #cbd5e1',
           background: '#f1f5f9',
-          position: 'relative'
+          position: 'relative',
+          flexShrink: 0
         }}
       >
         <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
@@ -449,46 +454,7 @@ export default function OperationsTree({
           </div>
         )}
       </div>
-
-      {/* ================= 1b. TOP TABS (MATCHING SCREENSHOT) ================= */}
-      <div
-        style={{
-          height: '24px',
-          background: '#f1f5f9',
-          display: 'flex',
-          alignItems: 'center',
-          overflowX: 'auto',
-          borderBottom: '1px solid #cbd5e1',
-          padding: '0 4px',
-          gap: '2px'
-        }}
-      >
-        {tabs.map((tab) => {
-          const isActive = currentTab === tab;
-          return (
-            <button
-              key={tab}
-              onClick={() => handleTabClick(tab)}
-              style={{
-                background: isActive ? '#ffffff' : 'transparent',
-                color: isActive ? '#0f172a' : '#64748b',
-                fontWeight: isActive ? 600 : 400,
-                fontSize: '11px',
-                border: isActive ? '1px solid #cbd5e1' : '1px solid transparent',
-                borderBottom: isActive ? '1px solid #ffffff' : '1px solid transparent',
-                borderRadius: '3px 3px 0 0',
-                padding: '2px 7px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                position: 'relative',
-                top: '1px'
-              }}
-            >
-              {tab}
-            </button>
-          );
-        })}
-      </div>
+      )}
 
       {currentTab === 'Circle Cent...' ? (
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -830,12 +796,8 @@ export default function OperationsTree({
       >
         {/* ==================== A. TOOLPATHS TREE VIEW ==================== */}
         {currentTab === 'Toolpaths' && (
-          operations.length === 0 ? (
-            /* Blank Project: clean empty canvas list matching screenshot */
-            <div style={{ flex: 1, minHeight: '100%', padding: '8px' }} />
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {/* Root: Machine Group-1 */}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {/* Root: Machine Group-1 */}
               <div
                 onClick={() => {
                   if (activeOpId === 'all') {
@@ -964,7 +926,12 @@ export default function OperationsTree({
                 {/* Operations List */}
                 {toolpathGroupExpanded && (
                   <div style={{ paddingLeft: '14px', borderLeft: '1px dotted #cbd5e1', marginLeft: '6px' }}>
-                    {operations.map((op, idx) => {
+                    {operations.length === 0 ? (
+                      <div style={{ padding: '6px 4px', color: '#94a3b8', fontStyle: 'italic', fontSize: '10.5px' }}>
+                        (No operations created yet)
+                      </div>
+                    ) : (
+                      operations.map((op, idx) => {
                       const isSelected = activeOpId === op.id || activeOpId === 'all';
                       const isExpanded = expandedOps[op.id] !== false;
 
@@ -1075,7 +1042,7 @@ export default function OperationsTree({
                           )}
                         </div>
                       );
-                    })}
+                    }))}
 
                     {/* Red Insertion Arrow at the end if none selected */}
                     {insertIndex >= operations.length && (
@@ -1092,7 +1059,7 @@ export default function OperationsTree({
               </div>
             )}
           </div>
-        ))}
+        )}
 
         {/* ==================== B. SOLIDS TREE VIEW ==================== */}
         {currentTab === 'Solids' && (
@@ -1322,6 +1289,47 @@ export default function OperationsTree({
           <div style={{ width: '35%', height: '100%', background: '#94a3b8', borderRadius: '2px' }} />
         </div>
         <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0 }}>▶</button>
+      </div>
+
+      {/* ================= 5. MASTERCAM BOTTOM TABS STRIP (MATCHING IMAGES 1, 2, 3) ================= */}
+      <div
+        style={{
+          height: '24px',
+          background: '#f1f5f9',
+          display: 'flex',
+          alignItems: 'flex-end',
+          overflowX: 'auto',
+          borderTop: '1px solid #cbd5e1',
+          padding: '0 2px',
+          gap: '2px',
+          flexShrink: 0
+        }}
+      >
+        {tabs.map((tab) => {
+          const isActive = currentTab === tab || (tab === 'Recent Fu...' && currentTab === 'Recent Functions');
+          return (
+            <button
+              key={tab}
+              onClick={() => handleTabClick(tab)}
+              style={{
+                background: isActive ? '#ffffff' : '#e2e8f0',
+                color: isActive ? '#0f172a' : '#475569',
+                fontWeight: isActive ? 600 : 400,
+                fontSize: '10.5px',
+                border: isActive ? '1px solid #cbd5e1' : '1px solid transparent',
+                borderBottom: 'none',
+                borderRadius: '3px 3px 0 0',
+                padding: '2px 7px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                height: isActive ? '23px' : '20px',
+                lineHeight: '16px'
+              }}
+            >
+              {tab}
+            </button>
+          );
+        })}
       </div>
 
 

@@ -98,7 +98,10 @@ import {
 } from './utils/cadGeometry';
 import {
   exportProjectMCAM,
-  saveAutoSaveSnapshot
+  parseProjectMCAM,
+  saveAutoSaveSnapshot,
+  serializeCustomGeometry,
+  deserializeCustomGeometry
 } from './utils/projectStorage';
 import {
   saveWorkspaceSession,
@@ -324,6 +327,7 @@ export default function App() {
   const [editingOperation, setEditingOperation] = useState(null);
   const [isMastercamToolpathModalOpen, setIsMastercamToolpathModalOpen] = useState(false);
   const [isNewOperation, setIsNewOperation] = useState(false);
+  const isNewOperationRef = useRef(false);
   const [isMastercamChainingModalOpen, setIsMastercamChainingModalOpen] = useState(false);
 
   // In-Viewport Backplot & Solid Verify Simulation State
@@ -1327,34 +1331,56 @@ export default function App() {
   };
 
   const handleEditOp = (op) => {
-    setEditingOperation(op);
+    isNewOperationRef.current = false;
     setIsNewOperation(false);
+    setEditingOperation(op);
     setIsMastercamToolpathModalOpen(true);
   };
 
   const handleCloseToolpathModal = () => {
-    if (isNewOperation && editingOperation) {
+    if (isNewOperationRef.current && editingOperation) {
       setOperations((prev) => prev.filter((o) => o.id !== editingOperation.id));
       setActiveOpId(null);
     }
+    isNewOperationRef.current = false;
     setIsNewOperation(false);
     setIsMastercamToolpathModalOpen(false);
   };
 
   const handleSaveOperation = (updatedOp) => {
+    isNewOperationRef.current = false;
     setIsNewOperation(false);
+    setIsMastercamToolpathModalOpen(false);
     const assignedTool = tools.find((t) => t.id === Number(updatedOp.toolId));
-    setOperations((prev) =>
-      prev.map((op) =>
-        op.id === updatedOp.id
-          ? {
-              ...updatedOp,
-              toolName: assignedTool ? `T${assignedTool.number} - ${assignedTool.name}` : op.toolName,
-              visible: true
-            }
-          : op
-      )
-    );
+    setOperations((prev) => {
+      const exists = prev.some((op) => op.id === updatedOp.id);
+      let updated;
+      if (exists) {
+        updated = prev.map((op) =>
+          op.id === updatedOp.id
+            ? {
+                ...updatedOp,
+                toolName: assignedTool ? `T${assignedTool.number} - ${assignedTool.name}` : op.toolName,
+                visible: true
+              }
+            : op
+        );
+      } else {
+        updated = [
+          ...prev,
+          {
+            ...updatedOp,
+            toolName: assignedTool ? `T${assignedTool.number} - ${assignedTool.name}` : updatedOp.toolName,
+            visible: true
+          }
+        ];
+      }
+      pushSnapshot({ operations: updated });
+      return updated;
+    });
+    setActiveOpId(updatedOp.id);
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true }));
   };
 
   const handleQuickAddOp = (strategy) => {
@@ -1633,6 +1659,7 @@ export default function App() {
       setOperations((prev) => [...prev, newOp]);
       setActiveOpId(newOp.id);
       setEditingOperation(newOp);
+      isNewOperationRef.current = true;
       setIsNewOperation(true);
       setIsMastercamToolpathModalOpen(true);
     }
@@ -2165,6 +2192,22 @@ export default function App() {
   };
 
   const handleModelImported = async (modelGroup, filename, rawFile = null) => {
+    // If opening an MCAM project file, restore whole project rather than treating as raw solid part CAD
+    if (filename.toLowerCase().endsWith('.mcam') || modelGroup?.userData?.projectData) {
+      let pData = modelGroup?.userData?.projectData;
+      if (!pData && rawFile) {
+        try {
+          pData = await parseProjectMCAM(rawFile);
+        } catch (err) {
+          console.warn('Could not parse MCAM file in handleModelImported:', err);
+        }
+      }
+      if (pData) {
+        handleProjectLoaded(pData);
+        return;
+      }
+    }
+
     // 1. Set imported 3D CAD model and project name
     setCurrentModel(modelGroup);
     setCurrentProjectName(filename);
@@ -2562,9 +2605,13 @@ export default function App() {
       activeMachine,
       activeWcs,
       workpieceColor,
-      partTransform
+      partTransform,
+      customGeometry: serializeCustomGeometry(customGeometry),
+      partMetrics,
+      solidsList
     };
     exportProjectMCAM(projectData, currentProjectName);
+    showToast(`Saved Mastercam project: ${currentProjectName}`, 'success');
   };
 
   // Save Project As Handler (Custom filename and metadata)
@@ -2579,22 +2626,84 @@ export default function App() {
       activeMachine,
       activeWcs,
       workpieceColor,
-      partTransform
+      partTransform,
+      customGeometry: serializeCustomGeometry(customGeometry),
+      partMetrics,
+      solidsList
     };
     exportProjectMCAM(projectData, filename);
+    showToast(`Saved project as: ${filename}`, 'success');
   };
 
   // Restore project from uploaded file or recent list
   const handleProjectLoaded = (data) => {
+    if (!data) return;
     if (data.projectName) setCurrentProjectName(data.projectName);
     if (data.stockConfig) setStockConfig(data.stockConfig);
-    if (data.tools) setTools(data.tools);
-    if (data.operations) setOperations(data.operations);
+    if (data.tools && data.tools.length > 0) setTools(data.tools);
+
+    const rehydrateBox3 = (b) => {
+      if (!b || !b.min || !b.max) return null;
+      return new THREE.Box3(
+        new THREE.Vector3(b.min.x || 0, b.min.y || 0, b.min.z || 0),
+        new THREE.Vector3(b.max.x || 0, b.max.y || 0, b.max.z || 0)
+      );
+    };
+
+    if (data.operations) {
+      const hydratedOps = data.operations.map((op) => ({
+        ...op,
+        bounds: op.bounds ? rehydrateBox3(op.bounds) : null
+      }));
+      setOperations(hydratedOps);
+      if (hydratedOps.length > 0) {
+        setActiveOpId(hydratedOps[0].id);
+      }
+    }
     if (data.activeMachine?.id) setActiveMachineId(data.activeMachine.id);
     if (data.activeWcs) setActiveWcs(data.activeWcs);
     if (data.workpieceColor) setWorkpieceColor(data.workpieceColor);
     if (data.partTransform) setPartTransform(data.partTransform);
-    showToast(`Project ${data.projectName || data.filename || 'MCAM'} loaded successfully.`, 'success');
+
+    // Restore custom wireframes (circles, rectangles, lines, drill points)
+    let restoredGeo = [];
+    if (data.customGeometry && Array.isArray(data.customGeometry)) {
+      restoredGeo = deserializeCustomGeometry(data.customGeometry);
+      setCustomGeometry(restoredGeo);
+      // Update Level 10 count
+      setLevels((prev) =>
+        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: restoredGeo.length, count: restoredGeo.length } : lvl))
+      );
+    }
+
+    if (data.partMetrics) {
+      const reBox = rehydrateBox3(data.partMetrics.box || data.partMetrics.bounds);
+      setPartMetrics({
+        ...data.partMetrics,
+        box: reBox,
+        bounds: reBox
+      });
+    }
+    if (data.solidsList && Array.isArray(data.solidsList) && data.solidsList.length > 0) {
+      setSolidsList(data.solidsList);
+    }
+
+    // Ensure layers visible and switch to Toolpaths tab
+    setLayerVisibility((prev) => ({
+      ...prev,
+      toolpaths: true,
+      wireframe: true,
+      part: true,
+      stock: true
+    }));
+    setActiveManagerTab('Toolpaths');
+    pushSnapshot({
+      operations: data.operations,
+      customGeometry: restoredGeo,
+      solidsList: data.solidsList
+    });
+
+    showToast(`Project ${data.projectName || data.filename || 'MCAM'} loaded successfully with all toolpaths & wireframe geometry.`, 'success');
   };
 
   // Restore from Auto-Save
@@ -3024,7 +3133,30 @@ export default function App() {
   };
 
   const handleApplyCircle = () => {
-    if (activeCircleId) {
+    let createdNew = false;
+    if (!activeCircleId && circleParams.radius > 0) {
+      const cx = circleParams.center?.x || 0;
+      const cz = circleParams.center?.z || 0;
+      const cy = circleParams.center?.y || 0;
+      const newCirc = createWireframeCircle(
+        circleParams.radius,
+        cy,
+        [cx, cz],
+        0,
+        360,
+        'G17',
+        { color: 0x1d4ed8, name: `Wireframe_Circle_R${circleParams.radius.toFixed(1)}` }
+      );
+      setCustomGeometry((prev) => {
+        const next = [...prev, newCirc];
+        pushSnapshot({ customGeometry: next });
+        return next;
+      });
+      setLevels((prev) =>
+        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: (lvl.entities || 0) + 1, count: (lvl.count || 0) + 1 } : lvl))
+      );
+      createdNew = true;
+    } else if (activeCircleId) {
       setCustomGeometry((prevList) => {
         const next = prevList.map((item) => {
           if ((item.id || item.uuid || item.name) === activeCircleId) {
@@ -3037,6 +3169,9 @@ export default function App() {
         return next;
       });
       setActiveCircleId(null);
+      createdNew = true;
+    }
+    if (createdNew) {
       showToast('Circle committed to Level 10. Ready for next circle.', 'success');
     }
   };
@@ -3164,7 +3299,32 @@ export default function App() {
   };
 
   const handleApplyRect = () => {
-    if (activeRectId) {
+    let createdNew = false;
+    const w = Math.abs(rectParams.width || 80);
+    const h = Math.abs(rectParams.height || 50);
+
+    if (!activeRectId && w > 0 && h > 0) {
+      const cx = rectParams.firstCorner ? rectParams.firstCorner.x + (rectParams.secondCorner ? (rectParams.secondCorner.x - rectParams.firstCorner.x) / 2 : w / 2) : 0;
+      const cz = rectParams.firstCorner ? rectParams.firstCorner.z + (rectParams.secondCorner ? (rectParams.secondCorner.z - rectParams.firstCorner.z) / 2 : h / 2) : 0;
+      const cy = 0;
+      const newRect = createWireframeRect(
+        w,
+        h,
+        cy,
+        0,
+        [cx, cz],
+        { color: 0x1d4ed8, name: `Wireframe_Rect_${Math.round(w)}x${Math.round(h)}` }
+      );
+      setCustomGeometry((prev) => {
+        const next = [...prev, newRect];
+        pushSnapshot({ customGeometry: next });
+        return next;
+      });
+      setLevels((prev) =>
+        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: (lvl.entities || 0) + 1, count: (lvl.count || 0) + 1 } : lvl))
+      );
+      createdNew = true;
+    } else if (activeRectId) {
       setCustomGeometry((prevList) => {
         const next = prevList.map((item) => {
           if ((item.id || item.uuid || item.name) === activeRectId) {
@@ -3177,6 +3337,9 @@ export default function App() {
         return next;
       });
       setActiveRectId(null);
+      createdNew = true;
+    }
+    if (createdNew) {
       showToast('Rectangle committed to Level 10. Ready for next rectangle.', 'success');
     }
   };
@@ -4355,6 +4518,8 @@ export default function App() {
         operations={operations}
         stockConfig={stockConfig}
         currentModel={currentModel}
+        customGeometry={customGeometry}
+        partMetrics={partMetrics}
         solidsList={solidsList}
         levels={levels}
         planesList={planesList}

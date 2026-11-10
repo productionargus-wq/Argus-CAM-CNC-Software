@@ -86,11 +86,11 @@ export default function RectanglePanel({
         overflowY: 'auto'
       }}
     >
-      {/* 1. Header with Title & Action Controls */}
+      {/* 1. Mastercam Header: Title with Pin & Close */}
       <div
         style={{
-          minHeight: '34px',
-          padding: '4px 8px',
+          height: '28px',
+          padding: '0 8px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -98,38 +98,10 @@ export default function RectanglePanel({
           borderBottom: '1px solid #cbd5e1'
         }}
       >
+        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
+          Rectangle
+        </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
-            Rectangle
-          </span>
-        </div>
-
-        {/* Action Button Strip */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          {/* Help Button */}
-          <button
-            type="button"
-            title="Help on Rectangle"
-            style={{
-              width: '18px',
-              height: '18px',
-              borderRadius: '50%',
-              background: '#0284c7',
-              border: 'none',
-              color: '#ffffff',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 0
-            }}
-          >
-            ?
-          </button>
-
-          {/* Pin Icon */}
           <button
             type="button"
             title="Pin Panel"
@@ -146,86 +118,139 @@ export default function RectanglePanel({
               justifyContent: 'center'
             }}
           >
-            <Pin size={12} />
+            <Pin size={13} />
           </button>
-
-          {/* Mastercam 3-Action Circular Group: Apply (Blue), OK (Green), Cancel (Red) */}
-          <div
+          <button
+            type="button"
+            onClick={onCancel}
+            title="Close (Esc)"
             style={{
+              width: '18px',
+              height: '18px',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#64748b',
+              padding: 0,
               display: 'flex',
               alignItems: 'center',
-              gap: '3px',
-              background: '#1e293b',
-              borderRadius: '14px',
-              padding: '2px 4px'
+              justifyContent: 'center',
+              fontSize: '13px',
+              lineHeight: 1
             }}
           >
-            {/* Blue: OK and Create New Operation */}
-            <button
-              type="button"
-              onClick={onApply}
-              title="OK and Create New Operation"
-              style={{
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%',
-                background: '#0284c7',
-                border: '1px solid #38bdf8',
-                color: '#ffffff',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0
-              }}
-            >
-              <Check size={11} strokeWidth={3} />
-            </button>
+            ✕
+          </button>
+        </div>
+      </div>
 
-            {/* Green OK */}
-            <button
-              type="button"
-              onClick={onOk}
-              title="OK: Accept rectangle and close (Enter)"
-              style={{
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%',
-                background: '#16a34a',
-                border: '1px solid #4ade80',
-                color: '#ffffff',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0
-              }}
-            >
-              <Check size={11} strokeWidth={3} />
-            </button>
+      {/* 2. Mastercam Dark Action Bar (Matching Images 1, 3, 4) */}
+      <div
+        style={{
+          height: '34px',
+          background: '#2b2d31',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 8px',
+          borderBottom: '1px solid #1e2024'
+        }}
+      >
+        {/* Help Button (Blue Circle with ?) */}
+        <button
+          type="button"
+          title="Help on Rectangle"
+          style={{
+            width: '20px',
+            height: '20px',
+            borderRadius: '50%',
+            background: '#0284c7',
+            border: 'none',
+            color: '#ffffff',
+            fontSize: '12px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0
+          }}
+        >
+          ?
+        </button>
 
-            {/* Red Cancel */}
-            <button
-              type="button"
-              onClick={onCancel}
-              title="Cancel: Abort rectangle (Esc)"
-              style={{
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%',
-                background: '#dc2626',
-                border: '1px solid #f87171',
-                color: '#ffffff',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0
-              }}
-            >
-              <X size={11} strokeWidth={3} />
-            </button>
-          </div>
+        {/* Action Group: Blue (OK and Create New Operation), Green (OK), Red (Cancel) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          {/* Blue: OK and Create New Operation */}
+          <button
+            type="button"
+            onClick={onApply}
+            title="OK and Create New Operation"
+            style={{
+              width: '22px',
+              height: '22px',
+              borderRadius: '50%',
+              background: '#0284c7',
+              border: '1.5px solid #38bdf8',
+              color: '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </button>
+
+          {/* Green: OK */}
+          <button
+            type="button"
+            onClick={onOk}
+            title="OK: Accept rectangle and close (Enter)"
+            style={{
+              width: '22px',
+              height: '22px',
+              borderRadius: '50%',
+              background: '#16a34a',
+              border: '1.5px solid #4ade80',
+              color: '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+            }}
+          >
+            <Check size={14} strokeWidth={3} />
+          </button>
+
+          {/* Red: Cancel */}
+          <button
+            type="button"
+            onClick={onCancel}
+            title="Cancel: Abort rectangle (Esc)"
+            style={{
+              width: '22px',
+              height: '22px',
+              borderRadius: '50%',
+              background: '#dc2626',
+              border: '1.5px solid #f87171',
+              color: '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+            }}
+          >
+            <X size={14} strokeWidth={3} />
+          </button>
         </div>
       </div>
 

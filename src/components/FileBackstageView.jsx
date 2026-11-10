@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import {
   exportProjectMCAM,
+  parseProjectMCAM,
   getRecentProjects,
   saveAutoSaveSnapshot,
   getAutoSaveSnapshot
@@ -36,6 +37,8 @@ export default function FileBackstageView({
   activeWcs,
   tools,
   operations,
+  customGeometry = [],
+  partMetrics = null,
   stockConfig,
   currentModel,
   solidsList,
@@ -231,6 +234,8 @@ export default function FileBackstageView({
       stockConfig,
       tools,
       operations,
+      customGeometry,
+      partMetrics,
       activeMachine,
       activeWcs,
       solidsList,
@@ -254,6 +259,9 @@ export default function FileBackstageView({
         stockConfig: includeStockInSave ? stockConfig : null,
         tools: includeToolLibrary ? tools : [],
         operations,
+        customGeometry,
+        partMetrics,
+        solidsList,
         activeMachine,
         activeWcs,
         descriptor: projectDescriptor
@@ -295,6 +303,16 @@ export default function FileBackstageView({
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       try {
+        if (file.name.toLowerCase().endsWith('.mcam')) {
+          const projectData = await parseProjectMCAM(file);
+          if (onLoadProject) {
+            onLoadProject(projectData);
+          }
+          if (onNotify) onNotify(`Successfully opened ${file.name}`, 'success');
+          onClose();
+          return;
+        }
+
         const modelGroup = await parseAnyCADFile(file);
         if (onModelImported) {
           onModelImported(modelGroup, file.name, file);

@@ -1388,14 +1388,26 @@ export default function Viewport3D({
 
   // 10. Dynamically Generate and Render Real Toolpaths from CAM Operations
   useEffect(() => {
-    if (!toolpathGroupRef.current || !partMetrics) return;
+    if (!toolpathGroupRef.current) return;
     const group = toolpathGroupRef.current;
 
     while (group.children.length > 0) {
       group.remove(group.children[0]);
     }
 
-    const bounds = partMetrics.box;
+    let bounds = partMetrics?.box;
+    if (!bounds && stockConfig?.dimensions) {
+      const sx = stockConfig.dimensions.x || 100;
+      const sy = stockConfig.dimensions.y || 40;
+      const sz = stockConfig.dimensions.z || 80;
+      bounds = new THREE.Box3(
+        new THREE.Vector3(-sx / 2, -sy / 2, -sz / 2),
+        new THREE.Vector3(sx / 2, sy / 2, sz / 2)
+      );
+    }
+    if (!bounds) {
+      bounds = new THREE.Box3(new THREE.Vector3(-50, -20, -50), new THREE.Vector3(50, 20, 50));
+    }
 
       const opColors = {
         face: 0x3b82f6,
@@ -1419,52 +1431,53 @@ export default function Viewport3D({
 
     operations.forEach((op) => {
       const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10 };
+      const opBounds = op.bounds || bounds;
 
       let toolpathData;
       if (op.badgeClass === 'face') {
-        toolpathData = generateFacingToolpath(bounds, assignedTool, {
+        toolpathData = generateFacingToolpath(opBounds, assignedTool, {
           stepoverPct: op.stepoverPct || 65,
           faceAllowance: stockConfig.allowanceTop || 2.0,
           depthOfCut: op.stepdown || 1.0,
           rapidHeight: op.rapidHeight || 15.0
         });
       } else if (op.badgeClass === 'pocket') {
-        toolpathData = generatePocketToolpath(bounds, assignedTool, {
+        toolpathData = generatePocketToolpath(opBounds, assignedTool, {
           stepoverPct: op.stepoverPct || 50,
           totalDepth: op.totalDepth || 15.0,
           stepdown: op.stepdown || 5.0,
           rapidHeight: op.rapidHeight || 15.0
         }, currentModel);
       } else if (op.badgeClass === 'circlemill') {
-        toolpathData = generateCircleMillToolpath(bounds, assignedTool, {
+        toolpathData = generateCircleMillToolpath(opBounds, assignedTool, {
           diameter: op.diameter || 50.8,
           totalDepth: op.totalDepth || 50.8,
           stepdown: op.stepdown || 6.35,
           rapidHeight: op.rapidHeight || 15.0
         });
       } else if (op.badgeClass === 'contour') {
-        toolpathData = generateWaterlineToolpath(bounds, assignedTool, {
+        toolpathData = generateWaterlineToolpath(opBounds, assignedTool, {
           stepdown: op.stepdown || 3.0,
           rapidHeight: op.rapidHeight || 15.0
         }, currentModel);
       } else if (op.badgeClass === 'swarf') {
-        toolpathData = generateSwarfToolpath(bounds, assignedTool, {
+        toolpathData = generateSwarfToolpath(opBounds, assignedTool, {
           tiltAngleDeg: 15.0,
           passes: 3
         }, currentModel);
       } else if (op.badgeClass === 'drill') {
-        toolpathData = generateDrillingToolpath(bounds, assignedTool, {
+        toolpathData = generateDrillingToolpath(opBounds, assignedTool, {
           drillDepth: op.totalDepth || 25.0,
           peckDepth: op.stepdown || 5.0,
           rapidHeight: op.rapidHeight || 10.0
         }, currentModel);
       } else if (op.badgeClass === 'spotdrill') {
-        toolpathData = generateSpotDrillToolpath(bounds, assignedTool, {
+        toolpathData = generateSpotDrillToolpath(opBounds, assignedTool, {
           spotDepth: op.stepdown || op.totalDepth || 3.8,
           rapidHeight: op.rapidHeight || 10.0
         }, currentModel);
       } else if (op.badgeClass === 'adaptive' || op.badgeClass === 'dynamic') {
-        toolpathData = generateAdaptiveRoughingToolpath(bounds, assignedTool, {
+        toolpathData = generateAdaptiveRoughingToolpath(opBounds, assignedTool, {
           stepoverPct: op.stepoverPct || 25,
           stepdown: op.stepdown || 6.0,
           totalDepth: op.totalDepth || 18.0,

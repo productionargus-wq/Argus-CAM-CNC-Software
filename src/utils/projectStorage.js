@@ -3,8 +3,101 @@
  * Handles .mcam file packages, auto-save backups, and recent project history.
  */
 
+import {
+  createWireframeCircle,
+  createWireframeRect,
+  createWireframeLine,
+  createPointMarker
+} from './cadGeometry';
+
 const AUTOSAVE_KEY = 'argus_cam_autosave_v1';
 const RECENT_PROJECTS_KEY = 'argus_cam_recent_projects_v1';
+
+/**
+ * Serializes custom Three.js geometry entities (circles, rects, lines, drill points)
+ * into a clean, JSON-serializable array for .mcam storage.
+ */
+export function serializeCustomGeometry(customGeometry = []) {
+  if (!Array.isArray(customGeometry)) return [];
+  return customGeometry.map((entity) => {
+    if (!entity) return null;
+    const ud = entity.userData || {};
+    const cadType = ud.cadType || ud.type || 'wireframe';
+    const hexColor = entity.material?.color?.getHex ? entity.material.color.getHex() : 0x1d4ed8;
+
+    return {
+      name: entity.name || `Wireframe_${cadType}`,
+      uuid: entity.uuid || ud.customId || null,
+      type: ud.type || cadType,
+      cadType,
+      radius: ud.radius !== undefined ? ud.radius : null,
+      diameter: ud.diameter !== undefined ? ud.diameter : (ud.radius ? ud.radius * 2 : null),
+      width: ud.width !== undefined ? ud.width : null,
+      depth: ud.depth !== undefined ? ud.depth : (ud.height !== undefined ? ud.height : null),
+      height: ud.height !== undefined ? ud.height : (ud.depth !== undefined ? ud.depth : null),
+      center: ud.center ? { x: ud.center.x || 0, y: ud.center.y || 0, z: ud.center.z || 0 } : null,
+      p1: ud.p1 ? { x: ud.p1.x || 0, y: ud.p1.y || 0, z: ud.p1.z || 0 } : null,
+      p2: ud.p2 ? { x: ud.p2.x || 0, y: ud.p2.y || 0, z: ud.p2.z || 0 } : null,
+      points: Array.isArray(ud.points)
+        ? ud.points.map((p) => ({ x: p.x || 0, y: p.y || 0, z: p.z || 0 }))
+        : null,
+      position: {
+        x: entity.position?.x || 0,
+        y: entity.position?.y || 0,
+        z: entity.position?.z || 0
+      },
+      color: hexColor
+    };
+  }).filter(Boolean);
+}
+
+/**
+ * Reconstructs interactive Three.js wireframe entities from serialized JSON data.
+ */
+export function deserializeCustomGeometry(serializedList = []) {
+  if (!Array.isArray(serializedList)) return [];
+  return serializedList.map((item) => {
+    if (!item) return null;
+    let obj = null;
+    const col = item.color || 0x1d4ed8;
+    const pos = item.position || { x: 0, y: 0, z: 0 };
+    const cadType = item.cadType || item.type || '';
+
+    if (cadType === 'circle') {
+      const cx = item.center?.x || pos.x || 0;
+      const cz = item.center?.z || pos.z || 0;
+      const y = item.center?.y || pos.y || 0;
+      const r = item.radius || (item.diameter ? item.diameter / 2 : 25.0);
+      obj = createWireframeCircle(r, y, [cx, cz], 0, 360, 'G17', { color: col, name: item.name });
+    } else if (cadType === 'rect' || cadType === 'rectangle') {
+      const cx = item.center?.x || pos.x || 0;
+      const cz = item.center?.z || pos.z || 0;
+      const y = item.center?.y || pos.y || 0;
+      const w = item.width || 80.0;
+      const d = item.depth || item.height || 50.0;
+      obj = createWireframeRect(w, d, y, 0, [cx, cz], { color: col, name: item.name });
+    } else if (cadType === 'line') {
+      const p1 = item.p1 ? [item.p1.x, item.p1.y, item.p1.z] : [-25, 0, 0];
+      const p2 = item.p2 ? [item.p2.x, item.p2.y, item.p2.z] : [25, 0, 0];
+      obj = createWireframeLine(p1, p2, { color: col, name: item.name });
+    } else if (cadType === 'drill' || cadType === 'datum_point' || item.name?.startsWith('Drill_')) {
+      const p = item.position ? [item.position.x, item.position.y, item.position.z] : [pos.x, pos.y, pos.z];
+      obj = createPointMarker(p, item.name || 'Drill_Point', col);
+    }
+    if (obj) {
+      if (item.uuid) obj.uuid = item.uuid;
+      if (obj.userData) {
+        obj.userData.customId = item.uuid || obj.uuid;
+        if (item.center) obj.userData.center = item.center;
+        if (item.radius) obj.userData.radius = item.radius;
+        if (item.width) obj.userData.width = item.width;
+        if (item.depth) obj.userData.depth = item.depth;
+        if (item.points) obj.userData.points = item.points;
+      }
+    }
+    return obj;
+  }).filter(Boolean);
+}
 
 /**
  * Serializes and triggers direct browser download of the active .mcam project
@@ -20,6 +113,11 @@ export function exportProjectMCAM(projectState, filename = "Project.mcam") {
     stockConfig: projectState.stockConfig,
     tools: projectState.tools,
     operations: projectState.operations,
+    customGeometry: Array.isArray(projectState.customGeometry) && projectState.customGeometry.length > 0 && typeof projectState.customGeometry[0].userData !== 'undefined'
+      ? serializeCustomGeometry(projectState.customGeometry)
+      : (projectState.customGeometry || []),
+    partMetrics: projectState.partMetrics || null,
+    solidsList: projectState.solidsList || [],
     activeMachine: projectState.activeMachine,
     activeWcs: projectState.activeWcs,
     workpieceColor: projectState.workpieceColor,
@@ -78,6 +176,11 @@ export function saveAutoSaveSnapshot(projectState) {
       stockConfig: projectState.stockConfig,
       tools: projectState.tools,
       operations: projectState.operations,
+      customGeometry: Array.isArray(projectState.customGeometry) && projectState.customGeometry.length > 0 && typeof projectState.customGeometry[0].userData !== 'undefined'
+        ? serializeCustomGeometry(projectState.customGeometry)
+        : (projectState.customGeometry || []),
+      partMetrics: projectState.partMetrics || null,
+      solidsList: projectState.solidsList || [],
       activeMachine: projectState.activeMachine,
       activeWcs: projectState.activeWcs,
       workpieceColor: projectState.workpieceColor,
