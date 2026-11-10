@@ -555,18 +555,23 @@ export function extractClosedChainsFromCAD(entities = []) {
 
     if ((resolvedType === 'rect' || resolvedType === 'rectangle') && Array.isArray(points) && points.length >= 4) {
       const vecs = points.map((p) => new THREE.Vector3(p.x, p.y, p.z));
+      if (vecs[0].distanceTo(vecs[vecs.length - 1]) > 0.05) {
+        vecs.push(vecs[0].clone());
+      }
+      const bounds = new THREE.Box3().setFromPoints(vecs);
       chains.push({
         id: entity.uuid || Math.random(),
         type: 'rectangle_loop',
         name: entity.name || 'Drawn Rectangle',
+        center: bounds.getCenter(new THREE.Vector3()),
         points: vecs,
         isClosed: true,
-        bounds: new THREE.Box3().setFromPoints(vecs)
+        bounds
       });
     } else if (resolvedType === 'circle' && center && radius) {
       const circlePts = [];
-      const segs = 36;
-      for (let i = 0; i < segs; i++) {
+      const segs = 64;
+      for (let i = 0; i <= segs; i++) {
         const rad = (i / segs) * Math.PI * 2;
         circlePts.push(new THREE.Vector3(
           center.x + Math.cos(rad) * radius,
@@ -590,13 +595,18 @@ export function extractClosedChainsFromCAD(entities = []) {
     } else if (['polyline', 'polygon', 'spline'].includes(resolvedType)) {
       const vecs = extractPointsFromCadEntity(entity);
       if (vecs.length >= 3 && vecs[0].distanceTo(vecs[vecs.length - 1]) < 0.8) {
+        if (vecs[0].distanceTo(vecs[vecs.length - 1]) > 0.05) {
+          vecs.push(vecs[0].clone());
+        }
+        const bounds = new THREE.Box3().setFromPoints(vecs);
         chains.push({
           id: entity.uuid || Math.random(),
           type: 'polyline_loop',
           name: entity.name || 'Drawn Polyline',
+          center: bounds.getCenter(new THREE.Vector3()),
           points: vecs,
           isClosed: true,
-          bounds: new THREE.Box3().setFromPoints(vecs)
+          bounds
         });
       }
     }

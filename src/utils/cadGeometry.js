@@ -1709,15 +1709,28 @@ export function offsetContour2D(uvPts = [], offset = 0, isClosed = true) {
   const rawDedup = [];
   uvPts.forEach((p) => {
     const prev = rawDedup[rawDedup.length - 1];
-    if (!prev || Math.hypot(p.u - prev.u, p.v - prev.v) > 0.08) {
+    if (!prev || Math.hypot(p.u - prev.u, p.v - prev.v) > 0.005) {
       rawDedup.push({ u: p.u, v: p.v });
     }
   });
-  if (isClosed && rawDedup.length > 2 && Math.hypot(rawDedup[0].u - rawDedup[rawDedup.length - 1].u, rawDedup[0].v - rawDedup[rawDedup.length - 1].v) < 0.08) {
+  if (isClosed && rawDedup.length > 2 && Math.hypot(rawDedup[0].u - rawDedup[rawDedup.length - 1].u, rawDedup[0].v - rawDedup[rawDedup.length - 1].v) < 0.005) {
     rawDedup.pop();
   }
 
-  // Drop nearly collinear intermediate vertices along straight wall slices so miter bisectors never blow up
+  // Drop strictly collinear intermediate vertices along flat wall slices regardless of wall length
+  // so near-corner triangle diagonal intersections never create bow-tie spikes when offsetting
+  const isCollinearBetween = (prev, curr, next) => {
+    const abU = next.u - prev.u;
+    const abV = next.v - prev.v;
+    const abLen = Math.hypot(abU, abV);
+    if (abLen <= 1e-4) return false;
+    const cross = Math.abs((curr.u - prev.u) * abV - (curr.v - prev.v) * abU) / abLen;
+    if (cross >= 0.002) return false;
+    const dot1 = (curr.u - prev.u) * abU + (curr.v - prev.v) * abV;
+    const dot2 = (next.u - curr.u) * abU + (next.v - curr.v) * abV;
+    return dot1 >= -1e-4 && dot2 >= -1e-4;
+  };
+
   const pts = [];
   const rawN = rawDedup.length;
   for (let i = 0; i < rawN; i++) {
@@ -1726,22 +1739,15 @@ export function offsetContour2D(uvPts = [], offset = 0, isClosed = true) {
       pts.push(curr);
       continue;
     }
-    if (pts.length === 0) {
-      pts.push(curr);
+    const prev = pts.length > 0 ? pts[pts.length - 1] : rawDedup[(i - 1 + rawN) % rawN];
+    const next = rawDedup[(i + 1) % rawN];
+    if (isCollinearBetween(prev, curr, next)) {
       continue;
     }
-    const prev = pts[pts.length - 1];
-    const next = rawDedup[(i + 1) % rawN];
-    const abU = next.u - prev.u;
-    const abV = next.v - prev.v;
-    const abLen = Math.hypot(abU, abV);
-    if (abLen > 1e-4) {
-      const cross = Math.abs((curr.u - prev.u) * abV - (curr.v - prev.v) * abU) / abLen;
-      if (cross < 0.005 && abLen < 12) {
-        continue;
-      }
-    }
     pts.push(curr);
+  }
+  if (isClosed && pts.length >= 4 && isCollinearBetween(pts[pts.length - 1], pts[0], pts[1])) {
+    pts.shift();
   }
   if (pts.length < 2 || (isClosed && pts.length < 3)) return [];
 
@@ -1931,9 +1937,13 @@ export function createParametricChainExtrusion(chains = [], params = {}, options
   validChains.forEach((chain) => {
     const rawPts = chain.points.map((p) => new THREE.Vector3(p.x, p.y, p.z));
     const isClosed = chain.isClosed ?? (rawPts.length >= 3 && rawPts[0].distanceTo(rawPts[rawPts.length - 1]) < 0.8);
+    // Ensure closed rings repeat their starting vertex so wall quads close 360deg watertight
+    const closedPts = (isClosed && rawPts.length >= 3 && rawPts[0].distanceTo(rawPts[rawPts.length - 1]) > 0.05)
+      ? [...rawPts, rawPts[0].clone()]
+      : rawPts;
 
     // Project base chain points into local coordinates relative to resolvedBase along (uAxis, vAxis, extrudeAxis)
-    const baseUVH = rawPts.map((pt) => {
+    const baseUVH = closedPts.map((pt) => {
       const rel = pt.clone().sub(resolvedBase);
       return {
         u: rel.dot(uAxis),
@@ -1947,6 +1957,13 @@ export function createParametricChainExtrusion(chains = [], params = {}, options
       : baseUVH.map((p) => ({ u: p.u, v: p.v }));
 
     if (baseOffsetUV.length < 2) return;
+    if (isClosed && baseOffsetUV.length >= 3) {
+      const f = baseOffsetUV[0];
+      const l = baseOffsetUV[baseOffsetUV.length - 1];
+      if (Math.hypot(f.u - l.u, f.v - l.v) > 0.05) {
+        baseOffsetUV.push({ u: f.u, v: f.v });
+      }
+    }
 
     // Average plane elevation offset along extrudeAxis
     const baseAvgH = baseUVH.reduce((acc, p) => acc + p.h, 0) / Math.max(1, baseUVH.length);
@@ -1961,7 +1978,14 @@ export function createParametricChainExtrusion(chains = [], params = {}, options
       const draftedUV = Math.abs(draftOffset) > 1e-4
         ? offsetContour2D(baseOffsetUV, draftOffset, isClosed)
         : baseOffsetUV;
-      const workingUV = draftedUV.length >= 2 ? draftedUV : baseOffsetUV;
+      const workingUV = draftedUV.length >= 2 ? [...draftedUV] : [...baseOffsetUV];
+      if (isClosed && workingUV.length >= 3) {
+        const f = workingUV[0];
+        const l = workingUV[workingUV.length - 1];
+        if (Math.hypot(f.u - l.u, f.v - l.v) > 0.05) {
+          workingUV.push({ u: f.u, v: f.v });
+        }
+      }
 
       return workingUV.map((uv, idx) => {
         const su = uv.u * curScale;
