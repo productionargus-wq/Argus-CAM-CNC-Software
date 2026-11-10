@@ -9,6 +9,8 @@ export default function GCodeViewerModal({
   tools,
   stockConfig,
   partMetrics,
+  currentModel = null,
+  customGeometry = [],
   defaultController = CONTROLLER_DIALECTS.HEIDENHAIN,
   currentProjectName = 'Base_Structure-ALU.step'
 }) {
@@ -32,11 +34,13 @@ export default function GCodeViewerModal({
         stockConfig,
         partMetrics,
         controller: selectedController,
-        programName: cleanProgName
+        programName: cleanProgName,
+        model: currentModel,
+        customGeometry
       });
       setNcData(generated);
     }
-  }, [isOpen, selectedController, operations, tools, stockConfig, partMetrics, cleanProgName]);
+  }, [isOpen, selectedController, operations, tools, stockConfig, partMetrics, currentModel, customGeometry, cleanProgName]);
 
   useEffect(() => {
     const dialog = dialogRef.current;

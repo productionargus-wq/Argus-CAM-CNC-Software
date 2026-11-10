@@ -124,6 +124,7 @@ export default function ToolpathsContextMenu({
   onOpenProbingStudio,
   onOpenHSMFilter,
   onOpenSurfaceFinishContour,
+  onOpenSurfaceFinishPocket,
   onExportStockSTL,
   onToggleLockOp,
   onToggleGhostOp,
@@ -235,7 +236,7 @@ export default function ToolpathsContextMenu({
         {activeSubmenu === 'mill' && (
           <div
             className="mcam-ctx-sub"
-            style={{ ...subStyle, maxHeight: '90vh', overflowY: 'auto' }}
+            style={{ ...subStyle, top: '-24px', overflow: 'visible' }}
             onMouseEnter={handleCancelSubmenuClose}
             onMouseLeave={handleScheduleSubmenuClose}
           >
@@ -303,6 +304,7 @@ export default function ToolpathsContextMenu({
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('project'))}>Project</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('flowline'))}>Flowline</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishContour ? onOpenSurfaceFinishContour() : onAddOperation?.('waterline'))}>Contour</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishPocket ? onOpenSurfaceFinishPocket() : onAddOperation?.('pocket'))}>Pocket</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('shallow'))}>Shallow</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pencil'))}>Pencil</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('rest_milling'))}>Leftover</div>

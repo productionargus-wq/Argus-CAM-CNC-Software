@@ -156,6 +156,22 @@ export const TOOLPATHS_RIBBON_CONFIG = [
     ],
     galleryMoreItems: [
       {
+        id: '3d_finish_contour',
+        label: 'Finish Contour',
+        icon: 'Tp3dWaterline',
+        action: 'tp_3d_finish_contour',
+        opType: 'surface_finish_contour',
+        tooltip: 'Surface Finish Contour around 3D Extruded / Drive Surfaces'
+      },
+      {
+        id: '3d_finish_pocket',
+        label: 'Finish Pocket',
+        icon: 'Tp3dPocket',
+        action: 'tp_3d_finish_pocket',
+        opType: 'surface_finish_pocket',
+        tooltip: 'Surface Finish Pocket Clearing inside 3D Extruded / Drive Cavities'
+      },
+      {
         id: '3d_equal_scallop',
         label: 'Equal Scallop',
         icon: 'Tp3dEqualScallop',

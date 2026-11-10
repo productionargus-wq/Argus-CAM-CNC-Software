@@ -35,6 +35,7 @@ const ALL_MASTERCAM_COMMANDS = [
   // Toolpaths
   { id: 'optirough', name: '3D OptiRough', category: 'Toolpaths > 3D', shortcut: '', desc: 'Dynamic high-speed constant engagement 3D roughing' },
   { id: 'surface_finish_contour', name: 'Surface Finish Contour', category: 'Toolpaths > 3D', shortcut: '', desc: '3D semi-finishing and finishing waterline contour passes' },
+  { id: 'surface_finish_pocket', name: 'Surface Finish Pocket', category: 'Toolpaths > 3D', shortcut: '', desc: '3D surface finish pocketing across extruded/drive surfaces' },
   { id: 'contour_2d', name: '2D Contour', category: 'Toolpaths > 2D', shortcut: '', desc: 'Profile milling along open or closed 2D chains' },
   { id: 'pocket_2d', name: '2D Pocket', category: 'Toolpaths > 2D', shortcut: '', desc: 'Zigzag, spiral, or true spiral pocket milling' },
   { id: 'drill_cycle', name: 'Hole Drilling', category: 'Toolpaths > 2D', shortcut: '', desc: 'Canned drilling, pecking (G83), and tapping cycles' },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box } from 'lucide-react';
 import TitleBar from './components/TitleBar';
 import RibbonBar from './components/RibbonBar';
@@ -61,6 +62,7 @@ import AddInsManagerModal from './components/AddInsManagerModal';
 import PartStatisticsModal from './components/PartStatisticsModal';
 import MastercamToolpathParametersModal from './components/MastercamToolpathParametersModal';
 import MastercamChainingModal from './components/MastercamChainingModal';
+import ChainingPalette from './components/ChainingPalette';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import StatusBar from './components/StatusBar';
 import ViewsheetBar from './components/ViewsheetBar';
@@ -91,6 +93,7 @@ import {
   createDrillPointsGrid,
   createPlanarSurface,
   createCylinderSurface,
+  createParametricChainExtrusion,
   extractEdgesFromModel,
   exportSceneToSTL,
   parseSTEPText,
@@ -109,7 +112,7 @@ import {
   clearWorkspaceSession
 } from './utils/workspacePersistence';
 import { parseAnyCADFile } from './utils/universalCadParser';
-import { extractClosedChainsFromCAD, computeRectPlacement, computeLineEnd } from './utils/cadDrawingEngine';
+import { extractClosedChainsFromCAD, buildChainFromEntity, computeRectPlacement, computeLineEnd } from './utils/cadDrawingEngine';
 import CNCDesignBoard from './components/CNCDesignBoard';
 import { convertBoardDiagramsToToolpaths, getCADTemplate } from './utils/cncBoardEngine';
 
@@ -131,6 +134,31 @@ function countWireframes(list = []) {
         g.name?.startsWith('Hole_') ||
         ['line', 'circle', 'rectangle', 'arc', 'spline'].includes(g.userData?.type))
   ).length;
+}
+
+function cloneEntityForSnapshot(entity) {
+  if (!entity || typeof entity.clone !== 'function') return entity;
+  const cloned = entity.clone(true);
+  cloned.uuid = entity.uuid;
+  if (entity.userData) {
+    cloned.userData = { ...entity.userData };
+  }
+  const cloneMaterial = (obj) => {
+    if (!obj?.material) return;
+    obj.material = Array.isArray(obj.material)
+      ? obj.material.map((m) => (typeof m?.clone === 'function' ? m.clone() : m))
+      : (typeof obj.material.clone === 'function' ? obj.material.clone() : obj.material);
+  };
+  cloneMaterial(cloned);
+  if (Array.isArray(cloned.children)) {
+    cloned.children.forEach(cloneMaterial);
+  }
+  return cloned;
+}
+
+function cloneCustomGeometryList(list = []) {
+  if (!Array.isArray(list)) return [];
+  return list.filter(Boolean).map(cloneEntityForSnapshot);
 }
 
 export default function App() {
@@ -249,6 +277,8 @@ export default function App() {
   const [isAnomalyScannerOpen, setIsAnomalyScannerOpen] = useState(false);
   const [isDefineToolModalOpen, setIsDefineToolModalOpen] = useState(false);
   const [isSurfaceFinishContourOpen, setIsSurfaceFinishContourOpen] = useState(false);
+  const [surfaceFinishStrategyMode, setSurfaceFinishStrategyMode] = useState('contour');
+  const [editingSurfaceFinishOp, setEditingSurfaceFinishOp] = useState(null);
   const [isCommandFinderOpen, setIsCommandFinderOpen] = useState(false);
   const [isAddInsModalOpen, setIsAddInsModalOpen] = useState(false);
   const [isStatisticsModalOpen, setIsStatisticsModalOpen] = useState(false);
@@ -311,6 +341,33 @@ export default function App() {
   });
   const [activeArcId, setActiveArcId] = useState(null);
 
+  // Mastercam Surfaces -> Extrude & Interactive Floating Chaining State
+  const [activeSurfaceTool, setActiveSurfaceTool] = useState(null); // 'extrude' | null
+  const [isChainingPaletteOpen, setIsChainingPaletteOpen] = useState(false);
+  const [isBasePointPickActive, setIsBasePointPickActive] = useState(false);
+  const [chainingConfig, setChainingConfig] = useState({
+    chainMode: 'wireframe',
+    planeMode: '3d',
+    selectionMethod: 'chain',
+    containmentSide: 'inside',
+    waitMode: false
+  });
+  const [selectedExtrudeChains, setSelectedExtrudeChains] = useState([]);
+  const [extrudeParams, setExtrudeParams] = useState({
+    height: 20.0,
+    scale: 1.0,
+    rotationAngleDeg: 0.0,
+    offsetDistance: 0.0,
+    draftAngleDeg: 0.0,
+    useAxis: false,
+    axis: 'z',
+    axisVector: { x: 0, y: 0, z: 1 },
+    direction: 'defined',
+    basePoint: null,
+    capEnds: true,
+    locks: {}
+  });
+
   // Synchronous sketch refs prevent stale closures during rapid keyboard typing + clicks
   const activeDrawingToolRef = useRef(activeDrawingTool);
   const circleParamsRef = useRef(circleParams);
@@ -319,6 +376,9 @@ export default function App() {
   const activeRectIdRef = useRef(activeRectId);
   const lineParamsRef = useRef(lineParams);
   const activeLineIdRef = useRef(activeLineId);
+  const activeSurfaceToolRef = useRef(activeSurfaceTool);
+  activeSurfaceToolRef.current = activeSurfaceTool;
+  const handleCancelSurfaceExtrudeRef = useRef(null);
 
   const setDrawingToolSync = (val) => {
     activeDrawingToolRef.current = val;
@@ -781,7 +841,7 @@ export default function App() {
       operations: JSON.parse(JSON.stringify(nextOps || [])),
       partTransform: { ...(nextPartTransform || { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } }) },
       solidsList: [...(nextSolids || [])],
-      customGeometry: [...(nextCustomGeo || [])]
+      customGeometry: cloneCustomGeometryList(nextCustomGeo || [])
     };
   };
 
@@ -800,6 +860,19 @@ export default function App() {
       : [createSnapshot({ customGeometry: [], operations: [] })];
     const updatedEntries = [...upToCurrent, snapshot].slice(-60);
     const nextState = { entries: updatedEntries, index: updatedEntries.length - 1 };
+    historyStateRef.current = nextState;
+    setHistoryState(nextState);
+  };
+
+  const replaceCurrentSnapshot = (overrideState = {}) => {
+    const cur = historyStateRef.current;
+    if (cur.index < 0 || cur.index >= cur.entries.length) {
+      pushSnapshot(overrideState);
+      return;
+    }
+    const updated = [...cur.entries];
+    updated[cur.index] = createSnapshot(overrideState);
+    const nextState = { entries: updated, index: cur.index };
     historyStateRef.current = nextState;
     setHistoryState(nextState);
   };
@@ -1187,6 +1260,29 @@ export default function App() {
     }
   };
 
+  const resetPendingSketchLocks = () => {
+    setActiveCircle(null);
+    setActiveRect(null);
+    setActiveLine(null);
+    setActiveArcId(null);
+    updateCircleParams((prev) => ({ ...prev, isLocked: false, center: null }));
+    updateRectParams((prev) => ({
+      ...prev,
+      isWidthLocked: false,
+      isHeightLocked: false,
+      firstCorner: null,
+      secondCorner: null
+    }));
+    updateLineParams((prev) => ({
+      ...prev,
+      isLengthLocked: false,
+      isAngleLocked: false,
+      pt1: null,
+      pt2: null
+    }));
+    setArcParams((prev) => ({ ...prev, isLocked: false }));
+  };
+
   const applyHistorySnapshot = (snap, nextIdx, msg) => {
     if (!snap) return;
     if (snap.operations) {
@@ -1206,12 +1302,9 @@ export default function App() {
       setSolidsList(snap.solidsList);
     }
     if (snap.customGeometry !== undefined) {
-      commitCustomGeometry(snap.customGeometry, false);
+      commitCustomGeometry(cloneCustomGeometryList(snap.customGeometry), false);
     }
-    setActiveCircle(null);
-    setActiveRect(null);
-    setActiveLine(null);
-    setActiveArcId(null);
+    resetPendingSketchLocks();
     setUndoTrigger((prev) => prev + 1);
 
     const cur = historyStateRef.current;
@@ -1226,6 +1319,25 @@ export default function App() {
     if (cur.index > 0) {
       const newIdx = cur.index - 1;
       applyHistorySnapshot(cur.entries[newIdx], newIdx, "Undo: Previous CAD/CAM state restored");
+      return;
+    }
+
+    const hasPendingSketchPreview =
+      circleParamsRef.current.isLocked ||
+      rectParamsRef.current.isWidthLocked ||
+      rectParamsRef.current.isHeightLocked ||
+      Boolean(rectParamsRef.current.firstCorner) ||
+      lineParamsRef.current.isLengthLocked ||
+      lineParamsRef.current.isAngleLocked ||
+      Boolean(lineParamsRef.current.pt1) ||
+      Boolean(activeCircleIdRef.current) ||
+      Boolean(activeRectIdRef.current) ||
+      Boolean(activeLineIdRef.current);
+
+    if (hasPendingSketchPreview) {
+      resetPendingSketchLocks();
+      setUndoTrigger((prev) => prev + 1);
+      showToast("Cleared active sketch preview and locks", "info");
     } else {
       showToast("No further undo actions in history", "warning");
     }
@@ -1241,24 +1353,59 @@ export default function App() {
     }
   };
 
+  const handleUndoRef = useRef(handleUndo);
+  const handleRedoRef = useRef(handleRedo);
+  useEffect(() => {
+    handleUndoRef.current = handleUndo;
+    handleRedoRef.current = handleRedo;
+  });
+
   // Keyboard shortcut listener for Ctrl+Z and Ctrl+Y
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ignore if user is currently typing in an input or textarea
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      const target = e.target;
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+      const lowerKey = (e.key || '').toLowerCase();
 
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        if (e.shiftKey) {
-          e.preventDefault();
-          handleRedo();
-        } else {
-          e.preventDefault();
-          handleUndo();
-        }
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+      if (isCtrlOrMeta && (lowerKey === 'z' || e.code === 'KeyZ')) {
+        const isSketchInput = target?.tagName === 'INPUT' && target.dataset?.sketchNumeric === 'true';
+        const isDirtyTextInput =
+          target?.isContentEditable ||
+          ['TEXTAREA', 'SELECT'].includes(target?.tagName) ||
+          (target?.tagName === 'INPUT' && (!isSketchInput || target.dataset?.dirty === 'true'));
+        if (isDirtyTextInput) return;
+
         e.preventDefault();
-        handleRedo();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
+        if (e.shiftKey) {
+          handleRedoRef.current();
+        } else {
+          handleUndoRef.current();
+        }
+        return;
+      }
+
+      if (isCtrlOrMeta && (lowerKey === 'y' || e.code === 'KeyY')) {
+        const isSketchInput = target?.tagName === 'INPUT' && target.dataset?.sketchNumeric === 'true';
+        const isDirtyTextInput =
+          target?.isContentEditable ||
+          ['TEXTAREA', 'SELECT'].includes(target?.tagName) ||
+          (target?.tagName === 'INPUT' && (!isSketchInput || target.dataset?.dirty === 'true'));
+        if (isDirtyTextInput) return;
+
+        e.preventDefault();
+        handleRedoRef.current();
+        return;
+      }
+
+      if (e.key === 'Escape' && activeSurfaceToolRef.current === 'extrude') {
+        e.preventDefault();
+        handleCancelSurfaceExtrudeRef.current?.();
+        return;
+      }
+
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName) || target?.isContentEditable) return;
+
+      if (isCtrlOrMeta && (lowerKey === 'n' || e.code === 'KeyN')) {
         e.preventDefault();
         setIsNewProjectModalOpen(true);
       }
@@ -1446,6 +1593,12 @@ export default function App() {
   };
 
   const handleEditOp = (op) => {
+    if (op?.strategyKey === 'surface_finish_contour' || op?.strategyKey === 'surface_finish_pocket' || op?.usesCustomSurfaces) {
+      setEditingSurfaceFinishOp(op);
+      setSurfaceFinishStrategyMode(op.strategyKey === 'surface_finish_pocket' || op.badgeClass === 'pocket' ? 'pocket' : 'contour');
+      setIsSurfaceFinishContourOpen(true);
+      return;
+    }
     isNewOperationRef.current = false;
     setIsNewOperation(false);
     setEditingOperation(op);
@@ -2446,29 +2599,56 @@ export default function App() {
     showToast(`Created Tool: ${newTool.name} (T${newTool.number})`, 'success');
   };
 
-  const handleApplySurfaceFinishContour = (contourParams) => {
-    const newOp = {
-      id: Date.now(),
-      name: `Surface Finish Contour - [${activePlane}]`,
-      type: 'Surface Finish Contour',
-      badgeClass: 'contour',
+  const openSurfaceFinishModal = (mode = 'contour', opToEdit = null) => {
+    setEditingSurfaceFinishOp(opToEdit);
+    setSurfaceFinishStrategyMode(mode);
+    setIsSurfaceFinishContourOpen(true);
+  };
+
+  const handleApplySurfaceFinishContour = (updatedOp) => {
+    const prevOps = operationsRef.current || operations || [];
+    const nextId = updatedOp.id || (prevOps.length > 0 ? Math.max(...prevOps.map((o) => Number(o.id) || 0)) + 1 : 1);
+    const assignedTool = tools.find((t) => Number(t.id) === Number(updatedOp.toolId)) || tools[0] || { id: 1, number: 1, name: updatedOp.toolName || '10mm Flat Endmill' };
+    const finalOp = {
+      ...updatedOp,
+      id: nextId,
+      name: updatedOp.name || `${updatedOp.strategyKey === 'surface_finish_pocket' ? 'Surface Finish Pocket' : 'Surface Finish Contour'} - [${activePlane}]`,
+      visible: true,
       enabled: true,
       locked: false,
       ghosted: false,
-      toolId: 1,
-      toolName: contourParams?.toolName || '51 Flat Endmill',
-      totalDepth: 25.0,
-      stepdown: parseFloat(contourParams?.maxStepdown) || 1.0,
-      rapidHeight: parseFloat(contourParams?.clearance) || 50.0,
-      feedRate: parseFloat(contourParams?.feedRate) || 50.0,
-      plungeRate: parseFloat(contourParams?.plungeRate) || 250.0,
-      spindleSpeed: parseInt(contourParams?.spindleSpeed) || 3500,
-      coolant: contourParams?.coolant || 'Flood',
-      details: `CS: ${contourParams?.cs || 560.79} | FPT: ${contourParams?.fpt || 0.0036} | Roll: ${contourParams?.rollAroundCorners || 'All'}`
+      toolId: assignedTool.id || 1,
+      toolName: `T${assignedTool.number || 1} - ${assignedTool.name}`,
+      usesCustomSurfaces: true
     };
-    setOperations((prev) => [...prev, newOp]);
-    setActiveOpId(newOp.id);
-    showToast('Surface Finish Contour Toolpath Applied & Recomputed', 'success');
+
+    if (finalOp.bounds && !currentModel) {
+      const box = rehydrateBox3(finalOp.bounds) || finalOp.bounds;
+      if (box?.min && box?.max && typeof box.getSize === 'function') {
+        const dim = box.getSize(new THREE.Vector3());
+        setPartMetrics({
+          box,
+          bounds: box,
+          center: box.getCenter(new THREE.Vector3()),
+          dimensions: dim,
+          triangles: 0
+        });
+      }
+    }
+
+    const exists = prevOps.some((o) => o.id === nextId);
+    const nextOps = exists
+      ? prevOps.map((o) => (o.id === nextId ? finalOp : o))
+      : [...prevOps, finalOp];
+
+    operationsRef.current = nextOps;
+    setOperations(nextOps);
+    setActiveOpId(finalOp.id);
+    setEditingSurfaceFinishOp(null);
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true }));
+    pushSnapshot({ operations: nextOps });
+    showToast(`${finalOp.name} computed & added to toolpaths.`, 'success');
   };
 
   const handleCopyViewportImage = async () => {
@@ -2586,7 +2766,10 @@ export default function App() {
         setIsDefineToolModalOpen(true);
         break;
       case 'surface_finish_contour':
-        setIsSurfaceFinishContourOpen(true);
+        openSurfaceFinishModal('contour', null);
+        break;
+      case 'surface_finish_pocket':
+        openSurfaceFinishModal('pocket', null);
         break;
       case 'verify_solid':
         setIsSolidVerifyModalOpen(true);
@@ -3261,18 +3444,24 @@ export default function App() {
     const newList = [...prevList];
     newList[targetIndex] = updated;
     commitCustomGeometry(newList, false);
+    replaceCurrentSnapshot({ customGeometry: newList });
     return true;
   };
 
   const commitActiveCustomEntity = (entityId, setEntityId) => {
     const prevList = customGeometryRef.current || [];
     const next = prevList.map((item) => {
-      if ((item.id || item.uuid || item.name) === entityId && item.material) {
-        item.material.color.setHex(0x1d4ed8);
+      if ((item.id || item.uuid || item.name) === entityId) {
+        const cloned = cloneEntityForSnapshot(item);
+        if (cloned?.material?.color?.setHex) {
+          cloned.material.color.setHex(0x1d4ed8);
+        }
+        return cloned;
       }
       return item;
     });
     commitCustomGeometry(next, false);
+    replaceCurrentSnapshot({ customGeometry: next });
     setEntityId(null);
   };
 
@@ -3745,7 +3934,10 @@ export default function App() {
         totalDepth: 5.0,
         rapidHeight: 15.0
       };
-      setOperations((prev) => [...prev, newOp]);
+      const nextOps = [...(operationsRef.current || []), newOp];
+      operationsRef.current = nextOps;
+      setOperations(nextOps);
+      pushSnapshot({ operations: nextOps });
       setActiveOpId(nextId);
       setActiveRibbonTab('Toolpaths');
       setIsSketchModeActive(false);
@@ -3787,7 +3979,10 @@ export default function App() {
       stockToLeaveZ: 0.0,
       rapidHeight: 15.0
     };
-    setOperations((prev) => [...prev, newOp]);
+    const nextOps = [...(operationsRef.current || []), newOp];
+    operationsRef.current = nextOps;
+    setOperations(nextOps);
+    pushSnapshot({ operations: nextOps });
     setActiveOpId(nextId);
     setActiveRibbonTab('Toolpaths');
     setIsSketchModeActive(false);
@@ -3830,7 +4025,10 @@ export default function App() {
       });
     });
 
-    setOperations((prev) => [...prev, ...newOps]);
+    const nextOps = [...(operationsRef.current || []), ...newOps];
+    operationsRef.current = nextOps;
+    setOperations(nextOps);
+    pushSnapshot({ operations: nextOps });
     if (newOps.length > 0) setActiveOpId(newOps[0].id);
     setActiveRibbonTab('Toolpaths');
     showToast(`Mastercam Chaining: Created ${newOps.length} Toolpath Operation(s) from Sketch!`, 'success');
@@ -4017,7 +4215,7 @@ export default function App() {
       createWireframeArc([0, y, 0], 25, 180, 270, { name: `Wireframe_BrokenArc_3` }),
       createWireframeArc([0, y, 0], 25, 270, 360, { name: `Wireframe_BrokenArc_4` })
     ];
-    arcs.forEach(handleAddCustomEntity);
+    commitCustomGeometry([...(customGeometryRef.current || []), ...arcs], true);
     showToast(`Break Many Pieces: Split geometry into 4 quadrant arc curves`, 'success');
   };
 
@@ -4030,11 +4228,184 @@ export default function App() {
     showToast(`Join Entities: Combined ${wireframes.length} wireframe elements into closed contour chain`, 'success');
   };
 
-  // Surface Creation & CAM Suite Handlers
+  // Surface Creation & Mastercam Surface Extrude Handlers
+  const syncPartMetricsFromCustomSurfaces = (entityList = []) => {
+    if (currentModel) return;
+    const surfs = (Array.isArray(entityList) ? entityList : []).filter((ent) => {
+      if (!ent || ent.visible === false) return false;
+      const ct = String(ent.userData?.cadType || ent.userData?.type || '').toLowerCase();
+      return ent.name?.startsWith('Surface_') || ent.name?.startsWith('CAD_Surface') || ct === 'surface_extrusion';
+    });
+    if (surfs.length === 0) return;
+    const box = new THREE.Box3();
+    surfs.forEach((s) => {
+      s.updateMatrixWorld?.(true);
+      box.expandByObject(s);
+    });
+    if (!box.isEmpty()) {
+      setPartMetrics({
+        box,
+        bounds: box,
+        center: box.getCenter(new THREE.Vector3()),
+        dimensions: box.getSize(new THREE.Vector3()),
+        triangles: 0
+      });
+    }
+  };
+
   const handleOpenSurfacesModal = (tool = 'plane') => {
+    if (tool === 'surface_extrude' || tool === 'extrude') {
+      setIsSketchModeActive(false);
+      setDrawingToolSync(null);
+      resetPendingSketchLocks();
+      setActiveSurfaceTool('extrude');
+      setActiveManagerTab('Surface Ex...');
+      setSelectedExtrudeChains([]);
+      setExtrudeParams({
+        height: 20.0,
+        scale: 1.0,
+        rotationAngleDeg: 0.0,
+        offsetDistance: 0.0,
+        draftAngleDeg: 0.0,
+        useAxis: false,
+        axis: 'z',
+        axisVector: { x: 0, y: 0, z: 1 },
+        direction: 'defined',
+        basePoint: null,
+        capEnds: true,
+        locks: {}
+      });
+      setIsBasePointPickActive(false);
+      setIsChainingPaletteOpen(true);
+      showToast('Select wireframe chain on canvas, then click Green Check in Chaining.', 'info');
+      return;
+    }
     setSurfacesModalTool(tool);
     setIsSurfacesModalOpen(true);
   };
+
+  const handleSelectChainEntityOnViewport = (entity) => {
+    if (!entity) return;
+    const chain = buildChainFromEntity(entity, customGeometryRef.current || [], {
+      method: chainingConfig.selectionMethod,
+      planeMode: chainingConfig.planeMode
+    });
+    if (!chain) return;
+
+    setSelectedExtrudeChains((prev) => {
+      const exists = prev.some((c) => c.id === chain.id);
+      if (chainingConfig.waitMode) {
+        return exists ? prev.filter((c) => c.id !== chain.id) : [...prev, chain];
+      }
+      return [chain];
+    });
+
+    setExtrudeParams((prev) => ({
+      ...prev,
+      basePoint: prev.locks?.basePoint ? prev.basePoint : (
+        chain.center ? { x: chain.center.x, y: chain.center.y, z: chain.center.z } : prev.basePoint
+      )
+    }));
+  };
+
+  const handleReverseExtrudeChain = () => {
+    setSelectedExtrudeChains((prev) =>
+      prev.map((c) => ({
+        ...c,
+        points: [...c.points].reverse(),
+        direction: c.direction === 'CCW / Reversed' ? 'CW / Forward' : 'CCW / Reversed'
+      }))
+    );
+  };
+
+  const handleAddAllClosedChainsToExtrude = () => {
+    const detected = extractClosedChainsFromCAD(customGeometryRef.current || []);
+    if (detected.length === 0) {
+      showToast('No closed wireframe contours found in viewport.', 'warning');
+      return;
+    }
+    setSelectedExtrudeChains(detected);
+    if (detected[0]?.center) {
+      setExtrudeParams((prev) => ({
+        ...prev,
+        basePoint: prev.basePoint || { x: detected[0].center.x, y: detected[0].center.y, z: detected[0].center.z }
+      }));
+    }
+    showToast(`Selected ${detected.length} closed contour chain(s).`, 'success');
+  };
+
+  const handleConfirmChaining = () => {
+    if (selectedExtrudeChains.length === 0) {
+      const detected = extractClosedChainsFromCAD(customGeometryRef.current || []);
+      if (detected.length === 1) {
+        setSelectedExtrudeChains(detected);
+        if (detected[0]?.center) {
+          setExtrudeParams((prev) => ({
+            ...prev,
+            basePoint: { x: detected[0].center.x, y: detected[0].center.y, z: detected[0].center.z }
+          }));
+        }
+      } else {
+        showToast('Select a wireframe contour on the canvas first.', 'warning');
+        return;
+      }
+    }
+    setIsChainingPaletteOpen(false);
+  };
+
+  const handleChangeExtrudeParam = (key, value) => {
+    setExtrudeParams((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleToggleExtrudeLock = (key) => {
+    setExtrudeParams((prev) => ({
+      ...prev,
+      locks: { ...(prev.locks || {}), [key]: !prev.locks?.[key] }
+    }));
+  };
+
+  const handlePickExtrudeBasePoint = (pt) => {
+    setExtrudeParams((prev) => ({ ...prev, basePoint: pt }));
+    setIsBasePointPickActive(false);
+    showToast(`Base Point updated: X${pt.x.toFixed(1)} Y${(-pt.z).toFixed(1)}`, 'success');
+  };
+
+  const handleCommitSurfaceExtrude = (keepOpen = false) => {
+    if (selectedExtrudeChains.length === 0) {
+      showToast('Select a chain before creating Surface Extrude.', 'warning');
+      return;
+    }
+    const surfMesh = createParametricChainExtrusion(selectedExtrudeChains, extrudeParams, {
+      color: 0x22d3ee
+    });
+    const nextList = [...(customGeometryRef.current || []), surfMesh];
+    commitCustomGeometry(nextList, true);
+    setLayerVisibility((prev) => ({ ...prev, surfaces: true }));
+    syncPartMetricsFromCustomSurfaces(nextList);
+
+    if (keepOpen) {
+      setSelectedExtrudeChains([]);
+      setIsChainingPaletteOpen(true);
+      showToast(`Created ${surfMesh.name} on Level 15 — select next chain.`, 'success');
+    } else {
+      setIsChainingPaletteOpen(false);
+      setIsBasePointPickActive(false);
+      setSelectedExtrudeChains([]);
+      setActiveSurfaceTool(null);
+      setActiveManagerTab('Toolpaths');
+      showToast(`Surface Extrude created (${surfMesh.name}) on Level 15.`, 'success');
+    }
+  };
+
+  const handleCancelSurfaceExtrude = () => {
+    setIsChainingPaletteOpen(false);
+    setIsBasePointPickActive(false);
+    setSelectedExtrudeChains([]);
+    setActiveSurfaceTool(null);
+    setActiveManagerTab('Toolpaths');
+  };
+
+  handleCancelSurfaceExtrudeRef.current = handleCancelSurfaceExtrude;
 
   const handleAddSurfaceEntity = (entity) => {
     const next = [...(customGeometryRef.current || []), entity];
@@ -4182,7 +4553,8 @@ export default function App() {
         onSelectTab={setActiveRibbonTab}
         onOpenFileBackstage={() => setIsFileBackstageOpen(true)}
         onOpenDefineToolModal={() => setIsDefineToolModalOpen(true)}
-        onOpenSurfaceFinishContour={() => setIsSurfaceFinishContourOpen(true)}
+        onOpenSurfaceFinishContour={() => openSurfaceFinishModal('contour', null)}
+        onOpenSurfaceFinishPocket={() => openSurfaceFinishModal('pocket', null)}
         onCopyViewportImage={handleCopyViewportImage}
         onPasteOp={handlePasteOp}
         onCutOp={handleCutOp}
@@ -4407,7 +4779,8 @@ export default function App() {
           onOpenNestingStudio={() => setIsNestingStudioOpen(true)}
           onOpenProbingStudio={() => setIsProbingModalOpen(true)}
           onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
-          onOpenSurfaceFinishContour={() => setIsSurfaceFinishContourOpen(true)}
+          onOpenSurfaceFinishContour={() => openSurfaceFinishModal('contour', null)}
+          onOpenSurfaceFinishPocket={() => openSurfaceFinishModal('pocket', null)}
           onExportStockSTL={handleExportStockSTL}
           activeDrawingTool={activeDrawingTool}
           circleParams={circleParams}
@@ -4449,6 +4822,25 @@ export default function App() {
           onApplyArc={handleApplyArc}
           onOkArc={handleOkArc}
           onCancelArc={handleCancelArc}
+          activeSurfaceTool={activeSurfaceTool}
+          surfaceExtrudeParams={extrudeParams}
+          selectedExtrudeChains={selectedExtrudeChains}
+          isChainingOpen={isChainingPaletteOpen}
+          isBasePointPicking={isBasePointPickActive}
+          onChangeExtrudeParam={handleChangeExtrudeParam}
+          onToggleExtrudeLock={handleToggleExtrudeLock}
+          onReselectExtrudeChains={() => {
+            setIsBasePointPickActive(false);
+            setIsChainingPaletteOpen(true);
+          }}
+          onReselectExtrudeBasePoint={() => {
+            setIsChainingPaletteOpen(false);
+            setIsBasePointPickActive(true);
+            showToast('Click new Base Point in 3D Viewport', 'info');
+          }}
+          onApplyExtrude={() => handleCommitSurfaceExtrude(true)}
+          onOkExtrude={() => handleCommitSurfaceExtrude(false)}
+          onCancelExtrude={handleCancelSurfaceExtrude}
         />
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
@@ -4538,64 +4930,97 @@ export default function App() {
         )}
 
         {workspaceViewMode === '3d' && (
-          <Viewport3D
-            currentModel={currentModel}
-            stockConfig={stockConfig}
-            fixtureConfig={fixtureConfig}
-            unitSystem={unitSystem}
-            operations={operations}
-            tools={tools}
-            activeOpId={activeOpId}
-            activePlane={activePlane}
-            planes={planesList}
-            theme={theme}
-            isBackplotActive={isBackplotActive}
-            backplotMode={backplotMode}
-            onCloseBackplot={() => setIsBackplotActive(false)}
-            onCoordinateUpdate={setCoords}
-            onMetricsCalculated={setPartMetrics}
-            onModelImported={handleModelImported}
-            workpieceColor={workpieceColor}
-            renderMode={renderMode}
-            cameraMode={cameraMode}
-            cameraFov={cameraFov}
-            clippingPlane={clippingPlane}
-            lightingMode={lightingMode}
-            layerVisibility={layerVisibility}
-            showArcCenters={showArcCenters}
-            showEndpoints={showEndpoints}
-            cameraCommand={cameraCommand}
-            partTransform={partTransform}
-            customGeometry={customGeometry}
-            isSketchModeActive={isSketchModeActive}
-            onToggleSketchMode={setIsSketchModeActive}
-            sketchTool={sketchTool}
-            onChangeSketchTool={setSketchTool}
-            onAddCustomEntity={handleAddCustomEntity}
-            onRemoveCustomEntity={handleRemoveCustomEntity}
-            onClearWireframes={handleClearWireframes}
-            onGenerateToolpathFromSketch={handleGenerateToolpathFromSketch}
-            onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
-            onToggleCameraMode={setCameraMode}
-            onUpdateClippingPlane={setClippingPlane}
-            onChangeRenderMode={setRenderMode}
-            activeDrawingRadius={circleParams.radius}
-            isRadiusLocked={circleParams.isLocked}
-            activeDrawingWidth={rectParams.width}
-            isWidthLocked={rectParams.isWidthLocked}
-            activeDrawingHeight={rectParams.height}
-            isHeightLocked={rectParams.isHeightLocked}
-            rectAnchorToCenter={rectParams.anchorToCenter}
-            rectCreateSurface={rectParams.createSurface}
-            activeDrawingLength={lineParams.length}
-            isLengthLocked={lineParams.isLengthLocked}
-            activeDrawingAngle={lineParams.angle}
-            isAngleLocked={lineParams.isAngleLocked}
-            lineType={lineParams.lineType}
-            onDrawingUpdate={handleDrawingUpdate}
-            reselectTrigger={reselectTrigger}
-            undoTrigger={undoTrigger}
-          />
+          <div style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', minWidth: 0 }}>
+            <ChainingPalette
+              isOpen={isChainingPaletteOpen}
+              chainMode={chainingConfig.chainMode}
+              onChangeChainMode={(chainMode) => setChainingConfig((prev) => ({ ...prev, chainMode }))}
+              planeMode={chainingConfig.planeMode}
+              onChangePlaneMode={(planeMode) => setChainingConfig((prev) => ({ ...prev, planeMode }))}
+              selectionMethod={chainingConfig.selectionMethod}
+              onChangeSelectionMethod={(selectionMethod) => setChainingConfig((prev) => ({ ...prev, selectionMethod }))}
+              containmentSide={chainingConfig.containmentSide}
+              onChangeContainmentSide={(containmentSide) => setChainingConfig((prev) => ({ ...prev, containmentSide }))}
+              waitMode={chainingConfig.waitMode}
+              onToggleWaitMode={(waitMode) => setChainingConfig((prev) => ({ ...prev, waitMode }))}
+              selectedChains={selectedExtrudeChains}
+              onReverseChain={handleReverseExtrudeChain}
+              onUnselectLast={() => setSelectedExtrudeChains((prev) => prev.slice(0, -1))}
+              onUnselectAll={() => setSelectedExtrudeChains([])}
+              onAddAllClosedChains={handleAddAllClosedChainsToExtrude}
+              onConfirm={handleConfirmChaining}
+              onCancel={handleCancelSurfaceExtrude}
+            />
+            <Viewport3D
+              currentModel={currentModel}
+              stockConfig={stockConfig}
+              fixtureConfig={fixtureConfig}
+              unitSystem={unitSystem}
+              operations={operations}
+              tools={tools}
+              activeOpId={activeOpId}
+              activePlane={activePlane}
+              planes={planesList}
+              theme={theme}
+              isBackplotActive={isBackplotActive}
+              backplotMode={backplotMode}
+              onCloseBackplot={() => setIsBackplotActive(false)}
+              onCoordinateUpdate={setCoords}
+              onMetricsCalculated={setPartMetrics}
+              onModelImported={handleModelImported}
+              workpieceColor={workpieceColor}
+              renderMode={renderMode}
+              cameraMode={cameraMode}
+              cameraFov={cameraFov}
+              clippingPlane={clippingPlane}
+              lightingMode={lightingMode}
+              layerVisibility={layerVisibility}
+              showArcCenters={showArcCenters}
+              showEndpoints={showEndpoints}
+              cameraCommand={cameraCommand}
+              partTransform={partTransform}
+              customGeometry={customGeometry}
+              isSketchModeActive={isSketchModeActive}
+              onToggleSketchMode={setIsSketchModeActive}
+              sketchTool={sketchTool}
+              onChangeSketchTool={setSketchTool}
+              onAddCustomEntity={handleAddCustomEntity}
+              onRemoveCustomEntity={handleRemoveCustomEntity}
+              onClearWireframes={handleClearWireframes}
+              onGenerateToolpathFromSketch={handleGenerateToolpathFromSketch}
+              onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
+              onToggleCameraMode={setCameraMode}
+              onUpdateClippingPlane={setClippingPlane}
+              onChangeRenderMode={setRenderMode}
+              activeDrawingRadius={circleParams.radius}
+              isRadiusLocked={circleParams.isLocked}
+              activeDrawingWidth={rectParams.width}
+              isWidthLocked={rectParams.isWidthLocked}
+              activeDrawingHeight={rectParams.height}
+              isHeightLocked={rectParams.isHeightLocked}
+              rectAnchorToCenter={rectParams.anchorToCenter}
+              rectCreateSurface={rectParams.createSurface}
+              activeDrawingLength={lineParams.length}
+              isLengthLocked={lineParams.isLengthLocked}
+              activeDrawingAngle={lineParams.angle}
+              isAngleLocked={lineParams.isAngleLocked}
+              lineType={lineParams.lineType}
+              onDrawingUpdate={handleDrawingUpdate}
+              reselectTrigger={reselectTrigger}
+              undoTrigger={undoTrigger}
+              isChainingActive={isChainingPaletteOpen}
+              chainingPlaneMode={chainingConfig.planeMode}
+              isBasePointPickActive={isBasePointPickActive}
+              selectedExtrudeChains={selectedExtrudeChains}
+              onSelectChainEntity={handleSelectChainEntityOnViewport}
+              onPickBasePoint={handlePickExtrudeBasePoint}
+              surfaceExtrudePreview={
+                activeSurfaceTool === 'extrude' && !isChainingPaletteOpen && selectedExtrudeChains.length > 0
+                  ? { chains: selectedExtrudeChains, params: extrudeParams }
+                  : null
+              }
+            />
+          </div>
         )}
       </div>
 
@@ -5110,6 +5535,7 @@ export default function App() {
         stockConfig={stockConfig}
         partMetrics={partMetrics}
         currentModel={currentModel}
+        customGeometry={customGeometry}
         activeMachine={activeMachine}
       />
 
@@ -5200,6 +5626,7 @@ export default function App() {
         stockConfig={stockConfig}
         partMetrics={partMetrics}
         currentModel={currentModel}
+        customGeometry={customGeometry}
         currentProjectName={currentProjectName}
       />
 
@@ -5246,12 +5673,21 @@ export default function App() {
         onNotify={showToast}
       />
 
-      {/* 17. Mastercam Surface Finish Contour Parameters Modal */}
+      {/* 17. Mastercam Surface Finish Contour & Pocket Parameters Modal */}
       <SurfaceFinishContourModal
         isOpen={isSurfaceFinishContourOpen}
-        onClose={() => setIsSurfaceFinishContourOpen(false)}
+        onClose={() => {
+          setIsSurfaceFinishContourOpen(false);
+          setEditingSurfaceFinishOp(null);
+        }}
+        operation={editingSurfaceFinishOp}
+        strategyMode={surfaceFinishStrategyMode}
         tools={tools}
-        onSaveOperation={handleApplySurfaceFinishContour}
+        customGeometry={customGeometry}
+        onSaveOperation={(op) => {
+          handleApplySurfaceFinishContour(op);
+          setIsSurfaceFinishContourOpen(false);
+        }}
         onOpenDefineToolModal={() => {
           setIsSurfaceFinishContourOpen(false);
           setIsDefineToolModalOpen(true);

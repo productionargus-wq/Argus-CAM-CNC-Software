@@ -20,6 +20,7 @@ export default function MachineSimModal({
   stockConfig = {},
   partMetrics = null,
   currentModel = null,
+  customGeometry = [],
   activeMachine = null
 }) {
   const dialogRef = useRef(null);
@@ -79,7 +80,8 @@ export default function MachineSimModal({
         partMetrics: partMetrics,
         controller: dialect,
         programName: `${selectedMachineId.toUpperCase()}_Argus_Job`,
-        model: currentModel
+        model: currentModel,
+        customGeometry
       });
       const text = generated?.gcodeText || (typeof generated === 'string' ? generated : '');
       programLines = text.split('\n').filter((l) => l.trim().length > 0);

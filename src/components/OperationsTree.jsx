@@ -11,6 +11,7 @@ import CircleCenterPointPanel from './CircleCenterPointPanel';
 import RectanglePanel from './RectanglePanel';
 import LineEndpointsPanel from './LineEndpointsPanel';
 import ArcTangentPanel from './ArcTangentPanel';
+import SurfaceExtrudePanel from './SurfaceExtrudePanel';
 
 export default function OperationsTree({
   operations = [],
@@ -71,6 +72,7 @@ export default function OperationsTree({
   onOpenProbingStudio,
   onOpenSetupSheet,
   onOpenSurfaceFinishContour,
+  onOpenSurfaceFinishPocket,
   onExportStockSTL,
   activeDrawingTool = null,
   circleParams = { radius: 25, isLocked: false, entityMethod: 'manual' },
@@ -114,11 +116,24 @@ export default function OperationsTree({
   onChangeArcEntityMethod,
   onApplyArc,
   onOkArc,
-  onCancelArc
+  onCancelArc,
+  // Surface Extrude Props
+  activeSurfaceTool = null,
+  surfaceExtrudeParams = null,
+  selectedExtrudeChains = [],
+  isChainingOpen = false,
+  isBasePointPicking = false,
+  onChangeExtrudeParam,
+  onToggleExtrudeLock,
+  onReselectExtrudeChains,
+  onReselectExtrudeBasePoint,
+  onApplyExtrude,
+  onOkExtrude,
+  onCancelExtrude
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
   const currentTab = activeManagerTab || localTab;
-  const isWireframeTool = ['Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent'].includes(currentTab);
+  const isWireframeTool = ['Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent', 'Surface Ex...'].includes(currentTab);
 
   const handleTabClick = (tab) => {
     const mapped = tab === 'Recent Fu...' ? 'Recent Functions' : tab;
@@ -126,9 +141,12 @@ export default function OperationsTree({
     if (onSelectManagerTab) onSelectManagerTab(mapped);
   };
 
-  // Sync tab with active drawing tool
+  // Sync tab with active drawing or surface tool
   useEffect(() => {
-    if (activeDrawingTool === 'circle') {
+    if (activeSurfaceTool === 'extrude') {
+      setLocalTab('Surface Ex...');
+      if (onSelectManagerTab) onSelectManagerTab('Surface Ex...');
+    } else if (activeDrawingTool === 'circle') {
       setLocalTab('Circle Cent...');
       if (onSelectManagerTab) onSelectManagerTab('Circle Cent...');
     } else if (activeDrawingTool === 'rect') {
@@ -140,11 +158,11 @@ export default function OperationsTree({
     } else if (activeDrawingTool === 'arc_tangent' || activeDrawingTool === 'arctangent' || activeDrawingTool === 'arc') {
       setLocalTab('Arc Tangent');
       if (onSelectManagerTab) onSelectManagerTab('Arc Tangent');
-    } else if (['Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent'].includes(localTab)) {
+    } else if (['Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent', 'Surface Ex...'].includes(localTab)) {
       setLocalTab('Toolpaths');
       if (onSelectManagerTab) onSelectManagerTab('Toolpaths');
     }
-  }, [activeDrawingTool]);
+  }, [activeDrawingTool, activeSurfaceTool]);
 
   // Tree Expansion States
   const [machineGroupExpanded, setMachineGroupExpanded] = useState(true);
@@ -279,9 +297,12 @@ export default function OperationsTree({
     if (activeDrawingTool === 'arc_tangent' || activeDrawingTool === 'arctangent' || activeDrawingTool === 'arc' || currentTab === 'Arc Tangent') {
       list.push('Arc Tangent');
     }
+    if (activeSurfaceTool === 'extrude' || currentTab === 'Surface Ex...') {
+      list.push('Surface Ex...');
+    }
     list.push('Recent Fu...');
     return list;
-  }, [activeDrawingTool, currentTab]);
+  }, [activeDrawingTool, activeSurfaceTool, currentTab]);
 
   const displayPlanes = planes && planes.length > 0 ? planes : [
     { id: 'plane_top', name: 'Top (G17)', code: 'G17', desc: 'Spindle along Z, XY Table', isStandard: true, wcsCode: 'G54' },
@@ -531,6 +552,22 @@ export default function OperationsTree({
             onApply={onApplyArc}
             onOk={onOkArc}
             onCancel={onCancelArc}
+          />
+        </div>
+      ) : currentTab === 'Surface Ex...' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <SurfaceExtrudePanel
+            extrudeParams={surfaceExtrudeParams}
+            selectedChains={selectedExtrudeChains}
+            isChainingOpen={isChainingOpen}
+            isBasePointPicking={isBasePointPicking}
+            onChangeParam={onChangeExtrudeParam}
+            onToggleLock={onToggleExtrudeLock}
+            onReselectChains={onReselectExtrudeChains}
+            onReselectBasePoint={onReselectExtrudeBasePoint}
+            onApply={onApplyExtrude}
+            onOk={onOkExtrude}
+            onCancel={onCancelExtrude}
           />
         </div>
       ) : (
@@ -1316,7 +1353,9 @@ export default function OperationsTree({
                 color: isActive ? '#0f172a' : '#475569',
                 fontWeight: isActive ? 600 : 400,
                 fontSize: '10.5px',
-                border: isActive ? '1px solid #cbd5e1' : '1px solid transparent',
+                borderTop: isActive ? '1px solid #cbd5e1' : '1px solid transparent',
+                borderLeft: isActive ? '1px solid #cbd5e1' : '1px solid transparent',
+                borderRight: isActive ? '1px solid #cbd5e1' : '1px solid transparent',
                 borderBottom: 'none',
                 borderRadius: '3px 3px 0 0',
                 padding: '2px 7px',
@@ -1382,6 +1421,7 @@ export default function OperationsTree({
           onOpenProbingStudio={onOpenProbingStudio}
           onOpenHSMFilter={onOpenHSMFilter}
           onOpenSurfaceFinishContour={onOpenSurfaceFinishContour}
+          onOpenSurfaceFinishPocket={onOpenSurfaceFinishPocket}
           onExportStockSTL={onExportStockSTL}
           onToggleLockOp={onToggleLockOp}
           onToggleGhostOp={onToggleGhostOp}

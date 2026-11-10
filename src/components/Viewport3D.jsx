@@ -4,7 +4,7 @@ import {
   Eye, Layers, Rotate3D, UploadCloud, Box, Info, Scissors, Camera, Sun, Sliders,
   Play, Pause, SkipForward, SkipBack, RotateCcw, X, AlertTriangle, CheckCircle2, Gauge
 } from 'lucide-react';
-import { parseSTLFile, calculatePartMetrics, createWireframeLine, createWireframeRect, createWireframeCircle, createPointMarker } from '../utils/cadGeometry';
+import { parseSTLFile, calculatePartMetrics, createWireframeLine, createWireframeRect, createWireframeCircle, createPointMarker, createParametricChainExtrusion } from '../utils/cadGeometry';
 import { parseAnyCADFile } from '../utils/universalCadParser';
 import ScaleRulerHUD from './ScaleRulerHUD';
 import ViewGnomonHUD from './ViewGnomonHUD';
@@ -15,11 +15,12 @@ import {
   createGhostPreview,
   createSnapIndicator,
   computeRectPlacement,
-  computeLineEnd
+  computeLineEnd,
+  hitTestWireframeEntity
 } from '../utils/cadDrawingEngine';
 import {
   generateFacingToolpath,
-  generatePocketToolpath,
+  generateSurfacePocketToolpath,
   generateWaterlineToolpath,
   generateSwarfToolpath,
   generateDrillingToolpath,
@@ -36,7 +37,10 @@ import {
   createToolAssembly3D,
   compileBackplotTrajectory,
   sampleTrajectoryAtT,
-  buildContourParamsFromOp
+  buildContourParamsFromOp,
+  buildPocketParamsFromOp,
+  buildEffectiveDriveModel,
+  computeDriveModelBounds
 } from '../utils/toolpathEngine';
 import {
   buildCPlaneHelperGroup,
@@ -117,7 +121,15 @@ export default function Viewport3D({
   lineType = 'freeform',
   onDrawingUpdate = null,
   reselectTrigger = 0,
-  undoTrigger = 0
+  undoTrigger = 0,
+  // Chaining & Live Surface Extrude Preview Props
+  isChainingActive = false,
+  chainingPlaneMode = '3d',
+  isBasePointPickActive = false,
+  selectedExtrudeChains = [],
+  onSelectChainEntity = null,
+  onPickBasePoint = null,
+  surfaceExtrudePreview = null
 }) {
   const isLight = theme !== 'dark';
   const mountRef = useRef(null);
@@ -193,6 +205,13 @@ export default function Viewport3D({
 
   const sketchGhostGroupRef = useRef(null);
   const snapIndicatorGroupRef = useRef(null);
+  const chainHighlightGroupRef = useRef(null);
+  const surfacePreviewGroupRef = useRef(null);
+  const isChainingActiveRef = useRef(isChainingActive);
+  const chainingPlaneModeRef = useRef(chainingPlaneMode);
+  const isBasePointPickActiveRef = useRef(isBasePointPickActive);
+  const onSelectChainEntityRef = useRef(onSelectChainEntity);
+  const onPickBasePointRef = useRef(onPickBasePoint);
   const sketchAnchorRef = useRef(null);
   const isSketchModeRef = useRef(isSketchModeActive);
   const activeSketchToolRef = useRef(sketchTool || 'line');
@@ -234,6 +253,11 @@ export default function Viewport3D({
   useEffect(() => { isAngleLockedRef.current = isAngleLocked; }, [isAngleLocked]);
   useEffect(() => { lineTypeRef.current = lineType; }, [lineType]);
   useEffect(() => { onDrawingUpdateRef.current = onDrawingUpdate; }, [onDrawingUpdate]);
+  useEffect(() => { isChainingActiveRef.current = isChainingActive; }, [isChainingActive]);
+  useEffect(() => { chainingPlaneModeRef.current = chainingPlaneMode; }, [chainingPlaneMode]);
+  useEffect(() => { isBasePointPickActiveRef.current = isBasePointPickActive; }, [isBasePointPickActive]);
+  useEffect(() => { onSelectChainEntityRef.current = onSelectChainEntity; }, [onSelectChainEntity]);
+  useEffect(() => { onPickBasePointRef.current = onPickBasePoint; }, [onPickBasePoint]);
 
   const renderLockedPreviewAt = (basePt, opts = {}) => {
     if (!isSketchModeRef.current || !sketchGhostGroupRef.current) return;
@@ -339,6 +363,7 @@ export default function Viewport3D({
       sketchAnchorRef.current = null;
       setSketchAnchor(null);
       if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+      if (snapIndicatorGroupRef.current) snapIndicatorGroupRef.current.clear();
       setDimensionFeedback(null);
       if (isSketchModeRef.current) {
         const tool = activeSketchToolRef.current;
@@ -432,6 +457,8 @@ export default function Viewport3D({
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.localClippingEnabled = true;
+    renderer.domElement.tabIndex = -1;
+    renderer.domElement.style.outline = 'none';
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -503,6 +530,18 @@ export default function Viewport3D({
     scene.add(snapIndicatorGroup);
     snapIndicatorGroupRef.current = snapIndicatorGroup;
 
+    const chainHighlightGroup = new THREE.Group();
+    chainHighlightGroup.name = "Chain_Highlight_Group";
+    chainHighlightGroup.position.set(0, 49, 0);
+    scene.add(chainHighlightGroup);
+    chainHighlightGroupRef.current = chainHighlightGroup;
+
+    const surfacePreviewGroup = new THREE.Group();
+    surfacePreviewGroup.name = "Surface_Preview_Group";
+    surfacePreviewGroup.position.set(0, 49, 0);
+    scene.add(surfacePreviewGroup);
+    surfacePreviewGroupRef.current = surfacePreviewGroup;
+
     // Drafting Dimension Callouts Group
     const dimensionGroup = new THREE.Group();
     dimensionGroup.position.set(0, 49, 0);
@@ -537,12 +576,45 @@ export default function Viewport3D({
       return new THREE.Vector3(Number(hit.x.toFixed(3)), Number(topY.toFixed(3)), Number(hit.z.toFixed(3)));
     };
 
+    const resolvePickOnWireframe = (e) => {
+      const entities = customGeometryRef.current || [];
+      const ySet = new Set([0, partTopYRef.current ?? 0, 35]);
+      entities.forEach((ent) => {
+        if (!ent || !ent.userData) return;
+        if (ent.userData.center?.y != null) ySet.add(Number(ent.userData.center.y));
+        if (Array.isArray(ent.userData.points) && ent.userData.points[0]?.y != null) {
+          ySet.add(Number(ent.userData.points[0].y));
+        }
+      });
+
+      const rect = dom.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const hitPlane = new THREE.Plane();
+      const target = new THREE.Vector3();
+      const tol = Math.max(7.5, spherical.radius * 0.03);
+
+      for (const wy of ySet) {
+        hitPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 49 + wy, 0));
+        const hit = raycaster.ray.intersectPlane(hitPlane, target);
+        if (!hit) continue;
+        const localPt = new THREE.Vector3(hit.x, wy, hit.z);
+        const match = hitTestWireframeEntity(localPt, entities, tol, chainingPlaneModeRef.current);
+        if (match) return { entity: match, localPt };
+      }
+      return { entity: null, localPt: getSketchIntersection(e) };
+    };
+
     // Mouse Drag Orbit & Pan
     let isDragging = false;
     let isPanning = false;
     let isDrawingDrag = false;
     let dragStartScreenX = 0;
     let dragStartScreenY = 0;
+    let pickDownX = 0;
+    let pickDownY = 0;
     let prevMouseX = 0;
     let prevMouseY = 0;
     let spherical = new THREE.Spherical(340, Math.PI / 3.4, Math.PI / 4);
@@ -663,6 +735,10 @@ export default function Viewport3D({
     };
 
     const onMouseDown = (e) => {
+      if (document.activeElement && document.activeElement !== dom && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
+      dom.focus({ preventScroll: true });
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
 
@@ -754,7 +830,11 @@ export default function Viewport3D({
         }
       }
 
-      if (e.button === 0) isDragging = true;
+      if (e.button === 0) {
+        pickDownX = e.clientX;
+        pickDownY = e.clientY;
+        isDragging = true;
+      }
       if (e.button === 2) isPanning = true;
     };
 
@@ -892,6 +972,25 @@ export default function Viewport3D({
     const onMouseUp = (e) => {
       isDragging = false;
       isPanning = false;
+
+      if ((isChainingActiveRef.current || isBasePointPickActiveRef.current) && e.button === 0 && !isSketchModeRef.current) {
+        const clickDist = Math.hypot(e.clientX - pickDownX, e.clientY - pickDownY);
+        if (clickDist < 6) {
+          if (isBasePointPickActiveRef.current && onPickBasePointRef.current) {
+            const snapped = resolveSnappedPoint(e);
+            const pt = snapped?.finalPt || getSketchIntersection(e);
+            if (pt) onPickBasePointRef.current({ x: pt.x, y: pt.y, z: pt.z });
+            return;
+          }
+          if (isChainingActiveRef.current && onSelectChainEntityRef.current) {
+            const picked = resolvePickOnWireframe(e);
+            if (picked?.entity) {
+              onSelectChainEntityRef.current(picked.entity);
+            }
+            return;
+          }
+        }
+      }
 
       if (isSketchModeRef.current && isDrawingDrag) {
         isDrawingDrag = false;
@@ -1462,7 +1561,10 @@ export default function Viewport3D({
 
     operations.forEach((op) => {
       const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10 };
-      const opBounds = toBox3(op.bounds) || bounds;
+      const effectiveModel = buildEffectiveDriveModel(currentModel, customGeometry, op);
+      const opBounds = (op.usesCustomSurfaces && effectiveModel)
+        ? computeDriveModelBounds(effectiveModel, op.bounds || bounds)
+        : (toBox3(op.bounds) || bounds);
 
       let toolpathData;
       if (op.badgeClass === 'face') {
@@ -1472,13 +1574,8 @@ export default function Viewport3D({
           depthOfCut: op.stepdown || 1.0,
           rapidHeight: op.rapidHeight || 15.0
         });
-      } else if (op.badgeClass === 'pocket') {
-        toolpathData = generatePocketToolpath(opBounds, assignedTool, {
-          stepoverPct: op.stepoverPct || 50,
-          totalDepth: op.totalDepth || 15.0,
-          stepdown: op.stepdown || 5.0,
-          rapidHeight: op.rapidHeight || 15.0
-        }, currentModel);
+      } else if (op.badgeClass === 'pocket' || op.badgeClass === 'surface_pocket') {
+        toolpathData = generateSurfacePocketToolpath(opBounds, assignedTool, buildPocketParamsFromOp(op), effectiveModel);
       } else if (op.badgeClass === 'circlemill') {
         toolpathData = generateCircleMillToolpath(opBounds, assignedTool, {
           diameter: op.diameter || (op.chain?.radius ? op.chain.radius * 2 : 50.8),
@@ -1488,24 +1585,24 @@ export default function Viewport3D({
           chain: op.chain,
           center: op.center || op.chain?.center
         });
-      } else if (op.badgeClass === 'contour') {
-        toolpathData = generateWaterlineToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), currentModel);
+      } else if (op.badgeClass === 'contour' || op.badgeClass === 'waterline') {
+        toolpathData = generateWaterlineToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
       } else if (op.badgeClass === 'swarf') {
         toolpathData = generateSwarfToolpath(opBounds, assignedTool, {
           tiltAngleDeg: 15.0,
           passes: 3
-        }, currentModel);
+        }, effectiveModel);
       } else if (op.badgeClass === 'drill') {
         toolpathData = generateDrillingToolpath(opBounds, assignedTool, {
           drillDepth: op.totalDepth || 25.0,
           peckDepth: op.stepdown || 5.0,
           rapidHeight: op.rapidHeight || 10.0
-        }, currentModel);
+        }, effectiveModel);
       } else if (op.badgeClass === 'spotdrill') {
         toolpathData = generateSpotDrillToolpath(opBounds, assignedTool, {
           spotDepth: op.stepdown || op.totalDepth || 3.8,
           rapidHeight: op.rapidHeight || 10.0
-        }, currentModel);
+        }, effectiveModel);
       } else if (op.badgeClass === 'adaptive' || op.badgeClass === 'dynamic') {
         toolpathData = generateAdaptiveRoughingToolpath(opBounds, assignedTool, {
           stepoverPct: op.stepoverPct || 25,
@@ -1514,50 +1611,51 @@ export default function Viewport3D({
           rapidHeight: op.rapidHeight || 15.0
         });
       } else if (op.badgeClass === 'chamfer') {
-        toolpathData = generateChamferToolpath(bounds, assignedTool, {
+        toolpathData = generateChamferToolpath(opBounds, assignedTool, {
           chamferWidth: op.chamferWidth || op.stepdown || 0.508,
           tipOffset: op.tipOffset || 1.27,
           rapidHeight: op.rapidHeight || 15.0
-        }, currentModel);
+        }, effectiveModel);
       } else if (op.badgeClass === 'tap') {
-        toolpathData = generateTapToolpath(bounds, assignedTool, {
+        toolpathData = generateTapToolpath(opBounds, assignedTool, {
           pitch: op.pitch || 0.79375,
           totalDepth: op.totalDepth || 12.19,
           rapidHeight: op.rapidHeight || 10.0
-        }, currentModel);
+        }, effectiveModel);
       } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
-        toolpathData = generateSurfaceParallelToolpath(bounds, assignedTool, {
+        toolpathData = generateSurfaceParallelToolpath(opBounds, assignedTool, {
           stepoverPct: op.stepoverPct || 20,
           rapidHeight: op.rapidHeight || 15.0
-        }, currentModel);
+        }, effectiveModel);
       } else if (op.badgeClass === 'rest' || op.badgeClass === 'rest_milling') {
-        toolpathData = generateRestMillingToolpath(bounds, assignedTool, {
+        toolpathData = generateRestMillingToolpath(opBounds, assignedTool, {
           refToolDiameter: op.refToolDiameter || 12.0,
           stepdown: op.stepdown || 2.5,
           totalDepth: op.totalDepth || 15.0,
           stepoverPct: op.stepoverPct || 30,
           rapidHeight: op.rapidHeight || 15.0
-        }, currentModel);
+        }, effectiveModel);
       } else if (op.badgeClass === 'pencil') {
-        toolpathData = generatePencilTracingToolpath(bounds, assignedTool, {
+        toolpathData = generatePencilTracingToolpath(opBounds, assignedTool, {
           totalDepth: op.totalDepth || 15.0,
           stepdown: op.stepdown || 1.0,
           biTangencyRadius: op.biTangencyRadius || 3.0,
           rapidHeight: op.rapidHeight || 15.0
-        }, currentModel);
+        }, effectiveModel);
       } else if (op.badgeClass === 'probe') {
         const center = op.center || {
-          x: (bounds.min.x + bounds.max.x) / 2,
-          y: bounds.max.y,
-          z: (bounds.min.z + bounds.max.z) / 2
+          x: (opBounds.min.x + opBounds.max.x) / 2,
+          y: opBounds.max.y,
+          z: (opBounds.min.z + opBounds.max.z) / 2
         };
         toolpathData = generateProbingToolpath(op.strategyKey || 'bore_centering', center, op.probingParams || {});
       }
 
       if (toolpathData) {
         const { cutGeo, rapidGeo } = buildToolpathMeshes(toolpathData);
-        // CAD wireframe entities sit inside customGeoGroup at Y = 49; align CAD-sketch toolpaths to that height
-        const visualYOffset = (!!op.chain || (!currentModel && opBounds.max.y < 49)) ? 49 : 0;
+        // CAD entities sit inside customGeoGroup at Y = 49; align CAD/surface toolpaths to that height
+        const usesCadSpace = !!op.chain || !!op.usesCustomSurfaces || !!(op.driveSurfaceIds?.length) || !currentModel;
+        const visualYOffset = usesCadSpace ? 49 : 0;
 
         // Feed cut line segments
         if (cutGeo.attributes.position && cutGeo.attributes.position.count > 0) {
@@ -1589,7 +1687,7 @@ export default function Viewport3D({
         }
       }
     });
-  }, [operations, tools, partMetrics, stockConfig, currentModel, layerVisibility.toolpaths, layerVisibility.rapids]);
+  }, [operations, tools, partMetrics, stockConfig, currentModel, customGeometry, layerVisibility.toolpaths, layerVisibility.rapids]);
 
   // 11. Dynamically Render Custom CAD Sketcher & Surface Entities on Level 10 & 15
   useEffect(() => {
@@ -1613,6 +1711,65 @@ export default function Viewport3D({
       group.add(entity);
     });
   }, [customGeometry, layerVisibility.wireframe, layerVisibility.surfaces]);
+
+  // 11a. Render Dashed Selection Highlight for Active Chaining Curves
+  useEffect(() => {
+    const group = chainHighlightGroupRef.current;
+    if (!group) return;
+    while (group.children.length > 0) group.remove(group.children[0]);
+
+    if (!isChainingActive && (!Array.isArray(selectedExtrudeChains) || selectedExtrudeChains.length === 0)) {
+      return;
+    }
+
+    (selectedExtrudeChains || []).forEach((chain) => {
+      if (!chain || !Array.isArray(chain.points) || chain.points.length < 2) return;
+      const pts = chain.points.map((p) => new THREE.Vector3(p.x, (p.y || 0) + 0.15, p.z));
+      const baseGeo = new THREE.BufferGeometry().setFromPoints(pts);
+
+      // Dark underlay + bright dashed overlay matching Mastercam dashed contour highlight
+      const underlay = new THREE.Line(baseGeo, new THREE.LineBasicMaterial({ color: 0x0f172a, linewidth: 2 }));
+      group.add(underlay);
+
+      const dashLine = new THREE.Line(
+        baseGeo.clone(),
+        new THREE.LineDashedMaterial({ color: 0xf8fafc, dashSize: 2.5, gapSize: 2.5, linewidth: 2 })
+      );
+      dashLine.computeLineDistances();
+      group.add(dashLine);
+
+      // Direction Arrow along first segment
+      const p0 = pts[0];
+      const p1 = pts[Math.min(1, pts.length - 1)];
+      const dir = new THREE.Vector3().subVectors(p1, p0);
+      if (dir.lengthSq() > 1e-4) {
+        dir.normalize();
+        const coneGeo = new THREE.ConeGeometry(1.4, 3.8, 8);
+        const cone = new THREE.Mesh(coneGeo, new THREE.MeshBasicMaterial({ color: 0x16a34a }));
+        cone.position.copy(p0).addScaledVector(dir, 3.0);
+        cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        group.add(cone);
+      }
+    });
+  }, [isChainingActive, selectedExtrudeChains]);
+
+  // 11a-2. Render Live Parametric Cyan Surface Extrude Preview
+  useEffect(() => {
+    const group = surfacePreviewGroupRef.current;
+    if (!group) return;
+    while (group.children.length > 0) group.remove(group.children[0]);
+
+    if (!surfaceExtrudePreview || !Array.isArray(surfaceExtrudePreview.chains) || surfaceExtrudePreview.chains.length === 0) {
+      return;
+    }
+
+    const previewMesh = createParametricChainExtrusion(
+      surfaceExtrudePreview.chains,
+      surfaceExtrudePreview.params,
+      { isPreview: true }
+    );
+    group.add(previewMesh);
+  }, [surfaceExtrudePreview]);
 
   // 11b. Dynamic CPlanes & Construction Coordinate System Grid/Triad
   useEffect(() => {
@@ -1697,7 +1854,7 @@ export default function Viewport3D({
       ? null
       : Number(backplotSelectedOpFilter);
 
-    const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, effectiveOpId, 49);
+    const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, effectiveOpId, 49, customGeometry);
     waypointsRef.current = trajectory.waypoints;
 
     if (trajectory.waypoints.length === 0) return;
@@ -1771,7 +1928,7 @@ export default function Viewport3D({
       if (backplotTrailRef.current) scene.remove(backplotTrailRef.current);
       if (backplotVerifyGroupRef.current) scene.remove(backplotVerifyGroupRef.current);
     };
-  }, [isBackplotActive, activeOpId, backplotSelectedOpFilter, operations, tools, partMetrics, currentModel, backplotInternalMode, heatmapTolerance]);
+  }, [isBackplotActive, activeOpId, backplotSelectedOpFilter, operations, tools, partMetrics, currentModel, customGeometry, backplotInternalMode, heatmapTolerance]);
 
   // 13. Backplot Animation & Sampling Frame Loop
   useEffect(() => {
@@ -1895,6 +2052,7 @@ export default function Viewport3D({
 
     const handleSketchKey = (e) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
 
       const key = e.key.toLowerCase();
       if (key === 'l') {

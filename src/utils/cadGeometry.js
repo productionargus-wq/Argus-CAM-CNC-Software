@@ -1697,6 +1697,424 @@ export function createExtrudedSurface(
 }
 
 /**
+ * Offsets a 2D (u, v) polyline or closed polygon along its outward (positive)
+ * or inward (negative) contour normal with miter-spike clamping.
+ */
+export function offsetContour2D(uvPts = [], offset = 0, isClosed = true) {
+  if (!Array.isArray(uvPts) || uvPts.length < 2 || Math.abs(offset) < 1e-5) {
+    return uvPts.map((p) => ({ u: p.u, v: p.v }));
+  }
+
+  // Deduplicate nearly identical consecutive points & simplify micro triangle-slice jitter
+  const rawDedup = [];
+  uvPts.forEach((p) => {
+    const prev = rawDedup[rawDedup.length - 1];
+    if (!prev || Math.hypot(p.u - prev.u, p.v - prev.v) > 0.08) {
+      rawDedup.push({ u: p.u, v: p.v });
+    }
+  });
+  if (isClosed && rawDedup.length > 2 && Math.hypot(rawDedup[0].u - rawDedup[rawDedup.length - 1].u, rawDedup[0].v - rawDedup[rawDedup.length - 1].v) < 0.08) {
+    rawDedup.pop();
+  }
+
+  // Drop nearly collinear intermediate vertices along straight wall slices so miter bisectors never blow up
+  const pts = [];
+  const rawN = rawDedup.length;
+  for (let i = 0; i < rawN; i++) {
+    const curr = rawDedup[i];
+    if (!isClosed && (i === 0 || i === rawN - 1)) {
+      pts.push(curr);
+      continue;
+    }
+    if (pts.length === 0) {
+      pts.push(curr);
+      continue;
+    }
+    const prev = pts[pts.length - 1];
+    const next = rawDedup[(i + 1) % rawN];
+    const abU = next.u - prev.u;
+    const abV = next.v - prev.v;
+    const abLen = Math.hypot(abU, abV);
+    if (abLen > 1e-4) {
+      const cross = Math.abs((curr.u - prev.u) * abV - (curr.v - prev.v) * abU) / abLen;
+      if (cross < 0.005 && abLen < 12) {
+        continue;
+      }
+    }
+    pts.push(curr);
+  }
+  if (pts.length < 2 || (isClosed && pts.length < 3)) return [];
+
+  // Bounding box + signed area (> 0 means CCW in u-v)
+  let inMinU = Infinity, inMaxU = -Infinity, inMinV = Infinity, inMaxV = -Infinity;
+  let area2 = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i];
+    inMinU = Math.min(inMinU, a.u); inMaxU = Math.max(inMaxU, a.u);
+    inMinV = Math.min(inMinV, a.v); inMaxV = Math.max(inMaxV, a.v);
+    if (isClosed) {
+      const b = pts[(i + 1) % pts.length];
+      area2 += a.u * b.v - b.u * a.v;
+    }
+  }
+  if (isClosed && offset < 0) {
+    const minInSpan = Math.min(inMaxU - inMinU, inMaxV - inMinV);
+    if (Math.abs(offset) >= minInSpan * 0.495) return [];
+  }
+  const outwardSign = (!isClosed || area2 >= 0) ? 1 : -1;
+  const effDist = offset * outwardSign;
+  const n = pts.length;
+
+  const getEdgeNormal = (a, b) => {
+    const du = b.u - a.u;
+    const dv = b.v - a.v;
+    const len = Math.hypot(du, dv) || 1;
+    // Right-hand normal of CCW curve points outward
+    return { nu: dv / len, nv: -du / len };
+  };
+
+  const outPts = [];
+  for (let i = 0; i < n; i++) {
+    const hasPrev = isClosed || i > 0;
+    const hasNext = isClosed || i < n - 1;
+    const prevPt = pts[(i - 1 + n) % n];
+    const currPt = pts[i];
+    const nextPt = pts[(i + 1) % n];
+
+    const n1 = hasPrev ? getEdgeNormal(prevPt, currPt) : null;
+    const n2 = hasNext ? getEdgeNormal(currPt, nextPt) : null;
+
+    if (!n1 && n2) {
+      outPts.push({ u: currPt.u + n2.nu * effDist, v: currPt.v + n2.nv * effDist });
+    } else if (n1 && !n2) {
+      outPts.push({ u: currPt.u + n1.nu * effDist, v: currPt.v + n1.nv * effDist });
+    } else if (n1 && n2) {
+      const avgU = n1.nu + n2.nu;
+      const avgV = n1.nv + n2.nv;
+      const avgLenSq = avgU * avgU + avgV * avgV;
+      if (avgLenSq < 1e-4) {
+        outPts.push({ u: currPt.u + n2.nu * effDist, v: currPt.v + n2.nv * effDist });
+      } else {
+        // Miter length along bisector: 1 / cos(theta/2) = 2 / |n1 + n2|
+        const avgLen = Math.sqrt(avgLenSq);
+        const rawScale = 2 / avgLenSq;
+        const maxMiter = 2.0 / avgLen;
+        const miterScale = Math.min(rawScale, maxMiter) * effDist;
+        outPts.push({ u: currPt.u + avgU * miterScale, v: currPt.v + avgV * miterScale });
+      }
+    }
+  }
+
+  // Collapse & inversion check when shrinking closed polygons inward
+  if (isClosed && offset < 0 && outPts.length >= 3) {
+    let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+    let newArea2 = 0;
+    for (let i = 0; i < outPts.length; i++) {
+      const a = outPts[i];
+      const b = outPts[(i + 1) % outPts.length];
+      minU = Math.min(minU, a.u); maxU = Math.max(maxU, a.u);
+      minV = Math.min(minV, a.v); maxV = Math.max(maxV, a.v);
+      newArea2 += a.u * b.v - b.u * a.v;
+    }
+    if ((maxU - minU) < 0.25 || (maxV - minV) < 0.25) return [];
+    if (area2 !== 0 && newArea2 * area2 <= 0) return [];
+    if (Math.abs(newArea2) >= Math.abs(area2) * 0.999) return [];
+    if (minU < inMinU - 0.1 || maxU > inMaxU + 0.1 || minV < inMinV - 0.1 || maxV > inMaxV + 0.1) return [];
+    outPts.push({ ...outPts[0] });
+  } else if (isClosed && outPts.length >= 3) {
+    outPts.push({ ...outPts[0] });
+  }
+
+  return outPts;
+}
+
+/**
+ * Resolves an orthonormal (uAxis, vAxis, extrudeAxis) basis from Mastercam Axis selection.
+ * Mastercam TOP: +X => Three +X, +Y => Three -Z, +Z => Three +Y.
+ */
+function resolveExtrusionBasis(params = {}) {
+  const { useAxis = false, axis = 'z', axisVector = { x: 0, y: 0, z: 1 } } = params;
+  const activeAxis = useAxis ? String(axis || 'z').toLowerCase() : 'z';
+
+  const dir = new THREE.Vector3(0, 1, 0);
+  if (activeAxis === 'x') {
+    dir.set(1, 0, 0);
+  } else if (activeAxis === 'y') {
+    dir.set(0, 0, -1);
+  } else if (activeAxis === 'vector' && axisVector) {
+    dir.set(
+      Number(axisVector.x) || 0,
+      Number(axisVector.z) || 0,
+      -(Number(axisVector.y) || 0)
+    );
+    if (dir.lengthSq() < 1e-6) dir.set(0, 1, 0);
+    dir.normalize();
+  }
+
+  const ref = Math.abs(dir.x) < 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+  const uAxis = new THREE.Vector3().crossVectors(ref, dir).normalize();
+  const vAxis = new THREE.Vector3().crossVectors(dir, uAxis).normalize();
+  return { extrudeAxis: dir, uAxis, vAxis };
+}
+
+/**
+ * Creates a Mastercam-style Parametric Shaded Cyan Surface Extrusion from wireframe chain(s).
+ * Supports Height (+/-), Scale, Rotation angle, Offset distance, Draft angle, Axis, Base Point, and Direction.
+ */
+export function createParametricChainExtrusion(chains = [], params = {}, options = {}) {
+  const validChains = (Array.isArray(chains) ? chains : [chains]).filter((c) => c && Array.isArray(c.points) && c.points.length >= 2);
+  const group = new THREE.Group();
+
+  const {
+    height = 20.0,
+    scale = 1.0,
+    rotationAngleDeg = 0.0,
+    offsetDistance = 0.0,
+    draftAngleDeg = 0.0,
+    useAxis = false,
+    axis = 'z',
+    axisVector = { x: 0, y: 0, z: 1 },
+    direction = 'defined',
+    basePoint = null,
+    capEnds = true
+  } = params;
+
+  const rawHeight = Number.isFinite(Number(height)) ? Number(height) : 20.0;
+  const safeHeight = Math.abs(rawHeight) < 0.05 ? (rawHeight < 0 ? -0.05 : 0.05) : rawHeight;
+  const dirMult = direction === 'reverse' ? -1 : 1;
+  const spanList = direction === 'both'
+    ? [
+        { startT: 0, endT: safeHeight },
+        { startT: 0, endT: -safeHeight }
+      ]
+    : [{ startT: 0, endT: safeHeight * dirMult }];
+
+  const { extrudeAxis, uAxis, vAxis } = resolveExtrusionBasis({ useAxis, axis, axisVector });
+  const safeScale = Number.isFinite(Number(scale)) ? Number(scale) : 1.0;
+  const rotTotalRad = ((Number(rotationAngleDeg) || 0) * Math.PI) / 180;
+  const offsetDist = Number(offsetDistance) || 0;
+  const draftTan = Math.tan(((Number(draftAngleDeg) || 0) * Math.PI) / 180);
+
+  // Mastercam Cyan Surface Finish + Dark Blue Boundary Rim
+  const surfaceColor = options.color || 0x22d3ee;
+  const rimColor = options.rimColor || 0x1e3a8a;
+  const isPreview = Boolean(options.isPreview);
+
+  const surfaceMat = new THREE.MeshStandardMaterial({
+    color: surfaceColor,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: options.opacity ?? (isPreview ? 0.65 : 0.78),
+    roughness: 0.32,
+    metalness: 0.08,
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1
+  });
+  const rimMat = new THREE.LineBasicMaterial({ color: rimColor, linewidth: 2 });
+
+  const resolvedBase = basePoint
+    ? new THREE.Vector3(Number(basePoint.x) || 0, Number(basePoint.y) || 0, Number(basePoint.z) || 0)
+    : (() => {
+        const first = validChains[0];
+        if (first?.center) {
+          return new THREE.Vector3(first.center.x || 0, first.center.y || 0, first.center.z || 0);
+        }
+        const box = new THREE.Box3();
+        validChains.forEach((c) => c.points.forEach((p) => box.expandByPoint(new THREE.Vector3(p.x, p.y, p.z))));
+        return box.isEmpty() ? new THREE.Vector3(0, 0, 0) : box.getCenter(new THREE.Vector3());
+      })();
+
+  const recordedContourLoops = [];
+  let maxDepthExtent = Math.abs(safeHeight);
+
+  validChains.forEach((chain) => {
+    const rawPts = chain.points.map((p) => new THREE.Vector3(p.x, p.y, p.z));
+    const isClosed = chain.isClosed ?? (rawPts.length >= 3 && rawPts[0].distanceTo(rawPts[rawPts.length - 1]) < 0.8);
+
+    // Project base chain points into local coordinates relative to resolvedBase along (uAxis, vAxis, extrudeAxis)
+    const baseUVH = rawPts.map((pt) => {
+      const rel = pt.clone().sub(resolvedBase);
+      return {
+        u: rel.dot(uAxis),
+        v: rel.dot(vAxis),
+        h: rel.dot(extrudeAxis)
+      };
+    });
+
+    const baseOffsetUV = Math.abs(offsetDist) > 1e-4
+      ? offsetContour2D(baseUVH, offsetDist, isClosed)
+      : baseUVH.map((p) => ({ u: p.u, v: p.v }));
+
+    if (baseOffsetUV.length < 2) return;
+
+    // Average plane elevation offset along extrudeAxis
+    const baseAvgH = baseUVH.reduce((acc, p) => acc + p.h, 0) / Math.max(1, baseUVH.length);
+
+    const buildSectionAtFraction = (frac, distAlongAxis) => {
+      const curScale = 1 + (safeScale - 1) * frac;
+      const curRot = rotTotalRad * frac;
+      const cosR = Math.cos(curRot);
+      const sinR = Math.sin(curRot);
+      const draftOffset = draftTan * Math.abs(distAlongAxis);
+
+      const draftedUV = Math.abs(draftOffset) > 1e-4
+        ? offsetContour2D(baseOffsetUV, draftOffset, isClosed)
+        : baseOffsetUV;
+      const workingUV = draftedUV.length >= 2 ? draftedUV : baseOffsetUV;
+
+      return workingUV.map((uv, idx) => {
+        const su = uv.u * curScale;
+        const sv = uv.v * curScale;
+        const ru = su * cosR - sv * sinR;
+        const rv = su * sinR + sv * cosR;
+        const localH = baseUVH[Math.min(idx, baseUVH.length - 1)]?.h ?? baseAvgH;
+        return resolvedBase.clone()
+          .addScaledVector(uAxis, ru)
+          .addScaledVector(vAxis, rv)
+          .addScaledVector(extrudeAxis, localH + distAlongAxis);
+      });
+    };
+
+    const heightSlices = Math.abs(rotationAngleDeg) > 0.1 ? 16 : 1;
+
+    spanList.forEach(({ startT, endT }) => {
+      const sections = [];
+      for (let s = 0; s <= heightSlices; s++) {
+        const frac = s / heightSlices;
+        const dist = startT + (endT - startT) * frac;
+        sections.push(buildSectionAtFraction(frac, dist));
+      }
+
+      const ringCount = sections[0].length;
+      if (ringCount < 2) return;
+      const positions = [];
+      const indices = [];
+
+      sections.forEach((sec) => {
+        sec.forEach((pt) => {
+          positions.push(pt.x, pt.y, pt.z);
+        });
+      });
+
+      for (let s = 0; s < heightSlices; s++) {
+        for (let i = 0; i < ringCount - 1; i++) {
+          const a = s * ringCount + i;
+          const b = s * ringCount + (i + 1);
+          const c = (s + 1) * ringCount + (i + 1);
+          const d = (s + 1) * ringCount + i;
+          indices.push(a, b, c, a, c, d);
+        }
+      }
+
+      const wallGeo = new THREE.BufferGeometry();
+      wallGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      wallGeo.setIndex(indices);
+      wallGeo.computeVertexNormals();
+
+      const wallMesh = new THREE.Mesh(wallGeo, surfaceMat);
+      wallMesh.userData = { isExtrudeWall: true, isCap: false };
+      group.add(wallMesh);
+
+      // Sharp vertical seam edges (> 30deg) so rectangles show vertical corners while circles stay smooth
+      const sharpEdges = new THREE.EdgesGeometry(wallGeo, 30);
+      group.add(new THREE.LineSegments(sharpEdges, rimMat));
+
+      // Top & Bottom Dark Blue Rim Outlines
+      const startRimGeo = new THREE.BufferGeometry().setFromPoints(sections[0]);
+      group.add(new THREE.Line(startRimGeo, rimMat));
+      const endSection = sections[sections.length - 1];
+      const endRimGeo = new THREE.BufferGeometry().setFromPoints(endSection);
+      group.add(new THREE.Line(endRimGeo, rimMat));
+
+      recordedContourLoops.push(endSection.map((p) => ({ x: p.x, y: p.y, z: p.z })));
+
+      // Flat Boundary Caps for Closed Chains (matching Mastercam Shaded Extrude visuals)
+      if (isClosed && capEnds && endSection.length >= 4) {
+        [
+          { pts3D: sections[0], hDist: startT, flip: endT >= startT },
+          { pts3D: endSection, hDist: endT, flip: endT < startT }
+        ].forEach(({ pts3D }) => {
+          const loop2D = pts3D.slice(0, -1).map((p) => {
+            const rel = p.clone().sub(resolvedBase);
+            return new THREE.Vector2(rel.dot(uAxis), rel.dot(vAxis));
+          });
+          if (loop2D.length < 3) return;
+          const faces = THREE.ShapeUtils.triangulateShape(loop2D, []);
+          if (!faces || faces.length === 0) return;
+
+          const capPositions = [];
+          const capIndices = [];
+          pts3D.slice(0, -1).forEach((p) => capPositions.push(p.x, p.y, p.z));
+          faces.forEach((tri) => capIndices.push(tri[0], tri[1], tri[2]));
+
+          const capGeo = new THREE.BufferGeometry();
+          capGeo.setAttribute('position', new THREE.Float32BufferAttribute(capPositions, 3));
+          capGeo.setIndex(capIndices);
+          capGeo.computeVertexNormals();
+
+          const capMesh = new THREE.Mesh(capGeo, surfaceMat);
+          capMesh.userData = { isExtrudeWall: false, isCap: true };
+          group.add(capMesh);
+        });
+      }
+    });
+  });
+
+  // Mastercam Cyan '+' Base / Extruded Center Marker
+  const topAnchor = resolvedBase.clone().addScaledVector(extrudeAxis, direction === 'reverse' ? -safeHeight : safeHeight);
+  const crossSize = 3.0;
+  const crossMat = new THREE.LineBasicMaterial({ color: 0x67e8f9, linewidth: 2 });
+  [resolvedBase, topAnchor].forEach((centerPt) => {
+    const c1 = new THREE.BufferGeometry().setFromPoints([
+      centerPt.clone().addScaledVector(uAxis, -crossSize),
+      centerPt.clone().addScaledVector(uAxis, crossSize)
+    ]);
+    const c2 = new THREE.BufferGeometry().setFromPoints([
+      centerPt.clone().addScaledVector(vAxis, -crossSize),
+      centerPt.clone().addScaledVector(vAxis, crossSize)
+    ]);
+    group.add(new THREE.Line(c1, crossMat));
+    group.add(new THREE.Line(c2, crossMat));
+  });
+
+  const labelHeight = Math.round(rawHeight);
+  group.name = options.name || `Surface_Extrude_H${labelHeight}`;
+  group.userData = {
+    type: 'surface_extrusion',
+    cadType: 'surface_extrusion',
+    surfaceRole: 'drive',
+    isClosed: validChains.every((c) => c.isClosed !== false),
+    depthExtent: maxDepthExtent,
+    basePoint: { x: resolvedBase.x, y: resolvedBase.y, z: resolvedBase.z },
+    chains: validChains.map((c) => ({
+      id: c.id,
+      type: c.type || 'chain',
+      name: c.name || 'Chain',
+      isClosed: c.isClosed !== false,
+      center: c.center ? { x: c.center.x || 0, y: c.center.y || 0, z: c.center.z || 0 } : null,
+      radius: c.radius ?? null,
+      points: c.points.map((p) => ({ x: p.x, y: p.y, z: p.z }))
+    })),
+    params: {
+      height: rawHeight,
+      scale: safeScale,
+      rotationAngleDeg: Number(rotationAngleDeg) || 0,
+      offsetDistance: offsetDist,
+      draftAngleDeg: Number(draftAngleDeg) || 0,
+      useAxis: Boolean(useAxis),
+      axis: axis || 'z',
+      axisVector: axisVector ? { ...axisVector } : { x: 0, y: 0, z: 1 },
+      direction: direction || 'defined',
+      basePoint: { x: resolvedBase.x, y: resolvedBase.y, z: resolvedBase.z },
+      capEnds: Boolean(capEnds)
+    },
+    contourLoops: recordedContourLoops
+  };
+  return group;
+}
+
+/**
  * Creates a 3D revolved/conical surface sheet
  */
 export function createRevolvedSurface(

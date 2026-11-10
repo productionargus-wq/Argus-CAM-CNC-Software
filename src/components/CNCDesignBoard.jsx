@@ -4,7 +4,7 @@ import {
   Grid, ZoomIn, ZoomOut, Maximize2, Trash2, Copy,
   ArrowUpRight, Play, Download, Sparkles, Layers,
   Compass, Scissors, ShieldAlert, CheckCircle2, ChevronRight,
-  Sliders, Box, RefreshCw, Undo2, Hexagon
+  Sliders, Box, RefreshCw, Undo2, Redo2, Hexagon
 } from 'lucide-react';
 import {
   screenToBoard,
@@ -59,6 +59,62 @@ export default function CNCDesignBoard({
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
   const containerRef = useRef(null);
+  const boardRootRef = useRef(null);
+  const boardShapesRef = useRef(boardShapes);
+  const dragStartShapesRef = useRef(null);
+  const boardHistoryRef = useRef({ past: [], future: [] });
+  const [boardHistoryMeta, setBoardHistoryMeta] = useState({ canUndo: false, canRedo: false });
+
+  useEffect(() => {
+    boardShapesRef.current = boardShapes;
+  }, [boardShapes]);
+
+  const cloneShapes = (list) => JSON.parse(JSON.stringify(list || []));
+
+  const syncHistoryMeta = () => {
+    const { past, future } = boardHistoryRef.current;
+    setBoardHistoryMeta({ canUndo: past.length > 0, canRedo: future.length > 0 });
+  };
+
+  const commitBoardShapes = useCallback((nextShapes, shouldPush = true) => {
+    if (shouldPush) {
+      const nextPast = [...boardHistoryRef.current.past, cloneShapes(boardShapesRef.current)].slice(-60);
+      boardHistoryRef.current = { past: nextPast, future: [] };
+      syncHistoryMeta();
+    }
+    boardShapesRef.current = nextShapes;
+    onUpdateShapes(nextShapes);
+  }, [onUpdateShapes]);
+
+  const handleBoardUndo = useCallback(() => {
+    const { past, future } = boardHistoryRef.current;
+    if (past.length === 0) return false;
+    const prevShapes = past[past.length - 1];
+    boardHistoryRef.current = {
+      past: past.slice(0, -1),
+      future: [cloneShapes(boardShapesRef.current), ...future].slice(0, 60)
+    };
+    syncHistoryMeta();
+    boardShapesRef.current = prevShapes;
+    onUpdateShapes(prevShapes);
+    setSelectedId(null);
+    return true;
+  }, [onUpdateShapes]);
+
+  const handleBoardRedo = useCallback(() => {
+    const { past, future } = boardHistoryRef.current;
+    if (future.length === 0) return false;
+    const nextShapes = future[0];
+    boardHistoryRef.current = {
+      past: [...past, cloneShapes(boardShapesRef.current)].slice(-60),
+      future: future.slice(1)
+    };
+    syncHistoryMeta();
+    boardShapesRef.current = nextShapes;
+    onUpdateShapes(nextShapes);
+    setSelectedId(null);
+    return true;
+  }, [onUpdateShapes]);
 
   // Sync board dimensions with stock config if changed
   useEffect(() => {
@@ -78,6 +134,10 @@ export default function CNCDesignBoard({
 
   // 1. Mouse Event Handlers
   const handleMouseDown = (e) => {
+    if (document.activeElement && !boardRootRef.current?.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+    boardRootRef.current?.focus({ preventScroll: true });
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
@@ -130,6 +190,7 @@ export default function CNCDesignBoard({
       }
 
       if (hit) {
+        dragStartShapesRef.current = cloneShapes(boardShapesRef.current);
         setSelectedId(hit.id);
         setIsDraggingShape(true);
         if (hit.x !== undefined) {
@@ -143,7 +204,7 @@ export default function CNCDesignBoard({
     } else if (activeTool === 'drill') {
       // Single drill click
       const newHole = createBoardDrillHole(snappedX, snappedY, 6.0);
-      onUpdateShapes([...boardShapes, newHole]);
+      commitBoardShapes([...boardShapes, newHole], true);
       setSelectedId(newHole.id);
     } else {
       // Start Drawing Shape
@@ -179,7 +240,7 @@ export default function CNCDesignBoard({
         }
         return s;
       });
-      onUpdateShapes(updated);
+      commitBoardShapes(updated, false);
     } else if (isDrawing && drawStart) {
       setDrawCurrent({ x: snappedX, y: snappedY });
     }
@@ -193,6 +254,16 @@ export default function CNCDesignBoard({
 
     if (isDraggingShape) {
       setIsDraggingShape(false);
+      if (dragStartShapesRef.current) {
+        const beforeJson = JSON.stringify(dragStartShapesRef.current);
+        const afterJson = JSON.stringify(boardShapesRef.current);
+        if (beforeJson !== afterJson) {
+          const nextPast = [...boardHistoryRef.current.past, dragStartShapesRef.current].slice(-60);
+          boardHistoryRef.current = { past: nextPast, future: [] };
+          syncHistoryMeta();
+        }
+        dragStartShapesRef.current = null;
+      }
       return;
     }
 
@@ -223,7 +294,7 @@ export default function CNCDesignBoard({
       }
 
       if (newShape) {
-        onUpdateShapes([...boardShapes, newShape]);
+        commitBoardShapes([...boardShapes, newShape], true);
         setSelectedId(newShape.id);
         setActiveTool('select');
       }
@@ -246,6 +317,46 @@ export default function CNCDesignBoard({
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
       const key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && (key === 'z' || e.code === 'KeyZ')) {
+        const vpArea = document.querySelector('.viewport-area');
+        const focusedIn3D = vpArea && vpArea.contains(document.activeElement);
+        if (!focusedIn3D) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (e.shiftKey) handleBoardRedo();
+          else handleBoardUndo();
+        }
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (key === 'y' || e.code === 'KeyY')) {
+        const vpArea = document.querySelector('.viewport-area');
+        const focusedIn3D = vpArea && vpArea.contains(document.activeElement);
+        if (!focusedIn3D) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleBoardRedo();
+        }
+        return;
+      }
+
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        if ((e.ctrlKey || e.metaKey) && key === 'd' && selectedShape) {
+          e.preventDefault();
+          const clone = {
+            ...selectedShape,
+            id: `clone_${Date.now()}`,
+            name: `${selectedShape.name} (Copy)`,
+            x: selectedShape.x !== undefined ? selectedShape.x + 10 : undefined,
+            y: selectedShape.y !== undefined ? selectedShape.y + 10 : undefined,
+            cx: selectedShape.cx !== undefined ? selectedShape.cx + 10 : undefined,
+            cy: selectedShape.cy !== undefined ? selectedShape.cy + 10 : undefined
+          };
+          commitBoardShapes([...boardShapes, clone], true);
+          setSelectedId(clone.id);
+        }
+        return;
+      }
+
       if (key === 'v') setActiveTool('select');
       if (key === 'r') setActiveTool('rect');
       if (key === 'c') setActiveTool('circle');
@@ -255,35 +366,20 @@ export default function CNCDesignBoard({
       if (key === 'l') setActiveTool('line');
 
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
-        onUpdateShapes(boardShapes.filter((s) => s.id !== selectedId));
+        commitBoardShapes(boardShapes.filter((s) => s.id !== selectedId), true);
         setSelectedId(null);
-      }
-
-      if ((e.ctrlKey || e.metaKey) && key === 'd' && selectedShape) {
-        e.preventDefault();
-        const clone = {
-          ...selectedShape,
-          id: `clone_${Date.now()}`,
-          name: `${selectedShape.name} (Copy)`,
-          x: selectedShape.x !== undefined ? selectedShape.x + 10 : undefined,
-          y: selectedShape.y !== undefined ? selectedShape.y + 10 : undefined,
-          cx: selectedShape.cx !== undefined ? selectedShape.cx + 10 : undefined,
-          cy: selectedShape.cy !== undefined ? selectedShape.cy + 10 : undefined
-        };
-        onUpdateShapes([...boardShapes, clone]);
-        setSelectedId(clone.id);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, selectedShape, boardShapes, onUpdateShapes]);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [selectedId, selectedShape, boardShapes, commitBoardShapes, handleBoardUndo, handleBoardRedo]);
 
   // Quick CAD Template Loader
   const handleLoadTemplate = (templateName) => {
     const templateShapes = getCADTemplate(templateName, boardW, boardH);
     if (templateShapes.length > 0) {
-      onUpdateShapes([...boardShapes, ...templateShapes]);
+      commitBoardShapes([...boardShapes, ...templateShapes], true);
       if (templateShapes[0]) setSelectedId(templateShapes[0].id);
     }
   };
@@ -303,8 +399,9 @@ export default function CNCDesignBoard({
   // Update selected shape property helper
   const updateSelectedProp = (key, val) => {
     if (!selectedShape) return;
-    onUpdateShapes(
-      boardShapes.map((s) => (s.id === selectedShape.id ? { ...s, [key]: val } : s))
+    commitBoardShapes(
+      boardShapes.map((s) => (s.id === selectedShape.id ? { ...s, [key]: val } : s)),
+      true
     );
   };
 
@@ -371,6 +468,8 @@ export default function CNCDesignBoard({
 
   return (
     <div
+      ref={boardRootRef}
+      tabIndex={-1}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -381,7 +480,8 @@ export default function CNCDesignBoard({
         fontFamily: 'Inter, system-ui, sans-serif',
         overflow: 'hidden',
         position: 'relative',
-        userSelect: 'none'
+        userSelect: 'none',
+        outline: 'none'
       }}
     >
       {/* 1. TOP HEADER & SETTINGS BAR */}
@@ -540,7 +640,43 @@ export default function CNCDesignBoard({
             <option value={10}>10 mm</option>
           </select>
 
-          {/* Zoom controls */}
+          {/* Undo / Redo & Zoom controls */}
+          <button
+            onClick={handleBoardUndo}
+            disabled={!boardHistoryMeta.canUndo}
+            style={{
+              background: '#1e293b',
+              border: '1px solid #334155',
+              color: boardHistoryMeta.canUndo ? '#38bdf8' : '#64748b',
+              opacity: boardHistoryMeta.canUndo ? 1 : 0.45,
+              padding: '3px 6px',
+              borderRadius: '4px',
+              cursor: boardHistoryMeta.canUndo ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+            title="Undo 2D Board Action (Ctrl+Z)"
+          >
+            <Undo2 size={12} />
+          </button>
+          <button
+            onClick={handleBoardRedo}
+            disabled={!boardHistoryMeta.canRedo}
+            style={{
+              background: '#1e293b',
+              border: '1px solid #334155',
+              color: boardHistoryMeta.canRedo ? '#38bdf8' : '#64748b',
+              opacity: boardHistoryMeta.canRedo ? 1 : 0.45,
+              padding: '3px 6px',
+              borderRadius: '4px',
+              cursor: boardHistoryMeta.canRedo ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+            title="Redo 2D Board Action (Ctrl+Y)"
+          >
+            <Redo2 size={12} />
+          </button>
           <button
             onClick={() => setZoom((z) => Math.min(10, z * 1.2))}
             style={{ background: '#1e293b', border: '1px solid #334155', color: '#f8fafc', padding: '3px 6px', borderRadius: '4px', cursor: 'pointer' }}
@@ -704,7 +840,7 @@ export default function CNCDesignBoard({
           <button
             onClick={() => {
               const gridHoles = createBoardDrillGrid(boardW / 2 - 30, boardH / 2 - 30, 3, 3, 30, 30, 5.0);
-              onUpdateShapes([...boardShapes, ...gridHoles]);
+              commitBoardShapes([...boardShapes, ...gridHoles], true);
             }}
             style={{
               width: '36px',
@@ -1109,7 +1245,7 @@ export default function CNCDesignBoard({
                 </span>
                 <button
                   onClick={() => {
-                    onUpdateShapes(boardShapes.filter((s) => s.id !== selectedShape.id));
+                    commitBoardShapes(boardShapes.filter((s) => s.id !== selectedShape.id), true);
                     setSelectedId(null);
                   }}
                   style={{
@@ -1352,7 +1488,7 @@ export default function CNCDesignBoard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {boardShapes.length > 0 && (
             <button
-              onClick={() => onUpdateShapes([])}
+              onClick={() => commitBoardShapes([], true)}
               style={{
                 background: 'rgba(239, 68, 68, 0.15)',
                 color: '#ef4444',

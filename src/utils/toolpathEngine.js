@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { offsetContour2D } from './cadGeometry.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -135,31 +136,103 @@ export function generateFacingToolpath(bounds, tool, params = {}) {
 }
 
 /**
- * Slices a 3D Three.js Object/Mesh hierarchy at a given horizontal Y plane.
- * Computes exact intersection line segments between all triangles and the plane Y = planeY.
+ * Builds a unified Three.js drive-surface Group combining currentModel and matching
+ * customGeometry surfaces (Level 15 Surface_* / Surface_Extrude_* entities).
  */
-export function sliceMeshAtY(object3D, planeY) {
+export function buildEffectiveDriveModel(currentModel = null, customGeometry = [], op = null) {
+  const driveIds = Array.isArray(op?.driveSurfaceIds) && op.driveSurfaceIds.length > 0
+    ? new Set(op.driveSurfaceIds.map((id) => String(id)))
+    : null;
+
+  const surfaceEntities = (Array.isArray(customGeometry) ? customGeometry : []).filter((ent) => {
+    if (!ent || ent.visible === false) return false;
+    const cadType = String(ent.userData?.cadType || ent.userData?.type || '').toLowerCase();
+    const isSurf = ent.name?.startsWith('Surface_') || ent.name?.startsWith('CAD_Surface') || cadType === 'surface_extrusion' || cadType === 'surface_plane';
+    if (!isSurf) return false;
+    if (driveIds) {
+      return driveIds.has(String(ent.uuid)) || driveIds.has(String(ent.userData?.customId)) || driveIds.has(String(ent.name));
+    }
+    return true;
+  });
+
+  if (!currentModel && surfaceEntities.length === 0) return null;
+  if (currentModel && surfaceEntities.length === 0) return currentModel;
+
+  const group = new THREE.Group();
+  if (currentModel) {
+    group.add(currentModel.clone(true));
+  }
+  surfaceEntities.forEach((ent) => {
+    const clone = ent.clone(true);
+    clone.traverse((node) => {
+      if (node.userData?.isCap) {
+        node.userData.isCap = true;
+      }
+    });
+    group.add(clone);
+  });
+  group.updateMatrixWorld(true);
+  return group;
+}
+
+/**
+ * Computes exact bounding Box3 from a drive surface/model hierarchy, falling back safely.
+ */
+export function computeDriveModelBounds(driveModel, fallbackBounds = null) {
+  if (driveModel) {
+    driveModel.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(driveModel);
+    if (!box.isEmpty()) return box;
+  }
+  return resolveSafeBounds(fallbackBounds);
+}
+
+/**
+ * Offsets a closed 3D loop in the XZ horizontal plane (Y preserved) by signedOffset
+ * (> 0 outward, < 0 inward) using shared miter-clamped 2D contour offsetting.
+ */
+export function offsetClosedLoopXZ(loop = [], signedOffset = 0, yOverride = null) {
+  if (!Array.isArray(loop) || loop.length < 3) return [];
+  const sampleY = yOverride ?? loop[0].y ?? 0;
+  if (Math.abs(signedOffset) < 1e-4) {
+    return loop.map((p) => new THREE.Vector3(p.x, sampleY, p.z));
+  }
+  const uv = loop.map((p) => ({ u: p.x, v: p.z }));
+  const offsetUV = offsetContour2D(uv, signedOffset, true);
+  if (!offsetUV || offsetUV.length < 3) return [];
+  return offsetUV.map((p) => new THREE.Vector3(p.u, sampleY, p.v));
+}
+
+/**
+ * Slices a 3D Three.js Object/Mesh hierarchy at a given horizontal Y plane.
+ * Computes exact intersection line segments between triangles and the plane Y = planeY.
+ * When options.wallOnly is true, skips cap meshes and horizontal cap faces.
+ */
+export function sliceMeshAtY(object3D, planeY, options = {}) {
   if (!object3D) return [];
+  const { wallOnly = false } = options;
   const segments = [];
 
   const tempV1 = new THREE.Vector3();
   const tempV2 = new THREE.Vector3();
   const tempV3 = new THREE.Vector3();
+  const edgeA = new THREE.Vector3();
+  const edgeB = new THREE.Vector3();
+  const triNorm = new THREE.Vector3();
+
+  const nudgeZero = (d) => (Math.abs(d) < 1e-5 ? 1e-5 : d);
 
   object3D.traverse((child) => {
     if (!child.isMesh || !child.geometry) return;
+    if (wallOnly && child.userData?.isCap) return;
+
     const geo = child.geometry;
     const pos = geo.attributes.position;
     if (!pos) return;
 
     child.updateMatrixWorld(true);
     const worldMatrix = child.matrixWorld;
-
-    let indices = null;
-    if (geo.index) {
-      indices = geo.index.array;
-    }
-
+    const indices = geo.index ? geo.index.array : null;
     const triCount = indices ? indices.length / 3 : pos.count / 3;
 
     for (let t = 0; t < triCount; t++) {
@@ -171,29 +244,35 @@ export function sliceMeshAtY(object3D, planeY) {
       tempV2.fromBufferAttribute(pos, i2).applyMatrix4(worldMatrix);
       tempV3.fromBufferAttribute(pos, i3).applyMatrix4(worldMatrix);
 
-      const d1 = tempV1.y - planeY;
-      const d2 = tempV2.y - planeY;
-      const d3 = tempV3.y - planeY;
+      if (wallOnly) {
+        edgeA.subVectors(tempV2, tempV1);
+        edgeB.subVectors(tempV3, tempV1);
+        triNorm.crossVectors(edgeA, edgeB);
+        const len = triNorm.length();
+        if (len > 1e-6 && Math.abs(triNorm.y / len) > 0.985) {
+          continue;
+        }
+      }
+
+      const d1 = nudgeZero(tempV1.y - planeY);
+      const d2 = nudgeZero(tempV2.y - planeY);
+      const d3 = nudgeZero(tempV3.y - planeY);
 
       const pts = [];
-
-      // Edge 1 -> 2
       if ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) {
         const u = d1 / (d1 - d2);
         pts.push(new THREE.Vector3().lerpVectors(tempV1, tempV2, u));
       }
-      // Edge 2 -> 3
       if ((d2 > 0 && d3 < 0) || (d2 < 0 && d3 > 0)) {
         const u = d2 / (d2 - d3);
         pts.push(new THREE.Vector3().lerpVectors(tempV2, tempV3, u));
       }
-      // Edge 3 -> 1
       if ((d3 > 0 && d1 < 0) || (d3 < 0 && d1 > 0)) {
         const u = d3 / (d3 - d1);
         pts.push(new THREE.Vector3().lerpVectors(tempV3, tempV1, u));
       }
 
-      if (pts.length === 2) {
+      if (pts.length === 2 && pts[0].distanceToSquared(pts[1]) > 1e-8) {
         segments.push([pts[0], pts[1]]);
       }
     }
@@ -313,90 +392,246 @@ export function detectHoleFeatures(object3D, bounds) {
 }
 
 /**
- * Generates 2D Dynamic Pocketing Toolpath (Concentric Clearing with Helical Ramp Plunge)
+ * Extracts normalized pocket parameters from an operation record.
  */
-export function generatePocketToolpath(bounds, tool, params = {}, model = null) {
-  bounds = resolveSafeBounds(bounds);
+export function buildPocketParamsFromOp(op = {}) {
+  const sp = op.surfaceParams || {};
+  const pp = op.pocketParams || {};
+  return {
+    stepoverPct: Number(pp.stepoverPct ?? op.stepoverPct) || 45,
+    totalDepth: Number(op.totalDepth ?? sp.totalDepth) || 15.0,
+    stepdown: Number(sp.maxStepdown ?? op.stepdown) || 2.0,
+    rapidHeight: Number(op.rapidHeight) || 15.0,
+    topOfStock: Number(op.topOfStock) || 0,
+    stockToLeaveXY: Number(sp.stockToLeaveDrive ?? op.stockToLeaveXY) || 0,
+    stockToLeaveZ: Number(op.stockToLeaveZ ?? sp.stockToLeaveDriveZ ?? sp.stockToLeaveDrive) || 0,
+    cutMethod: pp.cutMethod || op.cutStyle || 'constant_overlap',
+    cuttingDirection: pp.direction || op.cuttingDirection || 'climb',
+    finishWallPass: pp.finishWallPass !== false,
+    helicalEntry: pp.helicalEntry !== false,
+    chain: op.chain || null
+  };
+}
+
+/**
+ * Computes horizontal X scanline intersections inside a closed XZ polygon loop at given Z.
+ */
+function intersectScanlineXZ(polyPts, zVal) {
+  const xs = [];
+  for (let i = 0; i < polyPts.length - 1; i++) {
+    const a = polyPts[i];
+    const b = polyPts[i + 1];
+    if ((a.z <= zVal && b.z > zVal) || (b.z <= zVal && a.z > zVal)) {
+      const t = (zVal - a.z) / (b.z - a.z);
+      xs.push(a.x + t * (b.x - a.x));
+    }
+  }
+  xs.sort((u, v) => u - v);
+  const spans = [];
+  for (let i = 0; i + 1 < xs.length; i += 2) {
+    if (xs[i + 1] - xs[i] > 0.25) {
+      spans.push([xs[i], xs[i + 1]]);
+    }
+  }
+  return spans;
+}
+
+/**
+ * Generates 2D / 3D Surface Finish Pocket Toolpath from real drive surface wall slices
+ * or sketch chains (concentric inward clearing / zigzag raster + finish wall pass).
+ */
+export function generateSurfacePocketToolpath(bounds, tool, params = {}, model = null) {
+  const effBounds = model ? computeDriveModelBounds(model, bounds) : resolveSafeBounds(bounds);
   const {
-    stepoverPct = 50,
-    totalDepth = 15.0,
-    stepdown = 5.0,
-    rapidHeight = 15.0
+    stepoverPct = 45,
+    totalDepth = null,
+    stepdown = 2.0,
+    rapidHeight = 15.0,
+    topOfStock = 0,
+    stockToLeaveXY = 0,
+    stockToLeaveZ = 0,
+    cutMethod = 'constant_overlap',
+    cuttingDirection = 'climb',
+    finishWallPass = true,
+    helicalEntry = true,
+    chain = null
   } = params;
 
-  const toolRadius = (tool.diameter || 8) / 2;
-  const stepover = (tool.diameter * stepoverPct) / 100;
-  const topY = bounds.max.y;
+  const toolDiam = Math.max(0.5, Number(tool?.diameter) || 10.0);
+  const toolRadius = toolDiam / 2;
+  const stepover = Math.max(0.4, (toolDiam * Math.max(5, Math.min(95, Number(stepoverPct) || 45))) / 100);
+  const wallClearance = toolRadius + (Number(stockToLeaveXY) || 0);
+
+  const surfaceHeight = Math.max(0.5, effBounds.max.y - effBounds.min.y);
+  const rawTotalDepth = (totalDepth != null && Number(totalDepth) > 0) ? Number(totalDepth) : surfaceHeight;
+  const startTopY = effBounds.max.y + (Number(topOfStock) || 0);
+  const safeStepdown = Math.max(0.2, Math.abs(Number(stepdown)) || 2.0);
+  const targetDepth = Math.max(0.05, rawTotalDepth - (Number(stockToLeaveZ) || 0));
+  const bottomY = startTopY - targetDepth;
+
+  const zLevels = [];
+  for (let curY = startTopY - safeStepdown; curY > bottomY + 0.001; curY -= safeStepdown) {
+    zLevels.push(curY);
+  }
+  zLevels.push(bottomY);
 
   const cuttingLines = [];
   const rapidLines = [];
+  const isConventional = cuttingDirection === 'conventional';
 
-  const centerX = (bounds.max.x + bounds.min.x) / 2;
-  const centerZ = (bounds.max.z + bounds.min.z) / 2;
-  const pocketWidth = Math.max(10, (bounds.max.x - bounds.min.x) * 0.55 - toolRadius * 2);
-  const pocketDepth = Math.max(10, (bounds.max.z - bounds.min.z) * 0.55 - toolRadius * 2);
+  const buildChainBoundaryLoop = (curY) => {
+    if (chain && chain.type === 'circle_loop' && chain.radius) {
+      const segs = 48;
+      const cx = chain.center?.x ?? ((effBounds.min.x + effBounds.max.x) / 2);
+      const cz = chain.center?.z ?? ((effBounds.min.z + effBounds.max.z) / 2);
+      const loop = [];
+      for (let i = 0; i <= segs; i++) {
+        const a = (i / segs) * Math.PI * 2;
+        loop.push(new THREE.Vector3(cx + Math.cos(a) * chain.radius, curY, cz + Math.sin(a) * chain.radius));
+      }
+      return [loop];
+    }
+    if (chain && Array.isArray(chain.points) && chain.points.length >= 3) {
+      const pts = chain.points.map((p) => new THREE.Vector3(p.x, curY, p.z));
+      if (pts[0].distanceTo(pts[pts.length - 1]) > 0.1) pts.push(pts[0].clone());
+      return [pts];
+    }
+    const minX = effBounds.min.x;
+    const maxX = effBounds.max.x;
+    const minZ = effBounds.min.z;
+    const maxZ = effBounds.max.z;
+    return [[
+      new THREE.Vector3(minX, curY, minZ),
+      new THREE.Vector3(maxX, curY, minZ),
+      new THREE.Vector3(maxX, curY, maxZ),
+      new THREE.Vector3(minX, curY, maxZ),
+      new THREE.Vector3(minX, curY, minZ)
+    ]];
+  };
 
-  const safeTotalDepth = Math.abs(Number(totalDepth)) || 15.0;
-  const safeStepdown = Math.abs(Number(stepdown)) || 5.0;
+  let prevDepthY = startTopY + 2.0;
 
-  for (let curDepth = safeStepdown; curDepth <= safeTotalDepth; curDepth += safeStepdown) {
-    const cutY = topY - curDepth;
-
-    // 1. Helical Ramp Entry into the center of the pocket
-    const rampRadius = Math.min(6, toolRadius * 1.2);
-    const rampRotations = 3;
-    let prevPoint = new THREE.Vector3(centerX + rampRadius, topY + 2, centerZ);
-
-    rapidLines.push([
-      new THREE.Vector3(centerX + rampRadius, topY + rapidHeight, centerZ),
-      prevPoint
-    ]);
-
-    for (let i = 0; i <= rampRotations * 20; i++) {
-      const angle = (i / 20) * Math.PI * 2;
-      const progress = i / (rampRotations * 20);
-      const y = (topY + 2) - progress * (curDepth + 2);
-      const nextPoint = new THREE.Vector3(
-        centerX + Math.cos(angle) * rampRadius,
-        y,
-        centerZ + Math.sin(angle) * rampRadius
-      );
-      cuttingLines.push([prevPoint, nextPoint]);
-      prevPoint = nextPoint;
+  zLevels.forEach((curY) => {
+    let rawLoops = [];
+    if (model) {
+      const clampY = Math.min(effBounds.max.y - 0.02, Math.max(effBounds.min.y + 0.02, curY));
+      const segments = sliceMeshAtY(model, clampY, { wallOnly: true });
+      if (segments.length > 0) {
+        rawLoops = chainSegmentsIntoLoops(segments, 0.85).map((lp) => {
+          const closed = lp.map((p) => new THREE.Vector3(p.x, curY, p.z));
+          if (closed.length >= 2 && closed[0].distanceTo(closed[closed.length - 1]) > 0.1) {
+            closed.push(closed[0].clone());
+          }
+          return closed;
+        });
+      }
+    }
+    if (rawLoops.length === 0) {
+      rawLoops = buildChainBoundaryLoop(curY);
     }
 
-    // 2. Concentric Outward Clearing Loops
-    const maxLoops = Math.max(2, Math.floor(Math.min(pocketWidth, pocketDepth) / (stepover * 2)));
-    for (let loop = 1; loop <= maxLoops; loop++) {
-      const rx = loop * stepover;
-      const rz = loop * stepover * (pocketDepth / pocketWidth);
+    rawLoops.forEach((boundaryLoop) => {
+      if (boundaryLoop.length < 3) return;
+      const outerPass = offsetClosedLoopXZ(boundaryLoop, -wallClearance, curY);
+      if (outerPass.length < 3) return;
 
-      const loopPoints = [];
-      const numSegments = 32;
-      for (let s = 0; s < numSegments; s++) {
-        const a = (s / numSegments) * Math.PI * 2;
-        loopPoints.push(new THREE.Vector3(
-          centerX + Math.cos(a) * rx,
-          cutY,
-          centerZ + Math.sin(a) * rz
-        ));
+      const loopBox = new THREE.Box3().setFromPoints(outerPass);
+      const center = loopBox.getCenter(new THREE.Vector3());
+      const spanMin = Math.min(loopBox.max.x - loopBox.min.x, loopBox.max.z - loopBox.min.z);
+
+      // 1. Entry plunge / helical ramp into pocket interior
+      const rampR = Math.max(0.5, Math.min(toolRadius * 0.65, spanMin * 0.25));
+      const entryTopY = Math.max(curY + safeStepdown + 1.0, prevDepthY);
+      const entryStart = new THREE.Vector3(center.x + rampR, entryTopY, center.z);
+      rapidLines.push([
+        new THREE.Vector3(center.x + rampR, startTopY + rapidHeight, center.z),
+        entryStart
+      ]);
+
+      let lastPt = entryStart;
+      if (helicalEntry && spanMin > toolDiam * 0.6) {
+        const segsPerRev = 20;
+        const turns = 2;
+        const totalSegs = turns * segsPerRev;
+        for (let s = 1; s <= totalSegs; s++) {
+          const theta = (s / segsPerRev) * Math.PI * 2;
+          const yInterp = entryTopY - (s / totalSegs) * (entryTopY - curY);
+          const pt = new THREE.Vector3(
+            center.x + Math.cos(theta) * rampR,
+            yInterp,
+            center.z + Math.sin(theta) * rampR
+          );
+          cuttingLines.push([lastPt, pt]);
+          lastPt = pt;
+        }
+      } else {
+        const plungePt = new THREE.Vector3(center.x, curY, center.z);
+        cuttingLines.push([entryStart, plungePt]);
+        lastPt = plungePt;
       }
 
-      for (let p = 0; p < loopPoints.length - 1; p++) {
-        cuttingLines.push([loopPoints[p], loopPoints[p + 1]]);
+      // 2. Interior Clearing Pattern inside pocket wall offset
+      if (cutMethod === 'zigzag' || cutMethod === 'parallel') {
+        let dir = 1;
+        for (let z = loopBox.min.z + stepover * 0.3; z <= loopBox.max.z - stepover * 0.3; z += stepover) {
+          const spans = intersectScanlineXZ(outerPass, z);
+          spans.forEach(([xStart, xEnd]) => {
+            const pA = new THREE.Vector3(dir > 0 ? xStart : xEnd, curY, z);
+            const pB = new THREE.Vector3(dir > 0 ? xEnd : xStart, curY, z);
+            cuttingLines.push([lastPt, pA]);
+            cuttingLines.push([pA, pB]);
+            lastPt = pB;
+          });
+          dir *= -1;
+        }
+      } else {
+        // Incremental inward concentric offset rings ordered from center outward
+        const rings = [];
+        let prevRing = outerPass;
+        for (let k = 1; k < 64; k++) {
+          const inner = offsetClosedLoopXZ(prevRing, -stepover, curY);
+          if (!inner || inner.length < 3) break;
+          prevRing = inner;
+          rings.push(isConventional ? [...inner].reverse() : inner);
+        }
+        rings.reverse().forEach((ring) => {
+          const startPt = ring[0];
+          cuttingLines.push([lastPt, startPt]);
+          for (let i = 0; i < ring.length - 1; i++) {
+            cuttingLines.push([ring[i], ring[i + 1]]);
+          }
+          lastPt = ring[ring.length - 1];
+        });
       }
-      // Close loop
-      cuttingLines.push([loopPoints[loopPoints.length - 1], loopPoints[0]]);
-    }
 
-    // Retract at end of depth level
-    rapidLines.push([
-      new THREE.Vector3(centerX, cutY, centerZ),
-      new THREE.Vector3(centerX, topY + rapidHeight, centerZ)
-    ]);
-  }
+      // 3. Final Surface Finish Wall Perimeter Pass around outerPass
+      if (finishWallPass || cutMethod !== 'zigzag') {
+        const finalWall = isConventional ? [...outerPass].reverse() : outerPass;
+        cuttingLines.push([lastPt, finalWall[0]]);
+        for (let i = 0; i < finalWall.length - 1; i++) {
+          cuttingLines.push([finalWall[i], finalWall[i + 1]]);
+        }
+        lastPt = finalWall[finalWall.length - 1];
+      }
+
+      // Safe retract above pocket
+      rapidLines.push([
+        lastPt,
+        new THREE.Vector3(lastPt.x, startTopY + rapidHeight, lastPt.z)
+      ]);
+    });
+
+    prevDepthY = curY;
+  });
 
   return { cuttingLines, rapidLines };
+}
+
+/**
+ * Generates 2D / 3D Dynamic Pocketing Toolpath (routes cleanly to drive surface & chain clearing).
+ */
+export function generatePocketToolpath(bounds, tool, params = {}, model = null) {
+  return generateSurfacePocketToolpath(bounds, tool, params, model);
 }
 
 /**
@@ -405,17 +640,20 @@ export function generatePocketToolpath(bounds, tool, params = {}, model = null) 
  */
 export function buildContourParamsFromOp(op = {}) {
   const hasLeadOverrides = op.leadInLineLen != null || op.leadInArcRad != null || op.leadInSweepDeg != null;
+  const sp = op.surfaceParams || {};
+  const cp = op.contourParams || {};
   return {
-    stepdown: op.stepdown || 1.0,
-    totalDepth: op.totalDepth ?? 5.0,
-    rapidHeight: op.rapidHeight || 15.0,
+    stepdown: Number(sp.maxStepdown ?? op.stepdown) || 1.0,
+    totalDepth: op.totalDepth ?? sp.totalDepth ?? null,
+    rapidHeight: Number(op.rapidHeight) || 15.0,
     topOfStock: Number(op.topOfStock) || 0,
     depthCutsEnabled: op.depthCutsEnabled !== false,
     breakThroughEnabled: !!op.breakThroughEnabled,
     breakThroughAmount: Number(op.breakThroughAmount) || 0,
-    stockToLeaveXY: Number(op.stockToLeaveXY) || 0,
-    stockToLeaveZ: Number(op.stockToLeaveZ) || 0,
-    cuttingDirection: op.cuttingDirection || 'climb',
+    stockToLeaveXY: Number(sp.stockToLeaveDrive ?? op.stockToLeaveXY) || 0,
+    stockToLeaveZ: Number(op.stockToLeaveZ ?? sp.stockToLeaveDriveZ) || 0,
+    cuttingDirection: cp.direction || op.cuttingDirection || 'climb',
+    contourSide: cp.contourSide || op.contourSide || 'outside',
     chain: op.chain || null,
     leadConfig: hasLeadOverrides
       ? {
@@ -428,13 +666,13 @@ export function buildContourParamsFromOp(op = {}) {
 }
 
 /**
- * Generates 3D Waterline Finishing Toolpath (Multi-Z Surface Contouring with True Mesh Slicing)
+ * Generates 3D Waterline / Surface Finish Contour Toolpath (Multi-Z Slicing with Cutter Offset)
  */
 export function generateWaterlineToolpath(bounds, tool, params = {}, model = null) {
-  bounds = resolveSafeBounds(bounds);
+  bounds = model ? computeDriveModelBounds(model, bounds) : resolveSafeBounds(bounds);
   const {
     stepdown = 1.0,
-    totalDepth = 5.0,
+    totalDepth = null,
     rapidHeight = 15.0,
     topOfStock = 0,
     depthCutsEnabled = true,
@@ -443,13 +681,16 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
     stockToLeaveXY = 0,
     stockToLeaveZ = 0,
     cuttingDirection = 'climb',
+    contourSide = 'outside',
     chain = null
   } = params;
 
   const toolRadius = (tool.diameter || 10) / 2;
   const xyOffset = toolRadius + (Number(stockToLeaveXY) || 0);
+  const signedContourOffset = contourSide === 'inside' ? -xyOffset : xyOffset;
   const startTopY = bounds.max.y + (Number(topOfStock) || 0);
-  const rawDepth = Math.abs(Number(totalDepth)) || 5.0;
+  const surfaceHeight = Math.max(0.5, bounds.max.y - bounds.min.y);
+  const rawDepth = (totalDepth != null && Number(totalDepth) > 0) ? Math.abs(Number(totalDepth)) : surfaceHeight;
   const extraOvercut = breakThroughEnabled ? Math.abs(Number(breakThroughAmount) || 0) : 0;
   const safeTotalDepth = Math.max(0.01, rawDepth + extraOvercut - (Number(stockToLeaveZ) || 0));
   const safeStepdown = Math.abs(Number(stepdown)) || 1.0;
@@ -457,7 +698,7 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
   const isConventional = cuttingDirection === 'conventional';
   const effectiveLeadConfig = {
     ...(params.leadConfig || {}),
-    sideSign: isConventional ? 1 : -1
+    sideSign: contourSide === 'inside' ? (isConventional ? -1 : 1) : (isConventional ? 1 : -1)
   };
 
   const zLevels = [];
@@ -475,16 +716,17 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
 
   const centerX = chain?.center?.x ?? ((bounds.max.x + bounds.min.x) / 2);
   const centerZ = chain?.center?.z ?? ((bounds.max.z + bounds.min.z) / 2);
-  const halfX = (bounds.max.x - bounds.min.x) / 2 + xyOffset;
-  const halfZ = (bounds.max.z - bounds.min.z) / 2 + xyOffset;
+  const halfX = Math.max(0.5, (bounds.max.x - bounds.min.x) / 2 + signedContourOffset);
+  const halfZ = Math.max(0.5, (bounds.max.z - bounds.min.z) / 2 + signedContourOffset);
 
   zLevels.forEach((curY) => {
     let slicedLoops = [];
+    let slicedFrom3DModel = false;
 
     // 1. Direct 2D Sketch Chain (Circle or Rectangle)
     if (chain && chain.type === 'circle_loop' && chain.radius) {
       const segs = 48;
-      const r = chain.radius + xyOffset;
+      const r = Math.max(0.2, chain.radius + signedContourOffset);
       const circleLoop = [];
       for (let s = 0; s <= segs; s++) {
         const theta = (s / segs) * Math.PI * 2;
@@ -499,8 +741,8 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
       const safeChainBounds = resolveSafeBounds(chain.bounds);
       const rcX = chain?.center?.x ?? ((safeChainBounds.max.x + safeChainBounds.min.x) / 2);
       const rcZ = chain?.center?.z ?? ((safeChainBounds.max.z + safeChainBounds.min.z) / 2);
-      const rectHalfW = Math.abs(safeChainBounds.max.x - safeChainBounds.min.x) / 2 + xyOffset;
-      const rectHalfD = Math.abs(safeChainBounds.max.z - safeChainBounds.min.z) / 2 + xyOffset;
+      const rectHalfW = Math.max(0.2, Math.abs(safeChainBounds.max.x - safeChainBounds.min.x) / 2 + signedContourOffset);
+      const rectHalfD = Math.max(0.2, Math.abs(safeChainBounds.max.z - safeChainBounds.min.z) / 2 + signedContourOffset);
       const rectLoop = [
         new THREE.Vector3(rcX - rectHalfW, curY, rcZ - rectHalfD),
         new THREE.Vector3(rcX + rectHalfW, curY, rcZ - rectHalfD),
@@ -510,28 +752,39 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
       ];
       slicedLoops = [rectLoop];
     } else if (model) {
-      // 2. Attempt real 3D mesh slicing if 3D model is present
-      const segments = sliceMeshAtY(model, curY);
+      // 2. Real 3D drive-surface mesh slicing with cap filtering & boundary epsilon guard
+      const sliceY = Math.min(bounds.max.y - 0.02, Math.max(bounds.min.y + 0.02, curY));
+      const segments = sliceMeshAtY(model, sliceY, { wallOnly: true });
       if (segments.length > 0) {
-        slicedLoops = chainSegmentsIntoLoops(segments, 0.8);
+        slicedLoops = chainSegmentsIntoLoops(segments, 0.85);
+        slicedFrom3DModel = true;
       }
     }
 
     if (slicedLoops.length > 0) {
-      // Use real sliced / 2D sketch geometry contours with smooth lead-in / lead-out transitions
       slicedLoops.forEach((loop) => {
         if (loop.length < 2) return;
-        const closedLoop = [...loop];
-        if (loop[0].distanceTo(loop[loop.length - 1]) > 0.1) {
-          closedLoop.push(loop[0].clone());
+        const isClosed = loop[0].distanceTo(loop[loop.length - 1]) < 0.85;
+        let workingLoop = loop.map((p) => new THREE.Vector3(p.x, curY, p.z));
+        if (isClosed && workingLoop[0].distanceTo(workingLoop[workingLoop.length - 1]) > 0.05) {
+          workingLoop.push(workingLoop[0].clone());
         }
-        const orderedLoop = isConventional ? [...closedLoop].reverse() : closedLoop;
+
+        if (slicedFrom3DModel && workingLoop.length >= 3) {
+          const compLoop = offsetClosedLoopXZ(workingLoop, signedContourOffset, curY);
+          if (compLoop.length >= 3) {
+            workingLoop = compLoop;
+          } else {
+            return;
+          }
+        }
+
+        const orderedLoop = isConventional ? [...workingLoop].reverse() : workingLoop;
         const leadRes = applyLeadInOutToContour(orderedLoop, effectiveLeadConfig, rapidHeight);
         cuttingLines.push(...leadRes.cuttingLines);
         rapidLines.push(...leadRes.rapidLines);
       });
     } else {
-      // Fallback perimeter contour with tangent circular lead-in & lead-out
       const p1 = new THREE.Vector3(centerX - halfX, curY, centerZ - halfZ);
       const p2 = new THREE.Vector3(centerX + halfX, curY, centerZ - halfZ);
       const p3 = new THREE.Vector3(centerX + halfX, curY, centerZ + halfZ);
@@ -1494,7 +1747,7 @@ export function createToolAssembly3D(tool = {}) {
 /**
  * Compiles toolpath operations into an ordered sequence of continuous 3D waypoints for smooth backplot animation.
  */
-export function compileBackplotTrajectory(operations = [], tools = [], bounds, model = null, targetOpId = null, cadWorldYOffset = 0) {
+export function compileBackplotTrajectory(operations = [], tools = [], bounds, model = null, targetOpId = null, cadWorldYOffset = 0, customGeometry = []) {
   const waypoints = [];
   const validTargetId = (typeof targetOpId === 'number' || (typeof targetOpId === 'string' && targetOpId !== 'all')) ? targetOpId : null;
   const activeOps = (validTargetId && operations.some((op) => String(op.id) === String(validTargetId)))
@@ -1513,8 +1766,12 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
 
   finalOps.forEach((op) => {
     let assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10, rpm: 8000, feedRate: 1500 };
-    const opSafeBounds = op.bounds ? resolveSafeBounds(op.bounds) : safeBounds;
-    const visualYOffset = (cadWorldYOffset && (!!op.chain || (!model && opSafeBounds.max.y < 49))) ? cadWorldYOffset : 0;
+    const effectiveModel = buildEffectiveDriveModel(model, customGeometry, op);
+    const opSafeBounds = (op.usesCustomSurfaces && effectiveModel)
+      ? computeDriveModelBounds(effectiveModel, op.bounds || safeBounds)
+      : (op.bounds ? resolveSafeBounds(op.bounds) : safeBounds);
+    const usesCadSpace = !!op.chain || !!op.usesCustomSurfaces || !!(op.driveSurfaceIds?.length) || !model;
+    const visualYOffset = (cadWorldYOffset && usesCadSpace) ? cadWorldYOffset : 0;
     let data = null;
 
     if (op.badgeClass === 'face') {
@@ -1524,13 +1781,8 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
         depthOfCut: op.stepdown || 1.0,
         rapidHeight: op.rapidHeight || 15.0
       });
-    } else if (op.badgeClass === 'pocket') {
-      data = generatePocketToolpath(opSafeBounds, assignedTool, {
-        stepoverPct: op.stepoverPct || 50,
-        totalDepth: op.totalDepth || 15.0,
-        stepdown: op.stepdown || 5.0,
-        rapidHeight: op.rapidHeight || 15.0
-      }, model);
+    } else if (op.badgeClass === 'pocket' || op.badgeClass === 'surface_pocket') {
+      data = generateSurfacePocketToolpath(opSafeBounds, assignedTool, buildPocketParamsFromOp(op), effectiveModel);
     } else if (op.badgeClass === 'circlemill') {
       data = generateCircleMillToolpath(opSafeBounds, assignedTool, {
         diameter: op.diameter || (op.chain?.radius ? op.chain.radius * 2 : 50.8),
@@ -1540,19 +1792,19 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
         chain: op.chain,
         center: op.center || op.chain?.center
       });
-    } else if (op.badgeClass === 'contour') {
-      data = generateWaterlineToolpath(opSafeBounds, assignedTool, buildContourParamsFromOp(op), model);
+    } else if (op.badgeClass === 'contour' || op.badgeClass === 'waterline') {
+      data = generateWaterlineToolpath(opSafeBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
     } else if (op.badgeClass === 'swarf') {
       data = generateSwarfToolpath(opSafeBounds, assignedTool, {
         tiltAngleDeg: 15.0,
         passes: 3
-      }, model);
+      }, effectiveModel);
     } else if (op.badgeClass === 'drill') {
       data = generateDrillingToolpath(opSafeBounds, assignedTool, {
         drillDepth: op.totalDepth || 25.0,
         peckDepth: op.stepdown || 5.0,
         rapidHeight: op.rapidHeight || 10.0
-      }, model);
+      }, effectiveModel);
     } else if (op.badgeClass === 'adaptive' || op.badgeClass === 'dynamic') {
       data = generateAdaptiveRoughingToolpath(opSafeBounds, assignedTool, {
         stepoverPct: op.stepoverPct || 25,
@@ -1569,7 +1821,7 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
       data = generateSurfaceParallelToolpath(opSafeBounds, assignedTool, {
         stepoverPct: op.stepoverPct || 20,
         rapidHeight: op.rapidHeight || 15.0
-      }, model);
+      }, effectiveModel);
     } else if (op.badgeClass === 'rest' || op.badgeClass === 'rest_milling') {
       data = generateRestMillingToolpath(opSafeBounds, assignedTool, {
         refToolDiameter: op.refToolDiameter || 12.0,
@@ -1577,14 +1829,14 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
         totalDepth: op.totalDepth || 15.0,
         stepoverPct: op.stepoverPct || 30,
         rapidHeight: op.rapidHeight || 15.0
-      }, model);
+      }, effectiveModel);
     } else if (op.badgeClass === 'pencil') {
       data = generatePencilTracingToolpath(opSafeBounds, assignedTool, {
         totalDepth: op.totalDepth || 15.0,
         stepdown: op.stepdown || 1.0,
         biTangencyRadius: op.biTangencyRadius || 3.0,
         rapidHeight: op.rapidHeight || 15.0
-      }, model);
+      }, effectiveModel);
     } else if (op.badgeClass === 'probe') {
       const pCenter = op.center || {
         x: (opSafeBounds.min.x + opSafeBounds.max.x) / 2,

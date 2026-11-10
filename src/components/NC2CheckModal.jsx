@@ -148,7 +148,8 @@ export default function NC2CheckModal({
         partMetrics: partMetrics,
         controller: controller,
         programName: cleanProgName,
-        model: currentModel
+        model: currentModel,
+        customGeometry
       });
 
       setNcResult(result);
@@ -178,7 +179,8 @@ export default function NC2CheckModal({
       partMetrics,
       controller,
       programName: cleanProgName,
-      model: currentModel
+      model: currentModel,
+      customGeometry
     });
 
     const filename = `${cleanProgName}${active.fileExtension}`;

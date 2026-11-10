@@ -9,7 +9,9 @@ import {
   createWireframeLine,
   createWireframeArc,
   createWireframeSpline,
-  createPointMarker
+  createPointMarker,
+  createParametricChainExtrusion,
+  createExtrudedSurface
 } from './cadGeometry';
 
 const AUTOSAVE_KEY = 'argus_cam_autosave_v1';
@@ -69,6 +71,9 @@ export function serializeCustomGeometry(customGeometry = []) {
         y: entity.position?.y || 0,
         z: entity.position?.z || 0
       },
+      chains: Array.isArray(ud.chains || entity.chains) ? (ud.chains || entity.chains) : null,
+      extrudeParams: ud.params || entity.extrudeParams || null,
+      surfaceRole: ud.surfaceRole || ud.role || entity.surfaceRole || null,
       color: hexColor
     };
   }).filter(Boolean);
@@ -138,6 +143,24 @@ export function deserializeCustomGeometry(serializedList = []) {
         ? coordsRaw
         : [pos.x || 0, pos.y || 0, pos.z || 0];
       obj = createPointMarker(p, item.name || 'Drill_Point', col);
+    } else if (cadType === 'surface_extrusion' || item.name?.startsWith('Surface_Extrude_')) {
+      const savedChains = item.chains || ud.chains;
+      const savedParams = item.extrudeParams || ud.params;
+      if (Array.isArray(savedChains) && savedChains.length > 0 && savedParams) {
+        obj = createParametricChainExtrusion(savedChains, savedParams, {
+          name: item.name,
+          color: col && col !== 0x1d4ed8 ? col : 0x22d3ee
+        });
+      } else {
+        obj = createExtrudedSurface(
+          item.width ?? ud.width ?? 60,
+          item.depth ?? ud.depth ?? 40,
+          item.height ?? ud.height ?? 30,
+          pos.y || 0,
+          [pos.x || 0, pos.z || 0],
+          { name: item.name, role: item.surfaceRole || ud.surfaceRole || 'drive' }
+        );
+      }
     }
 
     if (obj) {

@@ -26,14 +26,19 @@ export default function SketchNumericInput({
   lockTitle = 'Lock value',
   showLock = true,
   showStepper = true,
+  presets = null,
+  onRawTextChange = null,
   onEnter = null
 }) {
   const [text, setText] = useState(() => formatCleanNumber(value, decimals));
+  const [hasTypedEdit, setHasTypedEdit] = useState(false);
+  const [showPresetMenu, setShowPresetMenu] = useState(false);
   const isFocusedRef = useRef(false);
 
   useEffect(() => {
     if (!isFocusedRef.current) {
       setText(formatCleanNumber(value, decimals));
+      setHasTypedEdit(false);
     }
   }, [value, decimals]);
 
@@ -50,16 +55,21 @@ export default function SketchNumericInput({
     const pattern = allowNegative ? /^-?\d*\.?\d*$/ : /^\d*\.?\d*$/;
     if (!pattern.test(raw)) return;
     setText(raw);
+    setHasTypedEdit(true);
+    if (onRawTextChange) onRawTextChange(raw);
     commitValidIfReady(raw);
   };
 
   const handleFocus = (e) => {
     isFocusedRef.current = true;
+    setHasTypedEdit(false);
     e.target.select();
   };
 
   const handleBlur = () => {
     isFocusedRef.current = false;
+    setHasTypedEdit(false);
+    setShowPresetMenu(false);
     const parsed = text === '' || text === '-' || text === '.' || text === '-.' ? NaN : Number(text);
     if (Number.isFinite(parsed)) {
       const clamped = Math.min(max, Math.max(min, parsed));
@@ -75,11 +85,13 @@ export default function SketchNumericInput({
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      setHasTypedEdit(false);
       e.currentTarget.blur();
       if (onEnter) onEnter();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       isFocusedRef.current = false;
+      setHasTypedEdit(false);
       setText(formatCleanNumber(value, decimals));
       e.currentTarget.blur();
     }
@@ -89,12 +101,13 @@ export default function SketchNumericInput({
     const parsed = Number(text);
     const current = Number.isFinite(parsed) ? parsed : (Number(value) || 0);
     const next = Math.min(max, Math.max(min, Number((current + delta).toFixed(decimals))));
+    setHasTypedEdit(false);
     setText(formatCleanNumber(next, decimals));
     if (onChangeNumber) onChangeNumber(next);
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, position: 'relative' }}>
       <div
         style={{
           display: 'flex',
@@ -111,6 +124,8 @@ export default function SketchNumericInput({
         <input
           type="text"
           inputMode="decimal"
+          data-sketch-numeric="true"
+          data-dirty={hasTypedEdit ? 'true' : 'false'}
           value={text}
           onChange={handleChange}
           onFocus={handleFocus}
@@ -128,6 +143,31 @@ export default function SketchNumericInput({
             userSelect: 'text'
           }}
         />
+        {Array.isArray(presets) && presets.length > 0 && (
+          <button
+            type="button"
+            title="Select preset value"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setShowPresetMenu((prev) => !prev)}
+            style={{
+              width: '14px',
+              height: '100%',
+              border: 'none',
+              borderLeft: '1px solid #e2e8f0',
+              background: '#ffffff',
+              color: '#475569',
+              fontSize: '8px',
+              cursor: 'pointer',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}
+          >
+            ▾
+          </button>
+        )}
         {showStepper && (
           <div
             style={{
@@ -204,6 +244,52 @@ export default function SketchNumericInput({
         >
           {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
         </button>
+      )}
+      {showPresetMenu && Array.isArray(presets) && presets.length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '23px',
+            left: 0,
+            right: showLock ? '24px' : 0,
+            background: '#ffffff',
+            border: '1px solid #cbd5e1',
+            borderRadius: '3px',
+            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.15)',
+            zIndex: 200,
+            maxHeight: '140px',
+            overflowY: 'auto'
+          }}
+        >
+          {presets.map((presetVal) => (
+            <button
+              key={presetVal}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setHasTypedEdit(false);
+                setText(formatCleanNumber(presetVal, decimals));
+                if (onChangeNumber) onChangeNumber(presetVal);
+                setShowPresetMenu(false);
+              }}
+              style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                padding: '3px 7px',
+                border: 'none',
+                borderBottom: '1px solid #f1f5f9',
+                background: Number(value) === Number(presetVal) ? '#e0f2fe' : '#ffffff',
+                color: '#0f172a',
+                fontSize: '11px',
+                fontFamily: 'monospace',
+                cursor: 'pointer'
+              }}
+            >
+              {formatCleanNumber(presetVal, decimals)}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

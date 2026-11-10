@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {
   generateFacingToolpath,
-  generatePocketToolpath,
+  generateSurfacePocketToolpath,
   generateWaterlineToolpath,
   generateSwarfToolpath,
   generateDrillingToolpath,
@@ -11,7 +11,10 @@ import {
   generateTapToolpath,
   generateSurfaceParallelToolpath,
   generateAdaptiveRoughingToolpath,
-  buildContourParamsFromOp
+  buildContourParamsFromOp,
+  buildPocketParamsFromOp,
+  buildEffectiveDriveModel,
+  computeDriveModelBounds
 } from './toolpathEngine.js';
 import { generateProbingGCode } from './probingEngine.js';
 
@@ -39,7 +42,8 @@ export function generateNCProgram({
   partMetrics,
   controller = CONTROLLER_DIALECTS.HEIDENHAIN,
   programName = 'DMU50_ZeroClamp_Job',
-  model = null
+  model = null,
+  customGeometry = []
 }) {
   const bounds = partMetrics?.box || partMetrics?.bounds || new THREE.Box3(
     new THREE.Vector3(-40, 49, -35),
@@ -131,7 +135,10 @@ export function generateNCProgram({
       feedRate: 1200
     };
 
-    const effectiveBounds = op.bounds || bounds;
+    const effectiveModel = buildEffectiveDriveModel(model, customGeometry, op);
+    const effectiveBounds = (op.usesCustomSurfaces && effectiveModel)
+      ? computeDriveModelBounds(effectiveModel, op.bounds || bounds)
+      : (op.bounds || bounds);
 
     // Calculate trajectory data
     let toolpathData;
@@ -142,13 +149,8 @@ export function generateNCProgram({
         depthOfCut: op.stepdown || 1.0,
         rapidHeight: op.rapidHeight || 15.0
       });
-    } else if (op.badgeClass === 'pocket') {
-      toolpathData = generatePocketToolpath(effectiveBounds, tool, {
-        stepoverPct: op.stepoverPct || 50,
-        totalDepth: op.totalDepth || 15.0,
-        stepdown: op.stepdown || 5.0,
-        rapidHeight: op.rapidHeight || 15.0
-      }, model);
+    } else if (op.badgeClass === 'pocket' || op.badgeClass === 'surface_pocket') {
+      toolpathData = generateSurfacePocketToolpath(effectiveBounds, tool, buildPocketParamsFromOp(op), effectiveModel);
     } else if (op.badgeClass === 'circlemill') {
       toolpathData = generateCircleMillToolpath(effectiveBounds, tool, {
         diameter: op.diameter || (op.chain?.radius ? op.chain.radius * 2 : 50.8),
@@ -158,41 +160,41 @@ export function generateNCProgram({
         chain: op.chain,
         center: op.center || op.chain?.center
       });
-    } else if (op.badgeClass === 'contour') {
-      toolpathData = generateWaterlineToolpath(effectiveBounds, tool, buildContourParamsFromOp(op), model);
+    } else if (op.badgeClass === 'contour' || op.badgeClass === 'waterline') {
+      toolpathData = generateWaterlineToolpath(effectiveBounds, tool, buildContourParamsFromOp(op), effectiveModel);
     } else if (op.badgeClass === 'swarf') {
       toolpathData = generateSwarfToolpath(effectiveBounds, tool, {
         tiltAngleDeg: 15.0,
         passes: 2
-      }, model);
+      }, effectiveModel);
     } else if (op.badgeClass === 'drill') {
       toolpathData = generateDrillingToolpath(effectiveBounds, tool, {
         drillDepth: op.totalDepth || 25.0,
         peckDepth: op.stepdown || 5.0,
         rapidHeight: op.rapidHeight || 10.0
-      }, model);
+      }, effectiveModel);
     } else if (op.badgeClass === 'spotdrill') {
       toolpathData = generateSpotDrillToolpath(effectiveBounds, tool, {
         spotDepth: op.stepdown || op.totalDepth || 3.8,
         rapidHeight: op.rapidHeight || 10.0
-      }, model);
+      }, effectiveModel);
     } else if (op.badgeClass === 'chamfer') {
       toolpathData = generateChamferToolpath(effectiveBounds, tool, {
         chamferWidth: op.chamferWidth || op.stepdown || 0.508,
         tipOffset: op.tipOffset || 1.27,
         rapidHeight: op.rapidHeight || 15.0
-      }, model);
+      }, effectiveModel);
     } else if (op.badgeClass === 'tap') {
       toolpathData = generateTapToolpath(effectiveBounds, tool, {
         pitch: op.pitch || 0.79375,
         totalDepth: op.totalDepth || 12.19,
         rapidHeight: op.rapidHeight || 10.0
-      }, model);
+      }, effectiveModel);
     } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
       toolpathData = generateSurfaceParallelToolpath(effectiveBounds, tool, {
         stepoverPct: op.stepoverPct || 20,
         rapidHeight: op.rapidHeight || 15.0
-      }, model);
+      }, effectiveModel);
     } else if (op.badgeClass === 'adaptive' || op.badgeClass === 'dynamic') {
       toolpathData = generateAdaptiveRoughingToolpath(effectiveBounds, tool, {
         stepoverPct: op.stepoverPct || 25,
@@ -264,7 +266,7 @@ export function generateNCProgram({
 
     // Coordinate & Z-Linking helpers
     // Three.js Top (G17): +X = CNC +X, -Z = CNC +Y (cplaneGeometry vAxis), +Y = CNC +Z
-    const isWcsTop = stockConfig?.wcsZZero !== 'model_origin' || !model || !!op.chain;
+    const isWcsTop = stockConfig?.wcsZZero !== 'model_origin' || !model || !!op.chain || !!op.usesCustomSurfaces;
     const zOffset = isWcsTop ? effectiveBounds.max.y : 0;
     const fmtNum = (n) => (Math.abs(n) < 0.0005 ? 0 : n).toFixed(3);
     const toCncY = (threeZ) => -threeZ;

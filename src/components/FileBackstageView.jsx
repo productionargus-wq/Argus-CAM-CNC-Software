@@ -195,12 +195,16 @@ export default function FileBackstageView({
       try {
         let code = '';
         if (operations && operations.length > 0) {
-          code = generateNCProgram({
+          const generated = generateNCProgram({
             operations,
             tools: tools || [],
             stockConfig,
+            partMetrics,
+            model: currentModel,
+            customGeometry,
             programName: currentProjectName ? currentProjectName.replace(/\.[^/.]+$/, "") : 'MASTERCAM_PART'
           });
+          code = generated?.gcodeText || (typeof generated === 'string' ? generated : '');
         } else {
           code = `( PROGRAM: ${currentProjectName || 'MASTERCAM_PART'} )\n` +
                  `( MACHINE: ${activeMachine?.name || 'DMG MORI DMU 50'} )\n` +

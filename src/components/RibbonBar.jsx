@@ -144,6 +144,7 @@ export default function RibbonBar({
   onOpenFileBackstage,
   onOpenDefineToolModal,
   onOpenSurfaceFinishContour,
+  onOpenSurfaceFinishPocket,
   onCopyViewportImage,
   onPasteOp,
   onCutOp,
@@ -774,7 +775,7 @@ export default function RibbonBar({
                     <Copy size={12} color="#f59e0b" />
                     <span>Duplicates</span>
                   </button>
-                  <button className="ribbon-btn-small" onClick={onUndeleteEntity} title="Undelete last deleted entity (Ctrl+Z)">
+                  <button className="ribbon-btn-small" onClick={onUndeleteEntity} title="Restore entity deleted with Non-Associative Delete">
                     <RotateCcw size={12} color="#10b981" />
                     <span>Undelete Entity</span>
                   </button>
@@ -1651,6 +1652,14 @@ export default function RibbonBar({
               if (action.startsWith('tp_3d_')) {
                 if (action === 'tp_3d_optirough' && onOpenAdaptiveModal) {
                   onOpenAdaptiveModal();
+                  return;
+                }
+                if (action === 'tp_3d_finish_contour' && onOpenSurfaceFinishContour) {
+                  onOpenSurfaceFinishContour();
+                  return;
+                }
+                if (action === 'tp_3d_finish_pocket' && onOpenSurfaceFinishPocket) {
+                  onOpenSurfaceFinishPocket();
                   return;
                 }
                 if (opType && onQuickAddOp) {

@@ -1,87 +1,164 @@
-import React, { useState, useEffect } from 'react';
-import { X, Check, HelpCircle, Settings, Layers, Sliders, Wrench } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import * as THREE from 'three';
+import { X, Check, HelpCircle } from 'lucide-react';
 
 export default function SurfaceFinishContourModal({
   isOpen,
   onClose,
-  operation,
+  operation = null,
+  strategyMode = 'contour', // 'contour' | 'pocket'
   tools = [],
+  customGeometry = [],
   onSaveOperation,
   onOpenDefineToolModal,
   onNotify
 }) {
-  const [activeTab, setActiveTab] = useState('toolpath_params'); // 'toolpath_params' | 'surface_params' | 'finish_contour_params'
+  const mode = operation?.strategyKey === 'surface_finish_pocket' || operation?.badgeClass === 'pocket'
+    ? 'pocket'
+    : strategyMode;
+  const isPocket = mode === 'pocket';
+
+  const [activeTab, setActiveTab] = useState('toolpath_params');
   const [selectedToolIndex, setSelectedToolIndex] = useState(0);
 
-  // Toolpath Parameters (Yellow Mastercam inputs matching Image 3)
+  const detectedSurfaces = useMemo(() => {
+    return (Array.isArray(customGeometry) ? customGeometry : [])
+      .filter((ent) => {
+        if (!ent || ent.visible === false) return false;
+        const ct = String(ent.userData?.cadType || ent.userData?.type || '').toLowerCase();
+        return ent.name?.startsWith('Surface_') || ent.name?.startsWith('CAD_Surface') || ct === 'surface_extrusion' || ct === 'surface_plane';
+      })
+      .map((ent, idx) => {
+        ent.updateMatrixWorld?.(true);
+        const box = new THREE.Box3().setFromObject(ent);
+        const height = !box.isEmpty() ? Math.max(0.5, Number((box.max.y - box.min.y).toFixed(2))) : 20.0;
+        const id = String(ent.uuid || ent.userData?.customId || ent.name || `surf_${idx}`);
+        return { id, name: ent.name || `Surface ${idx + 1}`, height, box };
+      });
+  }, [customGeometry, isOpen]);
+
+  const [selectedSurfaceIds, setSelectedSurfaceIds] = useState([]);
+
   const [params, setParams] = useState({
-    toolName: '51 Flat Endmill',
+    toolId: 1,
+    toolName: '10mm Flat Endmill',
     toolNumber: 1,
     lengthOffset: 1,
     headNumber: 0,
     diameterOffset: 1,
-    toolDiameter: 51.0,
+    toolDiameter: 10.0,
     cornerRadius: 0.0,
     spindleDirection: 'CW',
-    feedRate: 50.0,
-    spindleSpeed: 3500,
-    fpt: 0.0036,
-    cs: 560.7917,
-    plungeRate: 250.0,
-    retractRate: 50.0,
+    feedRate: 1200.0,
+    spindleSpeed: 6000,
+    fpt: 0.05,
+    cs: 188.5,
+    plungeRate: 450.0,
+    retractRate: 1000.0,
+    rapidHeight: 15.0,
     forceToolChange: false,
     rapidRetract: true,
     comment: 'Surface Finish Contour - 3D Drive Surfaces'
   });
 
-  // Surface Parameters tab state
   const [surfaceParams, setSurfaceParams] = useState({
     stockToLeaveDrive: 0.0,
     stockToLeaveCheck: 0.5,
     totalTolerance: 0.025,
     maxStepdown: 2.0,
-    driveSurfacesCount: 14,
-    checkSurfacesCount: 2
+    totalDepth: 20.0
   });
 
-  // Finish Contour Parameters tab state
   const [contourParams, setContourParams] = useState({
-    direction: 'climb', // climb | conventional
+    direction: 'climb',
+    contourSide: 'outside',
     rollAroundCorners: 'all',
     shallowCuts: true,
     shallowAngleLimitDeg: 45
   });
 
-  // Initialize from active operation or default tools
+  const [pocketParams, setPocketParams] = useState({
+    cutMethod: 'constant_overlap',
+    stepoverPct: 45,
+    direction: 'climb',
+    finishWallPass: true,
+    helicalEntry: true
+  });
+
   useEffect(() => {
+    if (!isOpen) return;
+    const defaultIds = (Array.isArray(operation?.driveSurfaceIds) && operation.driveSurfaceIds.length > 0)
+      ? operation.driveSurfaceIds.map(String)
+      : detectedSurfaces.map((s) => s.id);
+    setSelectedSurfaceIds(defaultIds);
+
+    const maxSurfHeight = detectedSurfaces.length > 0
+      ? Math.max(...detectedSurfaces.map((s) => s.height))
+      : 20.0;
+
     if (operation) {
+      const sp = operation.surfaceParams || {};
+      const cp = operation.contourParams || {};
+      const pp = operation.pocketParams || {};
+      const idx = tools.findIndex((t) => t.id === operation.toolId);
+      setSelectedToolIndex(idx >= 0 ? idx : 0);
       setParams((prev) => ({
         ...prev,
-        toolName: operation.toolName || operation.tool?.name || '51 Flat Endmill',
+        toolId: operation.toolId || 1,
+        toolName: operation.toolName || operation.tool?.name || prev.toolName,
         toolNumber: operation.toolNumber || operation.tool?.number || 1,
-        lengthOffset: operation.lengthOffset || 1,
-        diameterOffset: operation.diameterOffset || 1,
-        toolDiameter: operation.toolDiameter || operation.tool?.diameter || 51.0,
-        feedRate: operation.feedRate || operation.tool?.feedRate || 50.0,
-        spindleSpeed: operation.spindleSpeed || operation.tool?.spindleSpeed || 3500,
-        plungeRate: operation.plungeRate || 250.0,
-        retractRate: operation.retractRate || 50.0,
-        comment: operation.comment || `Op - ${operation.name || 'Surface Finish Contour'}`
+        toolDiameter: operation.toolDiameter || operation.tool?.diameter || 10.0,
+        feedRate: operation.feedRate || 1200.0,
+        spindleSpeed: operation.spindleSpeed || operation.tool?.rpm || 6000,
+        plungeRate: operation.plungeFeedRate || operation.plungeRate || 450.0,
+        retractRate: operation.retractRate || 1000.0,
+        rapidHeight: operation.rapidHeight || 15.0,
+        comment: operation.comment || operation.name || ''
       }));
-    } else if (tools.length > 0) {
-      const t = tools[0];
+      setSurfaceParams({
+        stockToLeaveDrive: Number(sp.stockToLeaveDrive ?? operation.stockToLeaveXY) || 0.0,
+        stockToLeaveCheck: Number(sp.stockToLeaveCheck) || 0.5,
+        totalTolerance: Number(sp.totalTolerance) || 0.025,
+        maxStepdown: Number(sp.maxStepdown ?? operation.stepdown) || 2.0,
+        totalDepth: Number(operation.totalDepth ?? sp.totalDepth) || maxSurfHeight
+      });
+      setContourParams({
+        direction: cp.direction || operation.cuttingDirection || 'climb',
+        contourSide: cp.contourSide || operation.contourSide || 'outside',
+        rollAroundCorners: cp.rollAroundCorners || operation.rollAroundCorners || 'all',
+        shallowCuts: cp.shallowCuts ?? true,
+        shallowAngleLimitDeg: cp.shallowAngleLimitDeg ?? 45
+      });
+      setPocketParams({
+        cutMethod: pp.cutMethod || operation.cutStyle || 'constant_overlap',
+        stepoverPct: Number(pp.stepoverPct ?? operation.stepoverPct) || 45,
+        direction: pp.direction || operation.cuttingDirection || 'climb',
+        finishWallPass: pp.finishWallPass !== false,
+        helicalEntry: pp.helicalEntry !== false
+      });
+    } else {
+      const t = tools[0] || { id: 1, number: 1, name: '10mm Flat Endmill', diameter: 10, rpm: 6000, feedRate: 1200, plungeRate: 450 };
+      setSelectedToolIndex(0);
       setParams((prev) => ({
         ...prev,
+        toolId: t.id || 1,
         toolName: t.name,
         toolNumber: t.number || 1,
-        toolDiameter: t.diameter || 51.0,
-        feedRate: t.feedRate || 50.0,
-        spindleSpeed: t.spindleSpeed || 3500
+        lengthOffset: t.number || 1,
+        diameterOffset: t.number || 1,
+        toolDiameter: t.diameter || 10.0,
+        feedRate: t.feedRate || 1200.0,
+        spindleSpeed: t.rpm || t.spindleSpeed || 6000,
+        plungeRate: t.plungeRate || 450.0,
+        comment: isPocket ? 'Surface Finish Pocket - 3D Drive Surfaces' : 'Surface Finish Contour - 3D Drive Surfaces'
+      }));
+      setSurfaceParams((prev) => ({
+        ...prev,
+        totalDepth: maxSurfHeight
       }));
     }
-  }, [operation, tools]);
+  }, [isOpen, operation, tools, detectedSurfaces, isPocket]);
 
-  // Handle ESC key
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -93,27 +170,55 @@ export default function SurfaceFinishContourModal({
   }, [isOpen, onClose]);
 
   const handleApply = () => {
+    const activeSurfaces = detectedSurfaces.filter((s) => selectedSurfaceIds.includes(s.id));
+    let combinedBox = null;
+    if (activeSurfaces.length > 0) {
+      combinedBox = new THREE.Box3();
+      activeSurfaces.forEach((s) => {
+        if (s.box && !s.box.isEmpty()) combinedBox.union(s.box);
+      });
+    }
+
+    const opTitle = isPocket ? 'Surface Finish Pocket' : 'Surface Finish Contour';
     const updatedOp = {
       ...(operation || {}),
-      name: operation?.name || 'Surface Finish Contour',
-      type: 'surface_finish_contour',
+      name: operation?.name || opTitle,
+      type: isPocket ? 'surface_finish_pocket' : 'surface_finish_contour',
+      strategyKey: isPocket ? 'surface_finish_pocket' : 'surface_finish_contour',
+      badgeClass: isPocket ? 'pocket' : 'contour',
+      badgeText: isPocket ? 'SP' : 'SC',
+      toolId: Number(params.toolId) || 1,
       toolName: params.toolName,
       toolNumber: Number(params.toolNumber),
       toolDiameter: Number(params.toolDiameter),
       feedRate: Number(params.feedRate),
       spindleSpeed: Number(params.spindleSpeed),
       plungeRate: Number(params.plungeRate),
+      plungeFeedRate: Number(params.plungeRate),
       retractRate: Number(params.retractRate),
+      rapidHeight: Number(params.rapidHeight) || 15.0,
+      stepdown: Number(surfaceParams.maxStepdown) || 2.0,
+      totalDepth: Number(surfaceParams.totalDepth) || 20.0,
+      stockToLeaveXY: Number(surfaceParams.stockToLeaveDrive) || 0.0,
+      stockToLeaveZ: 0.0,
+      cuttingDirection: isPocket ? pocketParams.direction : contourParams.direction,
+      contourSide: contourParams.contourSide,
+      cutStyle: pocketParams.cutMethod,
+      stepoverPct: Number(pocketParams.stepoverPct) || 45,
+      driveSurfaceIds: selectedSurfaceIds,
+      usesCustomSurfaces: true,
+      bounds: combinedBox && !combinedBox.isEmpty() ? combinedBox : (operation?.bounds || null),
       comment: params.comment,
-      surfaceParams,
-      contourParams
+      surfaceParams: { ...surfaceParams, driveSurfacesCount: activeSurfaces.length },
+      contourParams: { ...contourParams },
+      pocketParams: { ...pocketParams }
     };
 
     if (onSaveOperation) {
       onSaveOperation(updatedOp);
     }
     if (onNotify) {
-      onNotify(`Applied parameters for "${updatedOp.name}"`, 'success');
+      onNotify(`Applied "${updatedOp.name}" across ${activeSurfaces.length || 'active'} drive surface(s)`, 'success');
     }
     onClose();
   };
@@ -173,7 +278,9 @@ export default function SurfaceFinishContourModal({
             color: '#1e293b'
           }}
         >
-          <span style={{ fontWeight: 600 }}>Surface Finish Contour</span>
+          <span style={{ fontWeight: 600 }}>
+            {isPocket ? 'Surface Finish Pocket' : 'Surface Finish Contour'}
+          </span>
           <button
             onClick={onClose}
             style={{
@@ -198,7 +305,7 @@ export default function SurfaceFinishContourModal({
           {[
             { id: 'toolpath_params', label: 'Toolpath parameters' },
             { id: 'surface_params', label: 'Surface parameters' },
-            { id: 'finish_contour_params', label: 'Finish contour parameters' }
+            { id: 'finish_contour_params', label: isPocket ? 'Finish pocket parameters' : 'Finish contour parameters' }
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -256,11 +363,15 @@ export default function SurfaceFinishContourModal({
                             setSelectedToolIndex(idx);
                             setParams((prev) => ({
                               ...prev,
+                              toolId: t.id || idx + 1,
                               toolName: t.name,
                               toolNumber: t.number || idx + 1,
-                              toolDiameter: t.diameter || (t.name.includes('51') ? 51 : 12),
-                              feedRate: t.feedRate || 50.0,
-                              spindleSpeed: t.spindleSpeed || 3500
+                              lengthOffset: t.number || idx + 1,
+                              diameterOffset: t.number || idx + 1,
+                              toolDiameter: t.diameter || 10,
+                              feedRate: t.feedRate || 1200,
+                              plungeRate: t.plungeRate || 450,
+                              spindleSpeed: t.rpm || t.spindleSpeed || 6000
                             }));
                           }}
                           style={{
@@ -424,50 +535,157 @@ export default function SurfaceFinishContourModal({
 
         {/* Tab 2: Surface Parameters */}
         {activeTab === 'surface_params' && (
-          <div style={{ background: '#ffffff', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
+          <div style={{ background: '#ffffff', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12px' }}>
             <h3 style={{ margin: 0, fontSize: '14px', color: '#0f5a9e' }}>Drive & Check Surfaces Configuration</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+            <div style={{ border: '1px solid #cbd5e1', borderRadius: '3px', padding: '8px 10px', background: '#f8fafc' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontWeight: 600, color: '#334155', fontSize: '11.5px' }}>
+                <span>Drive Surfaces ({selectedSurfaceIds.length} / {detectedSurfaces.length} selected)</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSurfaceIds(detectedSurfaces.map((s) => s.id))}
+                  style={{ fontSize: '10.5px', padding: '1px 6px', border: '1px solid #94a3b8', background: '#ffffff', borderRadius: '2px', cursor: 'pointer' }}
+                >
+                  Select All
+                </button>
+              </div>
+              {detectedSurfaces.length === 0 ? (
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  No extruded surfaces found on Level 15 — will target active Solid / Stock boundaries.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '72px', overflowY: 'auto' }}>
+                  {detectedSurfaces.map((surf) => {
+                    const checked = selectedSurfaceIds.includes(surf.id);
+                    return (
+                      <label
+                        key={surf.id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '3px 8px',
+                          background: checked ? '#e0f2fe' : '#ffffff',
+                          border: `1px solid ${checked ? '#0284c7' : '#cbd5e1'}`,
+                          borderRadius: '3px',
+                          fontSize: '11px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedSurfaceIds((prev) => [...prev, surf.id]);
+                            } else {
+                              setSelectedSurfaceIds((prev) => prev.filter((id) => id !== surf.id));
+                            }
+                          }}
+                        />
+                        <span>{surf.name}</span>
+                        <span style={{ color: '#64748b', fontSize: '10px' }}>({surf.height}mm)</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label>Stock to leave on drive (mm):</label>
-                <input type="number" step="0.01" value={surfaceParams.stockToLeaveDrive} onChange={(e) => setSurfaceParams({ ...surfaceParams, stockToLeaveDrive: Number(e.target.value) })} style={yellowInputStyle} />
+                <input type="number" step="0.05" value={surfaceParams.stockToLeaveDrive} onChange={(e) => setSurfaceParams({ ...surfaceParams, stockToLeaveDrive: Number(e.target.value) })} style={yellowInputStyle} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label>Total Cut Depth (mm):</label>
+                <input type="number" step="1" min="0.1" value={surfaceParams.totalDepth} onChange={(e) => setSurfaceParams({ ...surfaceParams, totalDepth: Number(e.target.value) })} style={yellowInputStyle} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label>Maximum Stepdown (mm):</label>
+                <input type="number" step="0.5" min="0.1" value={surfaceParams.maxStepdown} onChange={(e) => setSurfaceParams({ ...surfaceParams, maxStepdown: Number(e.target.value) })} style={yellowInputStyle} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label>Stock to leave on check (mm):</label>
-                <input type="number" step="0.01" value={surfaceParams.stockToLeaveCheck} onChange={(e) => setSurfaceParams({ ...surfaceParams, stockToLeaveCheck: Number(e.target.value) })} style={yellowInputStyle} />
+                <input type="number" step="0.05" value={surfaceParams.stockToLeaveCheck} onChange={(e) => setSurfaceParams({ ...surfaceParams, stockToLeaveCheck: Number(e.target.value) })} style={yellowInputStyle} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label>Total Chordal Tolerance (mm):</label>
                 <input type="number" step="0.005" value={surfaceParams.totalTolerance} onChange={(e) => setSurfaceParams({ ...surfaceParams, totalTolerance: Number(e.target.value) })} style={yellowInputStyle} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label>Maximum Stepdown (mm):</label>
-                <input type="number" step="0.5" value={surfaceParams.maxStepdown} onChange={(e) => setSurfaceParams({ ...surfaceParams, maxStepdown: Number(e.target.value) })} style={yellowInputStyle} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label>Clearance / Rapid Z (mm):</label>
+                <input type="number" step="1" min="1" value={params.rapidHeight} onChange={(e) => setParams({ ...params, rapidHeight: Number(e.target.value) })} style={yellowInputStyle} />
               </div>
             </div>
           </div>
         )}
 
-        {/* Tab 3: Finish Contour Parameters */}
+        {/* Tab 3: Finish Contour or Finish Pocket Parameters */}
         {activeTab === 'finish_contour_params' && (
-          <div style={{ background: '#ffffff', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
-            <h3 style={{ margin: 0, fontSize: '14px', color: '#0f5a9e' }}>Contour Wall Engagement Strategy</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label>Cutting Direction:</label>
-                <select value={contourParams.direction} onChange={(e) => setContourParams({ ...contourParams, direction: e.target.value })} style={{ padding: '4px', fontSize: '12px' }}>
-                  <option value="climb">Climb Milling (Down Cut)</option>
-                  <option value="conventional">Conventional Milling (Up Cut)</option>
-                </select>
+          <div style={{ background: '#ffffff', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12px' }}>
+            <h3 style={{ margin: 0, fontSize: '14px', color: '#0f5a9e' }}>
+              {isPocket ? 'Finish Pocket Clearing Strategy' : 'Contour Wall Engagement Strategy'}
+            </h3>
+
+            {isPocket ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label>Pocket Cut Method:</label>
+                  <select value={pocketParams.cutMethod} onChange={(e) => setPocketParams({ ...pocketParams, cutMethod: e.target.value })} style={{ padding: '4px', fontSize: '12px' }}>
+                    <option value="constant_overlap">Constant Overlap Spiral</option>
+                    <option value="parallel_spiral">Parallel Spiral</option>
+                    <option value="zigzag">Zigzag Parallel Raster</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label>Stepover (% of Tool Diameter):</label>
+                  <input type="number" step="5" min="5" max="90" value={pocketParams.stepoverPct} onChange={(e) => setPocketParams({ ...pocketParams, stepoverPct: Number(e.target.value) })} style={yellowInputStyle} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label>Cutting Direction:</label>
+                  <select value={pocketParams.direction} onChange={(e) => setPocketParams({ ...pocketParams, direction: e.target.value })} style={{ padding: '4px', fontSize: '12px' }}>
+                    <option value="climb">Climb Milling (Down Cut)</option>
+                    <option value="conventional">Conventional Milling (Up Cut)</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px', paddingTop: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={pocketParams.helicalEntry} onChange={(e) => setPocketParams({ ...pocketParams, helicalEntry: e.target.checked })} />
+                    Helical Ramp Plunge Entry
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={pocketParams.finishWallPass} onChange={(e) => setPocketParams({ ...pocketParams, finishWallPass: e.target.checked })} />
+                    Final Finish Wall Spring Pass
+                  </label>
+                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label>Corner Roll Rule:</label>
-                <select value={contourParams.rollAroundCorners} onChange={(e) => setContourParams({ ...contourParams, rollAroundCorners: e.target.value })} style={{ padding: '4px', fontSize: '12px' }}>
-                  <option value="all">Roll around all sharp corners</option>
-                  <option value="sharp">Sharp corners only</option>
-                  <option value="none">None (G01 sharp decel)</option>
-                </select>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label>Cutting Direction:</label>
+                  <select value={contourParams.direction} onChange={(e) => setContourParams({ ...contourParams, direction: e.target.value })} style={{ padding: '4px', fontSize: '12px' }}>
+                    <option value="climb">Climb Milling (Down Cut)</option>
+                    <option value="conventional">Conventional Milling (Up Cut)</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label>Wall Offset Side:</label>
+                  <select value={contourParams.contourSide} onChange={(e) => setContourParams({ ...contourParams, contourSide: e.target.value })} style={{ padding: '4px', fontSize: '12px' }}>
+                    <option value="outside">Outside (External Boss / Wall)</option>
+                    <option value="inside">Inside (Internal Cavity / Bore)</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label>Corner Roll Rule:</label>
+                  <select value={contourParams.rollAroundCorners} onChange={(e) => setContourParams({ ...contourParams, rollAroundCorners: e.target.value })} style={{ padding: '4px', fontSize: '12px' }}>
+                    <option value="all">Roll around all sharp corners</option>
+                    <option value="sharp">Sharp corners only</option>
+                    <option value="none">None (G01 sharp decel)</option>
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 

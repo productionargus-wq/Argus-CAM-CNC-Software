@@ -345,26 +345,225 @@ export function createSnapIndicator(point, snapType = 'endpoint') {
 }
 
 /**
- * Automatically detects closed loop chains from drawn lines, arcs, and rectangles.
- * Returns array of closed point loops formatted for CAM pocketing / contouring.
+ * Extracts ordered 3D vertices from any wireframe Three.js entity (userData or BufferGeometry fallback).
+ */
+export function extractPointsFromCadEntity(entity) {
+  if (!entity) return [];
+  const ud = entity.userData || {};
+  const rawType = String(ud.cadType || ud.type || '').toLowerCase();
+
+  if (Array.isArray(ud.points) && ud.points.length >= 2) {
+    return ud.points.map((p) => new THREE.Vector3(p.x || 0, p.y || 0, p.z || 0));
+  }
+
+  if (rawType === 'circle' && ud.center && ud.radius) {
+    const pts = [];
+    const segs = 48;
+    for (let i = 0; i <= segs; i++) {
+      const a = (i / segs) * Math.PI * 2;
+      pts.push(new THREE.Vector3(
+        (ud.center.x || 0) + Math.cos(a) * ud.radius,
+        ud.center.y || 0,
+        (ud.center.z || 0) + Math.sin(a) * ud.radius
+      ));
+    }
+    return pts;
+  }
+
+  if (rawType === 'line' && ud.p1 && ud.p2) {
+    return [
+      new THREE.Vector3(ud.p1.x || 0, ud.p1.y || 0, ud.p1.z || 0),
+      new THREE.Vector3(ud.p2.x || 0, ud.p2.y || 0, ud.p2.z || 0)
+    ];
+  }
+
+  const posAttr = entity.geometry?.attributes?.position;
+  if (posAttr && posAttr.count >= 2) {
+    const pts = [];
+    for (let i = 0; i < posAttr.count; i++) {
+      pts.push(new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)));
+    }
+    return pts;
+  }
+
+  return [];
+}
+
+/**
+ * Checks whether an entity belongs to selectable wireframe geometry (excludes surface sheets / toolpaths / drill markers).
+ */
+export function isSelectableWireframeEntity(entity) {
+  if (!entity || entity.visible === false) return false;
+  const ud = entity.userData || {};
+  const cadType = String(ud.cadType || ud.type || '').toLowerCase();
+  if (entity.name?.startsWith('Surface_') || entity.name?.startsWith('CAD_Surface') || cadType === 'surface_extrusion' || cadType === 'surface_plane' || cadType === 'drill' || cadType === 'datum_point') {
+    return false;
+  }
+  if (entity.isLine || entity.name?.startsWith('Wireframe_') || ['circle', 'rect', 'rectangle', 'line', 'arc', 'polyline', 'polygon', 'spline'].includes(cadType)) {
+    return extractPointsFromCadEntity(entity).length >= 2;
+  }
+  return false;
+}
+
+/**
+ * Builds a single chain object from a seed wireframe entity, tracing connected open segments when method === 'chain'.
+ */
+export function buildChainFromEntity(seedEntity, allEntities = [], options = {}) {
+  const { method = 'chain', planeMode = '3d', tolerance = 0.75, reverse = false } = options;
+  if (!seedEntity || !isSelectableWireframeEntity(seedEntity)) return null;
+
+  const seedPts = extractPointsFromCadEntity(seedEntity);
+  if (seedPts.length < 2) return null;
+
+  const ud = seedEntity.userData || {};
+  const rawType = String(ud.cadType || ud.type || '').toLowerCase();
+  const isSelfClosed = seedPts.length >= 3 && seedPts[0].distanceTo(seedPts[seedPts.length - 1]) < 0.8;
+
+  let finalPts = seedPts;
+  const sourceEntityIds = [seedEntity.uuid || ud.customId || seedEntity.name];
+
+  if (method === 'chain' && !isSelfClosed) {
+    const pool = allEntities
+      .filter((ent) => ent !== seedEntity && isSelectableWireframeEntity(ent))
+      .map((ent) => ({ entity: ent, pts: extractPointsFromCadEntity(ent) }))
+      .filter(({ pts }) => {
+        if (pts.length < 2) return false;
+        const closed = pts.length >= 3 && pts[0].distanceTo(pts[pts.length - 1]) < 0.8;
+        if (closed) return false;
+        if (planeMode === 'cplane') {
+          return Math.abs(pts[0].y - seedPts[0].y) < 0.5 && Math.abs(pts[pts.length - 1].y - seedPts[0].y) < 0.5;
+        }
+        return true;
+      });
+
+    const combined = [...seedPts];
+    const used = new Set();
+    let changed = true;
+    while (changed) {
+      changed = false;
+      const head = combined[0];
+      const tail = combined[combined.length - 1];
+      if (combined.length >= 3 && head.distanceTo(tail) <= tolerance) break;
+
+      for (let i = 0; i < pool.length; i++) {
+        if (used.has(i)) continue;
+        const { entity, pts } = pool[i];
+        const pStart = pts[0];
+        const pEnd = pts[pts.length - 1];
+
+        if (tail.distanceTo(pStart) <= tolerance) {
+          combined.push(...pts.slice(1));
+          used.add(i);
+          sourceEntityIds.push(entity.uuid || entity.userData?.customId || entity.name);
+          changed = true;
+          break;
+        } else if (tail.distanceTo(pEnd) <= tolerance) {
+          combined.push(...[...pts].reverse().slice(1));
+          used.add(i);
+          sourceEntityIds.push(entity.uuid || entity.userData?.customId || entity.name);
+          changed = true;
+          break;
+        } else if (head.distanceTo(pEnd) <= tolerance) {
+          combined.unshift(...pts.slice(0, -1));
+          used.add(i);
+          sourceEntityIds.push(entity.uuid || entity.userData?.customId || entity.name);
+          changed = true;
+          break;
+        } else if (head.distanceTo(pStart) <= tolerance) {
+          combined.unshift(...[...pts].reverse().slice(0, -1));
+          used.add(i);
+          sourceEntityIds.push(entity.uuid || entity.userData?.customId || entity.name);
+          changed = true;
+          break;
+        }
+      }
+    }
+    finalPts = combined;
+  }
+
+  if (reverse) {
+    finalPts = [...finalPts].reverse();
+  }
+
+  const isClosed = finalPts.length >= 3 && finalPts[0].distanceTo(finalPts[finalPts.length - 1]) < 0.8;
+  const bounds = new THREE.Box3().setFromPoints(finalPts);
+  const centerVec = ud.center
+    ? new THREE.Vector3(ud.center.x || 0, ud.center.y || 0, ud.center.z || 0)
+    : bounds.getCenter(new THREE.Vector3());
+
+  return {
+    id: seedEntity.uuid || ud.customId || `chain_${Math.random().toString(36).slice(2, 8)}`,
+    type: rawType === 'circle' ? 'circle_loop' : rawType === 'rect' || rawType === 'rectangle' ? 'rectangle_loop' : isClosed ? 'polyline_loop' : 'open_chain',
+    name: seedEntity.name || (sourceEntityIds.length > 1 ? `Connected Chain (${sourceEntityIds.length})` : `Chain_${rawType || 'wire'}`),
+    points: finalPts.map((p) => p.clone()),
+    isClosed,
+    bounds,
+    center: centerVec,
+    radius: ud.radius ?? null,
+    direction: reverse ? 'CCW / Reversed' : 'CW / Forward',
+    sourceEntityIds
+  };
+}
+
+/**
+ * Hit-tests closest wireframe entity near a 3D cursor coordinate on the XZ sketch plane.
+ */
+export function hitTestWireframeEntity(cursorPt, entities = [], tolerance = 7.0, planeMode = '3d') {
+  if (!cursorPt || !Array.isArray(entities) || entities.length === 0) return null;
+
+  let bestEntity = null;
+  let bestDist = tolerance;
+  const tempProj = new THREE.Vector3();
+  const segLine = new THREE.Line3();
+
+  entities.forEach((entity) => {
+    if (!isSelectableWireframeEntity(entity)) return;
+    const pts = extractPointsFromCadEntity(entity);
+    if (pts.length < 2) return;
+
+    if (planeMode === 'cplane') {
+      const avgY = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+      if (Math.abs(avgY - cursorPt.y) > 2.5) return;
+    }
+
+    for (let i = 0; i < pts.length - 1; i++) {
+      segLine.set(pts[i], pts[i + 1]);
+      segLine.closestPointToPoint(cursorPt, true, tempProj);
+      const dist = planeMode === 'cplane'
+        ? Math.hypot(cursorPt.x - tempProj.x, cursorPt.z - tempProj.z)
+        : cursorPt.distanceTo(tempProj);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestEntity = entity;
+      }
+    }
+  });
+
+  return bestEntity;
+}
+
+/**
+ * Extracts selectable contour chains (rectangles, circles, closed polygons/splines) from CAD entities.
  */
 export function extractClosedChainsFromCAD(entities = []) {
   const chains = [];
 
   entities.forEach((entity) => {
     if (!entity || !entity.userData) return;
-    const { cadType, points, center, radius } = entity.userData;
+    const { cadType, type, points, center, radius } = entity.userData;
+    const resolvedType = String(cadType || type || '').toLowerCase();
 
-    if (cadType === 'rect' && Array.isArray(points) && points.length >= 4) {
+    if ((resolvedType === 'rect' || resolvedType === 'rectangle') && Array.isArray(points) && points.length >= 4) {
+      const vecs = points.map((p) => new THREE.Vector3(p.x, p.y, p.z));
       chains.push({
         id: entity.uuid || Math.random(),
         type: 'rectangle_loop',
         name: entity.name || 'Drawn Rectangle',
-        points: points.map(p => new THREE.Vector3(p.x, p.y, p.z)),
+        points: vecs,
         isClosed: true,
-        bounds: new THREE.Box3().setFromPoints(points.map(p => new THREE.Vector3(p.x, p.y, p.z)))
+        bounds: new THREE.Box3().setFromPoints(vecs)
       });
-    } else if (cadType === 'circle' && center && radius) {
+    } else if (resolvedType === 'circle' && center && radius) {
       const circlePts = [];
       const segs = 36;
       for (let i = 0; i < segs; i++) {
@@ -388,15 +587,18 @@ export function extractClosedChainsFromCAD(entities = []) {
           new THREE.Vector3(radius * 2, 2, radius * 2)
         )
       });
-    } else if (cadType === 'polyline' && Array.isArray(points) && points.length >= 3) {
-      chains.push({
-        id: entity.uuid || Math.random(),
-        type: 'polyline_loop',
-        name: entity.name || 'Drawn Polyline',
-        points: points.map(p => new THREE.Vector3(p.x, p.y, p.z)),
-        isClosed: points[0].distanceTo(points[points.length - 1]) < 0.5,
-        bounds: new THREE.Box3().setFromPoints(points.map(p => new THREE.Vector3(p.x, p.y, p.z)))
-      });
+    } else if (['polyline', 'polygon', 'spline'].includes(resolvedType)) {
+      const vecs = extractPointsFromCadEntity(entity);
+      if (vecs.length >= 3 && vecs[0].distanceTo(vecs[vecs.length - 1]) < 0.8) {
+        chains.push({
+          id: entity.uuid || Math.random(),
+          type: 'polyline_loop',
+          name: entity.name || 'Drawn Polyline',
+          points: vecs,
+          isClosed: true,
+          bounds: new THREE.Box3().setFromPoints(vecs)
+        });
+      }
     }
   });
 
