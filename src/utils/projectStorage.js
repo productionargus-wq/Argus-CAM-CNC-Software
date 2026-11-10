@@ -7,6 +7,8 @@ import {
   createWireframeCircle,
   createWireframeRect,
   createWireframeLine,
+  createWireframeArc,
+  createWireframeSpline,
   createPointMarker
 } from './cadGeometry';
 
@@ -15,31 +17,52 @@ const RECENT_PROJECTS_KEY = 'argus_cam_recent_projects_v1';
 
 /**
  * Serializes custom Three.js geometry entities (circles, rects, lines, drill points)
- * into a clean, JSON-serializable array for .mcam storage.
+ * into a clean, JSON-serializable array for .mcam and IndexedDB storage.
  */
 export function serializeCustomGeometry(customGeometry = []) {
   if (!Array.isArray(customGeometry)) return [];
   return customGeometry.map((entity) => {
     if (!entity) return null;
-    const ud = entity.userData || {};
-    const cadType = ud.cadType || ud.type || 'wireframe';
-    const hexColor = entity.material?.color?.getHex ? entity.material.color.getHex() : 0x1d4ed8;
+    const ud = entity.userData && Object.keys(entity.userData).length > 0 ? entity.userData : entity;
+    const rawType = ud.cadType || ud.type || entity.cadType || '';
+    const cadType = ['Line', 'Group', 'Mesh', 'Object3D'].includes(rawType)
+      ? (entity.name?.toLowerCase().includes('circle') ? 'circle'
+        : entity.name?.toLowerCase().includes('rect') ? 'rect'
+        : entity.name?.toLowerCase().includes('line') ? 'line'
+        : entity.name?.toLowerCase().includes('arc') ? 'arc'
+        : entity.name?.toLowerCase().includes('drill') ? 'drill'
+        : 'wireframe')
+      : (rawType || 'wireframe');
+    const hexColor = entity.material?.color?.getHex
+      ? entity.material.color.getHex()
+      : (typeof entity.color === 'number' ? entity.color : 0x1d4ed8);
+
+    const centerVal = ud.center || entity.center;
+    const normCenter = Array.isArray(centerVal)
+      ? { x: centerVal[0] || 0, y: centerVal[1] || 0, z: centerVal[2] || 0 }
+      : (centerVal ? { x: centerVal.x || 0, y: centerVal.y || 0, z: centerVal.z || 0 } : null);
 
     return {
       name: entity.name || `Wireframe_${cadType}`,
       uuid: entity.uuid || ud.customId || null,
       type: ud.type || cadType,
       cadType,
-      radius: ud.radius !== undefined ? ud.radius : null,
-      diameter: ud.diameter !== undefined ? ud.diameter : (ud.radius ? ud.radius * 2 : null),
-      width: ud.width !== undefined ? ud.width : null,
-      depth: ud.depth !== undefined ? ud.depth : (ud.height !== undefined ? ud.height : null),
-      height: ud.height !== undefined ? ud.height : (ud.depth !== undefined ? ud.depth : null),
-      center: ud.center ? { x: ud.center.x || 0, y: ud.center.y || 0, z: ud.center.z || 0 } : null,
-      p1: ud.p1 ? { x: ud.p1.x || 0, y: ud.p1.y || 0, z: ud.p1.z || 0 } : null,
-      p2: ud.p2 ? { x: ud.p2.x || 0, y: ud.p2.y || 0, z: ud.p2.z || 0 } : null,
-      points: Array.isArray(ud.points)
-        ? ud.points.map((p) => ({ x: p.x || 0, y: p.y || 0, z: p.z || 0 }))
+      radius: ud.radius !== undefined ? ud.radius : (entity.radius ?? null),
+      diameter: ud.diameter !== undefined ? ud.diameter : (ud.radius ? ud.radius * 2 : (entity.diameter ?? null)),
+      width: ud.width !== undefined ? ud.width : (entity.width ?? null),
+      depth: ud.depth !== undefined ? ud.depth : (ud.height !== undefined ? ud.height : (entity.depth ?? entity.height ?? null)),
+      height: ud.height !== undefined ? ud.height : (ud.depth !== undefined ? ud.depth : (entity.height ?? entity.depth ?? null)),
+      filletRadius: ud.filletRadius ?? entity.filletRadius ?? 0,
+      startAngleDeg: ud.startAngleDeg ?? entity.startAngleDeg ?? 0,
+      endAngleDeg: ud.endAngleDeg ?? entity.endAngleDeg ?? 360,
+      controlPoints: ud.controlPoints || entity.controlPoints || null,
+      center: normCenter,
+      p1: ud.p1 || entity.p1 ? { x: (ud.p1 || entity.p1).x || 0, y: (ud.p1 || entity.p1).y || 0, z: (ud.p1 || entity.p1).z || 0 } : null,
+      p2: ud.p2 || entity.p2 ? { x: (ud.p2 || entity.p2).x || 0, y: (ud.p2 || entity.p2).y || 0, z: (ud.p2 || entity.p2).z || 0 } : null,
+      points: Array.isArray(ud.points || entity.points)
+        ? (ud.points || entity.points).map((p) => Array.isArray(p)
+            ? { x: p[0] || 0, y: p[1] || 0, z: p[2] || 0 }
+            : { x: p.x || 0, y: p.y || 0, z: p.z || 0 })
         : null,
       position: {
         x: entity.position?.x || 0,
@@ -58,45 +81,78 @@ export function deserializeCustomGeometry(serializedList = []) {
   if (!Array.isArray(serializedList)) return [];
   return serializedList.map((item) => {
     if (!item) return null;
+    if (typeof item.clone === 'function' && item.isObject3D) return item;
+
     let obj = null;
-    const col = item.color || 0x1d4ed8;
+    const ud = item.userData || {};
+    const col = item.color || ud.color || 0x38bdf8;
     const pos = item.position || { x: 0, y: 0, z: 0 };
-    const cadType = item.cadType || item.type || '';
+    const rawType = item.cadType || ud.cadType || ud.type || (['Line', 'Group', 'Mesh', 'Object3D'].includes(item.type) ? '' : item.type) || '';
+    const cadType = rawType || (item.name?.toLowerCase().includes('circle') ? 'circle'
+      : item.name?.toLowerCase().includes('rect') ? 'rect'
+      : item.name?.toLowerCase().includes('line') ? 'line'
+      : item.name?.toLowerCase().includes('arc') ? 'arc'
+      : (item.name?.startsWith('Drill_') ? 'drill' : ''));
+
+    const centerRaw = item.center || ud.center;
+    const centerObj = Array.isArray(centerRaw)
+      ? { x: centerRaw[0] || 0, y: centerRaw[1] || 0, z: centerRaw[2] || 0 }
+      : centerRaw;
 
     if (cadType === 'circle') {
-      const cx = item.center?.x || pos.x || 0;
-      const cz = item.center?.z || pos.z || 0;
-      const y = item.center?.y || pos.y || 0;
-      const r = item.radius || (item.diameter ? item.diameter / 2 : 25.0);
+      const cx = centerObj?.x ?? pos.x ?? 0;
+      const cz = centerObj?.z ?? pos.z ?? 0;
+      const y = centerObj?.y ?? pos.y ?? 0;
+      const r = item.radius ?? ud.radius ?? (item.diameter ? item.diameter / 2 : 25.0);
       obj = createWireframeCircle(r, y, [cx, cz], 0, 360, 'G17', { color: col, name: item.name });
+    } else if (cadType === 'arc') {
+      const cx = centerObj?.x ?? pos.x ?? 0;
+      const cy = centerObj?.y ?? pos.y ?? 0;
+      const cz = centerObj?.z ?? pos.z ?? 0;
+      const r = item.radius ?? ud.radius ?? 25.0;
+      const sAngle = item.startAngleDeg ?? ud.startAngleDeg ?? 0;
+      const eAngle = item.endAngleDeg ?? ud.endAngleDeg ?? 180;
+      obj = createWireframeArc([cx, cy, cz], r, sAngle, eAngle, { color: col, name: item.name });
     } else if (cadType === 'rect' || cadType === 'rectangle') {
-      const cx = item.center?.x || pos.x || 0;
-      const cz = item.center?.z || pos.z || 0;
-      const y = item.center?.y || pos.y || 0;
-      const w = item.width || 80.0;
-      const d = item.depth || item.height || 50.0;
-      obj = createWireframeRect(w, d, y, 0, [cx, cz], { color: col, name: item.name });
+      const cx = centerObj?.x ?? pos.x ?? 0;
+      const cz = centerObj?.z ?? pos.z ?? 0;
+      const y = centerObj?.y ?? pos.y ?? 0;
+      const w = item.width ?? ud.width ?? 80.0;
+      const d = item.depth ?? item.height ?? ud.depth ?? ud.height ?? 50.0;
+      const fr = item.filletRadius ?? ud.filletRadius ?? 0;
+      obj = createWireframeRect(w, d, y, fr, [cx, cz], { color: col, name: item.name });
     } else if (cadType === 'line') {
-      const p1 = item.p1 ? [item.p1.x, item.p1.y, item.p1.z] : [-25, 0, 0];
-      const p2 = item.p2 ? [item.p2.x, item.p2.y, item.p2.z] : [25, 0, 0];
+      const p1Raw = item.p1 || ud.p1;
+      const p2Raw = item.p2 || ud.p2;
+      const p1 = p1Raw ? [p1Raw.x || 0, p1Raw.y || 0, p1Raw.z || 0] : [-25, 0, 0];
+      const p2 = p2Raw ? [p2Raw.x || 0, p2Raw.y || 0, p2Raw.z || 0] : [25, 0, 0];
       obj = createWireframeLine(p1, p2, { color: col, name: item.name });
+    } else if (cadType === 'spline') {
+      const ctrl = item.controlPoints || ud.controlPoints;
+      if (Array.isArray(ctrl) && ctrl.length >= 2) {
+        obj = createWireframeSpline(ctrl, { color: col, name: item.name });
+      }
     } else if (cadType === 'drill' || cadType === 'datum_point' || item.name?.startsWith('Drill_')) {
-      const p = item.position ? [item.position.x, item.position.y, item.position.z] : [pos.x, pos.y, pos.z];
+      const coordsRaw = ud.coords || item.coords;
+      const p = Array.isArray(coordsRaw)
+        ? coordsRaw
+        : [pos.x || 0, pos.y || 0, pos.z || 0];
       obj = createPointMarker(p, item.name || 'Drill_Point', col);
     }
+
     if (obj) {
       if (item.uuid) obj.uuid = item.uuid;
       if (obj.userData) {
         obj.userData.customId = item.uuid || obj.uuid;
-        if (item.center) obj.userData.center = item.center;
-        if (item.radius) obj.userData.radius = item.radius;
-        if (item.width) obj.userData.width = item.width;
-        if (item.depth) obj.userData.depth = item.depth;
-        if (item.points) obj.userData.points = item.points;
+        if (centerObj) obj.userData.center = centerObj;
+        if (item.radius ?? ud.radius) obj.userData.radius = item.radius ?? ud.radius;
+        if (item.width ?? ud.width) obj.userData.width = item.width ?? ud.width;
+        if (item.depth ?? ud.depth) obj.userData.depth = item.depth ?? ud.depth;
+        if (item.points || ud.points) obj.userData.points = item.points || ud.points;
       }
     }
     return obj;
-  }).filter(Boolean);
+  }).filter((o) => o && typeof o.clone === 'function');
 }
 
 /**

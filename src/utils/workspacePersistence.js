@@ -4,6 +4,8 @@
  * stock setup, machine settings, and viewport states across page reloads (F5/refresh).
  */
 
+import { serializeCustomGeometry } from './projectStorage';
+
 const DB_NAME = 'ArgusMastercamWorkspaceDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'active_session';
@@ -106,7 +108,13 @@ export async function saveWorkspaceSession(sessionData) {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
 
-      const safeData = sanitizeForIndexedDB(sessionData) || {};
+      const prepared = {
+        ...sessionData,
+        customGeometry: Array.isArray(sessionData?.customGeometry)
+          ? serializeCustomGeometry(sessionData.customGeometry)
+          : []
+      };
+      const safeData = sanitizeForIndexedDB(prepared) || {};
       const record = {
         ...safeData,
         savedAt: Date.now()

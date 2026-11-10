@@ -113,7 +113,8 @@ export default function Viewport3D({
   isAngleLocked = false,
   lineType = 'freeform',
   onDrawingUpdate = null,
-  reselectTrigger = 0
+  reselectTrigger = 0,
+  undoTrigger = 0
 }) {
   const isLight = theme !== 'dark';
   const mountRef = useRef(null);
@@ -229,20 +230,22 @@ export default function Viewport3D({
   useEffect(() => { onDrawingUpdateRef.current = onDrawingUpdate; }, [onDrawingUpdate]);
 
   useEffect(() => {
-    if (reselectTrigger > 0) {
+    if (reselectTrigger > 0 || undoTrigger > 0) {
       sketchAnchorRef.current = null;
       setSketchAnchor(null);
       if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
       setDimensionFeedback(null);
-      const tool = activeSketchToolRef.current;
-      setSketchPromptText(
-        tool === 'rect' ? 'Select position of first corner' :
-        tool === 'line' ? 'Specify first endpoint' :
-        tool === 'arc_tangent' ? 'Select the entity that the arc is to be tangent to' :
-        'Enter the center point'
-      );
+      if (isSketchModeRef.current) {
+        const tool = activeSketchToolRef.current;
+        setSketchPromptText(
+          tool === 'rect' ? 'Select position of first corner' :
+          tool === 'line' ? 'Specify first endpoint' :
+          tool === 'arc_tangent' ? 'Select the entity that the arc is to be tangent to' :
+          'Enter the center point'
+        );
+      }
     }
-  }, [reselectTrigger]);
+  }, [reselectTrigger, undoTrigger]);
 
   useEffect(() => {
     isSketchModeRef.current = isSketchModeActive;
@@ -1162,7 +1165,9 @@ export default function Viewport3D({
     }
     if (Array.isArray(customGeometry)) {
       customGeometry.forEach((item) => {
-        group.add(item.clone(true));
+        if (item && typeof item.clone === 'function') {
+          group.add(item.clone(true));
+        }
       });
     }
   }, [customGeometry]);
@@ -1395,7 +1400,16 @@ export default function Viewport3D({
       group.remove(group.children[0]);
     }
 
-    let bounds = partMetrics?.box;
+    const toBox3 = (b) => {
+      if (!b || !b.min || !b.max) return null;
+      if (typeof b.getCenter === 'function') return b;
+      return new THREE.Box3(
+        new THREE.Vector3(b.min.x || 0, b.min.y || 0, b.min.z || 0),
+        new THREE.Vector3(b.max.x || 0, b.max.y || 0, b.max.z || 0)
+      );
+    };
+
+    let bounds = toBox3(partMetrics?.box || partMetrics?.bounds);
     if (!bounds && stockConfig?.dimensions) {
       const sx = stockConfig.dimensions.x || 100;
       const sy = stockConfig.dimensions.y || 40;
@@ -1431,7 +1445,7 @@ export default function Viewport3D({
 
     operations.forEach((op) => {
       const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10 };
-      const opBounds = op.bounds || bounds;
+      const opBounds = toBox3(op.bounds) || bounds;
 
       let toolpathData;
       if (op.badgeClass === 'face') {

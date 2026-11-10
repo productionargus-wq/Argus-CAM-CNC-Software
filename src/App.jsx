@@ -113,6 +113,26 @@ import { extractClosedChainsFromCAD } from './utils/cadDrawingEngine';
 import CNCDesignBoard from './components/CNCDesignBoard';
 import { convertBoardDiagramsToToolpaths, getCADTemplate } from './utils/cncBoardEngine';
 
+function rehydrateBox3(b) {
+  if (!b || !b.min || !b.max) return null;
+  if (typeof b.getCenter === 'function') return b;
+  return new THREE.Box3(
+    new THREE.Vector3(b.min.x || 0, b.min.y || 0, b.min.z || 0),
+    new THREE.Vector3(b.max.x || 0, b.max.y || 0, b.max.z || 0)
+  );
+}
+
+function countWireframes(list = []) {
+  return (list || []).filter(
+    (g) =>
+      g &&
+      (g.name?.startsWith('Wireframe_') ||
+        g.name?.startsWith('Drill_') ||
+        g.name?.startsWith('Hole_') ||
+        ['line', 'circle', 'rectangle', 'arc', 'spline'].includes(g.userData?.type))
+  ).length;
+}
+
 export default function App() {
   const [theme, setTheme] = useState(() => {
     // Pure Light Theme default
@@ -151,6 +171,10 @@ export default function App() {
     scale: { x: 1, y: 1, z: 1 }
   });
   const [customGeometry, setCustomGeometry] = useState([]);
+  const customGeometryRef = useRef([]);
+  const operationsRef = useRef([]);
+  const partTransformRef = useRef(partTransform);
+  const solidsListRef = useRef([]);
   const [workspaceViewMode, setWorkspaceViewMode] = useState('3d'); // '3d' | '2d' | 'split'
   const [boardShapes, setBoardShapes] = useState(() => getCADTemplate('mounting-plate', 200, 150));
   const [cadSource, setCadSource] = useState(null);
@@ -285,6 +309,7 @@ export default function App() {
   });
   const [activeArcId, setActiveArcId] = useState(null);
   const [reselectTrigger, setReselectTrigger] = useState(0);
+  const [undoTrigger, setUndoTrigger] = useState(0);
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
   const [surfacesModalTool, setSurfacesModalTool] = useState('plane');
   const [isSolidsModalOpen, setIsSolidsModalOpen] = useState(false);
@@ -657,25 +682,28 @@ export default function App() {
 
   const activeMachine = machines.find((m) => m.id === activeMachineId) || machines[0];
 
-  // Sync entity counts with Levels
+  // Sync entity counts with Levels and keep synchronous refs updated
   useEffect(() => {
-    const wireframeCount = customGeometry.filter(
-      (g) => g.name?.startsWith('Wireframe_') || g.name?.startsWith('Drill_') || g.name?.startsWith('Hole_')
-    ).length;
+    customGeometryRef.current = customGeometry;
+    operationsRef.current = operations;
+    partTransformRef.current = partTransform;
+    solidsListRef.current = solidsList;
+
+    const wireframeCount = countWireframes(customGeometry);
     const surfaceCount = customGeometry.filter(
-      (g) => g.name?.startsWith('Surface_') || g.name?.startsWith('CAD_')
+      (g) => g && (g.name?.startsWith('Surface_') || g.name?.startsWith('CAD_'))
     ).length;
 
     setLevels((prev) =>
       prev.map((lvl) => {
-        if (lvl.id === 10) return { ...lvl, entities: wireframeCount };
+        if (lvl.id === 10) return { ...lvl, entities: wireframeCount, count: wireframeCount };
         if (lvl.id === 15) return { ...lvl, entities: surfaceCount };
         if (lvl.id === 50) return { ...lvl, entities: operations.length };
         if (lvl.id === 60) return { ...lvl, entities: operations.length };
         return lvl;
       })
     );
-  }, [customGeometry, operations]);
+  }, [customGeometry, operations, partTransform, solidsList]);
 
   // ================= Toast Notification System =================
   const [toasts, setToasts] = useState([]);
@@ -687,6 +715,52 @@ export default function App() {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, duration);
   };
+
+  // ================= Atomic Undo / Redo History Engine =================
+  const [historyState, setHistoryState] = useState({ entries: [], index: -1 });
+  const historyStateRef = useRef({ entries: [], index: -1 });
+  const history = historyState.entries;
+  const historyIndex = historyState.index;
+
+  const createSnapshot = (overrideState = {}) => {
+    const nextCustomGeo = overrideState.customGeometry !== undefined ? overrideState.customGeometry : customGeometryRef.current;
+    const nextOps = overrideState.operations !== undefined ? overrideState.operations : operationsRef.current;
+    const nextPartTransform = overrideState.partTransform !== undefined ? overrideState.partTransform : partTransformRef.current;
+    const nextSolids = overrideState.solidsList !== undefined ? overrideState.solidsList : solidsListRef.current;
+
+    return {
+      operations: JSON.parse(JSON.stringify(nextOps || [])),
+      partTransform: { ...(nextPartTransform || { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } }) },
+      solidsList: [...(nextSolids || [])],
+      customGeometry: [...(nextCustomGeo || [])]
+    };
+  };
+
+  const resetHistory = (baselineOverride = {}) => {
+    const baseline = createSnapshot(baselineOverride);
+    const nextState = { entries: [baseline], index: 0 };
+    historyStateRef.current = nextState;
+    setHistoryState(nextState);
+  };
+
+  const pushSnapshot = (overrideState = {}) => {
+    const snapshot = createSnapshot(overrideState);
+    const cur = historyStateRef.current;
+    const upToCurrent = cur.entries.length > 0 && cur.index >= 0
+      ? cur.entries.slice(0, cur.index + 1)
+      : [createSnapshot({ customGeometry: [], operations: [] })];
+    const updatedEntries = [...upToCurrent, snapshot].slice(-60);
+    const nextState = { entries: updatedEntries, index: updatedEntries.length - 1 };
+    historyStateRef.current = nextState;
+    setHistoryState(nextState);
+  };
+
+  // Initialize baseline snapshot on mount
+  useEffect(() => {
+    if (historyStateRef.current.entries.length === 0) {
+      resetHistory();
+    }
+  }, []);
 
   // Workspace Session Rehydration on Mount (from IndexedDB)
   useEffect(() => {
@@ -708,9 +782,22 @@ export default function App() {
           if (session.workpieceColor) setWorkpieceColor(session.workpieceColor);
           if (session.renderMode) setRenderMode(session.renderMode);
           if (session.layerVisibility) setLayerVisibility(session.layerVisibility);
-          if (session.partTransform) setPartTransform(session.partTransform);
-          if (session.customGeometry) setCustomGeometry(session.customGeometry);
-          if (session.solidsList) setSolidsList(session.solidsList);
+          if (session.partTransform) {
+            partTransformRef.current = session.partTransform;
+            setPartTransform(session.partTransform);
+          }
+          let restoredSessionGeo = customGeometryRef.current;
+          if (session.customGeometry) {
+            restoredSessionGeo = deserializeCustomGeometry(session.customGeometry);
+            customGeometryRef.current = restoredSessionGeo;
+            setCustomGeometry(restoredSessionGeo);
+          }
+          let restoredSessionSolids = solidsListRef.current;
+          if (session.solidsList) {
+            restoredSessionSolids = session.solidsList;
+            solidsListRef.current = restoredSessionSolids;
+            setSolidsList(restoredSessionSolids);
+          }
           if (session.stockConfig) setStockConfig(session.stockConfig);
           if (session.tools && Array.isArray(session.tools) && session.tools.length > 0) {
             let loadedTools = [...session.tools];
@@ -861,10 +948,16 @@ export default function App() {
             }
             setTools(loadedTools);
           }
+          let restoredSessionOps = operationsRef.current;
           if (session.operations && Array.isArray(session.operations)) {
-            setOperations(session.operations);
-            if (session.operations.length > 0) {
-              setActiveOpId(session.operations[0].id);
+            restoredSessionOps = session.operations.map((op) => ({
+              ...op,
+              bounds: rehydrateBox3(op.bounds) || op.bounds
+            }));
+            operationsRef.current = restoredSessionOps;
+            setOperations(restoredSessionOps);
+            if (restoredSessionOps.length > 0) {
+              setActiveOpId(restoredSessionOps[0].id);
             } else {
               setActiveOpId(null);
             }
@@ -896,6 +989,13 @@ export default function App() {
               else if (cs.sampleType === 'base_structure_alu' || cs.sampleType === 'base_structure') setCurrentModel(createMastercamBaseStructureALU());
             }
           }
+
+          resetHistory({
+            operations: restoredSessionOps,
+            partTransform: session.partTransform || partTransformRef.current,
+            solidsList: restoredSessionSolids,
+            customGeometry: restoredSessionGeo
+          });
 
           showToast(`Workspace restored: ${session.projectName || 'Active Session'}`, 'success');
         }
@@ -979,6 +1079,9 @@ export default function App() {
         stockConfig,
         tools,
         operations,
+        customGeometry: serializeCustomGeometry(customGeometry),
+        partMetrics,
+        solidsList,
         activeMachine,
         activeWcs,
         workpieceColor,
@@ -1007,7 +1110,8 @@ export default function App() {
     operations,
     fixtureConfig,
     cadSource,
-    activeMachine
+    activeMachine,
+    partMetrics
   ]);
 
   // Synchronize dynamic Theme attribute to root DOM element
@@ -1024,109 +1128,65 @@ export default function App() {
     });
   };
 
-  // ================= Undo / Redo History Stack =================
-  const [history, setHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-
-  // Initialize first snapshot on mount
-  useEffect(() => {
-    if (history.length === 0) {
-      setHistory([{
-        operations: JSON.parse(JSON.stringify(operations || [])),
-        partTransform: { ...partTransform },
-        solidsList: [...solidsList],
-        customGeometry: [...customGeometry]
-      }]);
-      setHistoryIndex(0);
+  // ================= Undo / Redo Handlers (Atomic State) =================
+  const commitCustomGeometry = (nextGeo, shouldPush = true) => {
+    const safeList = Array.isArray(nextGeo) ? nextGeo : [];
+    customGeometryRef.current = safeList;
+    setCustomGeometry(safeList);
+    if (shouldPush) {
+      pushSnapshot({ customGeometry: safeList });
     }
-  }, []);
+  };
 
-  const pushSnapshot = (overrideState = {}) => {
-    const nextCustomGeo = overrideState.customGeometry !== undefined ? overrideState.customGeometry : customGeometry;
-    const nextOps = overrideState.operations !== undefined ? overrideState.operations : operations;
-    const nextPartTransform = overrideState.partTransform !== undefined ? overrideState.partTransform : partTransform;
-    const nextSolids = overrideState.solidsList !== undefined ? overrideState.solidsList : solidsList;
+  const applyHistorySnapshot = (snap, nextIdx, msg) => {
+    if (!snap) return;
+    if (snap.operations) {
+      const hydratedOps = snap.operations.map((op) => ({
+        ...op,
+        bounds: rehydrateBox3(op.bounds) || op.bounds
+      }));
+      operationsRef.current = hydratedOps;
+      setOperations(hydratedOps);
+    }
+    if (snap.partTransform) {
+      partTransformRef.current = snap.partTransform;
+      setPartTransform(snap.partTransform);
+    }
+    if (snap.solidsList) {
+      solidsListRef.current = snap.solidsList;
+      setSolidsList(snap.solidsList);
+    }
+    if (snap.customGeometry !== undefined) {
+      commitCustomGeometry(snap.customGeometry, false);
+    }
+    setActiveCircleId(null);
+    setActiveRectId(null);
+    setActiveLineId(null);
+    setActiveArcId(null);
+    setUndoTrigger((prev) => prev + 1);
 
-    const snapshot = {
-      operations: JSON.parse(JSON.stringify(nextOps)),
-      partTransform: { ...nextPartTransform },
-      solidsList: [...nextSolids],
-      customGeometry: [...nextCustomGeo]
-    };
-    setHistory((prev) => {
-      const upToCurrent = prev.slice(0, historyIndex + 1);
-      return [...upToCurrent, snapshot];
-    });
-    setHistoryIndex((prev) => prev + 1);
+    const cur = historyStateRef.current;
+    const nextHist = { entries: cur.entries, index: nextIdx };
+    historyStateRef.current = nextHist;
+    setHistoryState(nextHist);
+    showToast(msg, "info");
   };
 
   const handleUndo = () => {
-    if (historyIndex > 0) {
-      const newIdx = historyIndex - 1;
-      const snap = history[newIdx];
-      if (snap) {
-        if (snap.operations) setOperations(snap.operations);
-        if (snap.partTransform) setPartTransform(snap.partTransform);
-        if (snap.solidsList) setSolidsList(snap.solidsList);
-        if (snap.customGeometry) {
-          setCustomGeometry(snap.customGeometry);
-          const wireframeCount = (snap.customGeometry || []).filter(
-            (e) =>
-              e?.name?.startsWith('Wireframe_') ||
-              e?.name?.startsWith('Drill_') ||
-              e?.name?.startsWith('Hole_') ||
-              e?.userData?.type === 'line' ||
-              e?.userData?.type === 'circle' ||
-              e?.userData?.type === 'rectangle' ||
-              e?.userData?.type === 'arc'
-          ).length;
-          setLevels((prev) =>
-            prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: wireframeCount } : lvl))
-          );
-        }
-        setActiveCircleId(null);
-        setActiveRectId(null);
-        setActiveLineId(null);
-        setActiveArcId(null);
-        setHistoryIndex(newIdx);
-        showToast("Undo: Previous CAD/CAM state restored", "info");
-      }
+    const cur = historyStateRef.current;
+    if (cur.index > 0) {
+      const newIdx = cur.index - 1;
+      applyHistorySnapshot(cur.entries[newIdx], newIdx, "Undo: Previous CAD/CAM state restored");
     } else {
       showToast("No further undo actions in history", "warning");
     }
   };
 
   const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIdx = historyIndex + 1;
-      const snap = history[newIdx];
-      if (snap) {
-        if (snap.operations) setOperations(snap.operations);
-        if (snap.partTransform) setPartTransform(snap.partTransform);
-        if (snap.solidsList) setSolidsList(snap.solidsList);
-        if (snap.customGeometry) {
-          setCustomGeometry(snap.customGeometry);
-          const wireframeCount = (snap.customGeometry || []).filter(
-            (e) =>
-              e?.name?.startsWith('Wireframe_') ||
-              e?.name?.startsWith('Drill_') ||
-              e?.name?.startsWith('Hole_') ||
-              e?.userData?.type === 'line' ||
-              e?.userData?.type === 'circle' ||
-              e?.userData?.type === 'rectangle' ||
-              e?.userData?.type === 'arc'
-          ).length;
-          setLevels((prev) =>
-            prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: wireframeCount } : lvl))
-          );
-        }
-        setActiveCircleId(null);
-        setActiveRectId(null);
-        setActiveLineId(null);
-        setActiveArcId(null);
-        setHistoryIndex(newIdx);
-        showToast("Redo: Re-applied CAD/CAM state", "info");
-      }
+    const cur = historyStateRef.current;
+    if (cur.index < cur.entries.length - 1) {
+      const newIdx = cur.index + 1;
+      applyHistorySnapshot(cur.entries[newIdx], newIdx, "Redo: Re-applied CAD/CAM state");
     } else {
       showToast("No further redo actions in history", "warning");
     }
@@ -1157,7 +1217,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [history, historyIndex]);
+  }, []);
 
   // ================= Handlers =================
   const handleToggleOp = (id) => {
@@ -1179,11 +1239,13 @@ export default function App() {
   };
 
   const handleDeleteOpById = (id) => {
-    if (operations.length <= 1) {
+    const curOps = operationsRef.current || operations;
+    if (curOps.length <= 1) {
       showToast("At least one operation must remain in the operations tree.", "warning");
       return;
     }
-    const updated = operations.filter((op) => op.id !== id);
+    const updated = curOps.filter((op) => op.id !== id);
+    operationsRef.current = updated;
     setOperations(updated);
     pushSnapshot({ operations: updated });
     if (activeOpId === id) {
@@ -1266,13 +1328,17 @@ export default function App() {
       showToast('No operation on clipboard to paste', 'warning');
       return;
     }
-    const nextId = operations.length > 0 ? Math.max(...operations.map((o) => o.id)) + 1 : 1;
+    const curOps = operationsRef.current || operations;
+    const nextId = curOps.length > 0 ? Math.max(...curOps.map((o) => o.id)) + 1 : 1;
     const pasted = {
       ...clipboardOp,
       id: nextId,
       name: `${clipboardOp.name} (Copy)`
     };
-    setOperations((prev) => [...prev, pasted]);
+    const nextOps = [...curOps, pasted];
+    operationsRef.current = nextOps;
+    setOperations(nextOps);
+    pushSnapshot({ operations: nextOps });
     setActiveOpId(nextId);
     showToast(`Pasted "${pasted.name}"`, 'success');
   };
@@ -1352,11 +1418,10 @@ export default function App() {
     setIsNewOperation(false);
     setIsMastercamToolpathModalOpen(false);
     const assignedTool = tools.find((t) => t.id === Number(updatedOp.toolId));
-    setOperations((prev) => {
-      const exists = prev.some((op) => op.id === updatedOp.id);
-      let updated;
-      if (exists) {
-        updated = prev.map((op) =>
+    const prevOps = operationsRef.current || [];
+    const exists = prevOps.some((op) => op.id === updatedOp.id);
+    const updatedOps = exists
+      ? prevOps.map((op) =>
           op.id === updatedOp.id
             ? {
                 ...updatedOp,
@@ -1364,20 +1429,18 @@ export default function App() {
                 visible: true
               }
             : op
-        );
-      } else {
-        updated = [
-          ...prev,
+        )
+      : [
+          ...prevOps,
           {
             ...updatedOp,
             toolName: assignedTool ? `T${assignedTool.number} - ${assignedTool.name}` : updatedOp.toolName,
             visible: true
           }
         ];
-      }
-      pushSnapshot({ operations: updated });
-      return updated;
-    });
+    operationsRef.current = updatedOps;
+    setOperations(updatedOps);
+    pushSnapshot({ operations: updatedOps });
     setActiveOpId(updatedOp.id);
     setActiveManagerTab('Toolpaths');
     setLayerVisibility((prev) => ({ ...prev, toolpaths: true }));
@@ -1973,15 +2036,19 @@ export default function App() {
           rapidHeight: 15.0
         }
       ];
+      operationsRef.current = titanOps;
       setOperations(titanOps);
       setActiveOpId(1);
 
       const wireframes = createTitan1MWireframe();
+      customGeometryRef.current = wireframes;
       setCustomGeometry(wireframes);
 
-      setSolidsList([
+      const titanSolids = [
         { id: 1, name: 'Solid 1 - TITAN-1M Workpiece', material: '6061-T6 Aluminum', volumeCm3: 88.4, isPrimary: true, visible: true, active: true, color: '#38bdf8' }
-      ]);
+      ];
+      solidsListRef.current = titanSolids;
+      setSolidsList(titanSolids);
 
       showToast('Loaded TITANS of CNC: TITAN-1M Benchmark Project with 8 Standard Operations', 'success');
     } else if (type === 'mastercam2019_tutorial' || type === 'mastercam_tutorial' || type === 'milling_tutorial') {
@@ -2150,10 +2217,12 @@ export default function App() {
           rapidHeight: 25.0
         }
       ];
+      operationsRef.current = tutorialOps;
       setOperations(tutorialOps);
       setActiveOpId(1);
 
       const wireframes = createMastercam2019TutorialWireframe();
+      customGeometryRef.current = wireframes;
       setCustomGeometry(wireframes);
 
       showToast('Loaded Mastercam 2019 Milling Tutorial Project with 5 Standard Operations', 'success');
@@ -2161,34 +2230,47 @@ export default function App() {
       setCurrentModel(createImpellerGeometry());
       setCurrentProjectName('DMU50_5Axis_Impeller.mcam');
       setActiveMachineId('dmu50');
+      customGeometryRef.current = [];
+      operationsRef.current = [];
       setCustomGeometry([]);
       setOperations([]);
-      setSolidsList([
+      const impSolids = [
         { id: 1, name: 'Solid 1 - 5-Axis Impeller Blisk', material: 'Ti-6Al-4V Titanium', volumeCm3: 142.5, isPrimary: true, visible: true, active: true, color: '#38bdf8' }
-      ]);
+      ];
+      solidsListRef.current = impSolids;
+      setSolidsList(impSolids);
       showToast('Loaded DMU50 5-Axis Impeller Geometry', 'success');
     } else if (type === 'bracket') {
       setCurrentModel(createAerospaceBracket());
       setCurrentProjectName('DMU50_Aero_Bracket.mcam');
       setActiveMachineId('haas_vf2');
+      customGeometryRef.current = [];
+      operationsRef.current = [];
       setCustomGeometry([]);
       setOperations([]);
-      setSolidsList([
+      const brkSolids = [
         { id: 1, name: 'Solid 1 - Aerospace 5X Bracket', material: '7075-T6 Aluminum', volumeCm3: 98.4, isPrimary: true, visible: true, active: true, color: '#38bdf8' }
-      ]);
+      ];
+      solidsListRef.current = brkSolids;
+      setSolidsList(brkSolids);
       showToast('Loaded Aerospace Structural Bracket Geometry', 'success');
     } else if (type === 'mold') {
       setCurrentModel(createMoldCoreGeometry());
       setCurrentProjectName('DMU50_Mold_Core.mcam');
       setActiveMachineId('dmu50');
+      customGeometryRef.current = [];
+      operationsRef.current = [];
       setCustomGeometry([]);
       setOperations([]);
-      setSolidsList([
+      const mldSolids = [
         { id: 1, name: 'Solid 1 - Mold Core Cavity', material: 'P20 Tool Steel', volumeCm3: 210.0, isPrimary: true, visible: true, active: true, color: '#38bdf8' }
-      ]);
+      ];
+      solidsListRef.current = mldSolids;
+      setSolidsList(mldSolids);
       showToast('Loaded Injection Mold Core Geometry', 'success');
     }
     handleResetTransform();
+    resetHistory();
   };
 
   const handleModelImported = async (modelGroup, filename, rawFile = null) => {
@@ -2234,12 +2316,12 @@ export default function App() {
     }
 
     // 2. Clear previous toolpaths & scratch wireframes (Standard clean CAM workflow)
+    operationsRef.current = [];
+    customGeometryRef.current = [];
     setOperations([]);
     setCustomGeometry([]);
     setIsBackplotActive(false);
     setActiveOpId(null);
-    setHistory([]);
-    setHistoryIndex(0);
     setDeletedEntitiesStack([]);
     setShowArcCenters(false);
     setShowEndpoints(false);
@@ -2258,6 +2340,7 @@ export default function App() {
         color: '#64748b'
       }
     ];
+    solidsListRef.current = newSolids;
     setSolidsList(newSolids);
 
     // 4. Configure clean CAD view: solid part model visible, no toolpaths, no fixture or stock obstruction
@@ -2276,6 +2359,12 @@ export default function App() {
     setLayerVisibility(cleanLayers);
 
     handleResetTransform();
+    resetHistory({
+      operations: [],
+      partTransform: { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+      solidsList: newSolids,
+      customGeometry: []
+    });
     setCameraCommand({ preset: 'iso', timestamp: Date.now() });
 
     // Immediate session flush to IndexedDB
@@ -2365,9 +2454,10 @@ export default function App() {
   };
 
   const handleDeleteNonAssociative = () => {
-    if (customGeometry.length > 0) {
-      setDeletedEntitiesStack((prev) => [...prev, ...customGeometry]);
-      setCustomGeometry([]);
+    const currentList = customGeometryRef.current || [];
+    if (currentList.length > 0) {
+      setDeletedEntitiesStack((prev) => [...prev, ...currentList]);
+      commitCustomGeometry([], true);
       showToast('Deleted non-associative wireframe geometry', 'success');
     } else {
       showToast('No non-associative geometry detected in active level', 'info');
@@ -2382,7 +2472,8 @@ export default function App() {
     if (deletedEntitiesStack.length > 0) {
       const restored = deletedEntitiesStack[deletedEntitiesStack.length - 1];
       setDeletedEntitiesStack((prev) => prev.slice(0, -1));
-      setCustomGeometry((prev) => [...prev, restored]);
+      const nextList = [...(customGeometryRef.current || []), restored];
+      commitCustomGeometry(nextList, true);
       showToast('Undelete: Restored previous entity to workspace', 'success');
     } else {
       showToast('No deleted entities in undo buffer', 'info');
@@ -2489,10 +2580,12 @@ export default function App() {
     // 1. Comprehensive State Teardown & Reset
     setIsBackplotActive(false);
     setActiveOpId(null);
-    setHistory([]);
-    setHistoryIndex(0);
     setDeletedEntitiesStack([]);
     handleResetTransform();
+    operationsRef.current = [];
+    customGeometryRef.current = [];
+    solidsListRef.current = [];
+    setOperations([]);
     setCustomGeometry([]);
     setShowArcCenters(false);
     setShowEndpoints(false);
@@ -2501,20 +2594,19 @@ export default function App() {
     setCurrentProjectName(projName);
 
     const t = String(template || 'blank').toLowerCase().trim();
+    const defaultTransform = { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } };
 
     if (t === 'blank' || t === 'blank_wireframe' || t === 'blank_part') {
       // Mastercam clean blank canvas
       setCurrentModel(null);
-      setOperations([]);
       setSolidsList([]);
-      setCustomGeometry([]);
       setPartMetrics({
         center: { x: 0, y: 0, z: 0 },
         dimensions: { x: 100, y: 25, z: 80 },
-        box: {
-          min: { x: -50, y: 0, z: -40 },
-          max: { x: 50, y: 25, z: 40 }
-        },
+        box: new THREE.Box3(
+          new THREE.Vector3(-50, 0, -40),
+          new THREE.Vector3(50, 25, 40)
+        ),
         triangles: 0
       });
       const stockDims = customDimensions || { x: 120, y: 30, z: 90 };
@@ -2534,6 +2626,12 @@ export default function App() {
       setIsSketchModeActive(false);
       setCameraCommand({ preset: 'top' });
       if (unitSystem) setUnitSystem(unitSystem);
+      resetHistory({
+        operations: [],
+        partTransform: defaultTransform,
+        solidsList: [],
+        customGeometry: []
+      });
       showToast("Mastercam Blank Project Ready", "success");
     } else if (t === 'titan_1m' || t === 'titan1m' || t === 'titan') {
       handleSelectSampleModel('titan_1m');
@@ -2544,14 +2642,18 @@ export default function App() {
       const h = customDimensions?.y || 45;
       const d = customDimensions?.z || 80;
       setCurrentModel(createBoxGeometry(w, h, d, "Raw_Block_Billet"));
-      setOperations([]);
-      setSolidsList([
+      const billetSolids = [
         { id: 1, name: 'Solid 1 - Raw Stock Billet', material: '6061-T6 Aluminum', volumeCm3: parseFloat(((w * h * d) / 1000).toFixed(1)), isPrimary: true, visible: true, active: true, color: '#38bdf8' }
-      ]);
+      ];
+      solidsListRef.current = billetSolids;
+      setSolidsList(billetSolids);
       setPartMetrics({
         center: { x: 0, y: 0, z: 0 },
         dimensions: { x: w, y: h, z: d },
-        box: { min: { x: -w / 2, y: -h / 2, z: -d / 2 }, max: { x: w / 2, y: h / 2, z: d / 2 } },
+        box: new THREE.Box3(
+          new THREE.Vector3(-w / 2, -h / 2, -d / 2),
+          new THREE.Vector3(w / 2, h / 2, d / 2)
+        ),
         triangles: 12
       });
       setStockConfig((prev) => ({
@@ -2562,6 +2664,12 @@ export default function App() {
       setActiveMachineId('haas_vf2');
       setIsSketchModeActive(false);
       setActiveRibbonTab('Toolpaths');
+      resetHistory({
+        operations: [],
+        partTransform: defaultTransform,
+        solidsList: billetSolids,
+        customGeometry: []
+      });
       showToast("Loaded 3-Axis VMC Billet Machining Template", "success");
     } else if (t === 'impeller' || t === 'dmu50_impeller') {
       handleSelectSampleModel('impeller');
@@ -2577,20 +2685,28 @@ export default function App() {
       setActiveRibbonTab('Toolpaths');
     } else if (t === 'lathe' || t === 'lathe_turn') {
       setCurrentModel(null);
-      setOperations([]);
       setSolidsList([]);
-      setCustomGeometry([]);
       setIsSketchModeActive(false);
       setIsLatheStudioOpen(true);
+      resetHistory({
+        operations: [],
+        partTransform: defaultTransform,
+        solidsList: [],
+        customGeometry: []
+      });
       showToast("Opened 2-Axis CNC Lathe Studio", "success");
     } else {
       // Clean fallback blank canvas
       setCurrentModel(null);
-      setOperations([]);
       setSolidsList([]);
-      setCustomGeometry([]);
       setIsSketchModeActive(true);
       setActiveRibbonTab('Wireframe');
+      resetHistory({
+        operations: [],
+        partTransform: defaultTransform,
+        solidsList: [],
+        customGeometry: []
+      });
       showToast("Created New Project Canvas", "success");
     }
   };
@@ -2642,38 +2758,33 @@ export default function App() {
     if (data.stockConfig) setStockConfig(data.stockConfig);
     if (data.tools && data.tools.length > 0) setTools(data.tools);
 
-    const rehydrateBox3 = (b) => {
-      if (!b || !b.min || !b.max) return null;
-      return new THREE.Box3(
-        new THREE.Vector3(b.min.x || 0, b.min.y || 0, b.min.z || 0),
-        new THREE.Vector3(b.max.x || 0, b.max.y || 0, b.max.z || 0)
-      );
-    };
-
+    let hydratedOps = operationsRef.current;
     if (data.operations) {
-      const hydratedOps = data.operations.map((op) => ({
+      hydratedOps = data.operations.map((op) => ({
         ...op,
         bounds: op.bounds ? rehydrateBox3(op.bounds) : null
       }));
+      operationsRef.current = hydratedOps;
       setOperations(hydratedOps);
       if (hydratedOps.length > 0) {
         setActiveOpId(hydratedOps[0].id);
+      } else {
+        setActiveOpId(null);
       }
     }
     if (data.activeMachine?.id) setActiveMachineId(data.activeMachine.id);
     if (data.activeWcs) setActiveWcs(data.activeWcs);
     if (data.workpieceColor) setWorkpieceColor(data.workpieceColor);
-    if (data.partTransform) setPartTransform(data.partTransform);
+    if (data.partTransform) {
+      partTransformRef.current = data.partTransform;
+      setPartTransform(data.partTransform);
+    }
 
     // Restore custom wireframes (circles, rectangles, lines, drill points)
     let restoredGeo = [];
     if (data.customGeometry && Array.isArray(data.customGeometry)) {
       restoredGeo = deserializeCustomGeometry(data.customGeometry);
-      setCustomGeometry(restoredGeo);
-      // Update Level 10 count
-      setLevels((prev) =>
-        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: restoredGeo.length, count: restoredGeo.length } : lvl))
-      );
+      commitCustomGeometry(restoredGeo, false);
     }
 
     if (data.partMetrics) {
@@ -2685,6 +2796,7 @@ export default function App() {
       });
     }
     if (data.solidsList && Array.isArray(data.solidsList) && data.solidsList.length > 0) {
+      solidsListRef.current = data.solidsList;
       setSolidsList(data.solidsList);
     }
 
@@ -2697,10 +2809,11 @@ export default function App() {
       stock: true
     }));
     setActiveManagerTab('Toolpaths');
-    pushSnapshot({
-      operations: data.operations,
+    resetHistory({
+      operations: hydratedOps,
+      partTransform: data.partTransform || partTransformRef.current,
       customGeometry: restoredGeo,
-      solidsList: data.solidsList
+      solidsList: data.solidsList || solidsListRef.current
     });
 
     showToast(`Project ${data.projectName || data.filename || 'MCAM'} loaded successfully with all toolpaths & wireframe geometry.`, 'success');
@@ -3026,15 +3139,11 @@ export default function App() {
         center: data.center ? { x: data.center.x, y: data.center.y, z: data.center.z } : prev.center
       }));
       if (data.completed) {
-        setTimeout(() => {
-          setCustomGeometry((currentList) => {
-            const lastEntity = currentList[currentList.length - 1];
-            if (lastEntity && (lastEntity.userData?.type === 'circle' || lastEntity.name?.startsWith('Wireframe_Circle'))) {
-              setActiveCircleId(lastEntity.id || lastEntity.uuid || lastEntity.name);
-            }
-            return currentList;
-          });
-        }, 10);
+        const currentList = customGeometryRef.current || [];
+        const lastEntity = currentList[currentList.length - 1];
+        if (lastEntity && (lastEntity.userData?.type === 'circle' || lastEntity.name?.startsWith('Wireframe_Circle'))) {
+          setActiveCircleId(lastEntity.id || lastEntity.uuid || lastEntity.name);
+        }
       }
     } else if (data.tool === 'rect') {
       setRectParams((prev) => ({
@@ -3045,15 +3154,11 @@ export default function App() {
         secondCorner: data.secondCorner ? { x: data.secondCorner.x, y: data.secondCorner.y, z: data.secondCorner.z } : prev.secondCorner
       }));
       if (data.completed) {
-        setTimeout(() => {
-          setCustomGeometry((currentList) => {
-            const lastEntity = currentList[currentList.length - 1];
-            if (lastEntity && (lastEntity.userData?.type === 'rectangle' || lastEntity.name?.startsWith('Wireframe_Rect'))) {
-              setActiveRectId(lastEntity.id || lastEntity.uuid || lastEntity.name);
-            }
-            return currentList;
-          });
-        }, 10);
+        const currentList = customGeometryRef.current || [];
+        const lastEntity = currentList[currentList.length - 1];
+        if (lastEntity && (lastEntity.userData?.type === 'rectangle' || lastEntity.name?.startsWith('Wireframe_Rect'))) {
+          setActiveRectId(lastEntity.id || lastEntity.uuid || lastEntity.name);
+        }
       }
     } else if (data.tool === 'line') {
       setLineParams((prev) => ({
@@ -3064,15 +3169,11 @@ export default function App() {
         pt2: data.pt2 ? { x: data.pt2.x, y: data.pt2.y, z: data.pt2.z } : prev.pt2
       }));
       if (data.completed) {
-        setTimeout(() => {
-          setCustomGeometry((currentList) => {
-            const lastEntity = currentList[currentList.length - 1];
-            if (lastEntity && (lastEntity.userData?.type === 'line' || lastEntity.name?.startsWith('Wireframe_Line'))) {
-              setActiveLineId(lastEntity.id || lastEntity.uuid || lastEntity.name);
-            }
-            return currentList;
-          });
-        }, 10);
+        const currentList = customGeometryRef.current || [];
+        const lastEntity = currentList[currentList.length - 1];
+        if (lastEntity && (lastEntity.userData?.type === 'line' || lastEntity.name?.startsWith('Wireframe_Line'))) {
+          setActiveLineId(lastEntity.id || lastEntity.uuid || lastEntity.name);
+        }
       }
     }
   };
@@ -3086,36 +3187,32 @@ export default function App() {
     }));
 
     if (activeCircleId) {
-      setCustomGeometry((prevList) => {
-        const targetIndex = prevList.findIndex(
-          (item) => (item.id || item.uuid || item.name) === activeCircleId
-        );
-        if (targetIndex >= 0) {
-          const oldEntity = prevList[targetIndex];
-          const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
-          const cx = Array.isArray(center) ? center[0] : (center.x || 0);
-          const cz = Array.isArray(center) ? center[1] : (center.z || 0);
-          const y = oldEntity.position?.y || center.y || 0;
+      const prevList = customGeometryRef.current || [];
+      const targetIndex = prevList.findIndex(
+        (item) => (item.id || item.uuid || item.name) === activeCircleId
+      );
+      if (targetIndex >= 0) {
+        const oldEntity = prevList[targetIndex];
+        const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
+        const cx = Array.isArray(center) ? center[0] : (center.x || 0);
+        const cz = Array.isArray(center) ? center[1] : (center.z || 0);
+        const y = oldEntity.position?.y || center.y || 0;
 
-          const updatedCircle = createWireframeCircle(
-            newRadius,
-            y,
-            [cx, cz],
-            0,
-            360,
-            'G17',
-            { color: 0x38bdf8, name: `Wireframe_Circle_R${newRadius.toFixed(1)}` }
-          );
-          if (activeCircleId) {
-            updatedCircle.uuid = activeCircleId;
-            if (updatedCircle.userData) updatedCircle.userData.customId = activeCircleId;
-          }
-          const newList = [...prevList];
-          newList[targetIndex] = updatedCircle;
-          return newList;
-        }
-        return prevList;
-      });
+        const updatedCircle = createWireframeCircle(
+          newRadius,
+          y,
+          [cx, cz],
+          0,
+          360,
+          'G17',
+          { color: 0x38bdf8, name: `Wireframe_Circle_R${newRadius.toFixed(1)}` }
+        );
+        updatedCircle.uuid = activeCircleId;
+        if (updatedCircle.userData) updatedCircle.userData.customId = activeCircleId;
+        const newList = [...prevList];
+        newList[targetIndex] = updatedCircle;
+        commitCustomGeometry(newList, false);
+      }
     }
   };
 
@@ -3134,6 +3231,7 @@ export default function App() {
 
   const handleApplyCircle = () => {
     let createdNew = false;
+    const prevList = customGeometryRef.current || [];
     if (!activeCircleId && circleParams.radius > 0) {
       const cx = circleParams.center?.x || 0;
       const cz = circleParams.center?.z || 0;
@@ -3147,27 +3245,17 @@ export default function App() {
         'G17',
         { color: 0x1d4ed8, name: `Wireframe_Circle_R${circleParams.radius.toFixed(1)}` }
       );
-      setCustomGeometry((prev) => {
-        const next = [...prev, newCirc];
-        pushSnapshot({ customGeometry: next });
-        return next;
-      });
-      setLevels((prev) =>
-        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: (lvl.entities || 0) + 1, count: (lvl.count || 0) + 1 } : lvl))
-      );
+      const next = [...prevList, newCirc];
+      commitCustomGeometry(next, true);
       createdNew = true;
     } else if (activeCircleId) {
-      setCustomGeometry((prevList) => {
-        const next = prevList.map((item) => {
-          if ((item.id || item.uuid || item.name) === activeCircleId) {
-            if (item.material) item.material.color.setHex(0x1d4ed8);
-            return item;
-          }
-          return item;
-        });
-        pushSnapshot({ customGeometry: next });
-        return next;
+      const next = prevList.map((item) => {
+        if ((item.id || item.uuid || item.name) === activeCircleId) {
+          if (item.material) item.material.color.setHex(0x1d4ed8);
+        }
+        return item;
       });
+      commitCustomGeometry(next, false);
       setActiveCircleId(null);
       createdNew = true;
     }
@@ -3186,14 +3274,9 @@ export default function App() {
 
   const handleCancelCircle = () => {
     if (activeCircleId) {
-      setCustomGeometry((prevList) => {
-        const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeCircleId);
-        pushSnapshot({ customGeometry: next });
-        return next;
-      });
-      setLevels((prev) =>
-        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
-      );
+      const prevList = customGeometryRef.current || [];
+      const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeCircleId);
+      commitCustomGeometry(next, true);
     }
     setActiveCircleId(null);
     setIsSketchModeActive(false);
@@ -3207,36 +3290,34 @@ export default function App() {
     setRectParams((prev) => ({ ...prev, width: newWidth }));
 
     if (activeRectId) {
-      setCustomGeometry((prevList) => {
-        const targetIndex = prevList.findIndex(
-          (item) => (item.id || item.uuid || item.name) === activeRectId
+      const prevList = customGeometryRef.current || [];
+      const targetIndex = prevList.findIndex(
+        (item) => (item.id || item.uuid || item.name) === activeRectId
+      );
+      if (targetIndex >= 0) {
+        const oldEntity = prevList[targetIndex];
+        const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
+        const cx = Array.isArray(center) ? center[0] : (center.x || 0);
+        const cz = Array.isArray(center) ? center[1] : (center.z || 0);
+        const y = oldEntity.position?.y || center.y || 0;
+        const currentHeight = Math.abs(rectParams.height || oldEntity.userData?.depth || 50);
+        const absW = Math.max(1, Math.abs(newWidth));
+
+        const updatedRect = createWireframeRect(
+          absW,
+          currentHeight,
+          y,
+          0,
+          [cx, cz],
+          { color: 0x38bdf8, name: `Wireframe_Rect_${Math.round(absW)}x${Math.round(currentHeight)}` }
         );
-        if (targetIndex >= 0) {
-          const oldEntity = prevList[targetIndex];
-          const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
-          const cx = Array.isArray(center) ? center[0] : (center.x || 0);
-          const cz = Array.isArray(center) ? center[1] : (center.z || 0);
-          const y = oldEntity.position?.y || center.y || 0;
-          const currentHeight = Math.abs(rectParams.height || oldEntity.userData?.depth || 50);
-          const absW = Math.max(1, Math.abs(newWidth));
+        updatedRect.uuid = activeRectId;
+        if (updatedRect.userData) updatedRect.userData.customId = activeRectId;
 
-          const updatedRect = createWireframeRect(
-            absW,
-            currentHeight,
-            y,
-            0,
-            [cx, cz],
-            { color: 0x38bdf8, name: `Wireframe_Rect_${Math.round(absW)}x${Math.round(currentHeight)}` }
-          );
-          updatedRect.uuid = activeRectId;
-          if (updatedRect.userData) updatedRect.userData.customId = activeRectId;
-
-          const newList = [...prevList];
-          newList[targetIndex] = updatedRect;
-          return newList;
-        }
-        return prevList;
-      });
+        const newList = [...prevList];
+        newList[targetIndex] = updatedRect;
+        commitCustomGeometry(newList, false);
+      }
     }
   };
 
@@ -3244,36 +3325,34 @@ export default function App() {
     setRectParams((prev) => ({ ...prev, height: newHeight }));
 
     if (activeRectId) {
-      setCustomGeometry((prevList) => {
-        const targetIndex = prevList.findIndex(
-          (item) => (item.id || item.uuid || item.name) === activeRectId
+      const prevList = customGeometryRef.current || [];
+      const targetIndex = prevList.findIndex(
+        (item) => (item.id || item.uuid || item.name) === activeRectId
+      );
+      if (targetIndex >= 0) {
+        const oldEntity = prevList[targetIndex];
+        const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
+        const cx = Array.isArray(center) ? center[0] : (center.x || 0);
+        const cz = Array.isArray(center) ? center[1] : (center.z || 0);
+        const y = oldEntity.position?.y || center.y || 0;
+        const currentWidth = Math.abs(rectParams.width || oldEntity.userData?.width || 80);
+        const absH = Math.max(1, Math.abs(newHeight));
+
+        const updatedRect = createWireframeRect(
+          currentWidth,
+          absH,
+          y,
+          0,
+          [cx, cz],
+          { color: 0x38bdf8, name: `Wireframe_Rect_${Math.round(currentWidth)}x${Math.round(absH)}` }
         );
-        if (targetIndex >= 0) {
-          const oldEntity = prevList[targetIndex];
-          const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
-          const cx = Array.isArray(center) ? center[0] : (center.x || 0);
-          const cz = Array.isArray(center) ? center[1] : (center.z || 0);
-          const y = oldEntity.position?.y || center.y || 0;
-          const currentWidth = Math.abs(rectParams.width || oldEntity.userData?.width || 80);
-          const absH = Math.max(1, Math.abs(newHeight));
+        updatedRect.uuid = activeRectId;
+        if (updatedRect.userData) updatedRect.userData.customId = activeRectId;
 
-          const updatedRect = createWireframeRect(
-            currentWidth,
-            absH,
-            y,
-            0,
-            [cx, cz],
-            { color: 0x38bdf8, name: `Wireframe_Rect_${Math.round(currentWidth)}x${Math.round(absH)}` }
-          );
-          updatedRect.uuid = activeRectId;
-          if (updatedRect.userData) updatedRect.userData.customId = activeRectId;
-
-          const newList = [...prevList];
-          newList[targetIndex] = updatedRect;
-          return newList;
-        }
-        return prevList;
-      });
+        const newList = [...prevList];
+        newList[targetIndex] = updatedRect;
+        commitCustomGeometry(newList, false);
+      }
     }
   };
 
@@ -3300,6 +3379,7 @@ export default function App() {
 
   const handleApplyRect = () => {
     let createdNew = false;
+    const prevList = customGeometryRef.current || [];
     const w = Math.abs(rectParams.width || 80);
     const h = Math.abs(rectParams.height || 50);
 
@@ -3315,27 +3395,17 @@ export default function App() {
         [cx, cz],
         { color: 0x1d4ed8, name: `Wireframe_Rect_${Math.round(w)}x${Math.round(h)}` }
       );
-      setCustomGeometry((prev) => {
-        const next = [...prev, newRect];
-        pushSnapshot({ customGeometry: next });
-        return next;
-      });
-      setLevels((prev) =>
-        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: (lvl.entities || 0) + 1, count: (lvl.count || 0) + 1 } : lvl))
-      );
+      const next = [...prevList, newRect];
+      commitCustomGeometry(next, true);
       createdNew = true;
     } else if (activeRectId) {
-      setCustomGeometry((prevList) => {
-        const next = prevList.map((item) => {
-          if ((item.id || item.uuid || item.name) === activeRectId) {
-            if (item.material) item.material.color.setHex(0x1d4ed8);
-            return item;
-          }
-          return item;
-        });
-        pushSnapshot({ customGeometry: next });
-        return next;
+      const next = prevList.map((item) => {
+        if ((item.id || item.uuid || item.name) === activeRectId) {
+          if (item.material) item.material.color.setHex(0x1d4ed8);
+        }
+        return item;
       });
+      commitCustomGeometry(next, false);
       setActiveRectId(null);
       createdNew = true;
     }
@@ -3354,14 +3424,9 @@ export default function App() {
 
   const handleCancelRect = () => {
     if (activeRectId) {
-      setCustomGeometry((prevList) => {
-        const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeRectId);
-        pushSnapshot({ customGeometry: next });
-        return next;
-      });
-      setLevels((prev) =>
-        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
-      );
+      const prevList = customGeometryRef.current || [];
+      const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeRectId);
+      commitCustomGeometry(next, true);
     }
     setActiveRectId(null);
     setIsSketchModeActive(false);
@@ -3374,65 +3439,61 @@ export default function App() {
   const handleChangeLineLength = (newLen) => {
     setLineParams((prev) => ({ ...prev, length: newLen }));
     if (activeLineId) {
-      setCustomGeometry((prevList) => {
-        const targetIndex = prevList.findIndex(
-          (item) => (item.id || item.uuid || item.name) === activeLineId
+      const prevList = customGeometryRef.current || [];
+      const targetIndex = prevList.findIndex(
+        (item) => (item.id || item.uuid || item.name) === activeLineId
+      );
+      if (targetIndex >= 0) {
+        const oldEntity = prevList[targetIndex];
+        const p1 = oldEntity.userData?.p1 || { x: 0, y: 0, z: 0 };
+        const angleRad = ((lineParams.angle || 0) * Math.PI) / 180;
+        const p2 = {
+          x: p1.x + Math.cos(angleRad) * newLen,
+          y: p1.y || 0,
+          z: p1.z - Math.sin(angleRad) * newLen
+        };
+        const updatedLine = createWireframeLine(
+          [p1.x, p1.y, p1.z],
+          [p2.x, p2.y, p2.z],
+          { color: 0x38bdf8, name: `Wireframe_Line_L${newLen.toFixed(1)}` }
         );
-        if (targetIndex >= 0) {
-          const oldEntity = prevList[targetIndex];
-          const p1 = oldEntity.userData?.p1 || { x: 0, y: 0, z: 0 };
-          const angleRad = ((lineParams.angle || 0) * Math.PI) / 180;
-          const p2 = {
-            x: p1.x + Math.cos(angleRad) * newLen,
-            y: p1.y || 0,
-            z: p1.z - Math.sin(angleRad) * newLen
-          };
-          const updatedLine = createWireframeLine(
-            [p1.x, p1.y, p1.z],
-            [p2.x, p2.y, p2.z],
-            { color: 0x38bdf8, name: `Wireframe_Line_L${newLen.toFixed(1)}` }
-          );
-          updatedLine.uuid = activeLineId;
-          if (updatedLine.userData) updatedLine.userData.customId = activeLineId;
-          const newList = [...prevList];
-          newList[targetIndex] = updatedLine;
-          return newList;
-        }
-        return prevList;
-      });
+        updatedLine.uuid = activeLineId;
+        if (updatedLine.userData) updatedLine.userData.customId = activeLineId;
+        const newList = [...prevList];
+        newList[targetIndex] = updatedLine;
+        commitCustomGeometry(newList, false);
+      }
     }
   };
 
   const handleChangeLineAngle = (newAngle) => {
     setLineParams((prev) => ({ ...prev, angle: newAngle }));
     if (activeLineId) {
-      setCustomGeometry((prevList) => {
-        const targetIndex = prevList.findIndex(
-          (item) => (item.id || item.uuid || item.name) === activeLineId
+      const prevList = customGeometryRef.current || [];
+      const targetIndex = prevList.findIndex(
+        (item) => (item.id || item.uuid || item.name) === activeLineId
+      );
+      if (targetIndex >= 0) {
+        const oldEntity = prevList[targetIndex];
+        const p1 = oldEntity.userData?.p1 || { x: 0, y: 0, z: 0 };
+        const currentLen = lineParams.length || 50;
+        const angleRad = ((newAngle || 0) * Math.PI) / 180;
+        const p2 = {
+          x: p1.x + Math.cos(angleRad) * currentLen,
+          y: p1.y || 0,
+          z: p1.z - Math.sin(angleRad) * currentLen
+        };
+        const updatedLine = createWireframeLine(
+          [p1.x, p1.y, p1.z],
+          [p2.x, p2.y, p2.z],
+          { color: 0x38bdf8, name: `Wireframe_Line_L${currentLen.toFixed(1)}` }
         );
-        if (targetIndex >= 0) {
-          const oldEntity = prevList[targetIndex];
-          const p1 = oldEntity.userData?.p1 || { x: 0, y: 0, z: 0 };
-          const currentLen = lineParams.length || 50;
-          const angleRad = ((newAngle || 0) * Math.PI) / 180;
-          const p2 = {
-            x: p1.x + Math.cos(angleRad) * currentLen,
-            y: p1.y || 0,
-            z: p1.z - Math.sin(angleRad) * currentLen
-          };
-          const updatedLine = createWireframeLine(
-            [p1.x, p1.y, p1.z],
-            [p2.x, p2.y, p2.z],
-            { color: 0x38bdf8, name: `Wireframe_Line_L${currentLen.toFixed(1)}` }
-          );
-          updatedLine.uuid = activeLineId;
-          if (updatedLine.userData) updatedLine.userData.customId = activeLineId;
-          const newList = [...prevList];
-          newList[targetIndex] = updatedLine;
-          return newList;
-        }
-        return prevList;
-      });
+        updatedLine.uuid = activeLineId;
+        if (updatedLine.userData) updatedLine.userData.customId = activeLineId;
+        const newList = [...prevList];
+        newList[targetIndex] = updatedLine;
+        commitCustomGeometry(newList, false);
+      }
     }
   };
 
@@ -3466,19 +3527,35 @@ export default function App() {
   };
 
   const handleApplyLine = () => {
-    if (activeLineId) {
-      setCustomGeometry((prevList) => {
-        const next = prevList.map((item) => {
-          if ((item.id || item.uuid || item.name) === activeLineId) {
-            if (item.material) item.material.color.setHex(0x1d4ed8);
-            return item;
-          }
-          return item;
-        });
-        pushSnapshot({ customGeometry: next });
-        return next;
+    let committed = false;
+    const prevList = customGeometryRef.current || [];
+    if (!activeLineId && lineParams.length > 0) {
+      const p1 = lineParams.pt1 || { x: 0, y: 0, z: 0 };
+      const angleRad = ((lineParams.angle || 0) * Math.PI) / 180;
+      const p2 = {
+        x: p1.x + Math.cos(angleRad) * lineParams.length,
+        y: p1.y || 0,
+        z: p1.z - Math.sin(angleRad) * lineParams.length
+      };
+      const newLine = createWireframeLine(
+        [p1.x, p1.y, p1.z],
+        [p2.x, p2.y, p2.z],
+        { color: 0x1d4ed8, name: `Wireframe_Line_L${Number(lineParams.length).toFixed(1)}` }
+      );
+      commitCustomGeometry([...prevList, newLine], true);
+      committed = true;
+    } else if (activeLineId) {
+      const next = prevList.map((item) => {
+        if ((item.id || item.uuid || item.name) === activeLineId) {
+          if (item.material) item.material.color.setHex(0x1d4ed8);
+        }
+        return item;
       });
+      commitCustomGeometry(next, false);
       setActiveLineId(null);
+      committed = true;
+    }
+    if (committed) {
       showToast('Line committed to Level 10. Ready for next line.', 'success');
     }
   };
@@ -3493,14 +3570,9 @@ export default function App() {
 
   const handleCancelLine = () => {
     if (activeLineId) {
-      setCustomGeometry((prevList) => {
-        const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeLineId);
-        pushSnapshot({ customGeometry: next });
-        return next;
-      });
-      setLevels((prev) =>
-        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
-      );
+      const prevList = customGeometryRef.current || [];
+      const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeLineId);
+      commitCustomGeometry(next, true);
     }
     setActiveLineId(null);
     setIsSketchModeActive(false);
@@ -3528,17 +3600,14 @@ export default function App() {
 
   const handleApplyArc = () => {
     if (activeArcId) {
-      setCustomGeometry((prevList) => {
-        const next = prevList.map((item) => {
-          if ((item.id || item.uuid || item.name) === activeArcId) {
-            if (item.material) item.material.color.setHex(0x1d4ed8);
-            return item;
-          }
-          return item;
-        });
-        pushSnapshot({ customGeometry: next });
-        return next;
+      const prevList = customGeometryRef.current || [];
+      const next = prevList.map((item) => {
+        if ((item.id || item.uuid || item.name) === activeArcId) {
+          if (item.material) item.material.color.setHex(0x1d4ed8);
+        }
+        return item;
       });
+      commitCustomGeometry(next, false);
       setActiveArcId(null);
       showToast('Arc Tangent committed to Level 10.', 'success');
     }
@@ -3554,14 +3623,9 @@ export default function App() {
 
   const handleCancelArc = () => {
     if (activeArcId) {
-      setCustomGeometry((prevList) => {
-        const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeArcId);
-        pushSnapshot({ customGeometry: next });
-        return next;
-      });
-      setLevels((prev) =>
-        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
-      );
+      const prevList = customGeometryRef.current || [];
+      const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeArcId);
+      commitCustomGeometry(next, true);
     }
     setActiveArcId(null);
     setIsSketchModeActive(false);
@@ -3741,37 +3805,21 @@ export default function App() {
   };
 
   const handleAddCustomEntity = (entity) => {
-    // If drawing and another entity was active, commit previous entity to dark blue
-    if (activeDrawingTool === 'circle' && activeCircleId) {
-      setCustomGeometry((prev) =>
-        prev.map((item) => {
-          if ((item.id || item.uuid || item.name) === activeCircleId) {
-            if (item.material) item.material.color.setHex(0x1d4ed8);
+    const activeIdToCommit =
+      activeDrawingTool === 'circle' ? activeCircleId :
+      activeDrawingTool === 'rect' ? activeRectId :
+      activeDrawingTool === 'line' ? activeLineId :
+      null;
+
+    const currentList = customGeometryRef.current || [];
+    const baseList = activeIdToCommit
+      ? currentList.map((item) => {
+          if ((item.id || item.uuid || item.name) === activeIdToCommit && item.material) {
+            item.material.color.setHex(0x1d4ed8);
           }
           return item;
         })
-      );
-    }
-    if (activeDrawingTool === 'rect' && activeRectId) {
-      setCustomGeometry((prev) =>
-        prev.map((item) => {
-          if ((item.id || item.uuid || item.name) === activeRectId) {
-            if (item.material) item.material.color.setHex(0x1d4ed8);
-          }
-          return item;
-        })
-      );
-    }
-    if (activeDrawingTool === 'line' && activeLineId) {
-      setCustomGeometry((prev) =>
-        prev.map((item) => {
-          if ((item.id || item.uuid || item.name) === activeLineId) {
-            if (item.material) item.material.color.setHex(0x1d4ed8);
-          }
-          return item;
-        })
-      );
-    }
+      : currentList;
 
     const entId = entity.id || entity.uuid || entity.name;
     if (activeDrawingTool === 'circle') {
@@ -3784,32 +3832,14 @@ export default function App() {
       setActiveArcId(entId);
     }
 
-    setCustomGeometry((prev) => {
-      const next = [...prev, entity];
-      pushSnapshot({ customGeometry: next });
-      return next;
-    });
-
-    const isWireframe = entity.name?.startsWith('Wireframe_') || entity.name?.startsWith('Drill_') || entity.name?.startsWith('Hole_') || entity.userData?.type === 'line' || entity.userData?.type === 'circle' || entity.userData?.type === 'arc' || entity.userData?.type === 'spline' || entity.userData?.type === 'rectangle';
-    if (isWireframe) {
-      setLevels((prev) =>
-        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: lvl.entities + 1 } : lvl))
-      );
-    }
+    commitCustomGeometry([...baseList, entity], true);
   };
 
   const handleRemoveCustomEntity = (target) => {
-    setCustomGeometry((prev) => {
-      const next = prev.filter((item) => item !== target && (item.id || item.uuid || item.name) !== (target?.id || target?.uuid || target?.name));
-      pushSnapshot({ customGeometry: next });
-      return next;
-    });
-    const isWireframe = target?.name?.startsWith('Wireframe_') || target?.name?.startsWith('Drill_') || target?.name?.startsWith('Hole_') || target?.userData?.type === 'line' || target?.userData?.type === 'circle' || target?.userData?.type === 'arc' || target?.userData?.type === 'rectangle';
-    if (isWireframe) {
-      setLevels((prev) =>
-        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
-      );
-    }
+    const currentList = customGeometryRef.current || [];
+    const targetKey = target?.id || target?.uuid || target?.name;
+    const next = currentList.filter((item) => item !== target && (item.id || item.uuid || item.name) !== targetKey);
+    commitCustomGeometry(next, true);
   };
 
   const handleAddWireframe = (type) => {
@@ -3817,23 +3847,18 @@ export default function App() {
   };
 
   const handleClearWireframes = () => {
-    setCustomGeometry((prev) => {
-      const next = prev.filter(
-        (item) =>
-          !item.name?.startsWith('Wireframe_') &&
-          !item.name?.startsWith('Drill_') &&
-          !item.name?.startsWith('Hole_') &&
-          item.userData?.type !== 'line' &&
-          item.userData?.type !== 'circle' &&
-          item.userData?.type !== 'rectangle' &&
-          item.userData?.type !== 'arc'
-      );
-      pushSnapshot({ customGeometry: next });
-      return next;
-    });
-    setLevels((prev) =>
-      prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: 0 } : lvl))
+    const currentList = customGeometryRef.current || [];
+    const next = currentList.filter(
+      (item) =>
+        !item.name?.startsWith('Wireframe_') &&
+        !item.name?.startsWith('Drill_') &&
+        !item.name?.startsWith('Hole_') &&
+        item.userData?.type !== 'line' &&
+        item.userData?.type !== 'circle' &&
+        item.userData?.type !== 'rectangle' &&
+        item.userData?.type !== 'arc'
     );
+    commitCustomGeometry(next, true);
     showToast('Level 10: Wireframe curves cleared', 'info');
   };
 
@@ -3925,11 +3950,13 @@ export default function App() {
   };
 
   const handleAddSurfaceEntity = (entity) => {
-    setCustomGeometry((prev) => [...prev, entity]);
+    const next = [...(customGeometryRef.current || []), entity];
+    commitCustomGeometry(next, true);
   };
 
   const handleRemoveSurfaceEntity = (target) => {
-    setCustomGeometry((prev) => prev.filter((item) => item !== target));
+    const next = (customGeometryRef.current || []).filter((item) => item !== target);
+    commitCustomGeometry(next, true);
   };
 
   const handleAddSurface = (type) => {
@@ -3937,13 +3964,12 @@ export default function App() {
   };
 
   const handleClearSurfaces = () => {
-    setCustomGeometry((prev) =>
-      prev.filter(
-        (item) =>
-          !item.name?.startsWith('Surface_') &&
-          !item.name?.startsWith('CAD_')
-      )
+    const next = (customGeometryRef.current || []).filter(
+      (item) =>
+        !item.name?.startsWith('Surface_') &&
+        !item.name?.startsWith('CAD_')
     );
+    commitCustomGeometry(next, true);
   };
 
   // Solid Primitives & Modeling Handlers
@@ -3955,7 +3981,7 @@ export default function App() {
   const handleSetPrimarySolid = (modelGroup, filename) => {
     setCurrentModel(modelGroup);
     setCurrentProjectName(filename);
-    setSolidsList((prev) => [
+    const nextSolids = [
       {
         id: 1,
         name: `Solid 1 - ${filename.replace(/\.[^/.]+$/, '')}`,
@@ -3966,16 +3992,20 @@ export default function App() {
         active: true,
         color: '#38bdf8'
       },
-      ...prev.slice(1)
-    ]);
+      ...(solidsListRef.current || solidsList).slice(1)
+    ];
+    solidsListRef.current = nextSolids;
+    setSolidsList(nextSolids);
     handleResetTransform();
+    pushSnapshot({ solidsList: nextSolids });
   };
 
   const handleAddSolidBody = (solidGroup, name) => {
-    setCustomGeometry((prev) => [...prev, solidGroup]);
-    const nextId = solidsList.length + 1;
-    setSolidsList((prev) => [
-      ...prev,
+    const nextGeo = [...(customGeometryRef.current || []), solidGroup];
+    const currentSolids = solidsListRef.current || solidsList;
+    const nextId = currentSolids.length + 1;
+    const nextSolids = [
+      ...currentSolids,
       {
         id: nextId,
         name: name || `Solid ${nextId}`,
@@ -3986,12 +4016,20 @@ export default function App() {
         active: false,
         color: '#10b981'
       }
-    ]);
+    ];
+    solidsListRef.current = nextSolids;
+    setSolidsList(nextSolids);
+    commitCustomGeometry(nextGeo, false);
+    pushSnapshot({ customGeometry: nextGeo, solidsList: nextSolids });
   };
 
   const handleRemoveSolidBody = (target) => {
-    setSolidsList((prev) => prev.filter((s) => s !== target && s.id !== target.id));
-    setCustomGeometry((prev) => prev.filter((item) => item.name !== target.name));
+    const nextSolids = (solidsListRef.current || solidsList).filter((s) => s !== target && s.id !== target.id);
+    const nextGeo = (customGeometryRef.current || []).filter((item) => item.name !== target.name);
+    solidsListRef.current = nextSolids;
+    setSolidsList(nextSolids);
+    commitCustomGeometry(nextGeo, false);
+    pushSnapshot({ customGeometry: nextGeo, solidsList: nextSolids });
   };
 
   const handleToggleSolidVisibility = (id) => {
@@ -4023,7 +4061,8 @@ export default function App() {
   };
 
   const handleClearDraftingDimensions = () => {
-    setCustomGeometry((prev) => prev.filter((item) => !item.name?.startsWith('Drafting_')));
+    const next = (customGeometryRef.current || []).filter((item) => !item.name?.startsWith('Drafting_'));
+    commitCustomGeometry(next, true);
   };
 
   // 3D Transform Workbench Handler (Translate, Rotate, Scale, Mirror, Pattern)
@@ -4405,6 +4444,7 @@ export default function App() {
                 lineType={lineParams.lineType}
                 onDrawingUpdate={handleDrawingUpdate}
                 reselectTrigger={reselectTrigger}
+                undoTrigger={undoTrigger}
               />
             </div>
           </div>
@@ -4467,6 +4507,7 @@ export default function App() {
             lineType={lineParams.lineType}
             onDrawingUpdate={handleDrawingUpdate}
             reselectTrigger={reselectTrigger}
+            undoTrigger={undoTrigger}
           />
         )}
       </div>
