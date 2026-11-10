@@ -144,16 +144,40 @@ export function createGhostPreview(tool, startPt, currentPt, options = {}) {
     line.computeLineDistances();
     group.add(line);
   } else if (tool === 'rect') {
-    // 4 points on the current Y plane
-    const p1 = startPt;
-    const p2 = new THREE.Vector3(currentPt.x, startPt.y, startPt.z);
-    const p3 = currentPt;
-    const p4 = new THREE.Vector3(startPt.x, startPt.y, currentPt.z);
+    let p1, p2, p3, p4;
+    const y = startPt.y;
+    if (options.anchorToCenter) {
+      const halfW = Math.abs(currentPt.x - startPt.x);
+      const halfD = Math.abs(currentPt.z - startPt.z);
+      p1 = new THREE.Vector3(startPt.x - halfW, y, startPt.z - halfD);
+      p2 = new THREE.Vector3(startPt.x + halfW, y, startPt.z - halfD);
+      p3 = new THREE.Vector3(startPt.x + halfW, y, startPt.z + halfD);
+      p4 = new THREE.Vector3(startPt.x - halfW, y, startPt.z + halfD);
+    } else {
+      p1 = startPt;
+      p2 = new THREE.Vector3(currentPt.x, y, startPt.z);
+      p3 = currentPt;
+      p4 = new THREE.Vector3(startPt.x, y, currentPt.z);
+    }
 
     const geo = new THREE.BufferGeometry().setFromPoints([p1, p2, p3, p4, p1]);
-    const line = new THREE.Line(geo, solidMaterial);
+    const line = new THREE.Line(geo, dashedMaterial);
+    line.computeLineDistances();
     group.add(line);
-  } else if (tool === 'circle') {
+
+    if (options.createSurface) {
+      const w = options.anchorToCenter ? Math.abs(currentPt.x - startPt.x) * 2 : Math.abs(currentPt.x - startPt.x);
+      const d = options.anchorToCenter ? Math.abs(currentPt.z - startPt.z) * 2 : Math.abs(currentPt.z - startPt.z);
+      const cx = options.anchorToCenter ? startPt.x : (startPt.x + currentPt.x) / 2;
+      const cz = options.anchorToCenter ? startPt.z : (startPt.z + currentPt.z) / 2;
+      const planeGeo = new THREE.PlaneGeometry(Math.max(1, w), Math.max(1, d));
+      planeGeo.rotateX(-Math.PI / 2);
+      const planeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+      const plane = new THREE.Mesh(planeGeo, planeMat);
+      plane.position.set(cx, y, cz);
+      group.add(plane);
+    }
+  } else if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
     const radius = Math.max(0.5, startPt.distanceTo(currentPt));
     const segments = 64;
     const pts = [];

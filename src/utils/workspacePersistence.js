@@ -33,6 +33,70 @@ function openDB() {
 }
 
 /**
+ * Safely strips non-cloneable Three.js closures, functions, DOM elements, and cyclic references
+ * so IndexedDB's structuredClone will never throw DataCloneError.
+ */
+function sanitizeForIndexedDB(data) {
+  if (!data || typeof data !== 'object') return data;
+
+  const seen = new WeakSet();
+
+  function clean(val, key = '') {
+    if (val === null || val === undefined) return val;
+    if (typeof val === 'function' || typeof val === 'symbol') return undefined;
+    if (typeof val !== 'object') return val;
+
+    // Filter out Three.js internal callbacks and circular references
+    if (key === '_onChange' || key === '_onChangeCallback' || key.startsWith('__')) {
+      return undefined;
+    }
+
+    if (seen.has(val)) return undefined;
+    seen.add(val);
+
+    // If it's a Three.js Vector3 or Euler
+    if (val.isVector3 || val.isEuler) {
+      return { x: val.x, y: val.y, z: val.z };
+    }
+    // If it's a Three.js Box3
+    if (val.isBox3) {
+      return {
+        min: { x: val.min.x, y: val.min.y, z: val.min.z },
+        max: { x: val.max.x, y: val.max.y, z: val.max.z }
+      };
+    }
+
+    // If it's a Three.js Line, Mesh, or Object3D
+    if (val.isObject3D) {
+      return {
+        uuid: val.uuid,
+        name: val.name,
+        type: val.type,
+        userData: clean(val.userData),
+        position: { x: val.position.x, y: val.position.y, z: val.position.z }
+      };
+    }
+
+    if (Array.isArray(val)) {
+      return val.map((item) => clean(item)).filter((item) => item !== undefined);
+    }
+
+    const out = {};
+    for (const [k, v] of Object.entries(val)) {
+      if (typeof v === 'function' || typeof v === 'symbol') continue;
+      if (k === '_onChange' || k === '_onChangeCallback') continue;
+      const cleaned = clean(v, k);
+      if (cleaned !== undefined) {
+        out[k] = cleaned;
+      }
+    }
+    return out;
+  }
+
+  return clean(data);
+}
+
+/**
  * Save current workspace session state into IndexedDB
  */
 export async function saveWorkspaceSession(sessionData) {
@@ -42,8 +106,9 @@ export async function saveWorkspaceSession(sessionData) {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
 
+      const safeData = sanitizeForIndexedDB(sessionData) || {};
       const record = {
-        ...sessionData,
+        ...safeData,
         savedAt: Date.now()
       };
 

@@ -14,18 +14,50 @@ export default function StatusBar({
   onToggleSectionView,
   unitSystem = 'imperial',
   activeRadius = null,
+  activeRectDimensions = null,
+  activeLineDimensions = null,
   theme = 'light'
 }) {
   return (
     <footer className="app-statusbar" aria-label="Status Bar">
       <div className="status-left">
-        {/* Dynamic Radius Indicator (Mastercam CAD Mode) */}
+        {/* Dynamic CAD Mode Indicators */}
         {activeRadius !== null && activeRadius !== undefined && (
           <>
             <div className="status-item" style={{ background: 'rgba(2, 132, 199, 0.25)', padding: '2px 6px', borderRadius: '3px' }}>
               <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: 700, fontFamily: 'monospace' }}>
                 Radius = {Number(activeRadius).toFixed(3)}
               </span>
+            </div>
+            <div style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.2)' }} />
+          </>
+        )}
+
+        {activeRectDimensions && (
+          <>
+            <div className="status-item" style={{ background: 'rgba(2, 132, 199, 0.25)', padding: '2px 6px', borderRadius: '3px', gap: '8px', display: 'flex' }}>
+              <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: 700, fontFamily: 'monospace' }}>
+                Width = {Number(activeRectDimensions.width || 0).toFixed(3)}
+              </span>
+              <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: 700, fontFamily: 'monospace' }}>
+                Height = {Number(activeRectDimensions.height || 0).toFixed(3)}
+              </span>
+            </div>
+            <div style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.2)' }} />
+          </>
+        )}
+
+        {activeLineDimensions && (
+          <>
+            <div className="status-item" style={{ background: 'rgba(2, 132, 199, 0.25)', padding: '2px 6px', borderRadius: '3px', gap: '8px', display: 'flex' }}>
+              <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: 700, fontFamily: 'monospace' }}>
+                Length = {Number(activeLineDimensions.length || 0).toFixed(3)}
+              </span>
+              {activeLineDimensions.angle !== undefined && (
+                <span style={{ color: '#38bdf8', fontSize: '11px', fontWeight: 700, fontFamily: 'monospace' }}>
+                  Angle = {Number(activeLineDimensions.angle || 0).toFixed(1)}°
+                </span>
+              )}
             </div>
             <div style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.2)' }} />
           </>

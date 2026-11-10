@@ -245,6 +245,42 @@ export default function App() {
     center: { x: 0, y: 0, z: 0 }
   });
   const [activeCircleId, setActiveCircleId] = useState(null);
+
+  const [rectParams, setRectParams] = useState({
+    width: 80.0,
+    height: 50.0,
+    isWidthLocked: false,
+    isHeightLocked: false,
+    anchorToCenter: false,
+    createSurface: false,
+    activePoint: 1,
+    firstCorner: null,
+    secondCorner: null
+  });
+  const [activeRectId, setActiveRectId] = useState(null);
+
+  const [lineParams, setLineParams] = useState({
+    length: 50.0,
+    angle: 0.0,
+    isLengthLocked: false,
+    isAngleLocked: false,
+    lineType: 'freeform',
+    isTangent: false,
+    lineMethod: 'two_endpoints',
+    activeEndpoint: 1,
+    axisOffset: 0.0,
+    pt1: null,
+    pt2: null
+  });
+  const [activeLineId, setActiveLineId] = useState(null);
+
+  const [arcParams, setArcParams] = useState({
+    radius: 25.0,
+    diameter: 50.0,
+    isLocked: false,
+    entityMethod: 'one_entity'
+  });
+  const [activeArcId, setActiveArcId] = useState(null);
   const [reselectTrigger, setReselectTrigger] = useState(0);
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
   const [surfacesModalTool, setSurfacesModalTool] = useState('plane');
@@ -990,9 +1026,9 @@ export default function App() {
 
   // Initialize first snapshot on mount
   useEffect(() => {
-    if (history.length === 0 && operations.length > 0) {
+    if (history.length === 0) {
       setHistory([{
-        operations: JSON.parse(JSON.stringify(operations)),
+        operations: JSON.parse(JSON.stringify(operations || [])),
         partTransform: { ...partTransform },
         solidsList: [...solidsList],
         customGeometry: [...customGeometry]
@@ -1002,11 +1038,16 @@ export default function App() {
   }, []);
 
   const pushSnapshot = (overrideState = {}) => {
+    const nextCustomGeo = overrideState.customGeometry !== undefined ? overrideState.customGeometry : customGeometry;
+    const nextOps = overrideState.operations !== undefined ? overrideState.operations : operations;
+    const nextPartTransform = overrideState.partTransform !== undefined ? overrideState.partTransform : partTransform;
+    const nextSolids = overrideState.solidsList !== undefined ? overrideState.solidsList : solidsList;
+
     const snapshot = {
-      operations: JSON.parse(JSON.stringify(overrideState.operations || operations)),
-      partTransform: { ...(overrideState.partTransform || partTransform) },
-      solidsList: [...(overrideState.solidsList || solidsList)],
-      customGeometry: [...(overrideState.customGeometry || customGeometry)]
+      operations: JSON.parse(JSON.stringify(nextOps)),
+      partTransform: { ...nextPartTransform },
+      solidsList: [...nextSolids],
+      customGeometry: [...nextCustomGeo]
     };
     setHistory((prev) => {
       const upToCurrent = prev.slice(0, historyIndex + 1);
@@ -1023,7 +1064,26 @@ export default function App() {
         if (snap.operations) setOperations(snap.operations);
         if (snap.partTransform) setPartTransform(snap.partTransform);
         if (snap.solidsList) setSolidsList(snap.solidsList);
-        if (snap.customGeometry) setCustomGeometry(snap.customGeometry);
+        if (snap.customGeometry) {
+          setCustomGeometry(snap.customGeometry);
+          const wireframeCount = (snap.customGeometry || []).filter(
+            (e) =>
+              e?.name?.startsWith('Wireframe_') ||
+              e?.name?.startsWith('Drill_') ||
+              e?.name?.startsWith('Hole_') ||
+              e?.userData?.type === 'line' ||
+              e?.userData?.type === 'circle' ||
+              e?.userData?.type === 'rectangle' ||
+              e?.userData?.type === 'arc'
+          ).length;
+          setLevels((prev) =>
+            prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: wireframeCount } : lvl))
+          );
+        }
+        setActiveCircleId(null);
+        setActiveRectId(null);
+        setActiveLineId(null);
+        setActiveArcId(null);
         setHistoryIndex(newIdx);
         showToast("Undo: Previous CAD/CAM state restored", "info");
       }
@@ -1040,7 +1100,26 @@ export default function App() {
         if (snap.operations) setOperations(snap.operations);
         if (snap.partTransform) setPartTransform(snap.partTransform);
         if (snap.solidsList) setSolidsList(snap.solidsList);
-        if (snap.customGeometry) setCustomGeometry(snap.customGeometry);
+        if (snap.customGeometry) {
+          setCustomGeometry(snap.customGeometry);
+          const wireframeCount = (snap.customGeometry || []).filter(
+            (e) =>
+              e?.name?.startsWith('Wireframe_') ||
+              e?.name?.startsWith('Drill_') ||
+              e?.name?.startsWith('Hole_') ||
+              e?.userData?.type === 'line' ||
+              e?.userData?.type === 'circle' ||
+              e?.userData?.type === 'rectangle' ||
+              e?.userData?.type === 'arc'
+          ).length;
+          setLevels((prev) =>
+            prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: wireframeCount } : lvl))
+          );
+        }
+        setActiveCircleId(null);
+        setActiveRectId(null);
+        setActiveLineId(null);
+        setActiveArcId(null);
         setHistoryIndex(newIdx);
         showToast("Redo: Re-applied CAD/CAM state", "info");
       }
@@ -2807,6 +2886,21 @@ export default function App() {
       }));
       setActiveCircleId(null);
       showToast('Circle Center Point: Click and drag on canvas to draw circle', 'info');
+    } else if (tool === 'rect') {
+      setActiveDrawingTool('rect');
+      setActiveManagerTab('Rectangle');
+      setActiveRectId(null);
+      showToast('Rectangle: Click and drag on canvas to draw rectangle', 'info');
+    } else if (tool === 'line') {
+      setActiveDrawingTool('line');
+      setActiveManagerTab('Line Endp...');
+      setActiveLineId(null);
+      showToast('Line Endpoints: Click and drag on canvas to draw line', 'info');
+    } else if (tool === 'arc_tangent' || tool === 'arctangent') {
+      setActiveDrawingTool('arc_tangent');
+      setActiveManagerTab('Arc Tangent');
+      setActiveArcId(null);
+      showToast('Arc Tangent: Select entity that arc is to be tangent to', 'info');
     } else {
       setActiveDrawingTool(null);
       showToast(`✏️ CAD Sketcher Active: Click & drag on 3D Viewport to draw ${tool.toUpperCase()} (Esc to exit)`, 'info');
@@ -2814,6 +2908,7 @@ export default function App() {
   };
 
   const handleDrawingUpdate = (data) => {
+    if (!data) return;
     if (data.tool === 'circle') {
       setCircleParams((prev) => ({
         ...prev,
@@ -2832,9 +2927,48 @@ export default function App() {
           });
         }, 10);
       }
+    } else if (data.tool === 'rect') {
+      setRectParams((prev) => ({
+        ...prev,
+        width: Number(data.width !== undefined ? data.width : prev.width),
+        height: Number(data.height !== undefined ? data.height : prev.height),
+        firstCorner: data.firstCorner ? { x: data.firstCorner.x, y: data.firstCorner.y, z: data.firstCorner.z } : prev.firstCorner,
+        secondCorner: data.secondCorner ? { x: data.secondCorner.x, y: data.secondCorner.y, z: data.secondCorner.z } : prev.secondCorner
+      }));
+      if (data.completed) {
+        setTimeout(() => {
+          setCustomGeometry((currentList) => {
+            const lastEntity = currentList[currentList.length - 1];
+            if (lastEntity && (lastEntity.userData?.type === 'rectangle' || lastEntity.name?.startsWith('Wireframe_Rect'))) {
+              setActiveRectId(lastEntity.id || lastEntity.uuid || lastEntity.name);
+            }
+            return currentList;
+          });
+        }, 10);
+      }
+    } else if (data.tool === 'line') {
+      setLineParams((prev) => ({
+        ...prev,
+        length: Number(data.length !== undefined ? data.length : prev.length),
+        angle: Number(data.angle !== undefined ? data.angle : prev.angle),
+        pt1: data.pt1 ? { x: data.pt1.x, y: data.pt1.y, z: data.pt1.z } : prev.pt1,
+        pt2: data.pt2 ? { x: data.pt2.x, y: data.pt2.y, z: data.pt2.z } : prev.pt2
+      }));
+      if (data.completed) {
+        setTimeout(() => {
+          setCustomGeometry((currentList) => {
+            const lastEntity = currentList[currentList.length - 1];
+            if (lastEntity && (lastEntity.userData?.type === 'line' || lastEntity.name?.startsWith('Wireframe_Line'))) {
+              setActiveLineId(lastEntity.id || lastEntity.uuid || lastEntity.name);
+            }
+            return currentList;
+          });
+        }, 10);
+      }
     }
   };
 
+  // ----- Circle Handlers -----
   const handleChangeCircleRadius = (newRadius) => {
     setCircleParams((prev) => ({
       ...prev,
@@ -2863,7 +2997,10 @@ export default function App() {
             'G17',
             { color: 0x38bdf8, name: `Wireframe_Circle_R${newRadius.toFixed(1)}` }
           );
-          updatedCircle.id = activeCircleId;
+          if (activeCircleId) {
+            updatedCircle.uuid = activeCircleId;
+            if (updatedCircle.userData) updatedCircle.userData.customId = activeCircleId;
+          }
           const newList = [...prevList];
           newList[targetIndex] = updatedCircle;
           return newList;
@@ -2874,17 +3011,11 @@ export default function App() {
   };
 
   const handleToggleCircleRadiusLock = () => {
-    setCircleParams((prev) => ({
-      ...prev,
-      isLocked: !prev.isLocked
-    }));
+    setCircleParams((prev) => ({ ...prev, isLocked: !prev.isLocked }));
   };
 
   const handleChangeCircleEntityMethod = (method) => {
-    setCircleParams((prev) => ({
-      ...prev,
-      entityMethod: method
-    }));
+    setCircleParams((prev) => ({ ...prev, entityMethod: method }));
   };
 
   const handleReselectCircleCenter = () => {
@@ -2894,15 +3025,17 @@ export default function App() {
 
   const handleApplyCircle = () => {
     if (activeCircleId) {
-      setCustomGeometry((prevList) =>
-        prevList.map((item) => {
+      setCustomGeometry((prevList) => {
+        const next = prevList.map((item) => {
           if ((item.id || item.uuid || item.name) === activeCircleId) {
             if (item.material) item.material.color.setHex(0x1d4ed8);
             return item;
           }
           return item;
-        })
-      );
+        });
+        pushSnapshot({ customGeometry: next });
+        return next;
+      });
       setActiveCircleId(null);
       showToast('Circle committed to Level 10. Ready for next circle.', 'success');
     }
@@ -2918,9 +3051,11 @@ export default function App() {
 
   const handleCancelCircle = () => {
     if (activeCircleId) {
-      setCustomGeometry((prevList) =>
-        prevList.filter((item) => (item.id || item.uuid || item.name) !== activeCircleId)
-      );
+      setCustomGeometry((prevList) => {
+        const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeCircleId);
+        pushSnapshot({ customGeometry: next });
+        return next;
+      });
       setLevels((prev) =>
         prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
       );
@@ -2930,6 +3065,346 @@ export default function App() {
     setActiveDrawingTool(null);
     setActiveManagerTab('Toolpaths');
     showToast('Circle creation cancelled.', 'info');
+  };
+
+  // ----- Rectangle Handlers -----
+  const handleChangeRectWidth = (newWidth) => {
+    setRectParams((prev) => ({ ...prev, width: newWidth }));
+
+    if (activeRectId) {
+      setCustomGeometry((prevList) => {
+        const targetIndex = prevList.findIndex(
+          (item) => (item.id || item.uuid || item.name) === activeRectId
+        );
+        if (targetIndex >= 0) {
+          const oldEntity = prevList[targetIndex];
+          const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
+          const cx = Array.isArray(center) ? center[0] : (center.x || 0);
+          const cz = Array.isArray(center) ? center[1] : (center.z || 0);
+          const y = oldEntity.position?.y || center.y || 0;
+          const currentHeight = Math.abs(rectParams.height || oldEntity.userData?.depth || 50);
+          const absW = Math.max(1, Math.abs(newWidth));
+
+          const updatedRect = createWireframeRect(
+            absW,
+            currentHeight,
+            y,
+            0,
+            [cx, cz],
+            { color: 0x38bdf8, name: `Wireframe_Rect_${Math.round(absW)}x${Math.round(currentHeight)}` }
+          );
+          updatedRect.uuid = activeRectId;
+          if (updatedRect.userData) updatedRect.userData.customId = activeRectId;
+
+          const newList = [...prevList];
+          newList[targetIndex] = updatedRect;
+          return newList;
+        }
+        return prevList;
+      });
+    }
+  };
+
+  const handleChangeRectHeight = (newHeight) => {
+    setRectParams((prev) => ({ ...prev, height: newHeight }));
+
+    if (activeRectId) {
+      setCustomGeometry((prevList) => {
+        const targetIndex = prevList.findIndex(
+          (item) => (item.id || item.uuid || item.name) === activeRectId
+        );
+        if (targetIndex >= 0) {
+          const oldEntity = prevList[targetIndex];
+          const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
+          const cx = Array.isArray(center) ? center[0] : (center.x || 0);
+          const cz = Array.isArray(center) ? center[1] : (center.z || 0);
+          const y = oldEntity.position?.y || center.y || 0;
+          const currentWidth = Math.abs(rectParams.width || oldEntity.userData?.width || 80);
+          const absH = Math.max(1, Math.abs(newHeight));
+
+          const updatedRect = createWireframeRect(
+            currentWidth,
+            absH,
+            y,
+            0,
+            [cx, cz],
+            { color: 0x38bdf8, name: `Wireframe_Rect_${Math.round(currentWidth)}x${Math.round(absH)}` }
+          );
+          updatedRect.uuid = activeRectId;
+          if (updatedRect.userData) updatedRect.userData.customId = activeRectId;
+
+          const newList = [...prevList];
+          newList[targetIndex] = updatedRect;
+          return newList;
+        }
+        return prevList;
+      });
+    }
+  };
+
+  const handleToggleRectWidthLock = () => {
+    setRectParams((prev) => ({ ...prev, isWidthLocked: !prev.isWidthLocked }));
+  };
+
+  const handleToggleRectHeightLock = () => {
+    setRectParams((prev) => ({ ...prev, isHeightLocked: !prev.isHeightLocked }));
+  };
+
+  const handleToggleRectAnchorToCenter = () => {
+    setRectParams((prev) => ({ ...prev, anchorToCenter: !prev.anchorToCenter }));
+  };
+
+  const handleToggleRectCreateSurface = () => {
+    setRectParams((prev) => ({ ...prev, createSurface: !prev.createSurface }));
+  };
+
+  const handleSelectRectPoint = (pointNum) => {
+    setRectParams((prev) => ({ ...prev, activePoint: pointNum }));
+    setReselectTrigger((prev) => prev + 1);
+  };
+
+  const handleApplyRect = () => {
+    if (activeRectId) {
+      setCustomGeometry((prevList) => {
+        const next = prevList.map((item) => {
+          if ((item.id || item.uuid || item.name) === activeRectId) {
+            if (item.material) item.material.color.setHex(0x1d4ed8);
+            return item;
+          }
+          return item;
+        });
+        pushSnapshot({ customGeometry: next });
+        return next;
+      });
+      setActiveRectId(null);
+      showToast('Rectangle committed to Level 10. Ready for next rectangle.', 'success');
+    }
+  };
+
+  const handleOkRect = () => {
+    handleApplyRect();
+    setIsSketchModeActive(false);
+    setActiveDrawingTool(null);
+    setActiveManagerTab('Toolpaths');
+    showToast('Rectangle accepted on Level 10.', 'success');
+  };
+
+  const handleCancelRect = () => {
+    if (activeRectId) {
+      setCustomGeometry((prevList) => {
+        const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeRectId);
+        pushSnapshot({ customGeometry: next });
+        return next;
+      });
+      setLevels((prev) =>
+        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
+      );
+    }
+    setActiveRectId(null);
+    setIsSketchModeActive(false);
+    setActiveDrawingTool(null);
+    setActiveManagerTab('Toolpaths');
+    showToast('Rectangle creation cancelled.', 'info');
+  };
+
+  // ----- Line Endpoints Handlers -----
+  const handleChangeLineLength = (newLen) => {
+    setLineParams((prev) => ({ ...prev, length: newLen }));
+    if (activeLineId) {
+      setCustomGeometry((prevList) => {
+        const targetIndex = prevList.findIndex(
+          (item) => (item.id || item.uuid || item.name) === activeLineId
+        );
+        if (targetIndex >= 0) {
+          const oldEntity = prevList[targetIndex];
+          const p1 = oldEntity.userData?.p1 || { x: 0, y: 0, z: 0 };
+          const angleRad = ((lineParams.angle || 0) * Math.PI) / 180;
+          const p2 = {
+            x: p1.x + Math.cos(angleRad) * newLen,
+            y: p1.y || 0,
+            z: p1.z - Math.sin(angleRad) * newLen
+          };
+          const updatedLine = createWireframeLine(
+            [p1.x, p1.y, p1.z],
+            [p2.x, p2.y, p2.z],
+            { color: 0x38bdf8, name: `Wireframe_Line_L${newLen.toFixed(1)}` }
+          );
+          updatedLine.uuid = activeLineId;
+          if (updatedLine.userData) updatedLine.userData.customId = activeLineId;
+          const newList = [...prevList];
+          newList[targetIndex] = updatedLine;
+          return newList;
+        }
+        return prevList;
+      });
+    }
+  };
+
+  const handleChangeLineAngle = (newAngle) => {
+    setLineParams((prev) => ({ ...prev, angle: newAngle }));
+    if (activeLineId) {
+      setCustomGeometry((prevList) => {
+        const targetIndex = prevList.findIndex(
+          (item) => (item.id || item.uuid || item.name) === activeLineId
+        );
+        if (targetIndex >= 0) {
+          const oldEntity = prevList[targetIndex];
+          const p1 = oldEntity.userData?.p1 || { x: 0, y: 0, z: 0 };
+          const currentLen = lineParams.length || 50;
+          const angleRad = ((newAngle || 0) * Math.PI) / 180;
+          const p2 = {
+            x: p1.x + Math.cos(angleRad) * currentLen,
+            y: p1.y || 0,
+            z: p1.z - Math.sin(angleRad) * currentLen
+          };
+          const updatedLine = createWireframeLine(
+            [p1.x, p1.y, p1.z],
+            [p2.x, p2.y, p2.z],
+            { color: 0x38bdf8, name: `Wireframe_Line_L${currentLen.toFixed(1)}` }
+          );
+          updatedLine.uuid = activeLineId;
+          if (updatedLine.userData) updatedLine.userData.customId = activeLineId;
+          const newList = [...prevList];
+          newList[targetIndex] = updatedLine;
+          return newList;
+        }
+        return prevList;
+      });
+    }
+  };
+
+  const handleToggleLineLengthLock = () => {
+    setLineParams((prev) => ({ ...prev, isLengthLocked: !prev.isLengthLocked }));
+  };
+
+  const handleToggleLineAngleLock = () => {
+    setLineParams((prev) => ({ ...prev, isAngleLocked: !prev.isAngleLocked }));
+  };
+
+  const handleChangeLineType = (lineType) => {
+    setLineParams((prev) => ({ ...prev, lineType }));
+  };
+
+  const handleToggleLineTangent = () => {
+    setLineParams((prev) => ({ ...prev, isTangent: !prev.isTangent }));
+  };
+
+  const handleChangeLineMethod = (lineMethod) => {
+    setLineParams((prev) => ({ ...prev, lineMethod }));
+  };
+
+  const handleSelectLineEndpoint = (endpointNum) => {
+    setLineParams((prev) => ({ ...prev, activeEndpoint: endpointNum }));
+    setReselectTrigger((prev) => prev + 1);
+  };
+
+  const handleChangeLineAxisOffset = (axisOffset) => {
+    setLineParams((prev) => ({ ...prev, axisOffset }));
+  };
+
+  const handleApplyLine = () => {
+    if (activeLineId) {
+      setCustomGeometry((prevList) => {
+        const next = prevList.map((item) => {
+          if ((item.id || item.uuid || item.name) === activeLineId) {
+            if (item.material) item.material.color.setHex(0x1d4ed8);
+            return item;
+          }
+          return item;
+        });
+        pushSnapshot({ customGeometry: next });
+        return next;
+      });
+      setActiveLineId(null);
+      showToast('Line committed to Level 10. Ready for next line.', 'success');
+    }
+  };
+
+  const handleOkLine = () => {
+    handleApplyLine();
+    setIsSketchModeActive(false);
+    setActiveDrawingTool(null);
+    setActiveManagerTab('Toolpaths');
+    showToast('Line Endpoints accepted on Level 10.', 'success');
+  };
+
+  const handleCancelLine = () => {
+    if (activeLineId) {
+      setCustomGeometry((prevList) => {
+        const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeLineId);
+        pushSnapshot({ customGeometry: next });
+        return next;
+      });
+      setLevels((prev) =>
+        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
+      );
+    }
+    setActiveLineId(null);
+    setIsSketchModeActive(false);
+    setActiveDrawingTool(null);
+    setActiveManagerTab('Toolpaths');
+    showToast('Line creation cancelled.', 'info');
+  };
+
+  // ----- Arc Tangent Handlers -----
+  const handleChangeArcRadius = (newRadius) => {
+    setArcParams((prev) => ({
+      ...prev,
+      radius: newRadius,
+      diameter: newRadius * 2
+    }));
+  };
+
+  const handleToggleArcLock = () => {
+    setArcParams((prev) => ({ ...prev, isLocked: !prev.isLocked }));
+  };
+
+  const handleChangeArcEntityMethod = (entityMethod) => {
+    setArcParams((prev) => ({ ...prev, entityMethod }));
+  };
+
+  const handleApplyArc = () => {
+    if (activeArcId) {
+      setCustomGeometry((prevList) => {
+        const next = prevList.map((item) => {
+          if ((item.id || item.uuid || item.name) === activeArcId) {
+            if (item.material) item.material.color.setHex(0x1d4ed8);
+            return item;
+          }
+          return item;
+        });
+        pushSnapshot({ customGeometry: next });
+        return next;
+      });
+      setActiveArcId(null);
+      showToast('Arc Tangent committed to Level 10.', 'success');
+    }
+  };
+
+  const handleOkArc = () => {
+    handleApplyArc();
+    setIsSketchModeActive(false);
+    setActiveDrawingTool(null);
+    setActiveManagerTab('Toolpaths');
+    showToast('Arc Tangent accepted on Level 10.', 'success');
+  };
+
+  const handleCancelArc = () => {
+    if (activeArcId) {
+      setCustomGeometry((prevList) => {
+        const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeArcId);
+        pushSnapshot({ customGeometry: next });
+        return next;
+      });
+      setLevels((prev) =>
+        prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
+      );
+    }
+    setActiveArcId(null);
+    setIsSketchModeActive(false);
+    setActiveDrawingTool(null);
+    setActiveManagerTab('Toolpaths');
+    showToast('Arc Tangent creation cancelled.', 'info');
   };
 
   const handleGenerateToolpathFromSketch = () => {
@@ -3103,7 +3578,7 @@ export default function App() {
   };
 
   const handleAddCustomEntity = (entity) => {
-    // If drawing circles and another circle was active, commit previous circle to dark blue (Image 4)
+    // If drawing and another entity was active, commit previous entity to dark blue
     if (activeDrawingTool === 'circle' && activeCircleId) {
       setCustomGeometry((prev) =>
         prev.map((item) => {
@@ -3114,13 +3589,45 @@ export default function App() {
         })
       );
     }
-
-    if (activeDrawingTool === 'circle') {
-      setActiveCircleId(entity.id || entity.uuid || entity.name);
+    if (activeDrawingTool === 'rect' && activeRectId) {
+      setCustomGeometry((prev) =>
+        prev.map((item) => {
+          if ((item.id || item.uuid || item.name) === activeRectId) {
+            if (item.material) item.material.color.setHex(0x1d4ed8);
+          }
+          return item;
+        })
+      );
+    }
+    if (activeDrawingTool === 'line' && activeLineId) {
+      setCustomGeometry((prev) =>
+        prev.map((item) => {
+          if ((item.id || item.uuid || item.name) === activeLineId) {
+            if (item.material) item.material.color.setHex(0x1d4ed8);
+          }
+          return item;
+        })
+      );
     }
 
-    setCustomGeometry((prev) => [...prev, entity]);
-    const isWireframe = entity.name?.startsWith('Wireframe_') || entity.name?.startsWith('Drill_') || entity.name?.startsWith('Hole_') || entity.userData?.type === 'line' || entity.userData?.type === 'circle' || entity.userData?.type === 'arc' || entity.userData?.type === 'spline';
+    const entId = entity.id || entity.uuid || entity.name;
+    if (activeDrawingTool === 'circle') {
+      setActiveCircleId(entId);
+    } else if (activeDrawingTool === 'rect') {
+      setActiveRectId(entId);
+    } else if (activeDrawingTool === 'line') {
+      setActiveLineId(entId);
+    } else if (activeDrawingTool === 'arc_tangent' || activeDrawingTool === 'arctangent') {
+      setActiveArcId(entId);
+    }
+
+    setCustomGeometry((prev) => {
+      const next = [...prev, entity];
+      pushSnapshot({ customGeometry: next });
+      return next;
+    });
+
+    const isWireframe = entity.name?.startsWith('Wireframe_') || entity.name?.startsWith('Drill_') || entity.name?.startsWith('Hole_') || entity.userData?.type === 'line' || entity.userData?.type === 'circle' || entity.userData?.type === 'arc' || entity.userData?.type === 'spline' || entity.userData?.type === 'rectangle';
     if (isWireframe) {
       setLevels((prev) =>
         prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: lvl.entities + 1 } : lvl))
@@ -3129,8 +3636,12 @@ export default function App() {
   };
 
   const handleRemoveCustomEntity = (target) => {
-    setCustomGeometry((prev) => prev.filter((item) => item !== target));
-    const isWireframe = target?.name?.startsWith('Wireframe_') || target?.name?.startsWith('Drill_') || target?.name?.startsWith('Hole_');
+    setCustomGeometry((prev) => {
+      const next = prev.filter((item) => item !== target && (item.id || item.uuid || item.name) !== (target?.id || target?.uuid || target?.name));
+      pushSnapshot({ customGeometry: next });
+      return next;
+    });
+    const isWireframe = target?.name?.startsWith('Wireframe_') || target?.name?.startsWith('Drill_') || target?.name?.startsWith('Hole_') || target?.userData?.type === 'line' || target?.userData?.type === 'circle' || target?.userData?.type === 'arc' || target?.userData?.type === 'rectangle';
     if (isWireframe) {
       setLevels((prev) =>
         prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: Math.max(0, lvl.entities - 1) } : lvl))
@@ -3143,14 +3654,20 @@ export default function App() {
   };
 
   const handleClearWireframes = () => {
-    setCustomGeometry((prev) =>
-      prev.filter(
+    setCustomGeometry((prev) => {
+      const next = prev.filter(
         (item) =>
           !item.name?.startsWith('Wireframe_') &&
           !item.name?.startsWith('Drill_') &&
-          !item.name?.startsWith('Hole_')
-      )
-    );
+          !item.name?.startsWith('Hole_') &&
+          item.userData?.type !== 'line' &&
+          item.userData?.type !== 'circle' &&
+          item.userData?.type !== 'rectangle' &&
+          item.userData?.type !== 'arc'
+      );
+      pushSnapshot({ customGeometry: next });
+      return next;
+    });
     setLevels((prev) =>
       prev.map((lvl) => (lvl.id === 10 ? { ...lvl, entities: 0 } : lvl))
     );
@@ -3612,6 +4129,37 @@ export default function App() {
           onApplyCircle={handleApplyCircle}
           onOkCircle={handleOkCircle}
           onCancelCircle={handleCancelCircle}
+          rectParams={rectParams}
+          onChangeRectWidth={handleChangeRectWidth}
+          onChangeRectHeight={handleChangeRectHeight}
+          onToggleRectWidthLock={handleToggleRectWidthLock}
+          onToggleRectHeightLock={handleToggleRectHeightLock}
+          onToggleRectAnchorToCenter={handleToggleRectAnchorToCenter}
+          onToggleRectCreateSurface={handleToggleRectCreateSurface}
+          onSelectRectPoint={handleSelectRectPoint}
+          onApplyRect={handleApplyRect}
+          onOkRect={handleOkRect}
+          onCancelRect={handleCancelRect}
+          lineParams={lineParams}
+          onChangeLineLength={handleChangeLineLength}
+          onChangeLineAngle={handleChangeLineAngle}
+          onToggleLineLengthLock={handleToggleLineLengthLock}
+          onToggleLineAngleLock={handleToggleLineAngleLock}
+          onChangeLineType={handleChangeLineType}
+          onToggleLineTangent={handleToggleLineTangent}
+          onChangeLineMethod={handleChangeLineMethod}
+          onSelectLineEndpoint={handleSelectLineEndpoint}
+          onChangeLineAxisOffset={handleChangeLineAxisOffset}
+          onApplyLine={handleApplyLine}
+          onOkLine={handleOkLine}
+          onCancelLine={handleCancelLine}
+          arcParams={arcParams}
+          onChangeArcRadius={handleChangeArcRadius}
+          onToggleArcLock={handleToggleArcLock}
+          onChangeArcEntityMethod={handleChangeArcEntityMethod}
+          onApplyArc={handleApplyArc}
+          onOkArc={handleOkArc}
+          onCancelArc={handleCancelArc}
         />
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
@@ -3681,6 +4229,17 @@ export default function App() {
                 onChangeRenderMode={setRenderMode}
                 activeDrawingRadius={circleParams.radius}
                 isRadiusLocked={circleParams.isLocked}
+                activeDrawingWidth={rectParams.width}
+                isWidthLocked={rectParams.isWidthLocked}
+                activeDrawingHeight={rectParams.height}
+                isHeightLocked={rectParams.isHeightLocked}
+                rectAnchorToCenter={rectParams.anchorToCenter}
+                rectCreateSurface={rectParams.createSurface}
+                activeDrawingLength={lineParams.length}
+                isLengthLocked={lineParams.isLengthLocked}
+                activeDrawingAngle={lineParams.angle}
+                isAngleLocked={lineParams.isAngleLocked}
+                lineType={lineParams.lineType}
                 onDrawingUpdate={handleDrawingUpdate}
                 reselectTrigger={reselectTrigger}
               />
@@ -3732,6 +4291,17 @@ export default function App() {
             onChangeRenderMode={setRenderMode}
             activeDrawingRadius={circleParams.radius}
             isRadiusLocked={circleParams.isLocked}
+            activeDrawingWidth={rectParams.width}
+            isWidthLocked={rectParams.isWidthLocked}
+            activeDrawingHeight={rectParams.height}
+            isHeightLocked={rectParams.isHeightLocked}
+            rectAnchorToCenter={rectParams.anchorToCenter}
+            rectCreateSurface={rectParams.createSurface}
+            activeDrawingLength={lineParams.length}
+            isLengthLocked={lineParams.isLengthLocked}
+            activeDrawingAngle={lineParams.angle}
+            isAngleLocked={lineParams.isAngleLocked}
+            lineType={lineParams.lineType}
             onDrawingUpdate={handleDrawingUpdate}
             reselectTrigger={reselectTrigger}
           />
@@ -3760,7 +4330,9 @@ export default function App() {
         isSectionView={clippingPlane?.enabled}
         onToggleSectionView={() => setClippingPlane(cp => ({ ...cp, enabled: !cp?.enabled }))}
         unitSystem={unitSystem}
-        activeRadius={isSketchModeActive && (sketchTool === 'circle' || activeDrawingTool === 'circle') ? circleParams.radius : null}
+        activeRadius={isSketchModeActive && (sketchTool === 'circle' || activeDrawingTool === 'circle' || sketchTool === 'arc_tangent' || activeDrawingTool === 'arc_tangent') ? (sketchTool === 'arc_tangent' ? arcParams.radius : circleParams.radius) : null}
+        activeRectDimensions={isSketchModeActive && (sketchTool === 'rect' || activeDrawingTool === 'rect') ? { width: rectParams.width, height: rectParams.height } : null}
+        activeLineDimensions={isSketchModeActive && (sketchTool === 'line' || activeDrawingTool === 'line') ? { length: lineParams.length, angle: lineParams.angle } : null}
         theme={theme}
       />
 

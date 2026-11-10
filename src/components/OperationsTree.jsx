@@ -8,6 +8,9 @@ import {
 } from 'lucide-react';
 import ToolpathsContextMenu from './ToolpathsContextMenu';
 import CircleCenterPointPanel from './CircleCenterPointPanel';
+import RectanglePanel from './RectanglePanel';
+import LineEndpointsPanel from './LineEndpointsPanel';
+import ArcTangentPanel from './ArcTangentPanel';
 
 export default function OperationsTree({
   operations = [],
@@ -77,7 +80,41 @@ export default function OperationsTree({
   onReselectCircleCenter,
   onApplyCircle,
   onOkCircle,
-  onCancelCircle
+  onCancelCircle,
+  // Rectangle Props
+  rectParams = { width: 80, height: 50, isWidthLocked: false, isHeightLocked: false, anchorToCenter: false, createSurface: false, activePoint: 1 },
+  onChangeRectWidth,
+  onChangeRectHeight,
+  onToggleRectWidthLock,
+  onToggleRectHeightLock,
+  onToggleRectAnchorToCenter,
+  onToggleRectCreateSurface,
+  onSelectRectPoint,
+  onApplyRect,
+  onOkRect,
+  onCancelRect,
+  // Line Endpoints Props
+  lineParams = { length: 50, angle: 0, isLengthLocked: false, isAngleLocked: false, lineType: 'freeform', isTangent: false, lineMethod: 'two_endpoints', activeEndpoint: 1, axisOffset: 0 },
+  onChangeLineLength,
+  onChangeLineAngle,
+  onToggleLineLengthLock,
+  onToggleLineAngleLock,
+  onChangeLineType,
+  onToggleLineTangent,
+  onChangeLineMethod,
+  onSelectLineEndpoint,
+  onChangeLineAxisOffset,
+  onApplyLine,
+  onOkLine,
+  onCancelLine,
+  // Arc Tangent Props
+  arcParams = { radius: 25, isLocked: false, entityMethod: 'one_entity' },
+  onChangeArcRadius,
+  onToggleArcLock,
+  onChangeArcEntityMethod,
+  onApplyArc,
+  onOkArc,
+  onCancelArc
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
   const currentTab = activeManagerTab || localTab;
@@ -92,7 +129,16 @@ export default function OperationsTree({
     if (activeDrawingTool === 'circle') {
       setLocalTab('Circle Cent...');
       if (onSelectManagerTab) onSelectManagerTab('Circle Cent...');
-    } else if (localTab === 'Circle Cent...') {
+    } else if (activeDrawingTool === 'rect') {
+      setLocalTab('Rectangle');
+      if (onSelectManagerTab) onSelectManagerTab('Rectangle');
+    } else if (activeDrawingTool === 'line') {
+      setLocalTab('Line Endp...');
+      if (onSelectManagerTab) onSelectManagerTab('Line Endp...');
+    } else if (activeDrawingTool === 'arctangent' || activeDrawingTool === 'arc') {
+      setLocalTab('Arc Tangent');
+      if (onSelectManagerTab) onSelectManagerTab('Arc Tangent');
+    } else if (['Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent'].includes(localTab)) {
       setLocalTab('Toolpaths');
       if (onSelectManagerTab) onSelectManagerTab('Toolpaths');
     }
@@ -218,9 +264,18 @@ export default function OperationsTree({
 
   // Tabs matching Mastercam screenshot
   const tabs = useMemo(() => {
-    const list = ['Toolpaths', 'Planes', 'Solids', 'Levels'];
+    const list = ['Toolpaths', 'Solids', 'Planes', 'Levels'];
     if (activeDrawingTool === 'circle' || currentTab === 'Circle Cent...') {
       list.push('Circle Cent...');
+    }
+    if (activeDrawingTool === 'rect' || currentTab === 'Rectangle') {
+      list.push('Rectangle');
+    }
+    if (activeDrawingTool === 'line' || currentTab === 'Line Endp...') {
+      list.push('Line Endp...');
+    }
+    if (activeDrawingTool === 'arctangent' || activeDrawingTool === 'arc' || currentTab === 'Arc Tangent') {
+      list.push('Arc Tangent');
     }
     return list;
   }, [activeDrawingTool, currentTab]);
@@ -448,6 +503,68 @@ export default function OperationsTree({
             onApply={onApplyCircle}
             onOk={onOkCircle}
             onCancel={onCancelCircle}
+          />
+        </div>
+      ) : currentTab === 'Rectangle' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <RectanglePanel
+            width={rectParams?.width || 80}
+            height={rectParams?.height || 50}
+            onChangeWidth={onChangeRectWidth}
+            onChangeHeight={onChangeRectHeight}
+            isWidthLocked={rectParams?.isWidthLocked || false}
+            isHeightLocked={rectParams?.isHeightLocked || false}
+            onToggleWidthLock={onToggleRectWidthLock}
+            onToggleHeightLock={onToggleRectHeightLock}
+            anchorToCenter={rectParams?.anchorToCenter || false}
+            onToggleAnchorToCenter={onToggleRectAnchorToCenter}
+            createSurface={rectParams?.createSurface || false}
+            onToggleCreateSurface={onToggleRectCreateSurface}
+            activePoint={rectParams?.activePoint || 1}
+            onSelectPoint={onSelectRectPoint}
+            onApply={onApplyRect}
+            onOk={onOkRect}
+            onCancel={onCancelRect}
+          />
+        </div>
+      ) : currentTab === 'Line Endp...' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <LineEndpointsPanel
+            length={lineParams?.length || 50}
+            angle={lineParams?.angle || 0}
+            onChangeLength={onChangeLineLength}
+            onChangeAngle={onChangeLineAngle}
+            isLengthLocked={lineParams?.isLengthLocked || false}
+            isAngleLocked={lineParams?.isAngleLocked || false}
+            onToggleLengthLock={onToggleLineLengthLock}
+            onToggleAngleLock={onToggleLineAngleLock}
+            lineType={lineParams?.lineType || 'freeform'}
+            onChangeLineType={onChangeLineType}
+            isTangent={lineParams?.isTangent || false}
+            onToggleTangent={onToggleLineTangent}
+            lineMethod={lineParams?.lineMethod || 'two_endpoints'}
+            onChangeLineMethod={onChangeLineMethod}
+            activeEndpoint={lineParams?.activeEndpoint || 1}
+            onSelectEndpoint={onSelectLineEndpoint}
+            axisOffset={lineParams?.axisOffset || 0}
+            onChangeAxisOffset={onChangeLineAxisOffset}
+            onApply={onApplyLine}
+            onOk={onOkLine}
+            onCancel={onCancelLine}
+          />
+        </div>
+      ) : currentTab === 'Arc Tangent' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <ArcTangentPanel
+            radius={arcParams?.radius || 25}
+            onChangeRadius={onChangeArcRadius}
+            isLocked={arcParams?.isLocked || false}
+            onToggleLock={onToggleArcLock}
+            entityMethod={arcParams?.entityMethod || 'one_entity'}
+            onChangeEntityMethod={onChangeArcEntityMethod}
+            onApply={onApplyArc}
+            onOk={onOkArc}
+            onCancel={onCancelArc}
           />
         </div>
       ) : (

@@ -1021,8 +1021,8 @@ export default function RibbonBar({
                     <span>Arc 3 Points</span>
                   </button>
                   <button
-                    className="ribbon-btn-small"
-                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('arctangent') : onAddWireframe('circle')}
+                    className={`ribbon-btn-small ${isSketchModeActive && (sketchTool === 'arc_tangent' || sketchTool === 'arctangent') ? 'active' : ''}`}
+                    onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('arc_tangent') : (onOpenWireframeModal && onOpenWireframeModal('arctangent'))}
                     title="Arc Tangent - Create circular arc tangent to two curves"
                   >
                     <Disc size={13} color="#0284c7" />
