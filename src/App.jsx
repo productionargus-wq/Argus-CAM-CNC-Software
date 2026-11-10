@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box } from 'lucide-react';
 import TitleBar from './components/TitleBar';
 import RibbonBar from './components/RibbonBar';
