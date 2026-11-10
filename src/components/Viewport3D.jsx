@@ -13,7 +13,9 @@ import {
   snapToGrid,
   snapToEntityPoints,
   createGhostPreview,
-  createSnapIndicator
+  createSnapIndicator,
+  computeRectPlacement,
+  computeLineEnd
 } from '../utils/cadDrawingEngine';
 import {
   generateFacingToolpath,
@@ -33,7 +35,8 @@ import {
   buildToolpathMeshes,
   createToolAssembly3D,
   compileBackplotTrajectory,
-  sampleTrajectoryAtT
+  sampleTrajectoryAtT,
+  buildContourParamsFromOp
 } from '../utils/toolpathEngine';
 import {
   buildCPlaneHelperGroup,
@@ -213,7 +216,10 @@ export default function Viewport3D({
   const orthoLockRef = useRef(false);
   const customGeometryRef = useRef(customGeometry);
   const onAddCustomEntityRef = useRef(onAddCustomEntity);
+  const partTopYRef = useRef(partMetrics?.box?.max?.y ?? 0);
+  const renderLockedPreviewAtRef = useRef(null);
 
+  useEffect(() => { partTopYRef.current = partMetrics?.box?.max?.y ?? 0; }, [partMetrics]);
   useEffect(() => { activeDrawingRadiusRef.current = activeDrawingRadius; }, [activeDrawingRadius]);
   useEffect(() => { isRadiusLockedRef.current = isRadiusLocked; }, [isRadiusLocked]);
   useEffect(() => { activeDrawingWidthRef.current = activeDrawingWidth; }, [activeDrawingWidth]);
@@ -228,6 +234,105 @@ export default function Viewport3D({
   useEffect(() => { isAngleLockedRef.current = isAngleLocked; }, [isAngleLocked]);
   useEffect(() => { lineTypeRef.current = lineType; }, [lineType]);
   useEffect(() => { onDrawingUpdateRef.current = onDrawingUpdate; }, [onDrawingUpdate]);
+
+  const renderLockedPreviewAt = (basePt, opts = {}) => {
+    if (!isSketchModeRef.current || !sketchGhostGroupRef.current) return;
+    const { isCursorHover = false } = opts;
+    const tool = activeSketchToolRef.current;
+    const group = sketchGhostGroupRef.current;
+
+    if (tool === 'rect') {
+      const lw = isWidthLockedRef.current && Number(activeDrawingWidthRef.current) > 0
+        ? Number(activeDrawingWidthRef.current)
+        : null;
+      const lh = isHeightLockedRef.current && Number(activeDrawingHeightRef.current) > 0
+        ? Number(activeDrawingHeightRef.current)
+        : null;
+      if (!lw || !lh) {
+        if (!sketchAnchorRef.current) group.clear();
+        return;
+      }
+      group.clear();
+      group.add(createGhostPreview('rect', basePt, basePt, {
+        anchorToCenter: rectAnchorToCenterRef.current,
+        createSurface: rectCreateSurfaceRef.current,
+        lockedWidth: lw,
+        lockedHeight: lh
+      }));
+      setDimensionFeedback(`W: ${lw.toFixed(2)} mm, H: ${lh.toFixed(2)} mm`);
+      setSketchPromptText(
+        sketchAnchorRef.current
+          ? 'Click canvas or OK to place rectangle'
+          : isCursorHover
+            ? `Click to place ${lw} × ${lh} mm rectangle`
+            : `Click canvas to place ${lw} × ${lh} mm, or click OK for (0, 0)`
+      );
+    } else if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
+      const lr = isRadiusLockedRef.current && Number(activeDrawingRadiusRef.current) > 0
+        ? Number(activeDrawingRadiusRef.current)
+        : null;
+      if (!lr) {
+        if (!sketchAnchorRef.current) group.clear();
+        return;
+      }
+      group.clear();
+      group.add(createGhostPreview(tool, basePt, basePt, { lockedRadius: lr }));
+      setDimensionFeedback(`R: ${lr.toFixed(2)} mm (Ø ${(lr * 2).toFixed(2)} mm)`);
+      setSketchPromptText(
+        isCursorHover
+          ? `Click to place Ø ${(lr * 2).toFixed(1)} mm circle`
+          : `Click canvas to place Ø ${(lr * 2).toFixed(1)} mm circle, or OK for (0, 0)`
+      );
+    } else if (tool === 'line') {
+      const ll = isLengthLockedRef.current && Number(activeDrawingLengthRef.current) > 0
+        ? Number(activeDrawingLengthRef.current)
+        : null;
+      const la = isAngleLockedRef.current && activeDrawingAngleRef.current !== null && activeDrawingAngleRef.current !== undefined
+        ? Number(activeDrawingAngleRef.current)
+        : null;
+      if (!ll || la === null) {
+        if (!sketchAnchorRef.current) group.clear();
+        return;
+      }
+      group.clear();
+      group.add(createGhostPreview('line', basePt, basePt, {
+        lineType: lineTypeRef.current,
+        lockedLength: ll,
+        lockedAngle: la
+      }));
+      setDimensionFeedback(`L: ${ll.toFixed(2)} mm, ∠ ${la.toFixed(1)}°`);
+      setSketchPromptText(
+        isCursorHover
+          ? `Click to place ${ll} mm line`
+          : `Click canvas to place ${ll} mm line, or OK for (0, 0)`
+      );
+    }
+  };
+  renderLockedPreviewAtRef.current = renderLockedPreviewAt;
+
+  // Live preview immediately when user types locked dimensions in the left panel
+  useEffect(() => {
+    if (!isSketchModeActive) return;
+    const basePt = sketchAnchorRef.current || new THREE.Vector3(0, partMetrics?.box?.max?.y ?? 0, 0);
+    renderLockedPreviewAt(basePt, { isCursorHover: false });
+  }, [
+    isSketchModeActive,
+    sketchTool,
+    activeDrawingWidth,
+    activeDrawingHeight,
+    isWidthLocked,
+    isHeightLocked,
+    rectAnchorToCenter,
+    rectCreateSurface,
+    activeDrawingRadius,
+    isRadiusLocked,
+    activeDrawingLength,
+    activeDrawingAngle,
+    isLengthLocked,
+    isAngleLocked,
+    lineType,
+    partMetrics?.box?.max?.y
+  ]);
 
   useEffect(() => {
     if (reselectTrigger > 0 || undoTrigger > 0) {
@@ -385,15 +490,17 @@ export default function Viewport3D({
     scene.add(customGeoGroup);
     customGeoGroupRef.current = customGeoGroup;
 
-    // Interactive Sketch Ghost & Snap Indicator Groups
+    // Interactive Sketch Ghost & Snap Indicator Groups (sibling of customGeoGroup so clearing customGeometry never detaches them)
     const sketchGhostGroup = new THREE.Group();
     sketchGhostGroup.name = "Sketch_Ghost_Group";
-    customGeoGroup.add(sketchGhostGroup);
+    sketchGhostGroup.position.set(0, 49, 0);
+    scene.add(sketchGhostGroup);
     sketchGhostGroupRef.current = sketchGhostGroup;
 
     const snapIndicatorGroup = new THREE.Group();
     snapIndicatorGroup.name = "Snap_Indicator_Group";
-    customGeoGroup.add(snapIndicatorGroup);
+    snapIndicatorGroup.position.set(0, 49, 0);
+    scene.add(snapIndicatorGroup);
     snapIndicatorGroupRef.current = snapIndicatorGroup;
 
     // Drafting Dimension Callouts Group
@@ -440,6 +547,121 @@ export default function Viewport3D({
     let prevMouseY = 0;
     let spherical = new THREE.Spherical(340, Math.PI / 3.4, Math.PI / 4);
 
+    const getDefaultPromptForTool = (tool) => (
+      tool === 'rect' ? 'Select position of first corner' :
+      tool === 'line' ? 'Specify first endpoint' :
+      tool === 'arc_tangent' ? 'Select the entity that the arc is to be tangent to' :
+      'Enter the center point'
+    );
+
+    const resolveSnappedPoint = (e) => {
+      const localPt = getSketchIntersection(e);
+      if (!localPt) return null;
+      let finalPt = localPt;
+      let snapResult = { snapped: false, point: localPt, type: null };
+      if (objectSnapRef.current) {
+        snapResult = snapToEntityPoints(localPt, customGeometryRef.current, 5.0);
+      }
+      if (snapResult.snapped) {
+        finalPt = snapResult.point;
+      } else if (gridSnapRef.current) {
+        finalPt = snapToGrid(localPt, gridStepRef.current, orthoLockRef.current, sketchAnchorRef.current);
+      }
+      return { finalPt, snapResult };
+    };
+
+    const getLockedRectOptions = () => ({
+      anchorToCenter: rectAnchorToCenterRef.current,
+      createSurface: rectCreateSurfaceRef.current,
+      lockedWidth: isWidthLockedRef.current && activeDrawingWidthRef.current > 0 ? activeDrawingWidthRef.current : null,
+      lockedHeight: isHeightLockedRef.current && activeDrawingHeightRef.current > 0 ? activeDrawingHeightRef.current : null
+    });
+
+    const getLockedLineOptions = () => ({
+      lineType: lineTypeRef.current,
+      lockedLength: isLengthLockedRef.current && activeDrawingLengthRef.current > 0 ? activeDrawingLengthRef.current : null,
+      lockedAngle: isAngleLockedRef.current && activeDrawingAngleRef.current !== null && activeDrawingAngleRef.current !== undefined ? activeDrawingAngleRef.current : null
+    });
+
+    const commitInteractiveEntity = (anchor, finalPt) => {
+      const tool = activeSketchToolRef.current;
+      let newEntity = null;
+
+      if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
+        const radius = (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0)
+          ? Number(activeDrawingRadiusRef.current)
+          : anchor.distanceTo(finalPt);
+        if (radius < 0.5) return false;
+        newEntity = createWireframeCircle(radius, anchor.y, [anchor.x, anchor.z], 0, 360, 'G17', { color: 0x38bdf8 });
+        if (onDrawingUpdateRef.current) {
+          onDrawingUpdateRef.current({ tool: 'circle', radius, diameter: radius * 2, center: anchor, completed: true });
+        }
+      } else if (tool === 'rect') {
+        const rectOpts = getLockedRectOptions();
+        const { width, height, cx, cz, dirX, dirZ } = computeRectPlacement(anchor, finalPt, rectOpts);
+        if (width < 0.5 || height < 0.5) return false;
+
+        newEntity = createWireframeRect(width, height, anchor.y, 0, [cx, cz], { color: 0x38bdf8 });
+        if (rectCreateSurfaceRef.current) {
+          const planeGeo = new THREE.PlaneGeometry(width, height);
+          planeGeo.rotateX(-Math.PI / 2);
+          const planeMat = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8,
+            transparent: true,
+            opacity: 0.35,
+            side: THREE.DoubleSide
+          });
+          const surfMesh = new THREE.Mesh(planeGeo, planeMat);
+          surfMesh.position.set(cx, anchor.y, cz);
+          surfMesh.name = `Surface_Plane_${Math.round(width)}x${Math.round(height)}`;
+          surfMesh.userData = { type: 'surface', cadType: 'surface_plane' };
+          newEntity.add(surfMesh);
+        }
+        if (onDrawingUpdateRef.current) {
+          onDrawingUpdateRef.current({
+            tool: 'rect',
+            width,
+            height,
+            dirX,
+            dirZ,
+            firstCorner: anchor,
+            secondCorner: finalPt,
+            completed: true
+          });
+        }
+      } else if (tool === 'line') {
+        const { p2, length, angle } = computeLineEnd(anchor, finalPt, getLockedLineOptions());
+        if (length < 0.5) return false;
+
+        newEntity = createWireframeLine(
+          [anchor.x, anchor.y, anchor.z],
+          [p2.x, p2.y, p2.z],
+          { color: 0x38bdf8 }
+        );
+        if (onDrawingUpdateRef.current) {
+          onDrawingUpdateRef.current({
+            tool: 'line',
+            length,
+            angle,
+            pt1: anchor,
+            pt2: p2,
+            completed: true
+          });
+        }
+      }
+
+      if (newEntity && onAddCustomEntityRef.current) {
+        onAddCustomEntityRef.current(newEntity);
+      }
+
+      sketchAnchorRef.current = null;
+      setSketchAnchor(null);
+      setDimensionFeedback(null);
+      if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+      setSketchPromptText(getDefaultPromptForTool(tool));
+      return true;
+    };
+
     const onMouseDown = (e) => {
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
@@ -460,19 +682,9 @@ export default function Viewport3D({
           dragStartScreenX = e.clientX;
           dragStartScreenY = e.clientY;
 
-          const localPt = getSketchIntersection(e);
-          if (!localPt) return;
-
-          let finalPt = localPt;
-          let snapResult = { snapped: false, point: localPt };
-          if (objectSnapRef.current) {
-            snapResult = snapToEntityPoints(localPt, customGeometryRef.current, 5.0);
-          }
-          if (snapResult.snapped) {
-            finalPt = snapResult.point;
-          } else if (gridSnapRef.current) {
-            finalPt = snapToGrid(localPt, gridStepRef.current, orthoLockRef.current, sketchAnchorRef.current);
-          }
+          const resolved = resolveSnappedPoint(e);
+          if (!resolved) return;
+          const { finalPt } = resolved;
 
           const tool = activeSketchToolRef.current;
 
@@ -484,6 +696,21 @@ export default function Viewport3D({
 
           if (tool === 'line' || tool === 'rect' || tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
             if (!sketchAnchorRef.current) {
+              // 1-Click placement when full dimensions are explicitly locked (Mastercam Auto-place)
+              const fullyLockedRect = tool === 'rect'
+                && isWidthLockedRef.current && activeDrawingWidthRef.current > 0
+                && isHeightLockedRef.current && activeDrawingHeightRef.current > 0;
+              const fullyLockedCircle = (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent')
+                && isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0;
+              const fullyLockedLine = tool === 'line'
+                && isLengthLockedRef.current && activeDrawingLengthRef.current > 0
+                && isAngleLockedRef.current;
+
+              if (fullyLockedRect || fullyLockedCircle || fullyLockedLine) {
+                commitInteractiveEntity(finalPt, finalPt);
+                return;
+              }
+
               sketchAnchorRef.current = finalPt.clone();
               setSketchAnchor(finalPt.clone());
               isDrawingDrag = true;
@@ -492,24 +719,20 @@ export default function Viewport3D({
                   onDrawingUpdateRef.current({
                     tool: 'circle',
                     center: finalPt.clone(),
-                    radius: (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) ? activeDrawingRadiusRef.current : 0,
-                    diameter: (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) ? activeDrawingRadiusRef.current * 2 : 0,
+                    radius: (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) ? activeDrawingRadiusRef.current : undefined,
+                    diameter: (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) ? activeDrawingRadiusRef.current * 2 : undefined,
                     isDragging: true
                   });
                 } else if (tool === 'rect') {
                   onDrawingUpdateRef.current({
                     tool: 'rect',
                     firstCorner: finalPt.clone(),
-                    width: (isWidthLockedRef.current && activeDrawingWidthRef.current) ? activeDrawingWidthRef.current : 0,
-                    height: (isHeightLockedRef.current && activeDrawingHeightRef.current) ? activeDrawingHeightRef.current : 0,
                     isDragging: true
                   });
                 } else if (tool === 'line') {
                   onDrawingUpdateRef.current({
                     tool: 'line',
                     pt1: finalPt.clone(),
-                    length: (isLengthLockedRef.current && activeDrawingLengthRef.current) ? activeDrawingLengthRef.current : 0,
-                    angle: (isAngleLockedRef.current && activeDrawingAngleRef.current) ? activeDrawingAngleRef.current : 0,
                     isDragging: true
                   });
                 }
@@ -520,101 +743,11 @@ export default function Viewport3D({
                 'Enter radius point'
               );
             } else {
-              // 2nd click of click-move-click
-              const anchor = sketchAnchorRef.current;
-              let newEntity = null;
-
-              if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
-                let radius = Math.max(0.5, anchor.distanceTo(finalPt));
-                if (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) {
-                  radius = activeDrawingRadiusRef.current;
-                }
-                newEntity = createWireframeCircle(radius, anchor.y, [anchor.x, anchor.z], 0, 360, 'G17', { color: 0x38bdf8 });
-                if (onDrawingUpdateRef.current) {
-                  onDrawingUpdateRef.current({ tool: 'circle', radius, diameter: radius * 2, center: anchor, completed: true });
-                }
-              } else if (tool === 'rect') {
-                let w = Math.max(1, Math.abs(finalPt.x - anchor.x));
-                let d = Math.max(1, Math.abs(finalPt.z - anchor.z));
-                if (isWidthLockedRef.current && activeDrawingWidthRef.current) w = Math.max(1, Math.abs(activeDrawingWidthRef.current));
-                if (isHeightLockedRef.current && activeDrawingHeightRef.current) d = Math.max(1, Math.abs(activeDrawingHeightRef.current));
-
-                let cx, cz;
-                if (rectAnchorToCenterRef.current) {
-                  cx = anchor.x;
-                  cz = anchor.z;
-                } else {
-                  cx = (anchor.x + finalPt.x) / 2;
-                  cz = (anchor.z + finalPt.z) / 2;
-                }
-                newEntity = createWireframeRect(w, d, anchor.y, 0, [cx, cz], { color: 0x38bdf8 });
-                if (rectCreateSurfaceRef.current) {
-                  const planeGeo = new THREE.PlaneGeometry(w, d);
-                  planeGeo.rotateX(-Math.PI / 2);
-                  const planeMat = new THREE.MeshStandardMaterial({
-                    color: 0x38bdf8,
-                    transparent: true,
-                    opacity: 0.35,
-                    side: THREE.DoubleSide
-                  });
-                  const surfMesh = new THREE.Mesh(planeGeo, planeMat);
-                  surfMesh.position.set(cx, anchor.y, cz);
-                  surfMesh.name = `Surface_Plane_${Math.round(w)}x${Math.round(d)}`;
-                  surfMesh.userData = { type: 'surface', cadType: 'surface_plane' };
-                  newEntity.add(surfMesh);
-                }
-                if (onDrawingUpdateRef.current) {
-                  onDrawingUpdateRef.current({
-                    tool: 'rect',
-                    width: finalPt.x - anchor.x,
-                    height: finalPt.z - anchor.z,
-                    firstCorner: anchor,
-                    secondCorner: finalPt,
-                    completed: true
-                  });
-                }
-              } else if (tool === 'line') {
-                let p2 = finalPt;
-                if (lineTypeRef.current === 'horizontal') {
-                  p2 = new THREE.Vector3(finalPt.x, anchor.y, anchor.z);
-                } else if (lineTypeRef.current === 'vertical') {
-                  p2 = new THREE.Vector3(anchor.x, anchor.y, finalPt.z);
-                }
-                newEntity = createWireframeLine(
-                  [anchor.x, anchor.y, anchor.z],
-                  [p2.x, p2.y, p2.z],
-                  { color: 0x38bdf8 }
-                );
-                const len = anchor.distanceTo(p2);
-                const dx = p2.x - anchor.x;
-                const dz = p2.z - anchor.z;
-                const angle = (Math.atan2(-dz, dx) * 180 / Math.PI + 360) % 360;
-                if (onDrawingUpdateRef.current) {
-                  onDrawingUpdateRef.current({
-                    tool: 'line',
-                    length: len,
-                    angle: angle,
-                    pt1: anchor,
-                    pt2: p2,
-                    completed: true
-                  });
-                }
+              // 2nd click: require valid non-zero dimensions (prevents accidental 1mm slivers)
+              const committed = commitInteractiveEntity(sketchAnchorRef.current, finalPt);
+              if (!committed && tool === 'rect') {
+                setSketchPromptText('Move cursor diagonally to give rectangle non-zero Width & Height');
               }
-
-              if (newEntity && onAddCustomEntityRef.current) {
-                onAddCustomEntityRef.current(newEntity);
-              }
-
-              sketchAnchorRef.current = null;
-              setSketchAnchor(null);
-              setDimensionFeedback(null);
-              if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
-              setSketchPromptText(
-                tool === 'rect' ? 'Select position of first corner' :
-                tool === 'line' ? 'Specify first endpoint' :
-                tool === 'arc_tangent' ? 'Select the entity that the arc is to be tangent to' :
-                'Enter the center point'
-              );
             }
             return;
           }
@@ -643,21 +776,15 @@ export default function Viewport3D({
         return;
       }
 
-      // Sketch Mode Hover & Ghost Preview
+      // Sketch Mode Hover & Ghost Preview (ignore cursor movement once user moves off canvas into left panel/UI unless dragging)
       if (isSketchModeRef.current) {
+        if (!isDrawingDrag && e.target !== renderer.domElement) {
+          return;
+        }
         setMouseScreenPos({ x: e.clientX, y: e.clientY });
-        const localPt = getSketchIntersection(e);
-        if (localPt) {
-          let finalPt = localPt;
-          let snapResult = { snapped: false, point: localPt, type: null };
-          if (objectSnapRef.current) {
-            snapResult = snapToEntityPoints(localPt, customGeometryRef.current, 5.0);
-          }
-          if (snapResult.snapped) {
-            finalPt = snapResult.point;
-          } else if (gridSnapRef.current) {
-            finalPt = snapToGrid(localPt, gridStepRef.current, orthoLockRef.current, sketchAnchorRef.current);
-          }
+        const resolved = resolveSnappedPoint(e);
+        if (resolved) {
+          const { finalPt, snapResult } = resolved;
 
           setCursorCoords({ x: finalPt.x, y: finalPt.y, z: finalPt.z });
 
@@ -676,17 +803,17 @@ export default function Viewport3D({
             sketchGhostGroupRef.current.clear();
 
             if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
-              let r = Math.max(0.5, anchor.distanceTo(finalPt));
-              if (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) {
-                r = activeDrawingRadiusRef.current;
-              }
-              const ghost = createGhostPreview(tool, anchor, finalPt);
+              const lockedR = (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0)
+                ? Number(activeDrawingRadiusRef.current)
+                : null;
+              const r = lockedR ?? Math.max(0.5, anchor.distanceTo(finalPt));
+              const ghost = createGhostPreview(tool, anchor, finalPt, { lockedRadius: lockedR });
               sketchGhostGroupRef.current.add(ghost);
 
-              setDimensionFeedback(`R: ${r.toFixed(3)} mm (Ø ${(r * 2).toFixed(3)} mm)`);
-              setSketchPromptText(`Enter radius point (R: ${r.toFixed(3)} mm)`);
+              setDimensionFeedback(`R: ${r.toFixed(2)} mm (Ø ${(r * 2).toFixed(2)} mm)`);
+              setSketchPromptText(`Enter radius point (R: ${r.toFixed(2)} mm)`);
 
-              if (onDrawingUpdateRef.current) {
+              if (onDrawingUpdateRef.current && !isRadiusLockedRef.current) {
                 onDrawingUpdateRef.current({
                   tool: 'circle',
                   radius: r,
@@ -696,55 +823,40 @@ export default function Viewport3D({
                 });
               }
             } else if (tool === 'rect') {
-              let w = finalPt.x - anchor.x;
-              let d = finalPt.z - anchor.z;
-              if (isWidthLockedRef.current && activeDrawingWidthRef.current) w = activeDrawingWidthRef.current;
-              if (isHeightLockedRef.current && activeDrawingHeightRef.current) d = activeDrawingHeightRef.current;
-
-              const ghost = createGhostPreview(tool, anchor, finalPt, {
-                anchorToCenter: rectAnchorToCenterRef.current,
-                createSurface: rectCreateSurfaceRef.current
-              });
+              const rectOpts = getLockedRectOptions();
+              const { width, height, dirX, dirZ } = computeRectPlacement(anchor, finalPt, rectOpts);
+              const ghost = createGhostPreview(tool, anchor, finalPt, rectOpts);
               sketchGhostGroupRef.current.add(ghost);
 
-              const absW = Math.abs(w).toFixed(2);
-              const absD = Math.abs(d).toFixed(2);
-              setDimensionFeedback(`W: ${absW} mm, H: ${absD} mm`);
+              setDimensionFeedback(`W: ${width.toFixed(2)} mm, H: ${height.toFixed(2)} mm`);
               setSketchPromptText('Select position of second corner');
 
-              if (onDrawingUpdateRef.current) {
+              if (onDrawingUpdateRef.current && (width >= 0.5 || height >= 0.5)) {
                 onDrawingUpdateRef.current({
                   tool: 'rect',
-                  width: w,
-                  height: d,
+                  width: rectOpts.lockedWidth ?? width,
+                  height: rectOpts.lockedHeight ?? height,
+                  dirX,
+                  dirZ,
                   firstCorner: anchor,
                   secondCorner: finalPt,
                   isDragging: isDrawingDrag
                 });
               }
             } else if (tool === 'line') {
-              let p2 = finalPt;
-              if (lineTypeRef.current === 'horizontal') {
-                p2 = new THREE.Vector3(finalPt.x, anchor.y, anchor.z);
-              } else if (lineTypeRef.current === 'vertical') {
-                p2 = new THREE.Vector3(anchor.x, anchor.y, finalPt.z);
-              }
-              const ghost = createGhostPreview(tool, anchor, p2);
+              const lineOpts = getLockedLineOptions();
+              const { p2, length, angle } = computeLineEnd(anchor, finalPt, lineOpts);
+              const ghost = createGhostPreview(tool, anchor, p2, lineOpts);
               sketchGhostGroupRef.current.add(ghost);
 
-              const len = anchor.distanceTo(p2);
-              const dx = p2.x - anchor.x;
-              const dz = p2.z - anchor.z;
-              const angle = (Math.atan2(-dz, dx) * 180 / Math.PI + 360) % 360;
-
-              setDimensionFeedback(`L: ${len.toFixed(2)} mm, ∠ ${angle.toFixed(1)}°`);
+              setDimensionFeedback(`L: ${length.toFixed(2)} mm, ∠ ${angle.toFixed(1)}°`);
               setSketchPromptText('Specify second endpoint');
 
               if (onDrawingUpdateRef.current) {
                 onDrawingUpdateRef.current({
                   tool: 'line',
-                  length: len,
-                  angle: angle,
+                  length: lineOpts.lockedLength ?? length,
+                  angle: lineOpts.lockedAngle ?? angle,
                   pt1: anchor,
                   pt2: p2,
                   isDragging: isDrawingDrag
@@ -752,16 +864,17 @@ export default function Viewport3D({
               }
             }
           } else {
-            if (activeSketchToolRef.current === 'circle') {
-              setSketchPromptText('Enter the center point');
-            } else if (activeSketchToolRef.current === 'rect') {
-              setSketchPromptText('Select position of first corner');
-            } else if (activeSketchToolRef.current === 'line') {
-              setSketchPromptText('Specify first endpoint');
-            } else if (activeSketchToolRef.current === 'arc_tangent' || activeSketchToolRef.current === 'arctangent') {
-              setSketchPromptText('Select the entity that the arc is to be tangent to');
+            const hasFullLock =
+              (activeSketchToolRef.current === 'rect' && isWidthLockedRef.current && Number(activeDrawingWidthRef.current) > 0 && isHeightLockedRef.current && Number(activeDrawingHeightRef.current) > 0) ||
+              ((activeSketchToolRef.current === 'circle' || activeSketchToolRef.current === 'arc_tangent' || activeSketchToolRef.current === 'arctangent') && isRadiusLockedRef.current && Number(activeDrawingRadiusRef.current) > 0) ||
+              (activeSketchToolRef.current === 'line' && isLengthLockedRef.current && Number(activeDrawingLengthRef.current) > 0 && isAngleLockedRef.current);
+
+            if (hasFullLock) {
+              renderLockedPreviewAtRef.current?.(finalPt, { isCursorHover: true });
             } else {
-              setSketchPromptText('Select point');
+              if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+              setDimensionFeedback(null);
+              setSketchPromptText(getDefaultPromptForTool(activeSketchToolRef.current));
             }
           }
         }
@@ -784,109 +897,18 @@ export default function Viewport3D({
         isDrawingDrag = false;
         const dragDist = Math.hypot(e.clientX - dragStartScreenX, e.clientY - dragStartScreenY);
 
-        if (dragDist > 6 && sketchAnchorRef.current) {
+        if (dragDist > 12 && sketchAnchorRef.current) {
           const anchor = sketchAnchorRef.current;
           const localPt = getSketchIntersection(e);
           let finalPt = localPt || anchor;
           if (objectSnapRef.current) {
             const snap = snapToEntityPoints(finalPt, customGeometryRef.current, 5.0);
             if (snap.snapped) finalPt = snap.point;
+          } else if (gridSnapRef.current) {
+            finalPt = snapToGrid(finalPt, gridStepRef.current, orthoLockRef.current, anchor);
           }
 
-          const tool = activeSketchToolRef.current;
-          let newEntity = null;
-
-          if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
-            let radius = Math.max(0.5, anchor.distanceTo(finalPt));
-            if (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0) {
-              radius = activeDrawingRadiusRef.current;
-            }
-            newEntity = createWireframeCircle(radius, anchor.y, [anchor.x, anchor.z], 0, 360, 'G17', { color: 0x38bdf8 });
-            if (onDrawingUpdateRef.current) {
-              onDrawingUpdateRef.current({ tool: 'circle', radius, diameter: radius * 2, center: anchor, completed: true });
-            }
-          } else if (tool === 'rect') {
-            let w = Math.max(1, Math.abs(finalPt.x - anchor.x));
-            let d = Math.max(1, Math.abs(finalPt.z - anchor.z));
-            if (isWidthLockedRef.current && activeDrawingWidthRef.current) w = Math.max(1, Math.abs(activeDrawingWidthRef.current));
-            if (isHeightLockedRef.current && activeDrawingHeightRef.current) d = Math.max(1, Math.abs(activeDrawingHeightRef.current));
-
-            let cx, cz;
-            if (rectAnchorToCenterRef.current) {
-              cx = anchor.x;
-              cz = anchor.z;
-            } else {
-              cx = (anchor.x + finalPt.x) / 2;
-              cz = (anchor.z + finalPt.z) / 2;
-            }
-            newEntity = createWireframeRect(w, d, anchor.y, 0, [cx, cz], { color: 0x38bdf8 });
-            if (rectCreateSurfaceRef.current) {
-              const planeGeo = new THREE.PlaneGeometry(w, d);
-              planeGeo.rotateX(-Math.PI / 2);
-              const planeMat = new THREE.MeshStandardMaterial({
-                color: 0x38bdf8,
-                transparent: true,
-                opacity: 0.35,
-                side: THREE.DoubleSide
-              });
-              const surfMesh = new THREE.Mesh(planeGeo, planeMat);
-              surfMesh.position.set(cx, anchor.y, cz);
-              surfMesh.name = `Surface_Plane_${Math.round(w)}x${Math.round(d)}`;
-              surfMesh.userData = { type: 'surface', cadType: 'surface_plane' };
-              newEntity.add(surfMesh);
-            }
-            if (onDrawingUpdateRef.current) {
-              onDrawingUpdateRef.current({
-                tool: 'rect',
-                width: finalPt.x - anchor.x,
-                height: finalPt.z - anchor.z,
-                firstCorner: anchor,
-                secondCorner: finalPt,
-                completed: true
-              });
-            }
-          } else if (tool === 'line') {
-            let p2 = finalPt;
-            if (lineTypeRef.current === 'horizontal') {
-              p2 = new THREE.Vector3(finalPt.x, anchor.y, anchor.z);
-            } else if (lineTypeRef.current === 'vertical') {
-              p2 = new THREE.Vector3(anchor.x, anchor.y, finalPt.z);
-            }
-            newEntity = createWireframeLine(
-              [anchor.x, anchor.y, anchor.z],
-              [p2.x, p2.y, p2.z],
-              { color: 0x38bdf8 }
-            );
-            const len = anchor.distanceTo(p2);
-            const dx = p2.x - anchor.x;
-            const dz = p2.z - anchor.z;
-            const angle = (Math.atan2(-dz, dx) * 180 / Math.PI + 360) % 360;
-            if (onDrawingUpdateRef.current) {
-              onDrawingUpdateRef.current({
-                tool: 'line',
-                length: len,
-                angle: angle,
-                pt1: anchor,
-                pt2: p2,
-                completed: true
-              });
-            }
-          }
-
-          if (newEntity && onAddCustomEntityRef.current) {
-            onAddCustomEntityRef.current(newEntity);
-          }
-
-          sketchAnchorRef.current = null;
-          setSketchAnchor(null);
-          setDimensionFeedback(null);
-          if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
-          setSketchPromptText(
-            tool === 'rect' ? 'Select position of first corner' :
-            tool === 'line' ? 'Specify first endpoint' :
-            tool === 'arc_tangent' ? 'Select the entity that the arc is to be tangent to' :
-            'Enter the center point'
-          );
+          commitInteractiveEntity(anchor, finalPt);
         }
       }
     };
@@ -898,8 +920,16 @@ export default function Viewport3D({
       camera.lookAt(0, 45, 0);
     };
 
+    const onMouseLeave = () => {
+      if (isSketchModeRef.current && !isDrawingDrag && !sketchAnchorRef.current) {
+        const originPt = new THREE.Vector3(0, partTopYRef.current ?? 0, 0);
+        renderLockedPreviewAtRef.current?.(originPt, { isCursorHover: false });
+      }
+    };
+
     const dom = renderer.domElement;
     dom.addEventListener('mousedown', onMouseDown);
+    dom.addEventListener('mouseleave', onMouseLeave);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
     dom.addEventListener('wheel', onWheel, { passive: false });
@@ -927,6 +957,7 @@ export default function Viewport3D({
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', handleResize);
       dom.removeEventListener('mousedown', onMouseDown);
+      dom.removeEventListener('mouseleave', onMouseLeave);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       dom.removeEventListener('wheel', onWheel);
@@ -1156,21 +1187,7 @@ export default function Viewport3D({
     }
   }, [cameraFov]);
 
-  // 6. Custom Geometry (Wireframes, Rectangles, Circles, Surfaces)
-  useEffect(() => {
-    if (!customGeoGroupRef.current) return;
-    const group = customGeoGroupRef.current;
-    while (group.children.length > 0) {
-      group.remove(group.children[0]);
-    }
-    if (Array.isArray(customGeometry)) {
-      customGeometry.forEach((item) => {
-        if (item && typeof item.clone === 'function') {
-          group.add(item.clone(true));
-        }
-      });
-    }
-  }, [customGeometry]);
+  // 6. Custom Geometry is managed cleanly by Effect 11 (preserves layer visibility flags)
 
   // 6b. Arc Center Points & Curve Endpoints Indicators (Real CAD entities only)
   useEffect(() => {
@@ -1464,16 +1481,15 @@ export default function Viewport3D({
         }, currentModel);
       } else if (op.badgeClass === 'circlemill') {
         toolpathData = generateCircleMillToolpath(opBounds, assignedTool, {
-          diameter: op.diameter || 50.8,
+          diameter: op.diameter || (op.chain?.radius ? op.chain.radius * 2 : 50.8),
           totalDepth: op.totalDepth || 50.8,
           stepdown: op.stepdown || 6.35,
-          rapidHeight: op.rapidHeight || 15.0
+          rapidHeight: op.rapidHeight || 15.0,
+          chain: op.chain,
+          center: op.center || op.chain?.center
         });
       } else if (op.badgeClass === 'contour') {
-        toolpathData = generateWaterlineToolpath(opBounds, assignedTool, {
-          stepdown: op.stepdown || 3.0,
-          rapidHeight: op.rapidHeight || 15.0
-        }, currentModel);
+        toolpathData = generateWaterlineToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), currentModel);
       } else if (op.badgeClass === 'swarf') {
         toolpathData = generateSwarfToolpath(opBounds, assignedTool, {
           tiltAngleDeg: 15.0,
@@ -1540,6 +1556,8 @@ export default function Viewport3D({
 
       if (toolpathData) {
         const { cutGeo, rapidGeo } = buildToolpathMeshes(toolpathData);
+        // CAD wireframe entities sit inside customGeoGroup at Y = 49; align CAD-sketch toolpaths to that height
+        const visualYOffset = (!!op.chain || (!currentModel && opBounds.max.y < 49)) ? 49 : 0;
 
         // Feed cut line segments
         if (cutGeo.attributes.position && cutGeo.attributes.position.count > 0) {
@@ -1549,6 +1567,7 @@ export default function Viewport3D({
           });
           const cutMesh = new THREE.LineSegments(cutGeo, cutMat);
           cutMesh.name = `op_cut_${op.id}`;
+          cutMesh.position.y = visualYOffset;
           cutMesh.visible = op.visible && (layerVisibility.toolpaths !== false);
           group.add(cutMesh);
         }
@@ -1564,6 +1583,7 @@ export default function Viewport3D({
           const rapidMesh = new THREE.LineSegments(rapidGeo, rapidMat);
           rapidMesh.computeLineDistances();
           rapidMesh.name = `op_rapid_${op.id}`;
+          rapidMesh.position.y = visualYOffset;
           rapidMesh.visible = op.visible && (layerVisibility.rapids !== false);
           group.add(rapidMesh);
         }
@@ -1677,7 +1697,7 @@ export default function Viewport3D({
       ? null
       : Number(backplotSelectedOpFilter);
 
-    const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, effectiveOpId);
+    const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, effectiveOpId, 49);
     waypointsRef.current = trajectory.waypoints;
 
     if (trajectory.waypoints.length === 0) return;
@@ -1797,7 +1817,9 @@ export default function Viewport3D({
         // Check for collet gouge
         const activeTool = sample.activeWaypoint?.tool || tools[0];
         const cutLen = activeTool?.fluteLength || 25;
-        const topY = partMetrics?.box?.max?.y || 45;
+        const topY = currentModel
+          ? (partMetrics?.box?.max?.y || 45)
+          : ((partMetrics?.box?.max?.y || 0) + 49);
         const currentDepth = topY - sample.currentPos.y;
         const isGouge = currentDepth > cutLen + 2.0;
         setHolderCollisionAlert(isGouge);

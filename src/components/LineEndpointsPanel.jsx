@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  HelpCircle, Pin, Check, X, Lock, Unlock,
+  Pin, Check, X,
   ChevronDown, ChevronUp
 } from 'lucide-react';
+import SketchNumericInput from './SketchNumericInput';
 
 export default function LineEndpointsPanel({
   length = 50,
@@ -26,68 +27,13 @@ export default function LineEndpointsPanel({
   onApply,
   onOk,
   onCancel,
-  theme = 'light'
+  theme: _theme = 'light'
 }) {
-  const isLight = theme !== 'dark';
-
   // Section collapse states
   const [entityExpanded, setEntityExpanded] = useState(true);
   const [endpointsExpanded, setEndpointsExpanded] = useState(true);
   const [dimensionsExpanded, setDimensionsExpanded] = useState(true);
   const [axisOffsetExpanded, setAxisOffsetExpanded] = useState(true);
-
-  // Local text input states for clean typing
-  const [lengthInput, setLengthInput] = useState(length.toFixed(4));
-  const [angleInput, setAngleInput] = useState(angle.toFixed(1));
-  const [offsetInput, setOffsetInput] = useState(axisOffset.toFixed(1));
-
-  useEffect(() => {
-    setLengthInput(length.toFixed(4));
-  }, [length]);
-
-  useEffect(() => {
-    setAngleInput(angle.toFixed(1));
-  }, [angle]);
-
-  useEffect(() => {
-    setOffsetInput(axisOffset.toFixed(1));
-  }, [axisOffset]);
-
-  const handleLengthChange = (valStr) => {
-    setLengthInput(valStr);
-    const num = parseFloat(valStr);
-    if (!isNaN(num) && onChangeLength) {
-      onChangeLength(num);
-    }
-  };
-
-  const handleAngleChange = (valStr) => {
-    setAngleInput(valStr);
-    const num = parseFloat(valStr);
-    if (!isNaN(num) && onChangeAngle) {
-      onChangeAngle(num);
-    }
-  };
-
-  const handleOffsetChange = (valStr) => {
-    setOffsetInput(valStr);
-    const num = parseFloat(valStr);
-    if (!isNaN(num) && onChangeAxisOffset) {
-      onChangeAxisOffset(num);
-    }
-  };
-
-  const stepLength = (delta) => {
-    const current = parseFloat(lengthInput) || length;
-    const next = Math.max(0.0001, current + delta);
-    handleLengthChange(next.toFixed(4));
-  };
-
-  const stepAngle = (delta) => {
-    const current = parseFloat(angleInput) || angle;
-    const next = (current + delta + 360) % 360;
-    handleAngleChange(next.toFixed(1));
-  };
 
   return (
     <div
@@ -511,185 +457,34 @@ export default function LineEndpointsPanel({
               {/* Length */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                 <span style={{ fontSize: '11px', color: '#475569', width: '52px' }}>Length:</span>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: '#ffffff',
-                    flex: 1,
-                    overflow: 'hidden',
-                    height: '22px'
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={lengthInput}
-                    onChange={(e) => handleLengthChange(e.target.value)}
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      padding: '2px 4px',
-                      fontSize: '11px',
-                      fontFamily: 'monospace',
-                      width: '100%',
-                      color: '#0f172a'
-                    }}
-                  />
-                  <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #cbd5e1', width: '14px', height: '100%' }}>
-                    <button
-                      type="button"
-                      onClick={() => stepLength(1.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => stepLength(-1.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        borderTop: '1px solid #cbd5e1',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={onToggleLengthLock}
-                  title={isLengthLocked ? 'Unlock Length' : 'Lock Length'}
-                  style={{
-                    width: '20px',
-                    height: '22px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: isLengthLocked ? '#fef3c7' : '#ffffff',
-                    color: isLengthLocked ? '#d97706' : '#94a3b8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0
-                  }}
-                >
-                  {isLengthLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                </button>
+                <SketchNumericInput
+                  value={Number(length) || 0}
+                  min={0.01}
+                  step={1}
+                  decimals={4}
+                  allowNegative={false}
+                  onChangeNumber={(num) => onChangeLength && onChangeLength(num)}
+                  isLocked={isLengthLocked}
+                  onToggleLock={onToggleLengthLock}
+                  lockTitle={isLengthLocked ? 'Unlock Length' : 'Lock Length'}
+                />
               </div>
 
               {/* Angle */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                 <span style={{ fontSize: '11px', color: '#475569', width: '52px' }}>Angle:</span>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: '#ffffff',
-                    flex: 1,
-                    overflow: 'hidden',
-                    height: '22px'
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={angleInput}
-                    onChange={(e) => handleAngleChange(e.target.value)}
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      padding: '2px 4px',
-                      fontSize: '11px',
-                      fontFamily: 'monospace',
-                      width: '100%',
-                      color: '#0f172a'
-                    }}
-                  />
-                  <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #cbd5e1', width: '14px', height: '100%' }}>
-                    <button
-                      type="button"
-                      onClick={() => stepAngle(5.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => stepAngle(-5.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        borderTop: '1px solid #cbd5e1',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={onToggleAngleLock}
-                  title={isAngleLocked ? 'Unlock Angle' : 'Lock Angle'}
-                  style={{
-                    width: '20px',
-                    height: '22px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: isAngleLocked ? '#fef3c7' : '#ffffff',
-                    color: isAngleLocked ? '#d97706' : '#94a3b8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0
-                  }}
-                >
-                  {isAngleLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                </button>
+                <SketchNumericInput
+                  value={Number(angle) || 0}
+                  min={-360}
+                  max={360}
+                  step={5}
+                  decimals={2}
+                  allowNegative={true}
+                  onChangeNumber={(num) => onChangeAngle && onChangeAngle(num)}
+                  isLocked={isAngleLocked}
+                  onToggleLock={onToggleAngleLock}
+                  lockTitle={isAngleLocked ? 'Unlock Angle' : 'Lock Angle'}
+                />
               </div>
             </div>
           )}
@@ -725,19 +520,14 @@ export default function LineEndpointsPanel({
 
           {axisOffsetExpanded && (
             <div style={{ padding: '8px' }}>
-              <input
-                type="text"
-                value={offsetInput}
-                onChange={(e) => handleOffsetChange(e.target.value)}
-                style={{
-                  width: '100%',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '3px',
-                  padding: '3px 6px',
-                  fontSize: '11px',
-                  color: '#0f172a',
-                  outline: 'none'
-                }}
+              <SketchNumericInput
+                value={Number(axisOffset) || 0}
+                step={1}
+                decimals={4}
+                allowNegative={true}
+                onChangeNumber={(num) => onChangeAxisOffset && onChangeAxisOffset(num)}
+                showLock={false}
+                showStepper={false}
               />
             </div>
           )}

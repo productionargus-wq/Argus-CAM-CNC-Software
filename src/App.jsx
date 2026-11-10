@@ -109,7 +109,7 @@ import {
   clearWorkspaceSession
 } from './utils/workspacePersistence';
 import { parseAnyCADFile } from './utils/universalCadParser';
-import { extractClosedChainsFromCAD } from './utils/cadDrawingEngine';
+import { extractClosedChainsFromCAD, computeRectPlacement, computeLineEnd } from './utils/cadDrawingEngine';
 import CNCDesignBoard from './components/CNCDesignBoard';
 import { convertBoardDiagramsToToolpaths, getCADTemplate } from './utils/cncBoardEngine';
 
@@ -276,6 +276,8 @@ export default function App() {
   const [rectParams, setRectParams] = useState({
     width: 80.0,
     height: 50.0,
+    dirX: 1,
+    dirZ: -1,
     isWidthLocked: false,
     isHeightLocked: false,
     anchorToCenter: false,
@@ -308,6 +310,53 @@ export default function App() {
     entityMethod: 'one_entity'
   });
   const [activeArcId, setActiveArcId] = useState(null);
+
+  // Synchronous sketch refs prevent stale closures during rapid keyboard typing + clicks
+  const activeDrawingToolRef = useRef(activeDrawingTool);
+  const circleParamsRef = useRef(circleParams);
+  const activeCircleIdRef = useRef(activeCircleId);
+  const rectParamsRef = useRef(rectParams);
+  const activeRectIdRef = useRef(activeRectId);
+  const lineParamsRef = useRef(lineParams);
+  const activeLineIdRef = useRef(activeLineId);
+
+  const setDrawingToolSync = (val) => {
+    activeDrawingToolRef.current = val;
+    setActiveDrawingTool(val);
+  };
+  const updateCircleParams = (updater) => {
+    const prev = circleParamsRef.current;
+    const next = typeof updater === 'function' ? updater(prev) : updater;
+    circleParamsRef.current = next;
+    setCircleParams(next);
+    return next;
+  };
+  const setActiveCircle = (id) => {
+    activeCircleIdRef.current = id;
+    setActiveCircleId(id);
+  };
+  const updateRectParams = (updater) => {
+    const prev = rectParamsRef.current;
+    const next = typeof updater === 'function' ? updater(prev) : updater;
+    rectParamsRef.current = next;
+    setRectParams(next);
+    return next;
+  };
+  const setActiveRect = (id) => {
+    activeRectIdRef.current = id;
+    setActiveRectId(id);
+  };
+  const updateLineParams = (updater) => {
+    const prev = lineParamsRef.current;
+    const next = typeof updater === 'function' ? updater(prev) : updater;
+    lineParamsRef.current = next;
+    setLineParams(next);
+    return next;
+  };
+  const setActiveLine = (id) => {
+    activeLineIdRef.current = id;
+    setActiveLineId(id);
+  };
   const [reselectTrigger, setReselectTrigger] = useState(0);
   const [undoTrigger, setUndoTrigger] = useState(0);
   const [isSurfacesModalOpen, setIsSurfacesModalOpen] = useState(false);
@@ -1159,9 +1208,9 @@ export default function App() {
     if (snap.customGeometry !== undefined) {
       commitCustomGeometry(snap.customGeometry, false);
     }
-    setActiveCircleId(null);
-    setActiveRectId(null);
-    setActiveLineId(null);
+    setActiveCircle(null);
+    setActiveRect(null);
+    setActiveLine(null);
     setActiveArcId(null);
     setUndoTrigger((prev) => prev + 1);
 
@@ -3099,32 +3148,49 @@ export default function App() {
     setSketchTool(tool);
     setIsSketchModeActive(true);
     if (tool === 'circle') {
-      setActiveDrawingTool('circle');
+      setDrawingToolSync('circle');
       setActiveManagerTab('Circle Cent...');
-      setCircleParams((prev) => ({
+      updateCircleParams((prev) => ({
         ...prev,
-        radius: prev.radius || 25.0,
-        diameter: (prev.radius || 25.0) * 2
+        isLocked: false,
+        center: null
       }));
-      setActiveCircleId(null);
-      showToast('Circle Center Point: Click and drag on canvas to draw circle', 'info');
+      setActiveCircle(null);
+      showToast('Circle Center Point: Click center & radius on canvas, or type Radius/Diameter and click OK', 'info');
     } else if (tool === 'rect') {
-      setActiveDrawingTool('rect');
+      setDrawingToolSync('rect');
       setActiveManagerTab('Rectangle');
-      setActiveRectId(null);
-      showToast('Rectangle: Click and drag on canvas to draw rectangle', 'info');
+      updateRectParams((prev) => ({
+        ...prev,
+        dirX: 1,
+        dirZ: -1,
+        isWidthLocked: false,
+        isHeightLocked: false,
+        firstCorner: null,
+        secondCorner: null
+      }));
+      setActiveRect(null);
+      showToast('Rectangle: Click two corners on canvas, or type Width & Height and click canvas / OK', 'info');
     } else if (tool === 'line') {
-      setActiveDrawingTool('line');
+      setDrawingToolSync('line');
       setActiveManagerTab('Line Endp...');
-      setActiveLineId(null);
-      showToast('Line Endpoints: Click and drag on canvas to draw line', 'info');
+      updateLineParams((prev) => ({
+        ...prev,
+        isLengthLocked: false,
+        isAngleLocked: false,
+        pt1: null,
+        pt2: null
+      }));
+      setActiveLine(null);
+      showToast('Line Endpoints: Click two endpoints on canvas, or type Length & Angle and click OK', 'info');
     } else if (tool === 'arc_tangent' || tool === 'arctangent') {
-      setActiveDrawingTool('arc_tangent');
+      setDrawingToolSync('arc_tangent');
       setActiveManagerTab('Arc Tangent');
+      setArcParams((prev) => ({ ...prev, isLocked: false }));
       setActiveArcId(null);
       showToast('Arc Tangent: Select entity that arc is to be tangent to', 'info');
     } else {
-      setActiveDrawingTool(null);
+      setDrawingToolSync(null);
       showToast(`✏️ CAD Sketcher Active: Click & drag on 3D Viewport to draw ${tool.toUpperCase()} (Esc to exit)`, 'info');
     }
   };
@@ -3132,24 +3198,26 @@ export default function App() {
   const handleDrawingUpdate = (data) => {
     if (!data) return;
     if (data.tool === 'circle') {
-      setCircleParams((prev) => ({
+      updateCircleParams((prev) => ({
         ...prev,
-        radius: data.radius,
-        diameter: data.diameter,
+        radius: data.radius !== undefined ? data.radius : prev.radius,
+        diameter: data.diameter !== undefined ? data.diameter : prev.diameter,
         center: data.center ? { x: data.center.x, y: data.center.y, z: data.center.z } : prev.center
       }));
       if (data.completed) {
         const currentList = customGeometryRef.current || [];
         const lastEntity = currentList[currentList.length - 1];
         if (lastEntity && (lastEntity.userData?.type === 'circle' || lastEntity.name?.startsWith('Wireframe_Circle'))) {
-          setActiveCircleId(lastEntity.id || lastEntity.uuid || lastEntity.name);
+          setActiveCircle(lastEntity.id || lastEntity.uuid || lastEntity.name);
         }
       }
     } else if (data.tool === 'rect') {
-      setRectParams((prev) => ({
+      updateRectParams((prev) => ({
         ...prev,
-        width: Number(data.width !== undefined ? data.width : prev.width),
-        height: Number(data.height !== undefined ? data.height : prev.height),
+        width: data.width !== undefined ? Math.abs(Number(data.width)) : prev.width,
+        height: data.height !== undefined ? Math.abs(Number(data.height)) : prev.height,
+        dirX: data.dirX !== undefined ? data.dirX : prev.dirX,
+        dirZ: data.dirZ !== undefined ? data.dirZ : prev.dirZ,
         firstCorner: data.firstCorner ? { x: data.firstCorner.x, y: data.firstCorner.y, z: data.firstCorner.z } : prev.firstCorner,
         secondCorner: data.secondCorner ? { x: data.secondCorner.x, y: data.secondCorner.y, z: data.secondCorner.z } : prev.secondCorner
       }));
@@ -3157,14 +3225,14 @@ export default function App() {
         const currentList = customGeometryRef.current || [];
         const lastEntity = currentList[currentList.length - 1];
         if (lastEntity && (lastEntity.userData?.type === 'rectangle' || lastEntity.name?.startsWith('Wireframe_Rect'))) {
-          setActiveRectId(lastEntity.id || lastEntity.uuid || lastEntity.name);
+          setActiveRect(lastEntity.id || lastEntity.uuid || lastEntity.name);
         }
       }
     } else if (data.tool === 'line') {
-      setLineParams((prev) => ({
+      updateLineParams((prev) => ({
         ...prev,
-        length: Number(data.length !== undefined ? data.length : prev.length),
-        angle: Number(data.angle !== undefined ? data.angle : prev.angle),
+        length: data.length !== undefined ? Number(data.length) : prev.length,
+        angle: data.angle !== undefined ? Number(data.angle) : prev.angle,
         pt1: data.pt1 ? { x: data.pt1.x, y: data.pt1.y, z: data.pt1.z } : prev.pt1,
         pt2: data.pt2 ? { x: data.pt2.x, y: data.pt2.y, z: data.pt2.z } : prev.pt2
       }));
@@ -3172,56 +3240,125 @@ export default function App() {
         const currentList = customGeometryRef.current || [];
         const lastEntity = currentList[currentList.length - 1];
         if (lastEntity && (lastEntity.userData?.type === 'line' || lastEntity.name?.startsWith('Wireframe_Line'))) {
-          setActiveLineId(lastEntity.id || lastEntity.uuid || lastEntity.name);
+          setActiveLine(lastEntity.id || lastEntity.uuid || lastEntity.name);
         }
       }
     }
   };
 
+  // Shared helper to update an in-progress live CAD entity cleanly without duplicating find/replace boilerplate
+  const replaceCustomEntity = (entityId, buildFn) => {
+    if (!entityId) return false;
+    const prevList = customGeometryRef.current || [];
+    const targetIndex = prevList.findIndex(
+      (item) => (item.id || item.uuid || item.name) === entityId
+    );
+    if (targetIndex < 0) return false;
+    const updated = buildFn(prevList[targetIndex]);
+    if (!updated) return false;
+    updated.uuid = entityId;
+    if (updated.userData) updated.userData.customId = entityId;
+    const newList = [...prevList];
+    newList[targetIndex] = updated;
+    commitCustomGeometry(newList, false);
+    return true;
+  };
+
+  const commitActiveCustomEntity = (entityId, setEntityId) => {
+    const prevList = customGeometryRef.current || [];
+    const next = prevList.map((item) => {
+      if ((item.id || item.uuid || item.name) === entityId && item.material) {
+        item.material.color.setHex(0x1d4ed8);
+      }
+      return item;
+    });
+    commitCustomGeometry(next, false);
+    setEntityId(null);
+  };
+
+  const buildRectFromParams = (params, existingEntity, colorHex = 0x38bdf8) => {
+    const absW = Math.max(0.5, Math.abs(Number(params.width) || 80));
+    const absH = Math.max(0.5, Math.abs(Number(params.height) || 50));
+    const y = existingEntity?.position?.y ?? existingEntity?.userData?.center?.y ?? params.firstCorner?.y ?? (partMetrics?.box?.max?.y ?? 0);
+    const dirX = params.dirX ?? existingEntity?.userData?.dirX ?? 1;
+    const dirZ = params.dirZ ?? existingEntity?.userData?.dirZ ?? -1;
+
+    const anchor = params.firstCorner
+      || existingEntity?.userData?.firstCorner
+      || existingEntity?.userData?.center
+      || { x: 0, y, z: 0 };
+
+    const anchorVec = new THREE.Vector3(anchor.x || 0, y, anchor.z || 0);
+    const { cx, cz } = computeRectPlacement(anchorVec, anchorVec, {
+      anchorToCenter: !!params.anchorToCenter,
+      lockedWidth: absW,
+      lockedHeight: absH,
+      dirX,
+      dirZ
+    });
+
+    const rectEntity = createWireframeRect(absW, absH, y, 0, [cx, cz], {
+      color: colorHex,
+      name: `Wireframe_Rect_${Math.round(absW)}x${Math.round(absH)}`
+    });
+    rectEntity.userData.firstCorner = { x: anchorVec.x, y, z: anchorVec.z };
+    rectEntity.userData.dirX = dirX;
+    rectEntity.userData.dirZ = dirZ;
+
+    if (params.createSurface) {
+      const planeGeo = new THREE.PlaneGeometry(absW, absH);
+      planeGeo.rotateX(-Math.PI / 2);
+      const planeMat = new THREE.MeshStandardMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity: 0.35,
+        side: THREE.DoubleSide
+      });
+      const surfMesh = new THREE.Mesh(planeGeo, planeMat);
+      surfMesh.position.set(cx, y, cz);
+      surfMesh.name = `Surface_Plane_${Math.round(absW)}x${Math.round(absH)}`;
+      surfMesh.userData = { type: 'surface', cadType: 'surface_plane' };
+      rectEntity.add(surfMesh);
+    }
+
+    return rectEntity;
+  };
+
   // ----- Circle Handlers -----
   const handleChangeCircleRadius = (newRadius) => {
-    setCircleParams((prev) => ({
+    const safeR = Math.max(0.1, Number(newRadius));
+    if (!Number.isFinite(safeR)) return;
+    const liveId = activeCircleIdRef.current;
+    updateCircleParams((prev) => ({
       ...prev,
-      radius: newRadius,
-      diameter: newRadius * 2
+      radius: safeR,
+      diameter: safeR * 2,
+      isLocked: !liveId ? true : prev.isLocked
     }));
 
-    if (activeCircleId) {
-      const prevList = customGeometryRef.current || [];
-      const targetIndex = prevList.findIndex(
-        (item) => (item.id || item.uuid || item.name) === activeCircleId
+    replaceCustomEntity(liveId, (oldEntity) => {
+      const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
+      const cx = Array.isArray(center) ? center[0] : (center.x || 0);
+      const cz = Array.isArray(center) ? center[1] : (center.z || 0);
+      const y = oldEntity.position?.y || center.y || 0;
+      return createWireframeCircle(
+        safeR,
+        y,
+        [cx, cz],
+        0,
+        360,
+        'G17',
+        { color: 0x38bdf8, name: `Wireframe_Circle_R${safeR.toFixed(1)}` }
       );
-      if (targetIndex >= 0) {
-        const oldEntity = prevList[targetIndex];
-        const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
-        const cx = Array.isArray(center) ? center[0] : (center.x || 0);
-        const cz = Array.isArray(center) ? center[1] : (center.z || 0);
-        const y = oldEntity.position?.y || center.y || 0;
-
-        const updatedCircle = createWireframeCircle(
-          newRadius,
-          y,
-          [cx, cz],
-          0,
-          360,
-          'G17',
-          { color: 0x38bdf8, name: `Wireframe_Circle_R${newRadius.toFixed(1)}` }
-        );
-        updatedCircle.uuid = activeCircleId;
-        if (updatedCircle.userData) updatedCircle.userData.customId = activeCircleId;
-        const newList = [...prevList];
-        newList[targetIndex] = updatedCircle;
-        commitCustomGeometry(newList, false);
-      }
-    }
+    });
   };
 
   const handleToggleCircleRadiusLock = () => {
-    setCircleParams((prev) => ({ ...prev, isLocked: !prev.isLocked }));
+    updateCircleParams((prev) => ({ ...prev, isLocked: !prev.isLocked }));
   };
 
   const handleChangeCircleEntityMethod = (method) => {
-    setCircleParams((prev) => ({ ...prev, entityMethod: method }));
+    updateCircleParams((prev) => ({ ...prev, entityMethod: method }));
   };
 
   const handleReselectCircleCenter = () => {
@@ -3229,364 +3366,319 @@ export default function App() {
     showToast('Click on canvas to pick new circle center point', 'info');
   };
 
-  const handleApplyCircle = () => {
+  const handleApplyCircle = (suppressToast = false) => {
     let createdNew = false;
     const prevList = customGeometryRef.current || [];
-    if (!activeCircleId && circleParams.radius > 0) {
-      const cx = circleParams.center?.x || 0;
-      const cz = circleParams.center?.z || 0;
-      const cy = circleParams.center?.y || 0;
+    const curCircle = circleParamsRef.current;
+    const liveId = activeCircleIdRef.current;
+    if (!liveId && curCircle.radius > 0) {
+      const cx = curCircle.center?.x || 0;
+      const cz = curCircle.center?.z || 0;
+      const cy = curCircle.center?.y ?? (partMetrics?.box?.max?.y ?? 0);
       const newCirc = createWireframeCircle(
-        circleParams.radius,
+        curCircle.radius,
         cy,
         [cx, cz],
         0,
         360,
         'G17',
-        { color: 0x1d4ed8, name: `Wireframe_Circle_R${circleParams.radius.toFixed(1)}` }
+        { color: 0x1d4ed8, name: `Wireframe_Circle_R${Number(curCircle.radius).toFixed(1)}` }
       );
-      const next = [...prevList, newCirc];
-      commitCustomGeometry(next, true);
+      commitCustomGeometry([...prevList, newCirc], true);
+      updateCircleParams((prev) => ({ ...prev, center: null, isLocked: false }));
       createdNew = true;
-    } else if (activeCircleId) {
-      const next = prevList.map((item) => {
-        if ((item.id || item.uuid || item.name) === activeCircleId) {
-          if (item.material) item.material.color.setHex(0x1d4ed8);
-        }
-        return item;
-      });
-      commitCustomGeometry(next, false);
-      setActiveCircleId(null);
+    } else if (liveId) {
+      commitActiveCustomEntity(liveId, setActiveCircle);
+      updateCircleParams((prev) => ({ ...prev, center: null, isLocked: false }));
       createdNew = true;
     }
     if (createdNew) {
-      showToast('Circle committed to Level 10. Ready for next circle.', 'success');
+      setReselectTrigger((prev) => prev + 1);
+      if (suppressToast !== true) {
+        showToast('Circle committed to Level 10. Ready for next circle.', 'success');
+      }
     }
   };
 
   const handleOkCircle = () => {
-    handleApplyCircle();
+    handleApplyCircle(true);
     setIsSketchModeActive(false);
-    setActiveDrawingTool(null);
+    setDrawingToolSync(null);
     setActiveManagerTab('Toolpaths');
     showToast('Circle Center Point accepted on Level 10.', 'success');
   };
 
   const handleCancelCircle = () => {
-    if (activeCircleId) {
+    const liveId = activeCircleIdRef.current;
+    if (liveId) {
       const prevList = customGeometryRef.current || [];
-      const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeCircleId);
+      const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== liveId);
       commitCustomGeometry(next, true);
     }
-    setActiveCircleId(null);
+    setActiveCircle(null);
+    setReselectTrigger((prev) => prev + 1);
     setIsSketchModeActive(false);
-    setActiveDrawingTool(null);
+    setDrawingToolSync(null);
     setActiveManagerTab('Toolpaths');
     showToast('Circle creation cancelled.', 'info');
   };
 
   // ----- Rectangle Handlers -----
   const handleChangeRectWidth = (newWidth) => {
-    setRectParams((prev) => ({ ...prev, width: newWidth }));
+    const absW = Math.max(0.5, Math.abs(Number(newWidth)));
+    if (!Number.isFinite(absW)) return;
+    const liveId = activeRectIdRef.current;
+    const nextParams = updateRectParams((prev) => ({
+      ...prev,
+      width: absW,
+      isWidthLocked: !liveId ? true : prev.isWidthLocked
+    }));
 
-    if (activeRectId) {
-      const prevList = customGeometryRef.current || [];
-      const targetIndex = prevList.findIndex(
-        (item) => (item.id || item.uuid || item.name) === activeRectId
-      );
-      if (targetIndex >= 0) {
-        const oldEntity = prevList[targetIndex];
-        const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
-        const cx = Array.isArray(center) ? center[0] : (center.x || 0);
-        const cz = Array.isArray(center) ? center[1] : (center.z || 0);
-        const y = oldEntity.position?.y || center.y || 0;
-        const currentHeight = Math.abs(rectParams.height || oldEntity.userData?.depth || 50);
-        const absW = Math.max(1, Math.abs(newWidth));
-
-        const updatedRect = createWireframeRect(
-          absW,
-          currentHeight,
-          y,
-          0,
-          [cx, cz],
-          { color: 0x38bdf8, name: `Wireframe_Rect_${Math.round(absW)}x${Math.round(currentHeight)}` }
-        );
-        updatedRect.uuid = activeRectId;
-        if (updatedRect.userData) updatedRect.userData.customId = activeRectId;
-
-        const newList = [...prevList];
-        newList[targetIndex] = updatedRect;
-        commitCustomGeometry(newList, false);
-      }
-    }
+    replaceCustomEntity(liveId, (oldEntity) =>
+      buildRectFromParams(nextParams, oldEntity, 0x38bdf8)
+    );
   };
 
   const handleChangeRectHeight = (newHeight) => {
-    setRectParams((prev) => ({ ...prev, height: newHeight }));
+    const absH = Math.max(0.5, Math.abs(Number(newHeight)));
+    if (!Number.isFinite(absH)) return;
+    const liveId = activeRectIdRef.current;
+    const nextParams = updateRectParams((prev) => ({
+      ...prev,
+      height: absH,
+      isHeightLocked: !liveId ? true : prev.isHeightLocked
+    }));
 
-    if (activeRectId) {
-      const prevList = customGeometryRef.current || [];
-      const targetIndex = prevList.findIndex(
-        (item) => (item.id || item.uuid || item.name) === activeRectId
-      );
-      if (targetIndex >= 0) {
-        const oldEntity = prevList[targetIndex];
-        const center = oldEntity.userData?.center || { x: 0, y: 0, z: 0 };
-        const cx = Array.isArray(center) ? center[0] : (center.x || 0);
-        const cz = Array.isArray(center) ? center[1] : (center.z || 0);
-        const y = oldEntity.position?.y || center.y || 0;
-        const currentWidth = Math.abs(rectParams.width || oldEntity.userData?.width || 80);
-        const absH = Math.max(1, Math.abs(newHeight));
-
-        const updatedRect = createWireframeRect(
-          currentWidth,
-          absH,
-          y,
-          0,
-          [cx, cz],
-          { color: 0x38bdf8, name: `Wireframe_Rect_${Math.round(currentWidth)}x${Math.round(absH)}` }
-        );
-        updatedRect.uuid = activeRectId;
-        if (updatedRect.userData) updatedRect.userData.customId = activeRectId;
-
-        const newList = [...prevList];
-        newList[targetIndex] = updatedRect;
-        commitCustomGeometry(newList, false);
-      }
-    }
+    replaceCustomEntity(liveId, (oldEntity) =>
+      buildRectFromParams(nextParams, oldEntity, 0x38bdf8)
+    );
   };
 
   const handleToggleRectWidthLock = () => {
-    setRectParams((prev) => ({ ...prev, isWidthLocked: !prev.isWidthLocked }));
+    updateRectParams((prev) => ({ ...prev, isWidthLocked: !prev.isWidthLocked }));
   };
 
   const handleToggleRectHeightLock = () => {
-    setRectParams((prev) => ({ ...prev, isHeightLocked: !prev.isHeightLocked }));
+    updateRectParams((prev) => ({ ...prev, isHeightLocked: !prev.isHeightLocked }));
   };
 
   const handleToggleRectAnchorToCenter = () => {
-    setRectParams((prev) => ({ ...prev, anchorToCenter: !prev.anchorToCenter }));
+    const nextParams = updateRectParams((prev) => ({ ...prev, anchorToCenter: !prev.anchorToCenter }));
+    replaceCustomEntity(activeRectIdRef.current, (oldEntity) =>
+      buildRectFromParams(nextParams, oldEntity, 0x38bdf8)
+    );
   };
 
   const handleToggleRectCreateSurface = () => {
-    setRectParams((prev) => ({ ...prev, createSurface: !prev.createSurface }));
+    const nextParams = updateRectParams((prev) => ({ ...prev, createSurface: !prev.createSurface }));
+    replaceCustomEntity(activeRectIdRef.current, (oldEntity) =>
+      buildRectFromParams(nextParams, oldEntity, 0x38bdf8)
+    );
   };
 
   const handleSelectRectPoint = (pointNum) => {
-    setRectParams((prev) => ({ ...prev, activePoint: pointNum }));
+    updateRectParams((prev) => ({ ...prev, activePoint: pointNum }));
     setReselectTrigger((prev) => prev + 1);
   };
 
-  const handleApplyRect = () => {
+  const handleApplyRect = (suppressToast = false) => {
     let createdNew = false;
     const prevList = customGeometryRef.current || [];
-    const w = Math.abs(rectParams.width || 80);
-    const h = Math.abs(rectParams.height || 50);
+    const curRect = rectParamsRef.current;
+    const liveId = activeRectIdRef.current;
+    const w = Math.abs(Number(curRect.width) || 0);
+    const h = Math.abs(Number(curRect.height) || 0);
 
-    if (!activeRectId && w > 0 && h > 0) {
-      const cx = rectParams.firstCorner ? rectParams.firstCorner.x + (rectParams.secondCorner ? (rectParams.secondCorner.x - rectParams.firstCorner.x) / 2 : w / 2) : 0;
-      const cz = rectParams.firstCorner ? rectParams.firstCorner.z + (rectParams.secondCorner ? (rectParams.secondCorner.z - rectParams.firstCorner.z) / 2 : h / 2) : 0;
-      const cy = 0;
-      const newRect = createWireframeRect(
-        w,
-        h,
-        cy,
-        0,
-        [cx, cz],
-        { color: 0x1d4ed8, name: `Wireframe_Rect_${Math.round(w)}x${Math.round(h)}` }
-      );
-      const next = [...prevList, newRect];
-      commitCustomGeometry(next, true);
+    if (!liveId && w >= 0.5 && h >= 0.5) {
+      const newRect = buildRectFromParams(curRect, null, 0x1d4ed8);
+      commitCustomGeometry([...prevList, newRect], true);
+      updateRectParams((prev) => ({ ...prev, firstCorner: null, secondCorner: null, isWidthLocked: false, isHeightLocked: false }));
       createdNew = true;
-    } else if (activeRectId) {
-      const next = prevList.map((item) => {
-        if ((item.id || item.uuid || item.name) === activeRectId) {
-          if (item.material) item.material.color.setHex(0x1d4ed8);
-        }
-        return item;
-      });
-      commitCustomGeometry(next, false);
-      setActiveRectId(null);
+    } else if (liveId) {
+      commitActiveCustomEntity(liveId, setActiveRect);
+      updateRectParams((prev) => ({ ...prev, firstCorner: null, secondCorner: null, isWidthLocked: false, isHeightLocked: false }));
       createdNew = true;
     }
     if (createdNew) {
-      showToast('Rectangle committed to Level 10. Ready for next rectangle.', 'success');
+      setReselectTrigger((prev) => prev + 1);
+      if (suppressToast !== true) {
+        showToast('Rectangle committed to Level 10. Ready for next rectangle.', 'success');
+      }
     }
   };
 
   const handleOkRect = () => {
-    handleApplyRect();
+    handleApplyRect(true);
     setIsSketchModeActive(false);
-    setActiveDrawingTool(null);
+    setDrawingToolSync(null);
     setActiveManagerTab('Toolpaths');
     showToast('Rectangle accepted on Level 10.', 'success');
   };
 
   const handleCancelRect = () => {
-    if (activeRectId) {
+    const liveId = activeRectIdRef.current;
+    if (liveId) {
       const prevList = customGeometryRef.current || [];
-      const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeRectId);
+      const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== liveId);
       commitCustomGeometry(next, true);
     }
-    setActiveRectId(null);
+    setActiveRect(null);
+    updateRectParams((prev) => ({ ...prev, firstCorner: null, secondCorner: null, isWidthLocked: false, isHeightLocked: false }));
+    setReselectTrigger((prev) => prev + 1);
     setIsSketchModeActive(false);
-    setActiveDrawingTool(null);
+    setDrawingToolSync(null);
     setActiveManagerTab('Toolpaths');
     showToast('Rectangle creation cancelled.', 'info');
   };
 
   // ----- Line Endpoints Handlers -----
   const handleChangeLineLength = (newLen) => {
-    setLineParams((prev) => ({ ...prev, length: newLen }));
-    if (activeLineId) {
-      const prevList = customGeometryRef.current || [];
-      const targetIndex = prevList.findIndex(
-        (item) => (item.id || item.uuid || item.name) === activeLineId
+    const safeLen = Math.max(0.01, Number(newLen));
+    if (!Number.isFinite(safeLen)) return;
+    const liveId = activeLineIdRef.current;
+    const nextLine = updateLineParams((prev) => ({
+      ...prev,
+      length: safeLen,
+      isLengthLocked: !liveId ? true : prev.isLengthLocked
+    }));
+    replaceCustomEntity(liveId, (oldEntity) => {
+      const p1 = oldEntity.userData?.p1 || { x: 0, y: 0, z: 0 };
+      const anchorVec = new THREE.Vector3(p1.x || 0, p1.y || 0, p1.z || 0);
+      const { p2 } = computeLineEnd(anchorVec, anchorVec, {
+        lineType: nextLine.lineType,
+        lockedLength: safeLen,
+        lockedAngle: nextLine.angle || 0
+      });
+      return createWireframeLine(
+        [anchorVec.x, anchorVec.y, anchorVec.z],
+        [p2.x, p2.y, p2.z],
+        { color: 0x38bdf8, name: `Wireframe_Line_L${safeLen.toFixed(1)}` }
       );
-      if (targetIndex >= 0) {
-        const oldEntity = prevList[targetIndex];
-        const p1 = oldEntity.userData?.p1 || { x: 0, y: 0, z: 0 };
-        const angleRad = ((lineParams.angle || 0) * Math.PI) / 180;
-        const p2 = {
-          x: p1.x + Math.cos(angleRad) * newLen,
-          y: p1.y || 0,
-          z: p1.z - Math.sin(angleRad) * newLen
-        };
-        const updatedLine = createWireframeLine(
-          [p1.x, p1.y, p1.z],
-          [p2.x, p2.y, p2.z],
-          { color: 0x38bdf8, name: `Wireframe_Line_L${newLen.toFixed(1)}` }
-        );
-        updatedLine.uuid = activeLineId;
-        if (updatedLine.userData) updatedLine.userData.customId = activeLineId;
-        const newList = [...prevList];
-        newList[targetIndex] = updatedLine;
-        commitCustomGeometry(newList, false);
-      }
-    }
+    });
   };
 
   const handleChangeLineAngle = (newAngle) => {
-    setLineParams((prev) => ({ ...prev, angle: newAngle }));
-    if (activeLineId) {
-      const prevList = customGeometryRef.current || [];
-      const targetIndex = prevList.findIndex(
-        (item) => (item.id || item.uuid || item.name) === activeLineId
+    const safeAngle = Number(newAngle);
+    if (!Number.isFinite(safeAngle)) return;
+    const liveId = activeLineIdRef.current;
+    const nextLine = updateLineParams((prev) => ({
+      ...prev,
+      angle: safeAngle,
+      isAngleLocked: !liveId ? true : prev.isAngleLocked
+    }));
+    replaceCustomEntity(liveId, (oldEntity) => {
+      const p1 = oldEntity.userData?.p1 || { x: 0, y: 0, z: 0 };
+      const anchorVec = new THREE.Vector3(p1.x || 0, p1.y || 0, p1.z || 0);
+      const currentLen = Math.max(0.01, Number(nextLine.length) || 50);
+      const { p2 } = computeLineEnd(anchorVec, anchorVec, {
+        lineType: nextLine.lineType,
+        lockedLength: currentLen,
+        lockedAngle: safeAngle
+      });
+      return createWireframeLine(
+        [anchorVec.x, anchorVec.y, anchorVec.z],
+        [p2.x, p2.y, p2.z],
+        { color: 0x38bdf8, name: `Wireframe_Line_L${currentLen.toFixed(1)}` }
       );
-      if (targetIndex >= 0) {
-        const oldEntity = prevList[targetIndex];
-        const p1 = oldEntity.userData?.p1 || { x: 0, y: 0, z: 0 };
-        const currentLen = lineParams.length || 50;
-        const angleRad = ((newAngle || 0) * Math.PI) / 180;
-        const p2 = {
-          x: p1.x + Math.cos(angleRad) * currentLen,
-          y: p1.y || 0,
-          z: p1.z - Math.sin(angleRad) * currentLen
-        };
-        const updatedLine = createWireframeLine(
-          [p1.x, p1.y, p1.z],
-          [p2.x, p2.y, p2.z],
-          { color: 0x38bdf8, name: `Wireframe_Line_L${currentLen.toFixed(1)}` }
-        );
-        updatedLine.uuid = activeLineId;
-        if (updatedLine.userData) updatedLine.userData.customId = activeLineId;
-        const newList = [...prevList];
-        newList[targetIndex] = updatedLine;
-        commitCustomGeometry(newList, false);
-      }
-    }
+    });
   };
 
   const handleToggleLineLengthLock = () => {
-    setLineParams((prev) => ({ ...prev, isLengthLocked: !prev.isLengthLocked }));
+    updateLineParams((prev) => ({ ...prev, isLengthLocked: !prev.isLengthLocked }));
   };
 
   const handleToggleLineAngleLock = () => {
-    setLineParams((prev) => ({ ...prev, isAngleLocked: !prev.isAngleLocked }));
+    updateLineParams((prev) => ({ ...prev, isAngleLocked: !prev.isAngleLocked }));
   };
 
   const handleChangeLineType = (lineType) => {
-    setLineParams((prev) => ({ ...prev, lineType }));
+    updateLineParams((prev) => ({ ...prev, lineType }));
   };
 
   const handleToggleLineTangent = () => {
-    setLineParams((prev) => ({ ...prev, isTangent: !prev.isTangent }));
+    updateLineParams((prev) => ({ ...prev, isTangent: !prev.isTangent }));
   };
 
   const handleChangeLineMethod = (lineMethod) => {
-    setLineParams((prev) => ({ ...prev, lineMethod }));
+    updateLineParams((prev) => ({ ...prev, lineMethod }));
   };
 
   const handleSelectLineEndpoint = (endpointNum) => {
-    setLineParams((prev) => ({ ...prev, activeEndpoint: endpointNum }));
+    updateLineParams((prev) => ({ ...prev, activeEndpoint: endpointNum }));
     setReselectTrigger((prev) => prev + 1);
   };
 
   const handleChangeLineAxisOffset = (axisOffset) => {
-    setLineParams((prev) => ({ ...prev, axisOffset }));
+    updateLineParams((prev) => ({ ...prev, axisOffset }));
   };
 
-  const handleApplyLine = () => {
+  const handleApplyLine = (suppressToast = false) => {
     let committed = false;
     const prevList = customGeometryRef.current || [];
-    if (!activeLineId && lineParams.length > 0) {
-      const p1 = lineParams.pt1 || { x: 0, y: 0, z: 0 };
-      const angleRad = ((lineParams.angle || 0) * Math.PI) / 180;
-      const p2 = {
-        x: p1.x + Math.cos(angleRad) * lineParams.length,
-        y: p1.y || 0,
-        z: p1.z - Math.sin(angleRad) * lineParams.length
-      };
+    const curLine = lineParamsRef.current;
+    const liveId = activeLineIdRef.current;
+    if (!liveId && curLine.length > 0) {
+      const y = partMetrics?.box?.max?.y ?? 0;
+      const p1 = curLine.pt1 || { x: 0, y, z: 0 };
+      const anchorVec = new THREE.Vector3(p1.x || 0, p1.y ?? y, p1.z || 0);
+      const { p2 } = computeLineEnd(anchorVec, anchorVec, {
+        lineType: curLine.lineType,
+        lockedLength: curLine.length,
+        lockedAngle: curLine.angle || 0
+      });
       const newLine = createWireframeLine(
-        [p1.x, p1.y, p1.z],
+        [anchorVec.x, anchorVec.y, anchorVec.z],
         [p2.x, p2.y, p2.z],
-        { color: 0x1d4ed8, name: `Wireframe_Line_L${Number(lineParams.length).toFixed(1)}` }
+        { color: 0x1d4ed8, name: `Wireframe_Line_L${Number(curLine.length).toFixed(1)}` }
       );
       commitCustomGeometry([...prevList, newLine], true);
+      updateLineParams((prev) => ({ ...prev, pt1: null, pt2: null, isLengthLocked: false, isAngleLocked: false }));
       committed = true;
-    } else if (activeLineId) {
-      const next = prevList.map((item) => {
-        if ((item.id || item.uuid || item.name) === activeLineId) {
-          if (item.material) item.material.color.setHex(0x1d4ed8);
-        }
-        return item;
-      });
-      commitCustomGeometry(next, false);
-      setActiveLineId(null);
+    } else if (liveId) {
+      commitActiveCustomEntity(liveId, setActiveLine);
+      updateLineParams((prev) => ({ ...prev, pt1: null, pt2: null, isLengthLocked: false, isAngleLocked: false }));
       committed = true;
     }
     if (committed) {
-      showToast('Line committed to Level 10. Ready for next line.', 'success');
+      setReselectTrigger((prev) => prev + 1);
+      if (suppressToast !== true) {
+        showToast('Line committed to Level 10. Ready for next line.', 'success');
+      }
     }
   };
 
   const handleOkLine = () => {
-    handleApplyLine();
+    handleApplyLine(true);
     setIsSketchModeActive(false);
-    setActiveDrawingTool(null);
+    setDrawingToolSync(null);
     setActiveManagerTab('Toolpaths');
     showToast('Line Endpoints accepted on Level 10.', 'success');
   };
 
   const handleCancelLine = () => {
-    if (activeLineId) {
+    const liveId = activeLineIdRef.current;
+    if (liveId) {
       const prevList = customGeometryRef.current || [];
-      const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== activeLineId);
+      const next = prevList.filter((item) => (item.id || item.uuid || item.name) !== liveId);
       commitCustomGeometry(next, true);
     }
-    setActiveLineId(null);
+    setActiveLine(null);
+    setReselectTrigger((prev) => prev + 1);
     setIsSketchModeActive(false);
-    setActiveDrawingTool(null);
+    setDrawingToolSync(null);
     setActiveManagerTab('Toolpaths');
     showToast('Line creation cancelled.', 'info');
   };
 
   // ----- Arc Tangent Handlers -----
   const handleChangeArcRadius = (newRadius) => {
+    const safeR = Math.max(0.1, Number(newRadius));
+    if (!Number.isFinite(safeR)) return;
     setArcParams((prev) => ({
       ...prev,
-      radius: newRadius,
-      diameter: newRadius * 2
+      radius: safeR,
+      diameter: safeR * 2,
+      isLocked: !activeArcId ? true : prev.isLocked
     }));
   };
 
@@ -3598,23 +3690,17 @@ export default function App() {
     setArcParams((prev) => ({ ...prev, entityMethod }));
   };
 
-  const handleApplyArc = () => {
+  const handleApplyArc = (suppressToast = false) => {
     if (activeArcId) {
-      const prevList = customGeometryRef.current || [];
-      const next = prevList.map((item) => {
-        if ((item.id || item.uuid || item.name) === activeArcId) {
-          if (item.material) item.material.color.setHex(0x1d4ed8);
-        }
-        return item;
-      });
-      commitCustomGeometry(next, false);
-      setActiveArcId(null);
-      showToast('Arc Tangent committed to Level 10.', 'success');
+      commitActiveCustomEntity(activeArcId, setActiveArcId);
+      if (suppressToast !== true) {
+        showToast('Arc Tangent committed to Level 10.', 'success');
+      }
     }
   };
 
   const handleOkArc = () => {
-    handleApplyArc();
+    handleApplyArc(true);
     setIsSketchModeActive(false);
     setActiveDrawingTool(null);
     setActiveManagerTab('Toolpaths');
@@ -3805,10 +3891,11 @@ export default function App() {
   };
 
   const handleAddCustomEntity = (entity) => {
+    const curTool = activeDrawingToolRef.current || activeDrawingTool;
     const activeIdToCommit =
-      activeDrawingTool === 'circle' ? activeCircleId :
-      activeDrawingTool === 'rect' ? activeRectId :
-      activeDrawingTool === 'line' ? activeLineId :
+      curTool === 'circle' ? activeCircleIdRef.current :
+      curTool === 'rect' ? activeRectIdRef.current :
+      curTool === 'line' ? activeLineIdRef.current :
       null;
 
     const currentList = customGeometryRef.current || [];
@@ -3822,13 +3909,13 @@ export default function App() {
       : currentList;
 
     const entId = entity.id || entity.uuid || entity.name;
-    if (activeDrawingTool === 'circle') {
-      setActiveCircleId(entId);
-    } else if (activeDrawingTool === 'rect') {
-      setActiveRectId(entId);
-    } else if (activeDrawingTool === 'line') {
-      setActiveLineId(entId);
-    } else if (activeDrawingTool === 'arc_tangent' || activeDrawingTool === 'arctangent') {
+    if (curTool === 'circle') {
+      setActiveCircle(entId);
+    } else if (curTool === 'rect') {
+      setActiveRect(entId);
+    } else if (curTool === 'line') {
+      setActiveLine(entId);
+    } else if (curTool === 'arc_tangent' || curTool === 'arctangent') {
       setActiveArcId(entId);
     }
 

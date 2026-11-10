@@ -120,6 +120,96 @@ export function snapToEntityPoints(cursorPoint, existingEntities = [], snapToler
 }
 
 /**
+ * Computes consistent rectangle center and full dimensions for both rubber-band previews
+ * and final entity creation, supporting locked dimensions and anchor-to-center mode.
+ */
+export function computeRectPlacement(anchorPt, targetPt, options = {}) {
+  const {
+    anchorToCenter = false,
+    lockedWidth = null,
+    lockedHeight = null,
+    dirX: fallbackDirX = 1,
+    dirZ: fallbackDirZ = -1
+  } = options;
+
+  const dx = (targetPt?.x ?? anchorPt.x) - anchorPt.x;
+  const dz = (targetPt?.z ?? anchorPt.z) - anchorPt.z;
+  const dirX = Math.abs(dx) > 0.001 ? (dx >= 0 ? 1 : -1) : (fallbackDirX || 1);
+  const dirZ = Math.abs(dz) > 0.001 ? (dz >= 0 ? 1 : -1) : (fallbackDirZ || -1);
+
+  const hasLockedW = lockedWidth !== null && lockedWidth !== undefined && Math.abs(Number(lockedWidth)) > 0;
+  const hasLockedH = lockedHeight !== null && lockedHeight !== undefined && Math.abs(Number(lockedHeight)) > 0;
+
+  let width;
+  let height;
+  let cx;
+  let cz;
+
+  if (anchorToCenter) {
+    width = hasLockedW ? Math.abs(Number(lockedWidth)) : Math.abs(dx) * 2;
+    height = hasLockedH ? Math.abs(Number(lockedHeight)) : Math.abs(dz) * 2;
+    cx = anchorPt.x;
+    cz = anchorPt.z;
+  } else {
+    width = hasLockedW ? Math.abs(Number(lockedWidth)) : Math.abs(dx);
+    height = hasLockedH ? Math.abs(Number(lockedHeight)) : Math.abs(dz);
+    cx = anchorPt.x + dirX * (width / 2);
+    cz = anchorPt.z + dirZ * (height / 2);
+  }
+
+  return { width, height, cx, cz, dirX, dirZ };
+}
+
+/**
+ * Computes line endpoint honoring horizontal/vertical constraint and locked length/angle.
+ */
+export function computeLineEnd(anchorPt, targetPt, options = {}) {
+  const {
+    lineType = 'freeform',
+    lockedLength = null,
+    lockedAngle = null
+  } = options;
+
+  let p2 = (targetPt || anchorPt).clone();
+  p2.y = anchorPt.y;
+
+  if (lockedAngle !== null && lockedAngle !== undefined && Number.isFinite(Number(lockedAngle))) {
+    const rawLen = anchorPt.distanceTo(p2);
+    const len = (lockedLength !== null && lockedLength !== undefined && Number(lockedLength) > 0)
+      ? Math.abs(Number(lockedLength))
+      : Math.max(1, rawLen);
+    const rad = (Number(lockedAngle) * Math.PI) / 180;
+    p2 = new THREE.Vector3(
+      anchorPt.x + Math.cos(rad) * len,
+      anchorPt.y,
+      anchorPt.z - Math.sin(rad) * len
+    );
+  } else {
+    if (lineType === 'horizontal') {
+      p2.z = anchorPt.z;
+    } else if (lineType === 'vertical') {
+      p2.x = anchorPt.x;
+    }
+    if (lockedLength !== null && lockedLength !== undefined && Number(lockedLength) > 0) {
+      const dir = new THREE.Vector3().subVectors(p2, anchorPt);
+      if (dir.lengthSq() < 1e-6) {
+        dir.set(lineType === 'vertical' ? 0 : 1, 0, lineType === 'vertical' ? -1 : 0);
+      } else {
+        dir.normalize();
+      }
+      p2 = anchorPt.clone().addScaledVector(dir, Math.abs(Number(lockedLength)));
+    }
+  }
+
+  const length = anchorPt.distanceTo(p2);
+  const dx = p2.x - anchorPt.x;
+  const dz = p2.z - anchorPt.z;
+  const angle = (Math.atan2(-dz, dx) * 180 / Math.PI + 360) % 360;
+
+  return { p2, length, angle };
+}
+
+/**
  * Creates a dynamic rubber-band preview mesh for mouse drag drawing.
  */
 export function createGhostPreview(tool, startPt, currentPt, options = {}) {
@@ -133,32 +223,21 @@ export function createGhostPreview(tool, startPt, currentPt, options = {}) {
     linewidth: 2
   });
 
-  const solidMaterial = new THREE.LineBasicMaterial({
-    color: 0x38bdf8,
-    linewidth: 2
-  });
-
   if (tool === 'line') {
-    const geo = new THREE.BufferGeometry().setFromPoints([startPt, currentPt]);
+    const { p2 } = computeLineEnd(startPt, currentPt, options);
+    const geo = new THREE.BufferGeometry().setFromPoints([startPt, p2]);
     const line = new THREE.Line(geo, dashedMaterial);
     line.computeLineDistances();
     group.add(line);
   } else if (tool === 'rect') {
-    let p1, p2, p3, p4;
+    const { width, height, cx, cz } = computeRectPlacement(startPt, currentPt, options);
+    const halfW = Math.max(0.5, width / 2);
+    const halfD = Math.max(0.5, height / 2);
     const y = startPt.y;
-    if (options.anchorToCenter) {
-      const halfW = Math.abs(currentPt.x - startPt.x);
-      const halfD = Math.abs(currentPt.z - startPt.z);
-      p1 = new THREE.Vector3(startPt.x - halfW, y, startPt.z - halfD);
-      p2 = new THREE.Vector3(startPt.x + halfW, y, startPt.z - halfD);
-      p3 = new THREE.Vector3(startPt.x + halfW, y, startPt.z + halfD);
-      p4 = new THREE.Vector3(startPt.x - halfW, y, startPt.z + halfD);
-    } else {
-      p1 = startPt;
-      p2 = new THREE.Vector3(currentPt.x, y, startPt.z);
-      p3 = currentPt;
-      p4 = new THREE.Vector3(startPt.x, y, currentPt.z);
-    }
+    const p1 = new THREE.Vector3(cx - halfW, y, cz - halfD);
+    const p2 = new THREE.Vector3(cx + halfW, y, cz - halfD);
+    const p3 = new THREE.Vector3(cx + halfW, y, cz + halfD);
+    const p4 = new THREE.Vector3(cx - halfW, y, cz + halfD);
 
     const geo = new THREE.BufferGeometry().setFromPoints([p1, p2, p3, p4, p1]);
     const line = new THREE.Line(geo, dashedMaterial);
@@ -166,11 +245,7 @@ export function createGhostPreview(tool, startPt, currentPt, options = {}) {
     group.add(line);
 
     if (options.createSurface) {
-      const w = options.anchorToCenter ? Math.abs(currentPt.x - startPt.x) * 2 : Math.abs(currentPt.x - startPt.x);
-      const d = options.anchorToCenter ? Math.abs(currentPt.z - startPt.z) * 2 : Math.abs(currentPt.z - startPt.z);
-      const cx = options.anchorToCenter ? startPt.x : (startPt.x + currentPt.x) / 2;
-      const cz = options.anchorToCenter ? startPt.z : (startPt.z + currentPt.z) / 2;
-      const planeGeo = new THREE.PlaneGeometry(Math.max(1, w), Math.max(1, d));
+      const planeGeo = new THREE.PlaneGeometry(Math.max(1, width), Math.max(1, height));
       planeGeo.rotateX(-Math.PI / 2);
       const planeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
       const plane = new THREE.Mesh(planeGeo, planeMat);
@@ -178,7 +253,9 @@ export function createGhostPreview(tool, startPt, currentPt, options = {}) {
       group.add(plane);
     }
   } else if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
-    const radius = Math.max(0.5, startPt.distanceTo(currentPt));
+    const radius = (options.lockedRadius && options.lockedRadius > 0)
+      ? Number(options.lockedRadius)
+      : Math.max(0.5, startPt.distanceTo(currentPt));
     const segments = 64;
     const pts = [];
     for (let i = 0; i <= segments; i++) {
@@ -202,7 +279,10 @@ export function createGhostPreview(tool, startPt, currentPt, options = {}) {
     group.add(centerDot);
 
     // Radius guideline
-    const radGeo = new THREE.BufferGeometry().setFromPoints([startPt, currentPt]);
+    const radEnd = (options.lockedRadius && options.lockedRadius > 0)
+      ? new THREE.Vector3(startPt.x + radius, startPt.y, startPt.z)
+      : currentPt;
+    const radGeo = new THREE.BufferGeometry().setFromPoints([startPt, radEnd]);
     const radLine = new THREE.Line(radGeo, dashedMaterial);
     radLine.computeLineDistances();
     group.add(radLine);

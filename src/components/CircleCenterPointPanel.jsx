@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  HelpCircle, Pin, Check, X, ArrowUpRight, Lock, Unlock,
-  ChevronDown, ChevronUp, RotateCcw
+  Pin, Check, X,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
+import SketchNumericInput from './SketchNumericInput';
 
 export default function CircleCenterPointPanel({
   radius = 25,
@@ -15,54 +16,12 @@ export default function CircleCenterPointPanel({
   onApply,
   onOk,
   onCancel,
-  theme = 'light'
+  theme: _theme = 'light'
 }) {
-  const isLight = theme !== 'dark';
-
   // Section collapse states
   const [entityExpanded, setEntityExpanded] = useState(true);
   const [centerExpanded, setCenterExpanded] = useState(true);
   const [sizeExpanded, setSizeExpanded] = useState(true);
-
-  // Local radius / diameter input text states for clean typing
-  const [radiusInput, setRadiusInput] = useState(radius.toFixed(5));
-  const [diameterInput, setDiameterInput] = useState((radius * 2).toFixed(5));
-
-  // Sync inputs when prop radius changes externally (e.g. while dragging in viewport)
-  useEffect(() => {
-    setRadiusInput(radius.toFixed(5));
-    setDiameterInput((radius * 2).toFixed(5));
-  }, [radius]);
-
-  const handleRadiusChange = (valStr) => {
-    setRadiusInput(valStr);
-    const num = parseFloat(valStr);
-    if (!isNaN(num) && num > 0) {
-      setDiameterInput((num * 2).toFixed(5));
-      if (onChangeRadius) onChangeRadius(num);
-    }
-  };
-
-  const handleDiameterChange = (valStr) => {
-    setDiameterInput(valStr);
-    const num = parseFloat(valStr);
-    if (!isNaN(num) && num > 0) {
-      setRadiusInput((num / 2).toFixed(5));
-      if (onChangeRadius) onChangeRadius(num / 2);
-    }
-  };
-
-  const stepRadius = (delta) => {
-    const current = parseFloat(radiusInput) || radius;
-    const next = Math.max(0.1, current + delta);
-    handleRadiusChange(next.toFixed(5));
-  };
-
-  const stepDiameter = (delta) => {
-    const current = parseFloat(diameterInput) || (radius * 2);
-    const next = Math.max(0.2, current + delta);
-    handleDiameterChange(next.toFixed(5));
-  };
 
   return (
     <div
@@ -390,191 +349,33 @@ export default function CircleCenterPointPanel({
               {/* Radius Row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ width: '55px', fontSize: '11px', color: '#475569' }}>Radius:</span>
-                <div style={{ display: 'flex', alignItems: 'center', flex: 1, position: 'relative' }}>
-                  <input
-                    type="text"
-                    value={radiusInput}
-                    onChange={(e) => handleRadiusChange(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '3px 20px 3px 6px',
-                      fontSize: '11px',
-                      fontFamily: 'monospace',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '2px',
-                      background: '#ffffff',
-                      color: '#0f172a',
-                      outline: 'none'
-                    }}
-                  />
-                  {/* Stepper Buttons */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      right: '2px',
-                      top: '2px',
-                      bottom: '2px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      width: '14px'
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => stepRadius(1.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        background: '#f1f5f9',
-                        cursor: 'pointer',
-                        padding: 0,
-                        fontSize: '6px',
-                        lineHeight: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderBottom: '1px solid #e2e8f0'
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => stepRadius(-1.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        background: '#f1f5f9',
-                        cursor: 'pointer',
-                        padding: 0,
-                        fontSize: '6px',
-                        lineHeight: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-
-                {/* Lock Button */}
-                <button
-                  type="button"
-                  onClick={onToggleLock}
-                  title={isLocked ? "Radius Locked (Subsequent clicks use this size)" : "Radius Unlocked"}
-                  style={{
-                    width: '22px',
-                    height: '22px',
-                    border: isLocked ? '1px solid #f59e0b' : '1px solid #cbd5e1',
-                    background: isLocked ? '#fef3c7' : '#ffffff',
-                    borderRadius: '2px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: isLocked ? '#b45309' : '#64748b',
-                    padding: 0
-                  }}
-                >
-                  {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                </button>
+                <SketchNumericInput
+                  value={Number(radius) || 0}
+                  min={0.1}
+                  step={1}
+                  decimals={4}
+                  allowNegative={false}
+                  onChangeNumber={(num) => onChangeRadius && onChangeRadius(num)}
+                  isLocked={isLocked}
+                  onToggleLock={onToggleLock}
+                  lockTitle={isLocked ? 'Radius Locked (Subsequent clicks use this size)' : 'Lock Radius'}
+                />
               </div>
 
               {/* Diameter Row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ width: '55px', fontSize: '11px', color: '#475569' }}>Diameter:</span>
-                <div style={{ display: 'flex', alignItems: 'center', flex: 1, position: 'relative' }}>
-                  <input
-                    type="text"
-                    value={diameterInput}
-                    onChange={(e) => handleDiameterChange(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '3px 20px 3px 6px',
-                      fontSize: '11px',
-                      fontFamily: 'monospace',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '2px',
-                      background: '#ffffff',
-                      color: '#0f172a',
-                      outline: 'none'
-                    }}
-                  />
-                  {/* Stepper Buttons */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      right: '2px',
-                      top: '2px',
-                      bottom: '2px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      width: '14px'
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => stepDiameter(2.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        background: '#f1f5f9',
-                        cursor: 'pointer',
-                        padding: 0,
-                        fontSize: '6px',
-                        lineHeight: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderBottom: '1px solid #e2e8f0'
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => stepDiameter(-2.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        background: '#f1f5f9',
-                        cursor: 'pointer',
-                        padding: 0,
-                        fontSize: '6px',
-                        lineHeight: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-
-                {/* Lock Button */}
-                <button
-                  type="button"
-                  onClick={onToggleLock}
-                  title={isLocked ? "Diameter Locked" : "Diameter Unlocked"}
-                  style={{
-                    width: '22px',
-                    height: '22px',
-                    border: isLocked ? '1px solid #f59e0b' : '1px solid #cbd5e1',
-                    background: isLocked ? '#fef3c7' : '#ffffff',
-                    borderRadius: '2px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: isLocked ? '#b45309' : '#64748b',
-                    padding: 0
-                  }}
-                >
-                  {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                </button>
+                <SketchNumericInput
+                  value={(Number(radius) || 0) * 2}
+                  min={0.2}
+                  step={2}
+                  decimals={4}
+                  allowNegative={false}
+                  onChangeNumber={(num) => onChangeRadius && onChangeRadius(num / 2)}
+                  isLocked={isLocked}
+                  onToggleLock={onToggleLock}
+                  lockTitle={isLocked ? 'Diameter Locked' : 'Lock Diameter'}
+                />
               </div>
             </div>
           )}

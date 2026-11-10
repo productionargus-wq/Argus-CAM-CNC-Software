@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  HelpCircle, Pin, Check, X, Lock, Unlock,
+  Pin, Check, X,
   ChevronDown, ChevronUp
 } from 'lucide-react';
+import SketchNumericInput from './SketchNumericInput';
 
 export default function RectanglePanel({
   width = 80,
@@ -22,55 +23,12 @@ export default function RectanglePanel({
   onApply,
   onOk,
   onCancel,
-  theme = 'light'
+  theme: _theme = 'light'
 }) {
-  const isLight = theme !== 'dark';
-
   // Section collapse states
   const [pointsExpanded, setPointsExpanded] = useState(true);
   const [dimensionsExpanded, setDimensionsExpanded] = useState(true);
   const [settingsExpanded, setSettingsExpanded] = useState(true);
-
-  // Local text input states for clean typing
-  const [widthInput, setWidthInput] = useState(width.toFixed(5));
-  const [heightInput, setHeightInput] = useState(height.toFixed(5));
-
-  // Sync inputs when props change externally (e.g. while dragging in viewport)
-  useEffect(() => {
-    setWidthInput(width.toFixed(5));
-  }, [width]);
-
-  useEffect(() => {
-    setHeightInput(height.toFixed(5));
-  }, [height]);
-
-  const handleWidthChange = (valStr) => {
-    setWidthInput(valStr);
-    const num = parseFloat(valStr);
-    if (!isNaN(num) && onChangeWidth) {
-      onChangeWidth(num);
-    }
-  };
-
-  const handleHeightChange = (valStr) => {
-    setHeightInput(valStr);
-    const num = parseFloat(valStr);
-    if (!isNaN(num) && onChangeHeight) {
-      onChangeHeight(num);
-    }
-  };
-
-  const stepWidth = (delta) => {
-    const current = parseFloat(widthInput) || width;
-    const next = current + delta;
-    handleWidthChange(next.toFixed(5));
-  };
-
-  const stepHeight = (delta) => {
-    const current = parseFloat(heightInput) || height;
-    const next = current + delta;
-    handleHeightChange(next.toFixed(5));
-  };
 
   return (
     <div
@@ -386,205 +344,36 @@ export default function RectanglePanel({
               {/* Width Row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                 <span style={{ fontSize: '11px', color: '#475569', width: '52px' }}>Width:</span>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: '#ffffff',
-                    flex: 1,
-                    overflow: 'hidden',
-                    height: '22px'
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={widthInput}
-                    onChange={(e) => handleWidthChange(e.target.value)}
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      padding: '2px 4px',
-                      fontSize: '11px',
-                      fontFamily: 'monospace',
-                      width: '100%',
-                      color: '#0f172a'
-                    }}
-                  />
-                  {/* Up / Down stepper buttons */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      borderLeft: '1px solid #cbd5e1',
-                      width: '14px',
-                      height: '100%'
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => stepWidth(1.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => stepWidth(-1.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        borderTop: '1px solid #cbd5e1',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-
-                {/* Width Lock Button */}
-                <button
-                  type="button"
-                  onClick={onToggleWidthLock}
-                  title={isWidthLocked ? 'Unlock Width' : 'Lock Width'}
-                  style={{
-                    width: '20px',
-                    height: '22px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: isWidthLocked ? '#fef3c7' : '#ffffff',
-                    color: isWidthLocked ? '#d97706' : '#94a3b8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0
-                  }}
-                >
-                  {isWidthLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                </button>
+                <SketchNumericInput
+                  value={Math.abs(Number(width) || 0)}
+                  min={0.01}
+                  step={1}
+                  decimals={4}
+                  allowNegative={false}
+                  onChangeNumber={(num) => onChangeWidth && onChangeWidth(num)}
+                  isLocked={isWidthLocked}
+                  onToggleLock={onToggleWidthLock}
+                  lockTitle={isWidthLocked ? 'Unlock Width' : 'Lock Width'}
+                />
               </div>
 
               {/* Height Row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                 <span style={{ fontSize: '11px', color: '#475569', width: '52px' }}>Height:</span>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: '#ffffff',
-                    flex: 1,
-                    overflow: 'hidden',
-                    height: '22px'
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={heightInput}
-                    onChange={(e) => handleHeightChange(e.target.value)}
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      padding: '2px 4px',
-                      fontSize: '11px',
-                      fontFamily: 'monospace',
-                      width: '100%',
-                      color: '#0f172a'
-                    }}
-                  />
-                  {/* Up / Down stepper buttons */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      borderLeft: '1px solid #cbd5e1',
-                      width: '14px',
-                      height: '100%'
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => stepHeight(1.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => stepHeight(-1.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        borderTop: '1px solid #cbd5e1',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-
-                {/* Height Lock Button */}
-                <button
-                  type="button"
-                  onClick={onToggleHeightLock}
-                  title={isHeightLocked ? 'Unlock Height' : 'Lock Height'}
-                  style={{
-                    width: '20px',
-                    height: '22px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: isHeightLocked ? '#fef3c7' : '#ffffff',
-                    color: isHeightLocked ? '#d97706' : '#94a3b8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0
-                  }}
-                >
-                  {isHeightLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                </button>
+                <SketchNumericInput
+                  value={Math.abs(Number(height) || 0)}
+                  min={0.01}
+                  step={1}
+                  decimals={4}
+                  allowNegative={false}
+                  onChangeNumber={(num) => onChangeHeight && onChangeHeight(num)}
+                  isLocked={isHeightLocked}
+                  onToggleLock={onToggleHeightLock}
+                  lockTitle={isHeightLocked ? 'Unlock Height' : 'Lock Height'}
+                />
+              </div>
+              <div style={{ fontSize: '10px', color: '#64748b', lineHeight: '1.35' }}>
+                Click Corner 1 &amp; Corner 2 on canvas, or type Width &amp; Height and click canvas / OK.
               </div>
             </div>
           )}

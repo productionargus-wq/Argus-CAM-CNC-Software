@@ -50,37 +50,46 @@ export const DEFAULT_LEAD_CONFIG = {
 
 /**
  * Builds a smooth tangential circular arc entry leading into targetPoint along cutDirection.
+ * Defaults to the outward side of a clockwise contour (sideSign = -1) so entry stays clear of the finished wall.
  */
 export function buildTangentArcLeadIn(targetPoint, cutDirection, config = {}) {
-  const radius = Number(config.arcRadius ?? DEFAULT_LEAD_CONFIG.arcRadius);
-  const sweepAngleDeg = Number(config.sweepAngleDeg ?? DEFAULT_LEAD_CONFIG.sweepAngleDeg);
-  const linearDist = Number(config.linearExtension ?? DEFAULT_LEAD_CONFIG.linearExtension);
+  const radius = Math.max(0, Number(config.arcRadius ?? DEFAULT_LEAD_CONFIG.arcRadius));
+  const sweepAngleDeg = Math.max(0, Number(config.sweepAngleDeg ?? DEFAULT_LEAD_CONFIG.sweepAngleDeg));
+  const linearDist = Math.max(0, Number(config.linearExtension ?? DEFAULT_LEAD_CONFIG.linearExtension));
+  const sideSign = config.sideSign ?? (config.leadSide === 'inside' ? 1 : -1);
 
   const dir = cutDirection.clone().normalize();
-  const normal = new THREE.Vector3(-dir.z, 0, dir.x).normalize(); // left normal
+  const sideNormal = new THREE.Vector3(-dir.z * sideSign, 0, dir.x * sideSign).normalize();
 
-  // Circle center placed at targetPoint + normal * radius
-  const circleCenter = new THREE.Vector3().addVectors(targetPoint, normal.clone().multiplyScalar(radius));
+  if (radius <= 0.001 || sweepAngleDeg <= 0.1) {
+    const startPt = linearDist > 0
+      ? targetPoint.clone().addScaledVector(sideNormal, linearDist)
+      : targetPoint.clone();
+    return linearDist > 0 ? [startPt, targetPoint.clone()] : [targetPoint.clone()];
+  }
+
+  const circleCenter = targetPoint.clone().addScaledVector(sideNormal, radius);
   const sweepRad = (sweepAngleDeg * Math.PI) / 180;
   const segments = Math.max(8, Math.round(sweepAngleDeg / 10));
 
   const arcPoints = [];
   for (let i = segments; i >= 0; i--) {
-    const t = i / segments;
-    const angle = -Math.PI / 2 + (1 - t) * sweepRad;
-    const pt = new THREE.Vector3(
-      circleCenter.x + dir.x * Math.sin(angle) * radius - normal.x * Math.cos(angle) * radius,
-      targetPoint.y,
-      circleCenter.z + dir.z * Math.sin(angle) * radius - normal.z * Math.cos(angle) * radius
-    );
+    const theta = (i / segments) * sweepRad;
+    const pt = circleCenter.clone()
+      .addScaledVector(sideNormal, -Math.cos(theta) * radius)
+      .addScaledVector(dir, -Math.sin(theta) * radius);
+    pt.y = targetPoint.y;
     arcPoints.push(pt);
   }
 
-  // Linear extension prior to arc
   const result = [];
   if (linearDist > 0 && arcPoints.length > 0) {
-    const arcStart = arcPoints[0];
-    const linearStart = arcStart.clone().sub(dir.clone().multiplyScalar(linearDist));
+    const entryTangent = dir.clone()
+      .multiplyScalar(Math.cos(sweepRad))
+      .addScaledVector(sideNormal, -Math.sin(sweepRad))
+      .normalize();
+    const linearStart = arcPoints[0].clone().addScaledVector(entryTangent, -linearDist);
+    linearStart.y = targetPoint.y;
     result.push(linearStart);
   }
 
@@ -90,46 +99,56 @@ export function buildTangentArcLeadIn(targetPoint, cutDirection, config = {}) {
 
 /**
  * Builds a smooth tangential circular arc departure swinging away from targetPoint.
+ * Starts continuously at targetPoint (+ optional overlap) and swings outward to avoid gouging corners.
  */
 export function buildTangentArcLeadOut(targetPoint, cutDirection, config = {}) {
-  const radius = Number(config.arcRadius ?? DEFAULT_LEAD_CONFIG.arcRadius);
-  const sweepAngleDeg = Number(config.sweepAngleDeg ?? DEFAULT_LEAD_CONFIG.sweepAngleDeg);
-  const linearDist = Number(config.linearExtension ?? DEFAULT_LEAD_CONFIG.linearExtension);
-  const overlapDist = Number(config.overlapDist ?? DEFAULT_LEAD_CONFIG.overlapDist);
+  const radius = Math.max(0, Number(config.arcRadius ?? DEFAULT_LEAD_CONFIG.arcRadius));
+  const sweepAngleDeg = Math.max(0, Number(config.sweepAngleDeg ?? DEFAULT_LEAD_CONFIG.sweepAngleDeg));
+  const linearDist = Math.max(0, Number(config.linearExtension ?? DEFAULT_LEAD_CONFIG.linearExtension));
+  const overlapDist = Math.max(0, Number(config.overlapDist ?? DEFAULT_LEAD_CONFIG.overlapDist));
   const microLift = Number(config.microLiftExit ?? DEFAULT_LEAD_CONFIG.microLiftExit);
+  const sideSign = config.sideSign ?? (config.leadSide === 'inside' ? 1 : -1);
 
   const dir = cutDirection.clone().normalize();
-  const normal = new THREE.Vector3(-dir.z, 0, dir.x).normalize(); // left normal
+  const sideNormal = new THREE.Vector3(-dir.z * sideSign, 0, dir.x * sideSign).normalize();
 
   const result = [];
-
-  // 1. Overlap pass past the nominal target point (to erase cutter witness mark)
   let arcStartPoint = targetPoint.clone();
   if (overlapDist > 0) {
-    arcStartPoint = targetPoint.clone().add(dir.clone().multiplyScalar(overlapDist));
-    result.push(arcStartPoint);
+    result.push(targetPoint.clone());
+    arcStartPoint = targetPoint.clone().addScaledVector(dir, overlapDist);
+  }
+  result.push(arcStartPoint);
+
+  if (radius <= 0.001 || sweepAngleDeg <= 0.1) {
+    if (linearDist > 0) {
+      const endPt = arcStartPoint.clone().addScaledVector(sideNormal, linearDist);
+      endPt.y = arcStartPoint.y + microLift;
+      result.push(endPt);
+    }
+    return result;
   }
 
-  // 2. Tangent departure circle center
-  const circleCenter = new THREE.Vector3().addVectors(arcStartPoint, normal.clone().multiplyScalar(radius));
+  const circleCenter = arcStartPoint.clone().addScaledVector(sideNormal, radius);
   const sweepRad = (sweepAngleDeg * Math.PI) / 180;
   const segments = Math.max(8, Math.round(sweepAngleDeg / 10));
 
-  for (let i = 0; i <= segments; i++) {
+  for (let i = 1; i <= segments; i++) {
     const t = i / segments;
-    const angle = -Math.PI / 2 + t * sweepRad;
-    const pt = new THREE.Vector3(
-      circleCenter.x + dir.x * Math.sin(angle) * radius - normal.x * Math.cos(angle) * radius,
-      arcStartPoint.y + t * microLift,
-      circleCenter.z + dir.z * Math.sin(angle) * radius - normal.z * Math.cos(angle) * radius
-    );
+    const theta = t * sweepRad;
+    const pt = circleCenter.clone()
+      .addScaledVector(sideNormal, -Math.cos(theta) * radius)
+      .addScaledVector(dir, Math.sin(theta) * radius);
+    pt.y = arcStartPoint.y + t * microLift;
     result.push(pt);
   }
 
-  // 3. Linear extension departing safely
   if (linearDist > 0 && result.length > 0) {
-    const lastArc = result[result.length - 1];
-    const linearEnd = lastArc.clone().add(dir.clone().multiplyScalar(linearDist));
+    const exitTangent = dir.clone()
+      .multiplyScalar(Math.cos(sweepRad))
+      .addScaledVector(sideNormal, Math.sin(sweepRad))
+      .normalize();
+    const linearEnd = result[result.length - 1].clone().addScaledVector(exitTangent, linearDist);
     linearEnd.y = arcStartPoint.y + microLift;
     result.push(linearEnd);
   }
@@ -177,14 +196,15 @@ export function applyLeadInOutToContour(contourPoints, config = {}, rapidHeight 
 
   const entryType = config.entryType || 'tangent_arc';
   const exitType = config.exitType || 'tangent_arc';
+  const sideSign = config.sideSign ?? (config.leadSide === 'inside' ? 1 : -1);
 
   // 1. Generate Lead-In points
   let leadInPoints = [];
   if (entryType === 'tangent_arc') {
     leadInPoints = buildTangentArcLeadIn(p0, cutDir, config);
   } else if (entryType === 'linear_perpendicular') {
-    const perp = new THREE.Vector3(-cutDir.z, 0, cutDir.x).normalize();
-    const leadStart = p0.clone().add(perp.multiplyScalar(config.linearExtension || 6.0));
+    const sideNormal = new THREE.Vector3(-cutDir.z * sideSign, 0, cutDir.x * sideSign).normalize();
+    const leadStart = p0.clone().add(sideNormal.multiplyScalar(config.linearExtension ?? 6.0));
     leadInPoints = [leadStart, p0];
   } else {
     leadInPoints = [p0];
@@ -217,8 +237,8 @@ export function applyLeadInOutToContour(contourPoints, config = {}, rapidHeight 
   if (exitType === 'tangent_arc') {
     leadOutPoints = buildTangentArcLeadOut(pLast, exitDir, config);
   } else if (exitType === 'linear_perpendicular') {
-    const perp = new THREE.Vector3(-exitDir.z, 0, exitDir.x).normalize();
-    const leadEnd = pLast.clone().add(perp.multiplyScalar(config.linearExtension || 6.0));
+    const sideNormal = new THREE.Vector3(-exitDir.z * sideSign, 0, exitDir.x * sideSign).normalize();
+    const leadEnd = pLast.clone().add(sideNormal.multiplyScalar(config.linearExtension ?? 6.0));
     leadOutPoints = [pLast, leadEnd];
   } else {
     leadOutPoints = [pLast];

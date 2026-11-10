@@ -459,7 +459,7 @@ export default function OperationsTree({
       {currentTab === 'Circle Cent...' ? (
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <CircleCenterPointPanel
-            radius={circleParams?.radius || 25}
+            radius={circleParams?.radius ?? 25}
             onChangeRadius={onChangeCircleRadius}
             isLocked={circleParams?.isLocked || false}
             onToggleLock={onToggleCircleRadiusLock}
@@ -474,8 +474,8 @@ export default function OperationsTree({
       ) : currentTab === 'Rectangle' ? (
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <RectanglePanel
-            width={rectParams?.width || 80}
-            height={rectParams?.height || 50}
+            width={rectParams?.width ?? 80}
+            height={rectParams?.height ?? 50}
             onChangeWidth={onChangeRectWidth}
             onChangeHeight={onChangeRectHeight}
             isWidthLocked={rectParams?.isWidthLocked || false}
@@ -496,8 +496,8 @@ export default function OperationsTree({
       ) : currentTab === 'Line Endp...' ? (
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <LineEndpointsPanel
-            length={lineParams?.length || 50}
-            angle={lineParams?.angle || 0}
+            length={lineParams?.length ?? 50}
+            angle={lineParams?.angle ?? 0}
             onChangeLength={onChangeLineLength}
             onChangeAngle={onChangeLineAngle}
             isLengthLocked={lineParams?.isLengthLocked || false}
@@ -512,7 +512,7 @@ export default function OperationsTree({
             onChangeLineMethod={onChangeLineMethod}
             activeEndpoint={lineParams?.activeEndpoint || 1}
             onSelectEndpoint={onSelectLineEndpoint}
-            axisOffset={lineParams?.axisOffset || 0}
+            axisOffset={lineParams?.axisOffset ?? 0}
             onChangeAxisOffset={onChangeLineAxisOffset}
             onApply={onApplyLine}
             onOk={onOkLine}
@@ -522,7 +522,7 @@ export default function OperationsTree({
       ) : currentTab === 'Arc Tangent' ? (
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <ArcTangentPanel
-            radius={arcParams?.radius || 25}
+            radius={arcParams?.radius ?? 25}
             onChangeRadius={onChangeArcRadius}
             isLocked={arcParams?.isLocked || false}
             onToggleLock={onToggleArcLock}

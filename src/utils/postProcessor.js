@@ -10,7 +10,8 @@ import {
   generateChamferToolpath,
   generateTapToolpath,
   generateSurfaceParallelToolpath,
-  generateAdaptiveRoughingToolpath
+  generateAdaptiveRoughingToolpath,
+  buildContourParamsFromOp
 } from './toolpathEngine.js';
 import { generateProbingGCode } from './probingEngine.js';
 
@@ -65,8 +66,8 @@ export function generateNCProgram({
     lines.push(`; --- ARGUS CAM 5-AXIS HEIDENHAIN TNC 640 POST ---`);
     lines.push(`; DATE: ${dateStr} | TIME STAMP`);
     lines.push(`; MACHINE: DMU 50 EVO 5-AXIS MILL-TURN`);
-    lines.push(`; BLK FORM 0.1 Z X${bounds.min.x.toFixed(2)} Y${bounds.min.z.toFixed(2)} Z${bounds.min.y.toFixed(2)}`);
-    lines.push(`; BLK FORM 0.2 X${bounds.max.x.toFixed(2)} Y${bounds.max.z.toFixed(2)} Z${(bounds.max.y + (stockConfig?.allowanceTop || 2)).toFixed(2)}`);
+    lines.push(`; BLK FORM 0.1 Z X${bounds.min.x.toFixed(2)} Y${(-bounds.max.z).toFixed(2)} Z${bounds.min.y.toFixed(2)}`);
+    lines.push(`; BLK FORM 0.2 X${bounds.max.x.toFixed(2)} Y${(-bounds.min.z).toFixed(2)} Z${(bounds.max.y + (stockConfig?.allowanceTop || 2)).toFixed(2)}`);
     lines.push(`; ------------------------------------------------`);
   } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
     lines.push(`; %_N_${programName.toUpperCase()}_MPF`);
@@ -141,12 +142,7 @@ export function generateNCProgram({
         center: op.center || op.chain?.center
       });
     } else if (op.badgeClass === 'contour') {
-      toolpathData = generateWaterlineToolpath(effectiveBounds, tool, {
-        stepdown: op.stepdown || 1.0,
-        totalDepth: op.totalDepth || 5.0,
-        rapidHeight: op.rapidHeight || 15.0,
-        chain: op.chain
-      }, model);
+      toolpathData = generateWaterlineToolpath(effectiveBounds, tool, buildContourParamsFromOp(op), model);
     } else if (op.badgeClass === 'swarf') {
       toolpathData = generateSwarfToolpath(effectiveBounds, tool, {
         tiltAngleDeg: 15.0,
@@ -191,6 +187,14 @@ export function generateNCProgram({
 
     if (!toolpathData) return;
 
+    const effRpm = Number(op.spindleSpeed) > 0 ? Math.round(Number(op.spindleSpeed)) : (tool.rpm || 6000);
+    const effFeed = Number(op.feedRate) > 0 ? Math.round(Number(op.feedRate)) : (tool.feedRate || 1000);
+    const effPlunge = Number(op.plungeFeedRate) > 0 ? Math.round(Number(op.plungeFeedRate)) : (tool.plungeRate || 450);
+    const coolantOff = op.coolant === 'Off';
+    const coolantIsoCode = coolantOff ? '' : (op.coolant === 'Mist' || op.coolant === 'Air Blast' ? ' M07' : ' M08');
+    const useControllerComp = op.compensationType === 'control' || op.compensationType === 'wear' || (!op.compensationType && op.badgeClass === 'chamfer');
+    const compCode = op.cuttingDirection === 'conventional' ? 'G42' : 'G41';
+
     // Operation Section Header
     lines.push(``);
     lines.push(`; ================================================`);
@@ -200,8 +204,8 @@ export function generateNCProgram({
 
     // Tool Change & Spindle Start
     if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
-      lines.push(`${nextN()} TOOL CALL ${tool.number} Z S${tool.rpm} DL+0.00 DR+0.00`);
-      lines.push(`${nextN()} M03 M08`);
+      lines.push(`${nextN()} TOOL CALL ${tool.number} Z S${effRpm} DL+0.00 DR+0.00`);
+      lines.push(`${nextN()} M03${coolantIsoCode}`);
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} PLANE SPATIAL SPA+15.00 SPB+0.00 SPC+0.00 TURN FMAX`);
         lines.push(`${nextN()} FUNCTION TCPM F CONT AXIS SPAT`);
@@ -211,8 +215,8 @@ export function generateNCProgram({
       }
     } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
       lines.push(`${nextN()} T="T${tool.number}_${(tool.type || 'FLAT').toUpperCase()}" M6`);
-      lines.push(`${nextN()} S${tool.rpm} M3`);
-      lines.push(`${nextN()} D1 M8`);
+      lines.push(`${nextN()} S${effRpm} M3`);
+      lines.push(`${nextN()} D1${coolantIsoCode}`);
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} TRAORI ; 5-AXIS TCP`);
       } else if (op.badgeClass === 'adaptive' || op.feedOptimization) {
@@ -221,62 +225,128 @@ export function generateNCProgram({
     } else {
       // Fanuc / Haas / GRBL / Mach3
       lines.push(`${nextN()} T${tool.number} M06 (${tool.name})`);
-      lines.push(`${nextN()} S${tool.rpm} M03`);
-      lines.push(`${nextN()} G43 H${tool.number} M08`);
+      lines.push(`${nextN()} S${effRpm} M03`);
+      lines.push(`${nextN()} G43 H${tool.number}${coolantIsoCode}`);
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} G43.4 H${tool.number} ; 5-AXIS TCPM ACTIVATION`);
-      } else if (op.badgeClass === 'contour' || op.badgeClass === 'chamfer') {
-        lines.push(`${nextN()} G41 D${tool.number} ; CUTTER RADIUS COMPENSATION LEFT`);
+      } else if (useControllerComp) {
+        lines.push(`${nextN()} ${compCode} D${tool.number} ; CUTTER RADIUS COMPENSATION`);
+      } else if (op.badgeClass === 'contour') {
+        lines.push(`(CUTTER COMP: COMPUTER PRE-OFFSET)`);
       } else if (op.badgeClass === 'adaptive' || op.feedOptimization) {
         lines.push(`${nextN()} G05.1 Q1 (HIGH SPEED AICC II LOOK-AHEAD ACCEL/DECEL)`);
       }
     }
 
-    // Top of workpiece coordinate datum (WCS Z=0)
-    // On CNC machines, Z0 is typically at the top surface of the workpiece.
+    // Coordinate & Z-Linking helpers
+    // Three.js Top (G17): +X = CNC +X, -Z = CNC +Y (cplaneGeometry vAxis), +Y = CNC +Z
     const isWcsTop = stockConfig?.wcsZZero !== 'model_origin' || !model || !!op.chain;
     const zOffset = isWcsTop ? effectiveBounds.max.y : 0;
+    const fmtNum = (n) => (Math.abs(n) < 0.0005 ? 0 : n).toFixed(3);
+    const toCncY = (threeZ) => -threeZ;
+    const toCncZ = (threeY) => threeY - zOffset;
 
-    let lastPos = new THREE.Vector3(0, effectiveBounds.max.y + (op.rapidHeight || 15.0), 0);
+    const clearanceZ = isWcsTop
+      ? (Number(op.rapidHeight) || 15.0)
+      : (effectiveBounds.max.y + (Number(op.rapidHeight) || 15.0) - zOffset);
+    const retractRel = Number(op.retractHeight) || 5.0;
+    const retractZ = isWcsTop
+      ? Math.min(clearanceZ, retractRel)
+      : (effectiveBounds.max.y + retractRel - zOffset);
+    const topStockLocal = Number(op.topOfStock) || 0;
+    const feedPlaneVal = Number(op.feedPlane) || 2.5;
+    const stockTopCncZ = isWcsTop ? topStockLocal : (effectiveBounds.max.y + topStockLocal - zOffset);
 
-    // Initial Rapid Approach Move
-    if (toolpathData.rapidLines.length > 0) {
-      const firstRapid = toolpathData.rapidLines[0][0];
-      const rapidZ = (firstRapid.y - zOffset).toFixed(3);
+    const emitRapidXY = (cncX, cncY) => {
       if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
-        lines.push(`${nextN()} L X${firstRapid.x.toFixed(3)} Y${firstRapid.z.toFixed(3)} FMAX M08`);
-        lines.push(`${nextN()} L Z+${rapidZ} FMAX`);
-      } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
-        lines.push(`${nextN()} G00 X${firstRapid.x.toFixed(3)} Y${firstRapid.z.toFixed(3)}`);
-        lines.push(`${nextN()} G00 Z${rapidZ}`);
+        lines.push(`${nextN()} L X${fmtNum(cncX)} Y${fmtNum(cncY)} FMAX`);
       } else {
-        lines.push(`${nextN()} G00 X${firstRapid.x.toFixed(3)} Y${firstRapid.z.toFixed(3)}`);
-        lines.push(`${nextN()} G00 Z${rapidZ}`);
+        lines.push(`${nextN()} G00 X${fmtNum(cncX)} Y${fmtNum(cncY)}`);
       }
-      lastPos = firstRapid;
+    };
+
+    const emitRapidZ = (cncZ, extra = '') => {
+      const zStr = fmtNum(cncZ);
+      if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
+        lines.push(`${nextN()} L Z${cncZ >= 0 ? '+' : ''}${zStr} FMAX${extra}`);
+      } else {
+        lines.push(`${nextN()} G00 Z${zStr}${extra}`);
+      }
+    };
+
+    const emitPlungeZ = (cncZ) => {
+      const zStr = fmtNum(cncZ);
+      if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
+        lines.push(`${nextN()} L Z${cncZ >= 0 ? '+' : ''}${zStr} F${effPlunge}`);
+      } else {
+        lines.push(`${nextN()} G01 Z${zStr} F${effPlunge}`);
+      }
+    };
+
+    const emitLinkToPoint = (targetThreePt, useClearance) => {
+      const targetX = targetThreePt.x;
+      const targetY = toCncY(targetThreePt.z);
+      const targetZ = toCncZ(targetThreePt.y);
+      const safeZ = useClearance ? clearanceZ : Math.max(retractZ, targetZ + 1.0);
+      const feedZ = op.feedPlaneMode === 'absolute'
+        ? Math.min(safeZ, Math.max(targetZ + 0.5, feedPlaneVal))
+        : Math.min(safeZ, Math.max(targetZ + 0.5, stockTopCncZ + feedPlaneVal));
+
+      if (!useClearance) {
+        emitRapidZ(safeZ);
+      }
+      emitRapidXY(targetX, targetY);
+      if (useClearance) {
+        emitRapidZ(safeZ);
+      }
+      if (feedZ < safeZ - 0.05 && feedZ > targetZ + 0.05) {
+        emitRapidZ(feedZ);
+      }
+      if (targetZ < (feedZ - 0.01)) {
+        emitPlungeZ(targetZ);
+      }
+    };
+
+    let lastPos = null;
+    const entryStart = toolpathData.cuttingLines[0]?.[0] || toolpathData.rapidLines[0]?.[0] || null;
+    if (entryStart) {
+      emitLinkToPoint(entryStart, true);
+      lastPos = entryStart.clone();
     }
 
-    // Emit Cutting Passes (G01 / G02 / G03) - full cutting passes emitted without cutoff
+    // Emit Cutting Passes (G01) - connect pass transitions via safe Retract -> XY -> Feed Plane -> Plunge
     toolpathData.cuttingLines.forEach(([p1, p2], idx) => {
+      if (lastPos && lastPos.distanceTo(p1) > 0.05) {
+        const xyGap = Math.hypot(p1.x - lastPos.x, p1.z - lastPos.z);
+        if (xyGap > 0.05) {
+          emitLinkToPoint(p1, false);
+        } else {
+          const p1Z = toCncZ(p1.y);
+          if (p1.y < lastPos.y - 0.05) {
+            emitPlungeZ(p1Z);
+          } else {
+            emitRapidZ(p1Z);
+          }
+        }
+      }
+
       const dist = p1.distanceTo(p2);
       totalCuttingDistanceMm += dist;
 
       // Determine segment feed rate (optimized if feedOptimization is active)
-      let segFeed = tool.feedRate || 1000;
+      let segFeed = effFeed;
       if (op.feedOptimization) {
-        const baseF = tool.feedRate || 1000;
         const rctf = op.feedOptimization.rctfMultiplier || 1.35;
         const minPct = (op.feedOptimization.minCornerFeedPct || 45) / 100;
         const isCorner = idx % 6 === 0;
-        segFeed = isCorner ? Math.round(baseF * minPct) : Math.round(baseF * rctf);
+        segFeed = isCorner ? Math.round(effFeed * minPct) : Math.round(effFeed * rctf);
       }
 
       totalCuttingSeconds += (dist / segFeed) * 60;
 
-      // Coordinate mapping: Three.js Y is CNC Vertical Z; Three.js Z is CNC Table Y!
-      const cncX = p2.x.toFixed(3);
-      const cncY = p2.z.toFixed(3);
-      const cncZ = (p2.y - zOffset).toFixed(3);
+      const cncX = fmtNum(p2.x);
+      const cncY = fmtNum(toCncY(p2.z));
+      const cncZ = fmtNum(toCncZ(p2.y));
 
       const tp = toolpathData.trajectoryPoints?.[idx];
 
@@ -309,26 +379,26 @@ export function generateNCProgram({
       lastPos = p2;
     });
 
-    // Operation Retract
-    const retractZ = isWcsTop ? (op.rapidHeight || 15.0).toFixed(3) : (effectiveBounds.max.y + 40).toFixed(3);
+    // Operation Final Clearance Retract
+    const finalRetractZ = isWcsTop ? fmtNum(clearanceZ) : fmtNum(effectiveBounds.max.y + 40 - zOffset);
     if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} FUNCTION RESET TCPM`);
         lines.push(`${nextN()} PLANE RESET STAY`);
       }
-      lines.push(`${nextN()} L Z+${retractZ} FMAX M09`);
+      lines.push(`${nextN()} L Z+${finalRetractZ} FMAX M09`);
     } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} TRAFOOF ; TCP OFF`);
       }
-      lines.push(`${nextN()} G00 Z${retractZ} M09`);
+      lines.push(`${nextN()} G00 Z${finalRetractZ} M09`);
     } else {
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} G49 ; CANCEL 5-AXIS TCPM`);
-      } else if (op.badgeClass === 'contour' || op.badgeClass === 'chamfer') {
+      } else if (useControllerComp) {
         lines.push(`${nextN()} G40 ; CANCEL CUTTER RADIUS COMPENSATION`);
       }
-      lines.push(`${nextN()} G00 Z${retractZ} M09`);
+      lines.push(`${nextN()} G00 Z${finalRetractZ} M09`);
     }
   });
 

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  HelpCircle, Pin, Check, X, Lock, Unlock,
+  Pin, Check, X,
   ChevronDown, ChevronUp
 } from 'lucide-react';
+import SketchNumericInput from './SketchNumericInput';
 
 export default function ArcTangentPanel({
   radius = 25,
@@ -14,50 +15,10 @@ export default function ArcTangentPanel({
   onApply,
   onOk,
   onCancel,
-  theme = 'light'
+  theme: _theme = 'light'
 }) {
-  const isLight = theme !== 'dark';
-
   const [entityExpanded, setEntityExpanded] = useState(true);
   const [sizeExpanded, setSizeExpanded] = useState(true);
-
-  const [radiusInput, setRadiusInput] = useState(radius.toFixed(1));
-  const [diameterInput, setDiameterInput] = useState((radius * 2).toFixed(1));
-
-  useEffect(() => {
-    setRadiusInput(radius.toFixed(1));
-    setDiameterInput((radius * 2).toFixed(1));
-  }, [radius]);
-
-  const handleRadiusChange = (valStr) => {
-    setRadiusInput(valStr);
-    const num = parseFloat(valStr);
-    if (!isNaN(num) && num > 0) {
-      setDiameterInput((num * 2).toFixed(1));
-      if (onChangeRadius) onChangeRadius(num);
-    }
-  };
-
-  const handleDiameterChange = (valStr) => {
-    setDiameterInput(valStr);
-    const num = parseFloat(valStr);
-    if (!isNaN(num) && num > 0) {
-      setRadiusInput((num / 2).toFixed(1));
-      if (onChangeRadius) onChangeRadius(num / 2);
-    }
-  };
-
-  const stepRadius = (delta) => {
-    const current = parseFloat(radiusInput) || radius;
-    const next = Math.max(0.1, current + delta);
-    handleRadiusChange(next.toFixed(1));
-  };
-
-  const stepDiameter = (delta) => {
-    const current = parseFloat(diameterInput) || (radius * 2);
-    const next = Math.max(0.2, current + delta);
-    handleDiameterChange(next.toFixed(1));
-  };
 
   return (
     <div
@@ -356,185 +317,33 @@ export default function ArcTangentPanel({
               {/* Radius Row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                 <span style={{ fontSize: '11px', color: '#475569', width: '56px' }}>Radius:</span>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: '#ffffff',
-                    flex: 1,
-                    overflow: 'hidden',
-                    height: '22px'
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={radiusInput}
-                    onChange={(e) => handleRadiusChange(e.target.value)}
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      padding: '2px 4px',
-                      fontSize: '11px',
-                      fontFamily: 'monospace',
-                      width: '100%',
-                      color: '#0f172a'
-                    }}
-                  />
-                  <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #cbd5e1', width: '14px', height: '100%' }}>
-                    <button
-                      type="button"
-                      onClick={() => stepRadius(1.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => stepRadius(-1.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        borderTop: '1px solid #cbd5e1',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={onToggleLock}
-                  title={isLocked ? 'Unlock Radius' : 'Lock Radius'}
-                  style={{
-                    width: '20px',
-                    height: '22px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: isLocked ? '#fef3c7' : '#ffffff',
-                    color: isLocked ? '#d97706' : '#94a3b8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0
-                  }}
-                >
-                  {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                </button>
+                <SketchNumericInput
+                  value={Number(radius) || 0}
+                  min={0.1}
+                  step={1}
+                  decimals={4}
+                  allowNegative={false}
+                  onChangeNumber={(num) => onChangeRadius && onChangeRadius(num)}
+                  isLocked={isLocked}
+                  onToggleLock={onToggleLock}
+                  lockTitle={isLocked ? 'Unlock Radius' : 'Lock Radius'}
+                />
               </div>
 
               {/* Diameter Row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                 <span style={{ fontSize: '11px', color: '#475569', width: '56px' }}>Diameter:</span>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: '#ffffff',
-                    flex: 1,
-                    overflow: 'hidden',
-                    height: '22px'
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={diameterInput}
-                    onChange={(e) => handleDiameterChange(e.target.value)}
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      padding: '2px 4px',
-                      fontSize: '11px',
-                      fontFamily: 'monospace',
-                      width: '100%',
-                      color: '#0f172a'
-                    }}
-                  />
-                  <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid #cbd5e1', width: '14px', height: '100%' }}>
-                    <button
-                      type="button"
-                      onClick={() => stepDiameter(2.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => stepDiameter(-2.0)}
-                      style={{
-                        flex: 1,
-                        border: 'none',
-                        borderTop: '1px solid #cbd5e1',
-                        background: '#f1f5f9',
-                        fontSize: '6px',
-                        cursor: 'pointer',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#475569'
-                      }}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={onToggleLock}
-                  title={isLocked ? 'Unlock Diameter' : 'Lock Diameter'}
-                  style={{
-                    width: '20px',
-                    height: '22px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '3px',
-                    background: isLocked ? '#fef3c7' : '#ffffff',
-                    color: isLocked ? '#d97706' : '#94a3b8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0
-                  }}
-                >
-                  {isLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                </button>
+                <SketchNumericInput
+                  value={(Number(radius) || 0) * 2}
+                  min={0.2}
+                  step={2}
+                  decimals={4}
+                  allowNegative={false}
+                  onChangeNumber={(num) => onChangeRadius && onChangeRadius(num / 2)}
+                  isLocked={isLocked}
+                  onToggleLock={onToggleLock}
+                  lockTitle={isLocked ? 'Unlock Diameter' : 'Lock Diameter'}
+                />
               </div>
             </div>
           )}

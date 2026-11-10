@@ -400,6 +400,34 @@ export function generatePocketToolpath(bounds, tool, params = {}, model = null) 
 }
 
 /**
+ * Extracts normalized 2D contour parameters from an operation record so viewport,
+ * backplot, and NC post-processing share identical geometry and Z-depth rules.
+ */
+export function buildContourParamsFromOp(op = {}) {
+  const hasLeadOverrides = op.leadInLineLen != null || op.leadInArcRad != null || op.leadInSweepDeg != null;
+  return {
+    stepdown: op.stepdown || 1.0,
+    totalDepth: op.totalDepth ?? 5.0,
+    rapidHeight: op.rapidHeight || 15.0,
+    topOfStock: Number(op.topOfStock) || 0,
+    depthCutsEnabled: op.depthCutsEnabled !== false,
+    breakThroughEnabled: !!op.breakThroughEnabled,
+    breakThroughAmount: Number(op.breakThroughAmount) || 0,
+    stockToLeaveXY: Number(op.stockToLeaveXY) || 0,
+    stockToLeaveZ: Number(op.stockToLeaveZ) || 0,
+    cuttingDirection: op.cuttingDirection || 'climb',
+    chain: op.chain || null,
+    leadConfig: hasLeadOverrides
+      ? {
+          linearExtension: op.leadInLineLen != null ? Number(op.leadInLineLen) : undefined,
+          arcRadius: op.leadInArcRad != null ? Number(op.leadInArcRad) : undefined,
+          sweepAngleDeg: op.leadInSweepDeg != null ? Number(op.leadInSweepDeg) : undefined
+        }
+      : op.leadConfig
+  };
+}
+
+/**
  * Generates 3D Waterline Finishing Toolpath (Multi-Z Surface Contouring with True Mesh Slicing)
  */
 export function generateWaterlineToolpath(bounds, tool, params = {}, model = null) {
@@ -408,30 +436,55 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
     stepdown = 1.0,
     totalDepth = 5.0,
     rapidHeight = 15.0,
+    topOfStock = 0,
+    depthCutsEnabled = true,
+    breakThroughEnabled = false,
+    breakThroughAmount = 0,
+    stockToLeaveXY = 0,
+    stockToLeaveZ = 0,
+    cuttingDirection = 'climb',
     chain = null
   } = params;
 
   const toolRadius = (tool.diameter || 10) / 2;
-  const topY = bounds.max.y;
-  const safeTotalDepth = Math.abs(Number(totalDepth)) || 5.0;
+  const xyOffset = toolRadius + (Number(stockToLeaveXY) || 0);
+  const startTopY = bounds.max.y + (Number(topOfStock) || 0);
+  const rawDepth = Math.abs(Number(totalDepth)) || 5.0;
+  const extraOvercut = breakThroughEnabled ? Math.abs(Number(breakThroughAmount) || 0) : 0;
+  const safeTotalDepth = Math.max(0.01, rawDepth + extraOvercut - (Number(stockToLeaveZ) || 0));
   const safeStepdown = Math.abs(Number(stepdown)) || 1.0;
-  const bottomY = topY - safeTotalDepth;
+  const bottomY = bounds.max.y - safeTotalDepth;
+  const isConventional = cuttingDirection === 'conventional';
+  const effectiveLeadConfig = {
+    ...(params.leadConfig || {}),
+    sideSign: isConventional ? 1 : -1
+  };
+
+  const zLevels = [];
+  if (!depthCutsEnabled || safeStepdown >= startTopY - bottomY) {
+    zLevels.push(bottomY);
+  } else {
+    for (let curY = startTopY - safeStepdown; curY > bottomY + 0.001; curY -= safeStepdown) {
+      zLevels.push(curY);
+    }
+    zLevels.push(bottomY);
+  }
 
   const cuttingLines = [];
   const rapidLines = [];
 
   const centerX = chain?.center?.x ?? ((bounds.max.x + bounds.min.x) / 2);
   const centerZ = chain?.center?.z ?? ((bounds.max.z + bounds.min.z) / 2);
-  const halfX = (bounds.max.x - bounds.min.x) / 2 + toolRadius;
-  const halfZ = (bounds.max.z - bounds.min.z) / 2 + toolRadius;
+  const halfX = (bounds.max.x - bounds.min.x) / 2 + xyOffset;
+  const halfZ = (bounds.max.z - bounds.min.z) / 2 + xyOffset;
 
-  for (let curY = topY - safeStepdown; curY >= bottomY - 0.001; curY -= safeStepdown) {
+  zLevels.forEach((curY) => {
     let slicedLoops = [];
 
     // 1. Direct 2D Sketch Chain (Circle or Rectangle)
     if (chain && chain.type === 'circle_loop' && chain.radius) {
       const segs = 48;
-      const r = chain.radius + toolRadius;
+      const r = chain.radius + xyOffset;
       const circleLoop = [];
       for (let s = 0; s <= segs; s++) {
         const theta = (s / segs) * Math.PI * 2;
@@ -443,15 +496,17 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
       }
       slicedLoops = [circleLoop];
     } else if (chain && chain.type === 'rectangle_loop' && chain.bounds) {
-      const bSize = chain.bounds.getSize(new THREE.Vector3());
-      const rectHalfW = (bSize.x / 2) + toolRadius;
-      const rectHalfD = (bSize.z / 2) + toolRadius;
+      const safeChainBounds = resolveSafeBounds(chain.bounds);
+      const rcX = chain?.center?.x ?? ((safeChainBounds.max.x + safeChainBounds.min.x) / 2);
+      const rcZ = chain?.center?.z ?? ((safeChainBounds.max.z + safeChainBounds.min.z) / 2);
+      const rectHalfW = Math.abs(safeChainBounds.max.x - safeChainBounds.min.x) / 2 + xyOffset;
+      const rectHalfD = Math.abs(safeChainBounds.max.z - safeChainBounds.min.z) / 2 + xyOffset;
       const rectLoop = [
-        new THREE.Vector3(centerX - rectHalfW, curY, centerZ - rectHalfD),
-        new THREE.Vector3(centerX + rectHalfW, curY, centerZ - rectHalfD),
-        new THREE.Vector3(centerX + rectHalfW, curY, centerZ + rectHalfD),
-        new THREE.Vector3(centerX - rectHalfW, curY, centerZ + rectHalfD),
-        new THREE.Vector3(centerX - rectHalfW, curY, centerZ - rectHalfD)
+        new THREE.Vector3(rcX - rectHalfW, curY, rcZ - rectHalfD),
+        new THREE.Vector3(rcX + rectHalfW, curY, rcZ - rectHalfD),
+        new THREE.Vector3(rcX + rectHalfW, curY, rcZ + rectHalfD),
+        new THREE.Vector3(rcX - rectHalfW, curY, rcZ + rectHalfD),
+        new THREE.Vector3(rcX - rectHalfW, curY, rcZ - rectHalfD)
       ];
       slicedLoops = [rectLoop];
     } else if (model) {
@@ -470,7 +525,8 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
         if (loop[0].distanceTo(loop[loop.length - 1]) > 0.1) {
           closedLoop.push(loop[0].clone());
         }
-        const leadRes = applyLeadInOutToContour(closedLoop, params.leadConfig, rapidHeight);
+        const orderedLoop = isConventional ? [...closedLoop].reverse() : closedLoop;
+        const leadRes = applyLeadInOutToContour(orderedLoop, effectiveLeadConfig, rapidHeight);
         cuttingLines.push(...leadRes.cuttingLines);
         rapidLines.push(...leadRes.rapidLines);
       });
@@ -480,13 +536,14 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
       const p2 = new THREE.Vector3(centerX + halfX, curY, centerZ - halfZ);
       const p3 = new THREE.Vector3(centerX + halfX, curY, centerZ + halfZ);
       const p4 = new THREE.Vector3(centerX - halfX, curY, centerZ + halfZ);
-      const contour = [p1, p2, p3, p4, p1.clone()];
+      const baseContour = [p1, p2, p3, p4, p1.clone()];
+      const contour = isConventional ? [...baseContour].reverse() : baseContour;
 
-      const leadRes = applyLeadInOutToContour(contour, params.leadConfig, rapidHeight);
+      const leadRes = applyLeadInOutToContour(contour, effectiveLeadConfig, rapidHeight);
       cuttingLines.push(...leadRes.cuttingLines);
       rapidLines.push(...leadRes.rapidLines);
     }
-  }
+  });
 
   return { cuttingLines, rapidLines };
 }
@@ -1437,7 +1494,7 @@ export function createToolAssembly3D(tool = {}) {
 /**
  * Compiles toolpath operations into an ordered sequence of continuous 3D waypoints for smooth backplot animation.
  */
-export function compileBackplotTrajectory(operations = [], tools = [], bounds, model = null, targetOpId = null) {
+export function compileBackplotTrajectory(operations = [], tools = [], bounds, model = null, targetOpId = null, cadWorldYOffset = 0) {
   const waypoints = [];
   const validTargetId = (typeof targetOpId === 'number' || (typeof targetOpId === 'string' && targetOpId !== 'all')) ? targetOpId : null;
   const activeOps = (validTargetId && operations.some((op) => String(op.id) === String(validTargetId)))
@@ -1456,57 +1513,65 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
 
   finalOps.forEach((op) => {
     let assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10, rpm: 8000, feedRate: 1500 };
+    const opSafeBounds = op.bounds ? resolveSafeBounds(op.bounds) : safeBounds;
+    const visualYOffset = (cadWorldYOffset && (!!op.chain || (!model && opSafeBounds.max.y < 49))) ? cadWorldYOffset : 0;
     let data = null;
 
     if (op.badgeClass === 'face') {
-      data = generateFacingToolpath(safeBounds, assignedTool, {
+      data = generateFacingToolpath(opSafeBounds, assignedTool, {
         stepoverPct: op.stepoverPct || 65,
         faceAllowance: 2.0,
         depthOfCut: op.stepdown || 1.0,
         rapidHeight: op.rapidHeight || 15.0
       });
     } else if (op.badgeClass === 'pocket') {
-      data = generatePocketToolpath(safeBounds, assignedTool, {
+      data = generatePocketToolpath(opSafeBounds, assignedTool, {
         stepoverPct: op.stepoverPct || 50,
         totalDepth: op.totalDepth || 15.0,
         stepdown: op.stepdown || 5.0,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
+    } else if (op.badgeClass === 'circlemill') {
+      data = generateCircleMillToolpath(opSafeBounds, assignedTool, {
+        diameter: op.diameter || (op.chain?.radius ? op.chain.radius * 2 : 50.8),
+        totalDepth: op.totalDepth || 5.0,
+        stepdown: op.stepdown || 1.0,
+        rapidHeight: op.rapidHeight || 15.0,
+        chain: op.chain,
+        center: op.center || op.chain?.center
+      });
     } else if (op.badgeClass === 'contour') {
-      data = generateWaterlineToolpath(safeBounds, assignedTool, {
-        stepdown: op.stepdown || 3.0,
-        rapidHeight: op.rapidHeight || 15.0
-      }, model);
+      data = generateWaterlineToolpath(opSafeBounds, assignedTool, buildContourParamsFromOp(op), model);
     } else if (op.badgeClass === 'swarf') {
-      data = generateSwarfToolpath(safeBounds, assignedTool, {
+      data = generateSwarfToolpath(opSafeBounds, assignedTool, {
         tiltAngleDeg: 15.0,
         passes: 3
       }, model);
     } else if (op.badgeClass === 'drill') {
-      data = generateDrillingToolpath(safeBounds, assignedTool, {
+      data = generateDrillingToolpath(opSafeBounds, assignedTool, {
         drillDepth: op.totalDepth || 25.0,
         peckDepth: op.stepdown || 5.0,
         rapidHeight: op.rapidHeight || 10.0
       }, model);
-    } else if (op.badgeClass === 'adaptive') {
-      data = generateAdaptiveRoughingToolpath(safeBounds, assignedTool, {
+    } else if (op.badgeClass === 'adaptive' || op.badgeClass === 'dynamic') {
+      data = generateAdaptiveRoughingToolpath(opSafeBounds, assignedTool, {
         stepoverPct: op.stepoverPct || 25,
         stepdown: op.stepdown || 6.0,
         totalDepth: op.totalDepth || 18.0,
         rapidHeight: op.rapidHeight || 15.0
       });
     } else if (op.badgeClass === 'chamfer') {
-      data = generateChamferToolpath(safeBounds, assignedTool, {
+      data = generateChamferToolpath(opSafeBounds, assignedTool, {
         chamferWidth: op.stepdown || 1.0,
         rapidHeight: op.rapidHeight || 15.0
       });
     } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
-      data = generateSurfaceParallelToolpath(safeBounds, assignedTool, {
+      data = generateSurfaceParallelToolpath(opSafeBounds, assignedTool, {
         stepoverPct: op.stepoverPct || 20,
         rapidHeight: op.rapidHeight || 15.0
       }, model);
     } else if (op.badgeClass === 'rest' || op.badgeClass === 'rest_milling') {
-      data = generateRestMillingToolpath(safeBounds, assignedTool, {
+      data = generateRestMillingToolpath(opSafeBounds, assignedTool, {
         refToolDiameter: op.refToolDiameter || 12.0,
         stepdown: op.stepdown || 2.5,
         totalDepth: op.totalDepth || 15.0,
@@ -1514,7 +1579,7 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
         rapidHeight: op.rapidHeight || 15.0
       }, model);
     } else if (op.badgeClass === 'pencil') {
-      data = generatePencilTracingToolpath(safeBounds, assignedTool, {
+      data = generatePencilTracingToolpath(opSafeBounds, assignedTool, {
         totalDepth: op.totalDepth || 15.0,
         stepdown: op.stepdown || 1.0,
         biTangencyRadius: op.biTangencyRadius || 3.0,
@@ -1522,9 +1587,9 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
       }, model);
     } else if (op.badgeClass === 'probe') {
       const pCenter = op.center || {
-        x: (safeBounds.min.x + safeBounds.max.x) / 2,
-        y: safeBounds.max.y,
-        z: (safeBounds.min.z + safeBounds.max.z) / 2
+        x: (opSafeBounds.min.x + opSafeBounds.max.x) / 2,
+        y: opSafeBounds.max.y,
+        z: (opSafeBounds.min.z + opSafeBounds.max.z) / 2
       };
       data = generateProbingToolpath(op.strategyKey || 'bore_centering', pCenter, op.probingParams || {});
       assignedTool = data.probeTool || assignedTool;
@@ -1542,22 +1607,28 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
     }
 
     const isProbeOp = op.badgeClass === 'probe';
+    const opRpm = isProbeOp ? 0 : (Number(op.spindleSpeed) || op.spindleRpm || assignedTool.rpm || 8000);
+    const opFeed = isProbeOp ? 150 : (Number(op.feedRate) || assignedTool.feedRate || 1500);
 
     segments.forEach(({ seg, isRapid }) => {
-      const p1 = seg[0];
-      const p2 = seg[1];
+      const p1 = seg[0].clone();
+      const p2 = seg[1].clone();
+      if (visualYOffset) {
+        p1.y += visualYOffset;
+        p2.y += visualYOffset;
+      }
 
       const distToP1 = lastPos.distanceTo(p1);
       if (distToP1 > 0.05) {
         totalDist += distToP1;
         waypoints.push({
-          pos: p1.clone(),
+          pos: p1,
           isRapid: true,
           opId: op.id,
           opName: op.name,
           tool: assignedTool,
           feedRate: 5000,
-          spindleRpm: isProbeOp ? 0 : (op.spindleRpm || assignedTool.rpm || 8000),
+          spindleRpm: opRpm,
           cumulativeDist: totalDist
         });
       }
@@ -1565,13 +1636,13 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
       const segDist = p1.distanceTo(p2);
       totalDist += segDist;
       waypoints.push({
-        pos: p2.clone(),
+        pos: p2,
         isRapid,
         opId: op.id,
         opName: op.name,
         tool: assignedTool,
-        feedRate: isRapid ? 5000 : (isProbeOp ? 150 : (op.feedRate || assignedTool.feedRate || 1500)),
-        spindleRpm: isProbeOp ? 0 : (op.spindleRpm || assignedTool.rpm || 8000),
+        feedRate: isRapid ? 5000 : opFeed,
+        spindleRpm: opRpm,
         cumulativeDist: totalDist
       });
 
