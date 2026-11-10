@@ -191,16 +191,37 @@ export function computeDriveModelBounds(driveModel, fallbackBounds = null) {
  * Offsets a closed 3D loop in the XZ horizontal plane (Y preserved) by signedOffset
  * (> 0 outward, < 0 inward) using shared miter-clamped 2D contour offsetting.
  */
-export function offsetClosedLoopXZ(loop = [], signedOffset = 0, yOverride = null) {
-  if (!Array.isArray(loop) || loop.length < 3) return [];
+export function offsetClosedLoopXZ(loop = [], signedOffset = 0, yOverride = null, isClosed = true) {
+  if (!Array.isArray(loop) || loop.length < (isClosed ? 3 : 2)) return [];
   const sampleY = yOverride ?? loop[0].y ?? 0;
   if (Math.abs(signedOffset) < 1e-4) {
     return loop.map((p) => new THREE.Vector3(p.x, sampleY, p.z));
   }
   const uv = loop.map((p) => ({ u: p.x, v: p.z }));
-  const offsetUV = offsetContour2D(uv, signedOffset, true);
-  if (!offsetUV || offsetUV.length < 3) return [];
+  const offsetUV = offsetContour2D(uv, signedOffset, isClosed);
+  if (!offsetUV || offsetUV.length < (isClosed ? 3 : 2)) return [];
   return offsetUV.map((p) => new THREE.Vector3(p.u, sampleY, p.v));
+}
+
+/**
+ * Orients a closed XZ loop to match CNC XY winding (wantCncCCW=true -> CCW in CNC XY, xzArea2 < 0).
+ */
+export function orientClosedLoopXZ(loop = [], wantCncCCW = false) {
+  if (!Array.isArray(loop) || loop.length < 3) return loop;
+  const isClosedPt = loop[0].distanceTo(loop[loop.length - 1]) < 0.05;
+  const unique = isClosedPt ? loop.slice(0, -1) : loop;
+  if (unique.length < 3) return loop;
+
+  let xzArea2 = 0;
+  for (let i = 0; i < unique.length; i++) {
+    const a = unique[i];
+    const b = unique[(i + 1) % unique.length];
+    xzArea2 += a.x * b.z - b.x * a.z;
+  }
+  if (Math.abs(xzArea2) < 1e-6) return loop;
+
+  const currentlyCncCCW = xzArea2 < 0;
+  return currentlyCncCCW === wantCncCCW ? loop : [...loop].reverse();
 }
 
 /**
@@ -289,6 +310,7 @@ export function chainSegmentsIntoLoops(segments, tolerance = 0.5) {
 
   const remaining = segments.map((seg) => [seg[0].clone(), seg[1].clone()]);
   const loops = [];
+  const tolSq = tolerance * tolerance;
 
   while (remaining.length > 0) {
     const currentLoop = [remaining[0][0], remaining[0][1]];
@@ -300,30 +322,33 @@ export function chainSegmentsIntoLoops(segments, tolerance = 0.5) {
       const head = currentLoop[0];
       const tail = currentLoop[currentLoop.length - 1];
 
+      // Always choose the closest matching endpoint within tolerance to avoid
+      // short-circuiting across thin triangle diagonals instead of exact shared vertices.
+      let bestIdx = -1;
+      let bestMode = 0;
+      let bestDistSq = tolSq + 1e-9;
+
       for (let i = 0; i < remaining.length; i++) {
         const [p1, p2] = remaining[i];
+        const dTail1 = tail.distanceToSquared(p1);
+        if (dTail1 < bestDistSq) { bestDistSq = dTail1; bestIdx = i; bestMode = 1; }
+        const dTail2 = tail.distanceToSquared(p2);
+        if (dTail2 < bestDistSq) { bestDistSq = dTail2; bestIdx = i; bestMode = 2; }
+        const dHead2 = head.distanceToSquared(p2);
+        if (dHead2 < bestDistSq) { bestDistSq = dHead2; bestIdx = i; bestMode = 3; }
+        const dHead1 = head.distanceToSquared(p1);
+        if (dHead1 < bestDistSq) { bestDistSq = dHead1; bestIdx = i; bestMode = 4; }
+        if (bestDistSq < 1e-8) break;
+      }
 
-        if (tail.distanceTo(p1) <= tolerance) {
-          currentLoop.push(p2);
-          remaining.splice(i, 1);
-          extended = true;
-          break;
-        } else if (tail.distanceTo(p2) <= tolerance) {
-          currentLoop.push(p1);
-          remaining.splice(i, 1);
-          extended = true;
-          break;
-        } else if (head.distanceTo(p2) <= tolerance) {
-          currentLoop.unshift(p1);
-          remaining.splice(i, 1);
-          extended = true;
-          break;
-        } else if (head.distanceTo(p1) <= tolerance) {
-          currentLoop.unshift(p2);
-          remaining.splice(i, 1);
-          extended = true;
-          break;
-        }
+      if (bestIdx >= 0) {
+        const [p1, p2] = remaining[bestIdx];
+        remaining.splice(bestIdx, 1);
+        if (bestMode === 1) currentLoop.push(p2);
+        else if (bestMode === 2) currentLoop.push(p1);
+        else if (bestMode === 3) currentLoop.unshift(p1);
+        else if (bestMode === 4) currentLoop.unshift(p2);
+        extended = true;
       }
     }
 
@@ -477,7 +502,8 @@ export function generateSurfacePocketToolpath(bounds, tool, params = {}, model =
 
   const cuttingLines = [];
   const rapidLines = [];
-  const isConventional = cuttingDirection === 'conventional';
+  const isConventional = String(cuttingDirection || '').toLowerCase() === 'conventional';
+  const wantPocketCncCCW = !isConventional;
 
   const buildChainBoundaryLoop = (curY) => {
     if (chain && chain.type === 'circle_loop' && chain.radius) {
@@ -532,8 +558,15 @@ export function generateSurfacePocketToolpath(bounds, tool, params = {}, model =
 
     rawLoops.forEach((boundaryLoop) => {
       if (boundaryLoop.length < 3) return;
-      const outerPass = offsetClosedLoopXZ(boundaryLoop, -wallClearance, curY);
-      if (outerPass.length < 3) return;
+      let pathLen = 0;
+      for (let i = 1; i < boundaryLoop.length; i++) {
+        pathLen += Math.hypot(boundaryLoop[i].x - boundaryLoop[i - 1].x, boundaryLoop[i].z - boundaryLoop[i - 1].z);
+      }
+      if (pathLen < 0.25) return;
+
+      const rawOuterPass = offsetClosedLoopXZ(boundaryLoop, -wallClearance, curY);
+      if (rawOuterPass.length < 3) return;
+      const outerPass = orientClosedLoopXZ(rawOuterPass, wantPocketCncCCW);
 
       const loopBox = new THREE.Box3().setFromPoints(outerPass);
       const center = loopBox.getCenter(new THREE.Vector3());
@@ -592,7 +625,7 @@ export function generateSurfacePocketToolpath(bounds, tool, params = {}, model =
           const inner = offsetClosedLoopXZ(prevRing, -stepover, curY);
           if (!inner || inner.length < 3) break;
           prevRing = inner;
-          rings.push(isConventional ? [...inner].reverse() : inner);
+          rings.push(orientClosedLoopXZ(inner, wantPocketCncCCW));
         }
         rings.reverse().forEach((ring) => {
           const startPt = ring[0];
@@ -606,7 +639,7 @@ export function generateSurfacePocketToolpath(bounds, tool, params = {}, model =
 
       // 3. Final Surface Finish Wall Perimeter Pass around outerPass
       if (finishWallPass || cutMethod !== 'zigzag') {
-        const finalWall = isConventional ? [...outerPass].reverse() : outerPass;
+        const finalWall = outerPass;
         cuttingLines.push([lastPt, finalWall[0]]);
         for (let i = 0; i < finalWall.length - 1; i++) {
           cuttingLines.push([finalWall[i], finalWall[i + 1]]);
@@ -687,7 +720,8 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
 
   const toolRadius = (tool.diameter || 10) / 2;
   const xyOffset = toolRadius + (Number(stockToLeaveXY) || 0);
-  const signedContourOffset = contourSide === 'inside' ? -xyOffset : xyOffset;
+  const isInsideContour = String(contourSide || '').toLowerCase() === 'inside';
+  const signedContourOffset = isInsideContour ? -xyOffset : xyOffset;
   const startTopY = bounds.max.y + (Number(topOfStock) || 0);
   const surfaceHeight = Math.max(0.5, bounds.max.y - bounds.min.y);
   const rawDepth = (totalDepth != null && Number(totalDepth) > 0) ? Math.abs(Number(totalDepth)) : surfaceHeight;
@@ -695,10 +729,11 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
   const safeTotalDepth = Math.max(0.01, rawDepth + extraOvercut - (Number(stockToLeaveZ) || 0));
   const safeStepdown = Math.abs(Number(stepdown)) || 1.0;
   const bottomY = bounds.max.y - safeTotalDepth;
-  const isConventional = cuttingDirection === 'conventional';
+  const isConventional = String(cuttingDirection || '').toLowerCase() === 'conventional';
+  const wantCncCCW = isInsideContour !== isConventional;
   const effectiveLeadConfig = {
     ...(params.leadConfig || {}),
-    sideSign: contourSide === 'inside' ? (isConventional ? -1 : 1) : (isConventional ? 1 : -1)
+    sideSign: isConventional ? 1 : -1
   };
 
   const zLevels = [];
@@ -764,22 +799,30 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
     if (slicedLoops.length > 0) {
       slicedLoops.forEach((loop) => {
         if (loop.length < 2) return;
+        let pathLength = 0;
+        for (let i = 1; i < loop.length; i++) {
+          pathLength += Math.hypot(loop[i].x - loop[i - 1].x, loop[i].z - loop[i - 1].z);
+        }
+        if (slicedFrom3DModel && (loop.length < 3 || pathLength < 0.25)) return;
+
         const isClosed = loop[0].distanceTo(loop[loop.length - 1]) < 0.85;
         let workingLoop = loop.map((p) => new THREE.Vector3(p.x, curY, p.z));
         if (isClosed && workingLoop[0].distanceTo(workingLoop[workingLoop.length - 1]) > 0.05) {
           workingLoop.push(workingLoop[0].clone());
         }
 
-        if (slicedFrom3DModel && workingLoop.length >= 3) {
-          const compLoop = offsetClosedLoopXZ(workingLoop, signedContourOffset, curY);
-          if (compLoop.length >= 3) {
+        if (slicedFrom3DModel) {
+          const compLoop = offsetClosedLoopXZ(workingLoop, signedContourOffset, curY, isClosed);
+          if (compLoop.length >= (isClosed ? 3 : 2)) {
             workingLoop = compLoop;
           } else {
             return;
           }
         }
 
-        const orderedLoop = isConventional ? [...workingLoop].reverse() : workingLoop;
+        const orderedLoop = isClosed
+          ? orientClosedLoopXZ(workingLoop, wantCncCCW)
+          : (isConventional ? [...workingLoop].reverse() : workingLoop);
         const leadRes = applyLeadInOutToContour(orderedLoop, effectiveLeadConfig, rapidHeight);
         cuttingLines.push(...leadRes.cuttingLines);
         rapidLines.push(...leadRes.rapidLines);
@@ -790,7 +833,7 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
       const p3 = new THREE.Vector3(centerX + halfX, curY, centerZ + halfZ);
       const p4 = new THREE.Vector3(centerX - halfX, curY, centerZ + halfZ);
       const baseContour = [p1, p2, p3, p4, p1.clone()];
-      const contour = isConventional ? [...baseContour].reverse() : baseContour;
+      const contour = orientClosedLoopXZ(baseContour, wantCncCCW);
 
       const leadRes = applyLeadInOutToContour(contour, effectiveLeadConfig, rapidHeight);
       cuttingLines.push(...leadRes.cuttingLines);
