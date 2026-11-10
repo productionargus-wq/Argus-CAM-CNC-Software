@@ -59,9 +59,26 @@ export function generateNCProgram({
   let totalCuttingSeconds = 0;
 
   const dateStr = new Date().toISOString().slice(0, 10);
+  const useHeidenhain = controller === CONTROLLER_DIALECTS.HEIDENHAIN;
+  const useSiemens = controller === CONTROLLER_DIALECTS.SIEMENS;
+  const useIsoParens = !useHeidenhain && !useSiemens;
+
+  // Fanuc/Haas ISO controls reject nested parentheses inside (...) comments.
+  const sanitizeIsoCommentText = (text) =>
+    String(text ?? '')
+      .replace(/\(([^)]*)\)/g, ' - $1')
+      .replace(/[()]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const formatComment = (text) =>
+    useIsoParens ? `(${sanitizeIsoCommentText(text)})` : `; ${text}`;
+
+  const formatInlineNote = (text) =>
+    useIsoParens ? `(${sanitizeIsoCommentText(text)})` : `; ${text}`;
 
   // 1. Program Header based on Controller Dialect
-  if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
+  if (useHeidenhain) {
     lines.push(`0 BEGIN PGM ${programName.toUpperCase()} MM`);
     lines.push(`; --- ARGUS CAM 5-AXIS HEIDENHAIN TNC 640 POST ---`);
     lines.push(`; DATE: ${dateStr} | TIME STAMP`);
@@ -69,7 +86,7 @@ export function generateNCProgram({
     lines.push(`; BLK FORM 0.1 Z X${bounds.min.x.toFixed(2)} Y${(-bounds.max.z).toFixed(2)} Z${bounds.min.y.toFixed(2)}`);
     lines.push(`; BLK FORM 0.2 X${bounds.max.x.toFixed(2)} Y${(-bounds.min.z).toFixed(2)} Z${(bounds.max.y + (stockConfig?.allowanceTop || 2)).toFixed(2)}`);
     lines.push(`; ------------------------------------------------`);
-  } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
+  } else if (useSiemens) {
     lines.push(`; %_N_${programName.toUpperCase()}_MPF`);
     lines.push(`; --- ARGUS CAM SIEMENS 840D sl 5-AXIS POST ---`);
     lines.push(`; DATE: ${dateStr}`);
@@ -78,11 +95,11 @@ export function generateNCProgram({
   } else {
     // Standard ISO (Fanuc, Haas, GRBL, Mach3)
     lines.push(`%`);
-    lines.push(`O${Math.floor(1000 + Math.random() * 8000)} (${programName.toUpperCase()})`);
-    lines.push(`(--- ARGUS CAM POST-PROCESSOR ---)`);
-    lines.push(`(CONTROLLER: ${controller})`);
-    lines.push(`(DATE: ${dateStr})`);
-    lines.push(`(MATERIAL: ${stockConfig?.material || '6061 Aluminum'})`);
+    lines.push(`O${Math.floor(1000 + Math.random() * 8000)} (${sanitizeIsoCommentText(programName.toUpperCase())})`);
+    lines.push(formatComment('--- ARGUS CAM POST-PROCESSOR ---'));
+    lines.push(formatComment(`CONTROLLER: ${controller}`));
+    lines.push(formatComment(`DATE: ${dateStr}`));
+    lines.push(formatComment(`MATERIAL: ${stockConfig?.material || '6061 Aluminum'}`));
     lines.push(`${nextN()} G90 G21 G17 G54 G94`);
     lines.push(`${nextN()} G28 G91 Z0.`);
     lines.push(`${nextN()} G90`);
@@ -98,7 +115,7 @@ export function generateNCProgram({
       pLines.forEach((pl) => {
         if (!pl.trim()) return;
         if (pl.startsWith(';')) {
-          lines.push(pl);
+          lines.push(useIsoParens ? formatComment(pl.slice(1).trim()) : pl);
         } else {
           lines.push(`${nextN()} ${pl}`.trim());
         }
@@ -197,13 +214,16 @@ export function generateNCProgram({
 
     // Operation Section Header
     lines.push(``);
-    lines.push(`; ================================================`);
-    lines.push(`; OPERATION ${opIndex + 1}: ${op.name.toUpperCase()}`);
-    lines.push(`; TOOL: T${tool.number} [${tool.name}] | DIA: ${tool.diameter}mm`);
-    lines.push(`; ================================================`);
+    lines.push(formatComment('================================================'));
+    lines.push(formatComment(`OPERATION ${opIndex + 1}: ${op.name.toUpperCase()}`));
+    lines.push(formatComment(`TOOL: T${tool.number} [${tool.name}] | DIA: ${tool.diameter}mm`));
+    lines.push(formatComment('================================================'));
+
+    let pendingIsoHeightOffset = false;
+    let pendingIsoControlComp = false;
 
     // Tool Change & Spindle Start
-    if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
+    if (useHeidenhain) {
       lines.push(`${nextN()} TOOL CALL ${tool.number} Z S${effRpm} DL+0.00 DR+0.00`);
       lines.push(`${nextN()} M03${coolantIsoCode}`);
       if (op.badgeClass === 'swarf') {
@@ -213,7 +233,7 @@ export function generateNCProgram({
         lines.push(`${nextN()} CYCL DEF 32.0 TOLERANCE`);
         lines.push(`${nextN()} CYCL DEF 32.1 T0.02 HSC-MODE:1`);
       }
-    } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
+    } else if (useSiemens) {
       lines.push(`${nextN()} T="T${tool.number}_${(tool.type || 'FLAT').toUpperCase()}" M6`);
       lines.push(`${nextN()} S${effRpm} M3`);
       lines.push(`${nextN()} D1${coolantIsoCode}`);
@@ -224,17 +244,21 @@ export function generateNCProgram({
       }
     } else {
       // Fanuc / Haas / GRBL / Mach3
-      lines.push(`${nextN()} T${tool.number} M06 (${tool.name})`);
+      lines.push(`${nextN()} T${tool.number} M06 (${sanitizeIsoCommentText(tool.name)})`);
       lines.push(`${nextN()} S${effRpm} M03`);
-      lines.push(`${nextN()} G43 H${tool.number}${coolantIsoCode}`);
       if (op.badgeClass === 'swarf') {
-        lines.push(`${nextN()} G43.4 H${tool.number} ; 5-AXIS TCPM ACTIVATION`);
-      } else if (useControllerComp) {
-        lines.push(`${nextN()} ${compCode} D${tool.number} ; CUTTER RADIUS COMPENSATION`);
-      } else if (op.badgeClass === 'contour') {
-        lines.push(`(CUTTER COMP: COMPUTER PRE-OFFSET)`);
-      } else if (op.badgeClass === 'adaptive' || op.feedOptimization) {
-        lines.push(`${nextN()} G05.1 Q1 (HIGH SPEED AICC II LOOK-AHEAD ACCEL/DECEL)`);
+        lines.push(`${nextN()} G43.4 H${tool.number}${coolantIsoCode} ${formatInlineNote('5-AXIS TCPM ACTIVATION')}`);
+      } else {
+        // Apply G43 H# and coolant together with initial Z clearance move after safe XY positioning
+        pendingIsoHeightOffset = true;
+        if (useControllerComp) {
+          pendingIsoControlComp = true;
+        } else if (op.badgeClass === 'contour') {
+          lines.push(formatComment('CUTTER COMP: COMPUTER PRE-OFFSET'));
+        }
+        if (op.badgeClass === 'adaptive' || op.feedOptimization) {
+          lines.push(`${nextN()} G05.1 Q1 ${formatInlineNote('HIGH SPEED AICC II LOOK-AHEAD ACCEL/DECEL')}`);
+        }
       }
     }
 
@@ -267,8 +291,11 @@ export function generateNCProgram({
 
     const emitRapidZ = (cncZ, extra = '') => {
       const zStr = fmtNum(cncZ);
-      if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
+      if (useHeidenhain) {
         lines.push(`${nextN()} L Z${cncZ >= 0 ? '+' : ''}${zStr} FMAX${extra}`);
+      } else if (useIsoParens && pendingIsoHeightOffset) {
+        pendingIsoHeightOffset = false;
+        lines.push(`${nextN()} G00 G43 H${tool.number} Z${zStr}${coolantIsoCode}${extra}`);
       } else {
         lines.push(`${nextN()} G00 Z${zStr}${extra}`);
       }
@@ -276,7 +303,7 @@ export function generateNCProgram({
 
     const emitPlungeZ = (cncZ) => {
       const zStr = fmtNum(cncZ);
-      if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
+      if (useHeidenhain) {
         lines.push(`${nextN()} L Z${cncZ >= 0 ? '+' : ''}${zStr} F${effPlunge}`);
       } else {
         lines.push(`${nextN()} G01 Z${zStr} F${effPlunge}`);
@@ -312,6 +339,10 @@ export function generateNCProgram({
     if (entryStart) {
       emitLinkToPoint(entryStart, true);
       lastPos = entryStart.clone();
+    }
+    if (pendingIsoHeightOffset) {
+      lines.push(`${nextN()} G43 H${tool.number}${coolantIsoCode}`);
+      pendingIsoHeightOffset = false;
     }
 
     // Emit Cutting Passes (G01) - connect pass transitions via safe Retract -> XY -> Feed Plane -> Plunge
@@ -368,12 +399,14 @@ export function generateNCProgram({
         }
       } else {
         // Fanuc / Haas / GRBL / Mach3
+        const compPrefix = pendingIsoControlComp ? `${compCode} D${tool.number} ` : '';
+        pendingIsoControlComp = false;
         if (op.badgeClass === 'swarf' && tp?.angles) {
-          lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} A${tp.angles.A.toFixed(3)} C${tp.angles.C.toFixed(3)} F${segFeed}`);
+          lines.push(`${nextN()} G01 ${compPrefix}X${cncX} Y${cncY} Z${cncZ} A${tp.angles.A.toFixed(3)} C${tp.angles.C.toFixed(3)} F${segFeed}`);
         } else if (op.badgeClass === 'swarf') {
-          lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} B15.000 C45.300 F${segFeed}`);
+          lines.push(`${nextN()} G01 ${compPrefix}X${cncX} Y${cncY} Z${cncZ} B15.000 C45.300 F${segFeed}`);
         } else {
-          lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} F${segFeed}`);
+          lines.push(`${nextN()} G01 ${compPrefix}X${cncX} Y${cncY} Z${cncZ} F${segFeed}`);
         }
       }
       lastPos = p2;
@@ -381,22 +414,22 @@ export function generateNCProgram({
 
     // Operation Final Clearance Retract
     const finalRetractZ = isWcsTop ? fmtNum(clearanceZ) : fmtNum(effectiveBounds.max.y + 40 - zOffset);
-    if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
+    if (useHeidenhain) {
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} FUNCTION RESET TCPM`);
         lines.push(`${nextN()} PLANE RESET STAY`);
       }
       lines.push(`${nextN()} L Z+${finalRetractZ} FMAX M09`);
-    } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
+    } else if (useSiemens) {
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} TRAFOOF ; TCP OFF`);
       }
       lines.push(`${nextN()} G00 Z${finalRetractZ} M09`);
     } else {
       if (op.badgeClass === 'swarf') {
-        lines.push(`${nextN()} G49 ; CANCEL 5-AXIS TCPM`);
+        lines.push(`${nextN()} G49 ${formatInlineNote('CANCEL 5-AXIS TCPM')}`);
       } else if (useControllerComp) {
-        lines.push(`${nextN()} G40 ; CANCEL CUTTER RADIUS COMPENSATION`);
+        lines.push(`${nextN()} G40 ${formatInlineNote('CANCEL CUTTER RADIUS COMPENSATION')}`);
       }
       lines.push(`${nextN()} G00 Z${finalRetractZ} M09`);
     }
@@ -404,19 +437,19 @@ export function generateNCProgram({
 
   // 3. Program Footer & End of Program
   lines.push(``);
-  lines.push(`; --- PROGRAM END ---`);
-  if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
+  lines.push(formatComment('--- PROGRAM END ---'));
+  if (useHeidenhain) {
     lines.push(`${nextN()} L Z+250.000 FMAX M05 M09`);
     lines.push(`${nextN()} L X+0.000 Y+200.000 FMAX M30`);
     lines.push(`${blockNum} END PGM ${programName.toUpperCase()} MM`);
-  } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
+  } else if (useSiemens) {
     lines.push(`${nextN()} M05`);
     lines.push(`${nextN()} G00 SUPA Z0. D0`);
     lines.push(`${nextN()} M30`);
   } else {
     // Fanuc / Haas / GRBL
     lines.push(`${nextN()} M05`);
-    lines.push(`${nextN()} G28 G91 Z0. M09`);
+    lines.push(`${nextN()} G28 G91 Z0.`);
     lines.push(`${nextN()} G28 G91 X0. Y0.`);
     lines.push(`${nextN()} G90`);
     lines.push(`${nextN()} M30`);
