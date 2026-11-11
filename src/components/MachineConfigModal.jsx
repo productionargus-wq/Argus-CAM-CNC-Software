@@ -301,11 +301,11 @@ function MachineConfigForm({
         {/* Modal Body */}
         <div className="mcm-body">
           {/* 1. Machine Fleet Selection */}
-          <fieldset className="mcm-section">
-            <legend className="mcm-legend">
+          <section className="mcm-section" aria-labelledby={`${uid}-sec-fleet`}>
+            <h3 id={`${uid}-sec-fleet`} className="mcm-section-title">
               <Cpu size={14} color="#2563eb" />
               <span>Active CNC Machine in Shop Fleet</span>
-            </legend>
+            </h3>
 
             <div className="mcm-fleet-grid">
               {MACHINE_FLEET_ORDER.map((id) => {
@@ -338,14 +338,14 @@ function MachineConfigForm({
                 );
               })}
             </div>
-          </fieldset>
+          </section>
 
           {/* 2. Kinematic Travel Envelopes */}
-          <fieldset className="mcm-section">
-            <legend className="mcm-legend">
+          <section className="mcm-section" aria-labelledby={`${uid}-sec-travel`}>
+            <h3 id={`${uid}-sec-travel`} className="mcm-section-title">
               <Gauge size={14} color="#0369a1" />
               <span>Axis Travel Limits &amp; Rotary Boundaries</span>
-            </legend>
+            </h3>
 
             <div className="mcm-grid-3">
               <div className="mcm-field">
@@ -438,14 +438,28 @@ function MachineConfigForm({
                 </div>
               </div>
             )}
-          </fieldset>
+          </section>
 
           {/* 3. Spindle & Dynamic Capabilities */}
-          <fieldset className="mcm-section">
-            <legend className="mcm-legend">
-              <Sliders size={14} color="#047857" />
-              <span>Spindle Dynamics &amp; Tool Changer (ATC)</span>
-            </legend>
+          <section className="mcm-section" aria-labelledby={`${uid}-sec-spindle`}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+              <h3 id={`${uid}-sec-spindle`} className="mcm-section-title" style={{ margin: 0 }}>
+                <Sliders size={14} color="#047857" />
+                <span>Spindle Dynamics &amp; Tool Changer (ATC)</span>
+              </h3>
+              <label htmlFor={`${uid}-tsc`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <input
+                  id={`${uid}-tsc`}
+                  type="checkbox"
+                  className="mcm-checkbox"
+                  checked={coolantTSC}
+                  onChange={(e) => setCoolantTSC(e.target.checked)}
+                />
+                <span className="mcm-checkbox-label" style={{ fontSize: '11px' }}>
+                  Through-Spindle Coolant (TSC)
+                </span>
+              </label>
+            </div>
 
             <div className="mcm-grid-4">
               <div className="mcm-field">
@@ -455,8 +469,8 @@ function MachineConfigForm({
                 <input
                   id={`${uid}-rpm`}
                   type="number"
-                  step="500"
-                  min="100"
+                  step="any"
+                  min="1"
                   className="mcm-control mcm-control-mono"
                   value={maxRpm}
                   onChange={(e) => setMaxRpm(e.target.value)}
@@ -470,8 +484,8 @@ function MachineConfigForm({
                 <input
                   id={`${uid}-feed`}
                   type="number"
-                  step="1000"
-                  min="100"
+                  step="any"
+                  min="1"
                   className="mcm-control mcm-control-mono"
                   value={maxFeed}
                   onChange={(e) => setMaxFeed(e.target.value)}
@@ -502,6 +516,7 @@ function MachineConfigForm({
                 <input
                   id={`${uid}-atc`}
                   type="number"
+                  step="1"
                   min="1"
                   className="mcm-control mcm-control-mono"
                   value={atcCapacity}
@@ -509,29 +524,14 @@ function MachineConfigForm({
                 />
               </div>
             </div>
-
-            <div style={{ marginTop: '10px' }}>
-              <label htmlFor={`${uid}-tsc`} className="mcm-checkbox-row" style={{ width: 'fit-content' }}>
-                <input
-                  id={`${uid}-tsc`}
-                  type="checkbox"
-                  className="mcm-checkbox"
-                  checked={coolantTSC}
-                  onChange={(e) => setCoolantTSC(e.target.checked)}
-                />
-                <span className="mcm-checkbox-label">
-                  Through-Spindle Coolant (TSC) Enabled
-                </span>
-              </label>
-            </div>
-          </fieldset>
+          </section>
 
           {/* 4. Post Processor Settings */}
-          <fieldset className="mcm-section">
-            <legend className="mcm-legend">
+          <section className="mcm-section" aria-labelledby={`${uid}-sec-post`}>
+            <h3 id={`${uid}-sec-post`} className="mcm-section-title">
               <Settings size={14} color="#b45309" />
               <span>G-Code Post Output Configurations</span>
-            </legend>
+            </h3>
 
             <div className="mcm-grid-3">
               <div className="mcm-field">
@@ -586,7 +586,7 @@ function MachineConfigForm({
                 />
               </div>
             </div>
-          </fieldset>
+          </section>
         </div>
 
         {/* Footer */}
