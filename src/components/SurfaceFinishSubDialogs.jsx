@@ -188,10 +188,10 @@ export function SurfaceHeightsSchematicSvg({
       <circle cx="104" cy="168" r="2.2" fill="#dc2626" />
       <circle cx="142" cy="170" r="2" fill="#dc2626" />
 
-      {/* 4 Horizontal Red Mastercam Leader Lines to Right-Side Inputs */}
+      {/* 4 Horizontal Red Mastercam Leader Lines aligned to fixed row datum bands (y=22, 112, 170, 222) */}
       {/* 1. Clearance */}
       <path
-        d="M118,136 H166 V22 H214"
+        d="M118,136 H166 V22 H215"
         fill="none"
         stroke={clearanceEnabled ? '#dc2626' : '#ef4444'}
         strokeWidth="1.3"
@@ -199,16 +199,16 @@ export function SurfaceHeightsSchematicSvg({
       />
       {/* 2. Retract */}
       <path
-        d="M106,136 H190 V112 H214"
+        d="M106,136 H188 V112 H215"
         fill="none"
         stroke={retractEnabled ? '#dc2626' : '#ef4444'}
         strokeWidth="1.4"
       />
       {/* 3. Feed plane */}
-      <path d="M144,170 H214" fill="none" stroke="#dc2626" strokeWidth="1.4" />
+      <path d="M144,170 H215" fill="none" stroke="#dc2626" strokeWidth="1.4" />
       {/* 4. Top of stock */}
       <path
-        d="M54,202 H182 V222 H214"
+        d="M54,202 H178 V222 H215"
         fill="none"
         stroke={topOfStockEnabled ? '#dc2626' : '#ef4444'}
         strokeWidth="1.3"
@@ -248,7 +248,7 @@ export function TipCompDiagramSvg({ tipComp = 'tip' }) {
  */
 export function TransitionTileSvg({ type }) {
   return (
-    <svg width="86" height="58" viewBox="0 0 86 58" style={{ display: 'block', background: '#c9ccd1', border: '1px solid #6b7280' }}>
+    <svg width="100%" height="58" viewBox="0 0 86 58" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', background: '#c9ccd1', border: '1px solid #6b7280', boxSizing: 'border-box' }}>
       {/* Upper and lower surface pass diagonal step edges */}
       <path d="M2,18 L24,2 M24,56 L84,12" stroke="#60a5fa" strokeWidth="1.2" fill="none" />
       <path d="M2,46 L60,2" stroke="#60a5fa" strokeWidth="1.1" fill="none" opacity="0.65" />
@@ -378,7 +378,10 @@ export function SurfaceFinishSubDialog({
     border: '1px solid #94a3b8',
     background: '#ffffdd',
     fontSize: '11.5px',
-    fontFamily: 'monospace'
+    fontFamily: 'monospace',
+    width: '100%',
+    minWidth: 0,
+    boxSizing: 'border-box'
   };
 
   if (dialog === 'coolant') {

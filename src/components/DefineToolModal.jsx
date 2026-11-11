@@ -456,6 +456,8 @@ function DefineToolModalInner({
 
   const step3InputStyle = {
     width: '100%',
+    minWidth: 0,
+    boxSizing: 'border-box',
     height: '22px',
     padding: '1px 6px',
     border: '1px solid #cbd5e1',
@@ -707,68 +709,28 @@ function DefineToolModalInner({
                   Specify the {activeToolMeta.label} dimensions and fluting geometry ({caps.spindleTaper}).
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: '24px', alignItems: 'start' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '145px 1fr', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: '#334155' }}>Cutting diameter (D):</span>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={toolGeometry.diameter}
-                        onChange={(e) => updateDiameterAndAutoName(e.target.value)}
-                        style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '1px', background: '#fef9c3', outline: 'none', fontSize: '12px' }}
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '145px 1fr', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: '#334155' }}>Corner radius (CR):</span>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={toolGeometry.cornerRadius}
-                        onChange={(e) => setToolGeometry({ ...toolGeometry, cornerRadius: Number(e.target.value) })}
-                        style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '1px', background: '#fef9c3', outline: 'none', fontSize: '12px' }}
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '145px 1fr', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: '#334155' }}>Flute length (FL):</span>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={toolGeometry.fluteLength}
-                        onChange={(e) => setToolGeometry({ ...toolGeometry, fluteLength: Number(e.target.value) })}
-                        style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '1px', background: '#fef9c3', outline: 'none', fontSize: '12px' }}
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '145px 1fr', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: '#334155' }}>Overall length (OAL):</span>
-                      <input
-                        type="number"
-                        step="1.0"
-                        value={toolGeometry.overallLength}
-                        onChange={(e) => setToolGeometry({ ...toolGeometry, overallLength: Number(e.target.value) })}
-                        style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '1px', background: '#fef9c3', outline: 'none', fontSize: '12px' }}
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '145px 1fr', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: '#334155' }}>Shank diameter (SD):</span>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={toolGeometry.shankDiameter}
-                        onChange={(e) => setToolGeometry({ ...toolGeometry, shankDiameter: Number(e.target.value) })}
-                        style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '1px', background: '#fef9c3', outline: 'none', fontSize: '12px' }}
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '145px 1fr', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: '#334155' }}>Number of flutes:</span>
-                      <input
-                        type="number"
-                        min={1}
-                        value={toolGeometry.flutes}
-                        onChange={(e) => handleFlutesChange(e.target.value)}
-                        style={{ padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '1px', background: '#fef9c3', outline: 'none', fontSize: '12px' }}
-                      />
-                    </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 0.85fr)', gap: '24px', alignItems: 'start', minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px', minWidth: 0 }}>
+                    {[
+                      { label: 'Cutting diameter (D):', val: toolGeometry.diameter, step: '0.1', fn: (v) => updateDiameterAndAutoName(v) },
+                      { label: 'Corner radius (CR):', val: toolGeometry.cornerRadius, step: '0.1', fn: (v) => setToolGeometry({ ...toolGeometry, cornerRadius: Number(v) }) },
+                      { label: 'Flute length (FL):', val: toolGeometry.fluteLength, step: '0.5', fn: (v) => setToolGeometry({ ...toolGeometry, fluteLength: Number(v) }) },
+                      { label: 'Overall length (OAL):', val: toolGeometry.overallLength, step: '1.0', fn: (v) => setToolGeometry({ ...toolGeometry, overallLength: Number(v) }) },
+                      { label: 'Shank diameter (SD):', val: toolGeometry.shankDiameter, step: '0.5', fn: (v) => setToolGeometry({ ...toolGeometry, shankDiameter: Number(v) }) },
+                      { label: 'Number of flutes:', val: toolGeometry.flutes, step: '1', min: 1, fn: (v) => handleFlutesChange(v) }
+                    ].map((row) => (
+                      <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '145px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <span style={{ color: '#334155' }}>{row.label}</span>
+                        <input
+                          type="number"
+                          step={row.step}
+                          min={row.min}
+                          value={row.val}
+                          onChange={(e) => row.fn(e.target.value)}
+                          style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', padding: '4px 8px', border: '1px solid #cbd5e1', borderRadius: '1px', background: '#fef9c3', outline: 'none', fontSize: '12px' }}
+                        />
+                      </div>
+                    ))}
                   </div>
 
                   {/* Interactive 2D Section Preview */}

@@ -28,6 +28,9 @@ const CLASSIC_YELLOW = {
   color: '#0f172a',
   padding: '2px 5px',
   height: '22px',
+  width: '100%',
+  minWidth: 0,
+  boxSizing: 'border-box',
   outline: 'none',
   fontFamily: "'Segoe UI', Tahoma, sans-serif"
 };
@@ -40,6 +43,24 @@ const DISABLED_GRAY = {
   color: '#64748b',
   padding: '2px 5px',
   height: '22px',
+  width: '100%',
+  minWidth: 0,
+  boxSizing: 'border-box',
+  outline: 'none',
+  fontFamily: "'Segoe UI', Tahoma, sans-serif"
+};
+
+const WHITE_INPUT = {
+  background: '#ffffff',
+  border: '1px solid #9ca3af',
+  borderRadius: '1px',
+  fontSize: '11.5px',
+  color: '#0f172a',
+  padding: '2px 5px',
+  height: '22px',
+  width: '100%',
+  minWidth: 0,
+  boxSizing: 'border-box',
   outline: 'none',
   fontFamily: "'Segoe UI', Tahoma, sans-serif"
 };
@@ -56,7 +77,8 @@ const MC_BUTTON = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  whiteSpace: 'nowrap'
+  whiteSpace: 'nowrap',
+  boxSizing: 'border-box'
 };
 
 function buildToolStateFromRecord(tool, caps, current) {
@@ -390,14 +412,16 @@ function SurfaceFinishContourModalInner({
     >
       <div
         style={{
-          width: '790px',
+          width: '820px',
           maxWidth: '96vw',
           background: '#f0f0f0',
           border: '1px solid #64748b',
           boxShadow: '0 22px 48px rgba(0, 0, 0, 0.42)',
           display: 'flex',
           flexDirection: 'column',
-          position: 'relative'
+          position: 'relative',
+          boxSizing: 'border-box',
+          overflow: 'hidden'
         }}
       >
         {/* Title Bar matching Mastercam 2018 */}
@@ -497,8 +521,8 @@ function SurfaceFinishContourModalInner({
         <div style={{ background: '#ffffff', margin: '0 8px 0 8px', border: '1px solid #cbd5e1', borderTop: 'none', padding: '12px', minHeight: '365px' }}>
           {/* ==================== TAB 1: TOOLPATH PARAMETERS (IMAGE 1) ==================== */}
           {activeTab === 'toolpath_params' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '325px 1fr', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)', gap: '14px', minWidth: 0 }}>
                 {/* Left Pane: Tool Table + Context Menu Trigger */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div
@@ -601,30 +625,30 @@ function SurfaceFinishContourModalInner({
                 </div>
 
                 {/* Right Pane: Exact Mastercam Tool Parameters Grid */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', fontSize: '11.5px', color: '#0f172a' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', fontSize: '11.5px', color: '#0f172a', minWidth: 0 }}>
                   {/* Tool name */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '80px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                     <span style={{ textAlign: 'right' }}>Tool name:</span>
                     <input
                       type="text"
                       value={toolParams.toolName}
                       onChange={(e) => setToolParams((p) => ({ ...p, toolName: e.target.value }))}
-                      style={{ ...MC_BUTTON, justifyContent: 'flex-start', background: '#ffffff', width: '100%', cursor: 'text', fontSize: '11.5px' }}
+                      style={WHITE_INPUT}
                     />
                   </div>
 
                   {/* Tool #, Length offset, Head #, Diameter offset, Tool diameter, Corner radius */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '6px 12px', minWidth: 0 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>Tool #:</span>
                       <input type="number" value={toolParams.toolNumber} onChange={(e) => setToolParams((p) => ({ ...p, toolNumber: Number(e.target.value) }))} style={CLASSIC_YELLOW} />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '95px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '92px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>Length offset:</span>
                       <input type="number" value={toolParams.lengthOffset} onChange={(e) => setToolParams((p) => ({ ...p, lengthOffset: Number(e.target.value) }))} style={CLASSIC_YELLOW} />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>Head #:</span>
                       <input
                         type="number"
@@ -635,12 +659,12 @@ function SurfaceFinishContourModalInner({
                         title={caps.hasHeadSelection ? 'Multi-head station index' : '-1 for single vertical spindle (3-Axis)'}
                       />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '95px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '92px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>Diameter offset:</span>
                       <input type="number" value={toolParams.diameterOffset} onChange={(e) => setToolParams((p) => ({ ...p, diameterOffset: Number(e.target.value) }))} style={CLASSIC_YELLOW} />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>Tool diameter:</span>
                       <input
                         type="number"
@@ -653,7 +677,7 @@ function SurfaceFinishContourModalInner({
                         style={CLASSIC_YELLOW}
                       />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '95px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '92px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>Corner radius:</span>
                       <input type="number" step="0.1" value={toolParams.cornerRadius} onChange={(e) => setToolParams((p) => ({ ...p, cornerRadius: Number(e.target.value) }))} style={CLASSIC_YELLOW} />
                     </div>
@@ -662,23 +686,23 @@ function SurfaceFinishContourModalInner({
                   <hr style={{ border: 'none', borderTop: '1px solid #cbd5e1', margin: '3px 0' }} />
 
                   {/* Coolant... & Spindle direction */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: '4px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '6px 12px', alignItems: 'center', minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', minWidth: 0 }}>
                       <button
                         type="button"
                         onClick={() => setActiveSubDialog('coolant')}
-                        style={{ ...MC_BUTTON, width: '92px' }}
+                        style={{ ...MC_BUTTON, width: '100%' }}
                         title={`Active coolant: ${toolParams.coolantMode}`}
                       >
                         Coolant... ({toolParams.coolantMode})
                       </button>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '95px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '92px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>Spindle direction:</span>
                       <select
                         value={toolParams.spindleDirection}
                         onChange={(e) => setToolParams((p) => ({ ...p, spindleDirection: e.target.value }))}
-                        style={{ height: '22px', border: '1px solid #9ca3af', background: '#ffffff', fontSize: '11.5px', padding: '0 4px' }}
+                        style={WHITE_INPUT}
                       >
                         <option value="CW">CW</option>
                         <option value="CCW">CCW</option>
@@ -687,38 +711,38 @@ function SurfaceFinishContourModalInner({
                     </div>
 
                     {/* Feed rate <-> Spindle speed */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>Feed rate:</span>
                       <input type="number" step="1" value={toolParams.feedRate} onChange={(e) => updateFeed(e.target.value)} style={CLASSIC_YELLOW} />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '95px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '92px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>Spindle speed:</span>
                       <input type="number" step="50" value={toolParams.spindleSpeed} onChange={(e) => updateRpm(e.target.value)} style={CLASSIC_YELLOW} />
                     </div>
 
                     {/* FPT <-> CS */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>FPT:</span>
                       <input type="number" step="0.0005" value={toolParams.fpt} onChange={(e) => updateFpt(e.target.value)} style={CLASSIC_YELLOW} />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '95px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '92px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>CS:</span>
                       <input type="number" step="0.1" value={toolParams.cs} onChange={(e) => updateCs(e.target.value)} style={CLASSIC_YELLOW} />
                     </div>
 
                     {/* Plunge rate & Retract rate */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>Plunge rate:</span>
                       <input type="number" step="5" value={toolParams.plungeRate} onChange={(e) => setToolParams((p) => ({ ...p, plungeRate: Number(e.target.value) }))} style={CLASSIC_YELLOW} />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '95px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '92px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <span style={{ textAlign: 'right' }}>Retract rate:</span>
                       <input type="number" step="5" value={toolParams.retractRate} onChange={(e) => setToolParams((p) => ({ ...p, retractRate: Number(e.target.value) }))} style={CLASSIC_YELLOW} />
                     </div>
                   </div>
 
                   {/* Force tool change / Rapid retract */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', paddingLeft: '85px', marginTop: '2px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '12px', paddingLeft: '80px', marginTop: '2px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                       <input type="checkbox" checked={toolParams.forceToolChange} onChange={(e) => setToolParams((p) => ({ ...p, forceToolChange: e.target.checked }))} />
                       <span>Force tool change</span>
@@ -740,6 +764,8 @@ function SurfaceFinishContourModalInner({
                       rows={3}
                       style={{
                         width: '100%',
+                        minWidth: 0,
+                        boxSizing: 'border-box',
                         border: '1px solid #9ca3af',
                         background: '#ffffff',
                         padding: '4px 6px',
@@ -753,30 +779,30 @@ function SurfaceFinishContourModalInner({
               </div>
 
               {/* Bottom 2-Row Machine Buttons Strip (Dynamic per 3X / 4X / 5X / Mill-Turn) */}
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '8px', display: 'grid', gridTemplateColumns: '140px 1fr 1fr 1fr 1fr', gap: '6px 10px', alignItems: 'center', fontSize: '11.5px' }}>
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '8px', display: 'grid', gridTemplateColumns: '125px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: '6px 10px', alignItems: 'center', fontSize: '11.5px' }}>
                 <button
                   type="button"
                   disabled={!caps.hasAxisCombos}
                   onClick={() => setActiveSubDialog('axis_combos')}
-                  style={{ ...MC_BUTTON, opacity: caps.hasAxisCombos ? 1 : 0.45, cursor: caps.hasAxisCombos ? 'pointer' : 'not-allowed' }}
+                  style={{ ...MC_BUTTON, width: '100%', opacity: caps.hasAxisCombos ? 1 : 0.45, cursor: caps.hasAxisCombos ? 'pointer' : 'not-allowed' }}
                   title={caps.hasAxisCombos ? `Configure axis combos for ${caps.machineName}` : 'Disabled on 3-Axis machine'}
                 >
                   Axis Combo&apos;s
                 </button>
                 <div style={{ gridColumn: '2 / 4' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
                   <input type="checkbox" checked={machineParams.toolDisplayEnabled} onChange={(e) => setMachineParams((p) => ({ ...p, toolDisplayEnabled: e.target.checked }))} />
-                  <button type="button" onClick={() => setActiveSubDialog('tool_display')} style={{ ...MC_BUTTON, flex: 1 }}>
+                  <button type="button" onClick={() => setActiveSubDialog('tool_display')} style={{ ...MC_BUTTON, flex: 1, minWidth: 0 }}>
                     Tool display...
                   </button>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
                   <input type="checkbox" checked={machineParams.refPointEnabled} onChange={(e) => setMachineParams((p) => ({ ...p, refPointEnabled: e.target.checked }))} />
                   <button
                     type="button"
                     disabled={!machineParams.refPointEnabled}
                     onClick={() => setActiveSubDialog('ref_point')}
-                    style={{ ...MC_BUTTON, flex: 1, opacity: machineParams.refPointEnabled ? 1 : 0.5 }}
+                    style={{ ...MC_BUTTON, flex: 1, minWidth: 0, opacity: machineParams.refPointEnabled ? 1 : 0.5 }}
                   >
                     Ref point...
                   </button>
@@ -787,10 +813,10 @@ function SurfaceFinishContourModalInner({
                   <input type="checkbox" checked={machineParams.toBatch} onChange={(e) => setMachineParams((p) => ({ ...p, toBatch: e.target.checked }))} />
                   <span>To batch</span>
                 </label>
-                <button type="button" onClick={() => setActiveSubDialog('home_pos')} style={MC_BUTTON}>
+                <button type="button" onClick={() => setActiveSubDialog('home_pos')} style={{ ...MC_BUTTON, width: '100%' }}>
                   Home pos...
                 </button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
                   <input
                     type="checkbox"
                     disabled={!caps.hasRotaryAxis}
@@ -801,15 +827,15 @@ function SurfaceFinishContourModalInner({
                     type="button"
                     disabled={!caps.hasRotaryAxis}
                     onClick={() => setActiveSubDialog('rotary_axis')}
-                    style={{ ...MC_BUTTON, flex: 1, opacity: caps.hasRotaryAxis ? 1 : 0.45, cursor: caps.hasRotaryAxis ? 'pointer' : 'not-allowed' }}
+                    style={{ ...MC_BUTTON, flex: 1, minWidth: 0, opacity: caps.hasRotaryAxis ? 1 : 0.45, cursor: caps.hasRotaryAxis ? 'pointer' : 'not-allowed' }}
                   >
                     Rotary axis...
                   </button>
                 </div>
-                <button type="button" onClick={() => setActiveSubDialog('planes')} style={MC_BUTTON}>
+                <button type="button" onClick={() => setActiveSubDialog('planes')} style={{ ...MC_BUTTON, width: '100%' }}>
                   Planes...
                 </button>
-                <button type="button" onClick={() => setActiveSubDialog('canned_text')} style={MC_BUTTON}>
+                <button type="button" onClick={() => setActiveSubDialog('canned_text')} style={{ ...MC_BUTTON, width: '100%' }}>
                   Canned text...
                 </button>
               </div>
@@ -818,9 +844,9 @@ function SurfaceFinishContourModalInner({
 
           {/* ==================== TAB 2: SURFACE PARAMETERS (IMAGE 4 VERBATIM) ==================== */}
           {activeTab === 'surface_params' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '215px 1fr 240px', gap: '12px', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '215px minmax(0, 1fr) 265px', gap: '10px', alignItems: 'start', minWidth: 0 }}>
               {/* Column 1: Schematic SVG + Regen button */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <SurfaceHeightsSchematicSvg
                   clearanceEnabled={surfaceParams.clearanceEnabled}
                   retractEnabled={surfaceParams.retractEnabled}
@@ -830,16 +856,16 @@ function SurfaceFinishContourModalInner({
                 <button
                   type="button"
                   onClick={() => onNotify?.('Previewing Z clearance, retract & feed planes against active drive surfaces.', 'info')}
-                  style={{ ...MC_BUTTON, width: '90px' }}
+                  style={{ ...MC_BUTTON, width: '90px', marginTop: '10px' }}
                 >
                   Regen...
                 </button>
               </div>
 
-              {/* Column 2: 4 Aligned Datum Rows + Direction */}
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '310px', fontSize: '11.5px' }}>
-                {/* Row 1: Clearance (y ~ 0..64) */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '6px' }}>
+              {/* Column 2: 4 Rigid Datum Bands Aligned to SVG Leader Lines (y=22, 112, 170, 222) + Direction */}
+              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '11.5px', minWidth: 0 }}>
+                {/* Band 1 (0..92px): Clearance center @ ~22.5px */}
+                <div style={{ height: '92px', boxSizing: 'border-box', paddingTop: '11px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <input
                       type="checkbox"
@@ -850,7 +876,7 @@ function SurfaceFinishContourModalInner({
                       type="button"
                       disabled={!surfaceParams.clearanceEnabled}
                       onClick={() => setSurfaceParams((p) => ({ ...p, clearanceEnabled: true }))}
-                      style={{ ...MC_BUTTON, width: '78px', opacity: surfaceParams.clearanceEnabled ? 1 : 0.6 }}
+                      style={{ ...MC_BUTTON, width: '82px', opacity: surfaceParams.clearanceEnabled ? 1 : 0.6 }}
                     >
                       Clearance...
                     </button>
@@ -873,17 +899,17 @@ function SurfaceFinishContourModalInner({
                       <span>Incremental</span>
                     </label>
                   </div>
-                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', paddingLeft: '20px', fontSize: '11px', color: surfaceParams.clearanceEnabled ? '#0f172a' : '#64748b', lineHeight: 1.25 }}>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', paddingLeft: '20px', fontSize: '11px', color: surfaceParams.clearanceEnabled ? '#0f172a' : '#64748b', lineHeight: 1.2 }}>
                     <input type="checkbox" disabled={!surfaceParams.clearanceEnabled} checked={surfaceParams.useClearanceStartEndOnly} onChange={(e) => setSurfaceParams((p) => ({ ...p, useClearanceStartEndOnly: e.target.checked }))} />
                     <span>Use clearance only at the start and end of operation</span>
                   </label>
                 </div>
 
-                {/* Row 2: Retract */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {/* Band 2 (92..150px): Retract center @ 92 + 8 + 11.5 = 111.5px */}
+                <div style={{ height: '58px', boxSizing: 'border-box', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <input type="checkbox" checked={surfaceParams.retractEnabled} onChange={(e) => setSurfaceParams((p) => ({ ...p, retractEnabled: e.target.checked }))} />
-                    <button type="button" disabled={!surfaceParams.retractEnabled} style={{ ...MC_BUTTON, width: '78px', opacity: surfaceParams.retractEnabled ? 1 : 0.6 }}>
+                    <button type="button" disabled={!surfaceParams.retractEnabled} style={{ ...MC_BUTTON, width: '82px', opacity: surfaceParams.retractEnabled ? 1 : 0.6 }}>
                       Retract...
                     </button>
                     <input
@@ -907,10 +933,10 @@ function SurfaceFinishContourModalInner({
                   </div>
                 </div>
 
-                {/* Row 3: Feed plane */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '19px' }}>
+                {/* Band 3 (150..208px): Feed plane center @ 150 + 8 + 11.5 = 169.5px */}
+                <div style={{ height: '58px', boxSizing: 'border-box', paddingTop: '8px', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <button type="button" style={{ ...MC_BUTTON, width: '78px' }}>Feed plane...</button>
+                    <button type="button" style={{ ...MC_BUTTON, width: '82px' }}>Feed plane...</button>
                     <input
                       type="number"
                       step="0.5"
@@ -919,7 +945,7 @@ function SurfaceFinishContourModalInner({
                       style={{ ...CLASSIC_YELLOW, width: '64px' }}
                     />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: '1px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                       <input type="radio" checked={surfaceParams.feedPlaneMode === 'abs'} onChange={() => setSurfaceParams((p) => ({ ...p, feedPlaneMode: 'abs' }))} />
                       <span>Absolute</span>
@@ -931,11 +957,11 @@ function SurfaceFinishContourModalInner({
                   </div>
                 </div>
 
-                {/* Row 4: Top of stock */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {/* Band 4 (208..275px): Top of stock center @ 208 + 3 + 11.5 = 222.5px */}
+                <div style={{ height: '67px', boxSizing: 'border-box', paddingTop: '3px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <input type="checkbox" checked={surfaceParams.topOfStockEnabled} onChange={(e) => setSurfaceParams((p) => ({ ...p, topOfStockEnabled: e.target.checked }))} />
-                    <button type="button" disabled={!surfaceParams.topOfStockEnabled} style={{ ...MC_BUTTON, width: '78px', opacity: surfaceParams.topOfStockEnabled ? 1 : 0.6 }}>
+                    <button type="button" disabled={!surfaceParams.topOfStockEnabled} style={{ ...MC_BUTTON, width: '82px', opacity: surfaceParams.topOfStockEnabled ? 1 : 0.6 }}>
                       Top of stock...
                     </button>
                     <input
@@ -959,14 +985,14 @@ function SurfaceFinishContourModalInner({
                   </div>
                 </div>
 
-                {/* Bottom Direction Toggle */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '6px' }}>
+                {/* Bottom Direction Toggle aligned across from Regen... */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px' }}>
                   <input type="checkbox" checked={surfaceParams.directionEnabled} onChange={(e) => setSurfaceParams((p) => ({ ...p, directionEnabled: e.target.checked }))} />
                   <button
                     type="button"
                     disabled={!surfaceParams.directionEnabled}
                     onClick={() => setActiveSubDialog('direction_vector')}
-                    style={{ ...MC_BUTTON, width: '78px', opacity: surfaceParams.directionEnabled ? 1 : 0.55 }}
+                    style={{ ...MC_BUTTON, width: '82px', opacity: surfaceParams.directionEnabled ? 1 : 0.55 }}
                   >
                     Direction...
                   </button>
@@ -974,13 +1000,13 @@ function SurfaceFinishContourModalInner({
               </div>
 
               {/* Column 3: Tip Comp + Surface Pointer + Stock to Leave + Tool Containment */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                   <span>Tip comp</span>
                   <select
                     value={surfaceParams.tipComp}
                     onChange={(e) => setSurfaceParams((p) => ({ ...p, tipComp: e.target.value }))}
-                    style={{ width: '90px', height: '22px', border: '1px solid #9ca3af', background: '#ffffff', fontSize: '11.5px' }}
+                    style={{ width: '92px', height: '22px', border: '1px solid #9ca3af', background: '#ffffff', fontSize: '11.5px', boxSizing: 'border-box' }}
                   >
                     <option value="tip">Tip</option>
                     <option value="center">Center</option>
@@ -1000,7 +1026,7 @@ function SurfaceFinishContourModalInner({
                   </button>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '122px 1fr 24px', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '126px minmax(0, 1fr) 26px', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                   <span style={{ lineHeight: 1.2 }}>Stock to leave on drive</span>
                   <input
                     type="number"
@@ -1009,10 +1035,10 @@ function SurfaceFinishContourModalInner({
                     onChange={(e) => setSurfaceParams((p) => ({ ...p, stockToLeaveDrive: Number(e.target.value) }))}
                     style={CLASSIC_YELLOW}
                   />
-                  <span>({selectedSurfaceIds.length})</span>
+                  <span style={{ textAlign: 'right' }}>({selectedSurfaceIds.length})</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '122px 1fr 24px', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '126px minmax(0, 1fr) 26px', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                   <span style={{ lineHeight: 1.2 }}>Stock to leave on check</span>
                   <input
                     type="number"
@@ -1021,11 +1047,11 @@ function SurfaceFinishContourModalInner({
                     onChange={(e) => setSurfaceParams((p) => ({ ...p, stockToLeaveCheck: Number(e.target.value) }))}
                     style={CLASSIC_YELLOW}
                   />
-                  <span>(0)</span>
+                  <span style={{ textAlign: 'right' }}>(0)</span>
                 </div>
 
                 {/* Tool Containment Box */}
-                <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', marginTop: '4px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', marginTop: '4px', minWidth: 0, boxSizing: 'border-box' }}>
                   <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px' }}>Tool containment</legend>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '11px' }}>
                     <span>Compensate to:</span>
@@ -1048,8 +1074,8 @@ function SurfaceFinishContourModalInner({
                       </label>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', color: surfaceParams.additionalOffsetEnabled ? '#0f172a' : '#64748b' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', color: surfaceParams.additionalOffsetEnabled ? '#0f172a' : '#64748b', whiteSpace: 'nowrap' }}>
                       <input
                         type="checkbox"
                         checked={surfaceParams.additionalOffsetEnabled}
@@ -1063,7 +1089,7 @@ function SurfaceFinishContourModalInner({
                       disabled={!surfaceParams.additionalOffsetEnabled}
                       value={surfaceParams.additionalOffset}
                       onChange={(e) => setSurfaceParams((p) => ({ ...p, additionalOffset: Number(e.target.value) }))}
-                      style={{ ...(surfaceParams.additionalOffsetEnabled ? CLASSIC_YELLOW : DISABLED_GRAY), width: '62px' }}
+                      style={{ ...(surfaceParams.additionalOffsetEnabled ? CLASSIC_YELLOW : DISABLED_GRAY), maxWidth: '72px', justifySelf: 'end' }}
                     />
                   </div>
                 </fieldset>
@@ -1073,12 +1099,12 @@ function SurfaceFinishContourModalInner({
 
           {/* ==================== TAB 3A: FINISH CONTOUR PARAMETERS (IMAGE 5 VERBATIM) ==================== */}
           {activeTab === 'finish_contour_params' && !isPocket && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '14px', alignItems: 'start' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '246px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
                 {/* LEFT COLUMN */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', alignItems: 'center', gap: '8px' }}>
-                    <button type="button" onClick={() => setActiveSubDialog('total_tolerance')} style={{ ...MC_BUTTON, borderColor: '#3b82f6' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', minWidth: 0 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <button type="button" onClick={() => setActiveSubDialog('total_tolerance')} style={{ ...MC_BUTTON, width: '100%', borderColor: '#3b82f6' }}>
                       Total tolerance...
                     </button>
                     <input
@@ -1090,7 +1116,7 @@ function SurfaceFinishContourModalInner({
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                     <span>Maximum stepdown</span>
                     <input
                       type="number"
@@ -1110,19 +1136,19 @@ function SurfaceFinishContourModalInner({
                     <span>Detect undercuts</span>
                   </label>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                     <span>Corner rounding radius</span>
                     <input
                       type="number"
                       step="0.5"
                       value={contourParams.cornerRoundingRadius}
                       onChange={(e) => setContourParams((p) => ({ ...p, cornerRoundingRadius: Number(e.target.value) }))}
-                      style={{ ...MC_BUTTON, background: '#ffffff', justifyContent: 'flex-start', cursor: 'text' }}
+                      style={WHITE_INPUT}
                     />
                   </div>
 
                   {/* Entry/exit arc/line group */}
-                  <div style={{ border: '1px solid #cbd5e1', padding: '6px 8px', marginTop: '2px' }}>
+                  <div style={{ border: '1px solid #cbd5e1', padding: '7px 8px', marginTop: '2px', boxSizing: 'border-box', minWidth: 0 }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 500, marginBottom: '6px', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
@@ -1131,8 +1157,8 @@ function SurfaceFinishContourModalInner({
                       />
                       <span>Entry/exit arc/line</span>
                     </label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', opacity: contourParams.entryExitArcEnabled ? 1 : 0.6 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '105px 1fr', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', opacity: contourParams.entryExitArcEnabled ? 1 : 0.6, minWidth: 0 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '112px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                         <span>Arc radius:</span>
                         <input
                           type="number"
@@ -1143,7 +1169,7 @@ function SurfaceFinishContourModalInner({
                           style={contourParams.entryExitArcEnabled ? CLASSIC_YELLOW : DISABLED_GRAY}
                         />
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '105px 1fr', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '112px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                         <span>Arc sweep:</span>
                         <input
                           type="number"
@@ -1154,7 +1180,7 @@ function SurfaceFinishContourModalInner({
                           style={contourParams.entryExitArcEnabled ? CLASSIC_YELLOW : DISABLED_GRAY}
                         />
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '105px 1fr', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '112px minmax(0, 1fr)', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                         <span>Line length:</span>
                         <input
                           type="number"
@@ -1199,10 +1225,10 @@ function SurfaceFinishContourModalInner({
                 </div>
 
                 {/* RIGHT COLUMN */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 }}>
                   {/* Direction of closed contours + Direction of open contours */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.9fr', gap: '10px' }}>
-                    <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 0.85fr)', gap: '10px', minWidth: 0 }}>
+                    <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
                       <legend style={{ fontSize: '11px', padding: '0 4px' }}>Direction of closed contours</legend>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
@@ -1226,7 +1252,7 @@ function SurfaceFinishContourModalInner({
                       </div>
                     </fieldset>
 
-                    <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px' }}>
+                    <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
                       <legend style={{ fontSize: '11px', padding: '0 4px' }}>Direction of open contours</legend>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingTop: '8px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
@@ -1242,9 +1268,9 @@ function SurfaceFinishContourModalInner({
                   </div>
 
                   {/* Transition Box with 4 SVG Tiles */}
-                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px' }}>
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
                     <legend style={{ fontSize: '11px', padding: '0 4px' }}>Transition</legend>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '8px', minWidth: 0 }}>
                       {[
                         { id: 'high_speed', label: 'High speed' },
                         { id: 'broken', label: 'Broken' },
@@ -1254,9 +1280,9 @@ function SurfaceFinishContourModalInner({
                         <div
                           key={tr.id}
                           onClick={() => setContourParams((p) => ({ ...p, transitionType: tr.id }))}
-                          style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px' }}
+                          style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}
                         >
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '11px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '11px', whiteSpace: 'nowrap' }}>
                             <input
                               type="radio"
                               checked={contourParams.transitionType === tr.id}
@@ -1271,7 +1297,7 @@ function SurfaceFinishContourModalInner({
                   </fieldset>
 
                   {/* Loop length & Ramp length */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'center' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '16px', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                       <span style={{ color: contourParams.transitionType === 'high_speed' ? '#0f172a' : '#64748b' }}>Loop length</span>
                       <input
@@ -1279,7 +1305,7 @@ function SurfaceFinishContourModalInner({
                         step="0.5"
                         value={contourParams.loopLength}
                         onChange={(e) => setContourParams((p) => ({ ...p, loopLength: Number(e.target.value) }))}
-                        style={{ ...(contourParams.transitionType === 'high_speed' ? CLASSIC_YELLOW : DISABLED_GRAY), background: '#ffffff', width: '74px' }}
+                        style={{ ...(contourParams.transitionType === 'high_speed' ? CLASSIC_YELLOW : WHITE_INPUT), width: '74px' }}
                       />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
@@ -1289,36 +1315,36 @@ function SurfaceFinishContourModalInner({
                         step="0.5"
                         value={contourParams.rampLength}
                         onChange={(e) => setContourParams((p) => ({ ...p, rampLength: Number(e.target.value) }))}
-                        style={{ ...(contourParams.transitionType === 'ramp' ? CLASSIC_YELLOW : DISABLED_GRAY), background: '#ffffff', width: '74px' }}
+                        style={{ ...(contourParams.transitionType === 'ramp' ? CLASSIC_YELLOW : WHITE_INPUT), width: '74px' }}
                       />
                     </div>
                   </div>
 
                   {/* Helix... / Shallow... / Flats... Checkboxes + Buttons */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '2px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <input type="checkbox" checked={contourParams.helixEnabled} onChange={(e) => setContourParams((p) => ({ ...p, helixEnabled: e.target.checked }))} />
-                      <button type="button" onClick={() => setActiveSubDialog('helix')} style={{ ...MC_BUTTON, flex: 1, opacity: contourParams.helixEnabled ? 1 : 0.65 }}>
+                      <button type="button" onClick={() => setActiveSubDialog('helix')} style={{ ...MC_BUTTON, flex: 1, minWidth: 0, opacity: contourParams.helixEnabled ? 1 : 0.65 }}>
                         Helix...
                       </button>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <input type="checkbox" checked={contourParams.shallowEnabled} onChange={(e) => setContourParams((p) => ({ ...p, shallowEnabled: e.target.checked }))} />
-                      <button type="button" onClick={() => setActiveSubDialog('shallow')} style={{ ...MC_BUTTON, flex: 1, opacity: contourParams.shallowEnabled ? 1 : 0.65 }}>
+                      <button type="button" onClick={() => setActiveSubDialog('shallow')} style={{ ...MC_BUTTON, flex: 1, minWidth: 0, opacity: contourParams.shallowEnabled ? 1 : 0.65 }}>
                         Shallow...
                       </button>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <input type="checkbox" checked={contourParams.flatsEnabled} onChange={(e) => setContourParams((p) => ({ ...p, flatsEnabled: e.target.checked }))} />
-                      <button type="button" onClick={() => setActiveSubDialog('flats')} style={{ ...MC_BUTTON, flex: 1, opacity: contourParams.flatsEnabled ? 1 : 0.65 }}>
+                      <button type="button" onClick={() => setActiveSubDialog('flats')} style={{ ...MC_BUTTON, flex: 1, minWidth: 0, opacity: contourParams.flatsEnabled ? 1 : 0.65 }}>
                         Flats...
                       </button>
                     </div>
                   </div>
 
                   {/* Bottom Row: Spiral + Limit | Cut depths... | Gap settings... | Advanced settings... */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'nowrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       <input type="checkbox" checked={contourParams.spiralEnabled} onChange={(e) => setContourParams((p) => ({ ...p, spiralEnabled: e.target.checked }))} />
                       <span>Spiral</span>
                     </label>
@@ -1329,7 +1355,7 @@ function SurfaceFinishContourModalInner({
                       disabled={!contourParams.spiralEnabled}
                       value={contourParams.spiralLimit}
                       onChange={(e) => setContourParams((p) => ({ ...p, spiralLimit: Number(e.target.value) }))}
-                      style={{ ...(contourParams.spiralEnabled ? CLASSIC_YELLOW : DISABLED_GRAY), width: '58px' }}
+                      style={{ ...(contourParams.spiralEnabled ? CLASSIC_YELLOW : DISABLED_GRAY), width: '54px' }}
                     />
                     <div style={{ flex: 1 }} />
                     <button type="button" onClick={() => setActiveSubDialog('cut_depths')} style={MC_BUTTON}>Cut depths...</button>
