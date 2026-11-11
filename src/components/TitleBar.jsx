@@ -2,8 +2,8 @@ import React from 'react';
 import { Save, RotateCcw, RotateCw, Printer, HelpCircle, Minus, Square, X, Cpu, Sun, Moon } from 'lucide-react';
 
 export default function TitleBar({
-  currentProject = "DMU_50evo_Katana_Schraubstock.mcam",
-  activeMachine = { name: "DMG MORI DMU 50", type: "5-Axis Mill-Turn" },
+  currentProject = "Part1.mcam",
+  activeMachine = null,
   theme = 'light',
   onToggleTheme,
   onSaveProject,
@@ -103,7 +103,9 @@ export default function TitleBar({
       <div className="titlebar-center">
         <span>Mastercam 2026 Interface Engine &bull;</span>
         <span className="titlebar-filename">{currentProject}</span>
-        <span className="titlebar-badge">{activeMachine?.name || '5-Axis Mill-Turn'}</span>
+        <span className="titlebar-badge" data-testid="titlebar-machine-badge">
+          {activeMachine?.name || 'No Machine Selected'}
+        </span>
       </div>
 
       <div className="titlebar-right">

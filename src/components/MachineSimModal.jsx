@@ -5,12 +5,17 @@ import {
   AlertTriangle, Cpu, Box, Sliders, CheckCircle2, AlertOctagon,
   Eye, EyeOff, Layers, Sparkles
 } from 'lucide-react';
-import { generateNCProgram, CONTROLLER_DIALECTS } from '../utils/postProcessor';
+import { generateNCProgram } from '../utils/postProcessor';
 import {
   MACHINE_KINEMATICS,
+  resolveMachineKinematics,
   buildMachineEnvelope3D,
   auditKinematicsAndCollisions
 } from '../utils/machineKinematics.js';
+import {
+  MACHINE_DEFINITIONS_CATALOG,
+  deriveControllerDialect
+} from '../config/machineDefinitionsCatalog';
 
 export default function MachineSimModal({
   isOpen,
@@ -26,7 +31,7 @@ export default function MachineSimModal({
   const dialogRef = useRef(null);
   const canvasRef = useRef(null);
 
-  const [selectedMachineId, setSelectedMachineId] = useState(activeMachine?.id || 'dmu50');
+  const [selectedMachineId, setSelectedMachineId] = useState(activeMachine?.id || 'mill_3x_default');
   const [isPlaying, setIsPlaying] = useState(true);
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const [activeLineIdx, setActiveLineIdx] = useState(0);
@@ -39,15 +44,16 @@ export default function MachineSimModal({
   }, [activeLineIdx]);
 
   useEffect(() => {
-    if (activeMachine?.id) {
+    if (activeMachine?.id && activeMachine.id !== 'design') {
       setSelectedMachineId(activeMachine.id);
     }
   }, [activeMachine]);
 
-  // Active Machine Kinematic Configuration
+  // Active Machine Kinematic Configuration (resolves ALL catalog machines dynamically!)
   const machineConfig = useMemo(() => {
-    return MACHINE_KINEMATICS[selectedMachineId] || MACHINE_KINEMATICS.dmu50;
-  }, [selectedMachineId]);
+    const src = selectedMachineId === activeMachine?.id ? activeMachine : selectedMachineId;
+    return resolveMachineKinematics(src);
+  }, [selectedMachineId, activeMachine]);
 
   const limits = useMemo(() => {
     const ax = machineConfig.axes;
@@ -55,8 +61,8 @@ export default function MachineSimModal({
       x: { min: ax.X?.min ?? -250, max: ax.X?.max ?? 250 },
       y: { min: ax.Y?.min ?? -200, max: ax.Y?.max ?? 200 },
       z: { min: ax.Z?.min ?? -100, max: ax.Z?.max ?? 350 },
-      b: { min: ax.B?.min ?? -5, max: ax.B?.max ?? 110 },
-      c: { min: ax.C?.min ?? -360, max: ax.C?.max ?? 360 }
+      b: { min: ax.B?.min ?? 0, max: ax.B?.max ?? 0 },
+      c: { min: ax.C?.min ?? 0, max: ax.C?.max ?? 0 }
     };
   }, [machineConfig]);
 
@@ -66,9 +72,7 @@ export default function MachineSimModal({
 
     let programLines = [];
     try {
-      const dialect = selectedMachineId === 'haas_vf2' ? CONTROLLER_DIALECTS.HAAS :
-        selectedMachineId === 'robodrill' ? CONTROLLER_DIALECTS.FANUC :
-        CONTROLLER_DIALECTS.HEIDENHAIN;
+      const dialect = deriveControllerDialect(machineConfig);
 
       const generated = generateNCProgram({
         operations: operations.length > 0 ? operations : [
@@ -79,7 +83,8 @@ export default function MachineSimModal({
         stockConfig: stockConfig,
         partMetrics: partMetrics,
         controller: dialect,
-        programName: `${selectedMachineId.toUpperCase()}_Argus_Job`,
+        machineName: machineConfig.name,
+        programName: `${String(selectedMachineId).toUpperCase()}_Argus_Job`,
         model: currentModel,
         customGeometry
       });
@@ -141,12 +146,12 @@ export default function MachineSimModal({
     });
 
     return { gcodeLines: programLines, motionBlocks: blocks };
-  }, [isOpen, operations, tools, stockConfig, partMetrics, currentModel, selectedMachineId]);
+  }, [isOpen, operations, tools, stockConfig, partMetrics, currentModel, selectedMachineId, machineConfig]);
 
   // Pre-flight Kinematic & Collision Audit
   const auditResult = useMemo(() => {
-    return auditKinematicsAndCollisions(motionBlocks, selectedMachineId, tools, stockConfig);
-  }, [motionBlocks, selectedMachineId, tools, stockConfig]);
+    return auditKinematicsAndCollisions(motionBlocks, machineConfig, tools, stockConfig);
+  }, [motionBlocks, machineConfig, tools, stockConfig]);
 
   // Current Kinematic State
   const currentBlock = motionBlocks[activeLineIdx] || motionBlocks[0] || {
@@ -223,7 +228,7 @@ export default function MachineSimModal({
     scene.add(grid);
 
     // 3D Physical Travel Envelope Cage (Wireframe Box + Safety Ring)
-    const envelopeGroup = buildMachineEnvelope3D(selectedMachineId, overtravelAxis);
+    const envelopeGroup = buildMachineEnvelope3D(machineConfig, overtravelAxis);
     envelopeGroup.visible = showEnvelope;
     scene.add(envelopeGroup);
 
@@ -342,7 +347,7 @@ export default function MachineSimModal({
       }
       renderer.dispose();
     };
-  }, [isOpen, isPlaying, speedMultiplier, motionBlocks, currentModel, selectedMachineId, showEnvelope, overtravelAxis]);
+  }, [isOpen, isPlaying, speedMultiplier, motionBlocks, currentModel, selectedMachineId, machineConfig, showEnvelope, overtravelAxis]);
 
   const handleJumpToClash = (lineIdx) => {
     setActiveLineIdx(lineIdx);
@@ -382,11 +387,19 @@ export default function MachineSimModal({
                 fontWeight: 600
               }}
             >
-              {Object.values(MACHINE_KINEMATICS).map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
+              {[...new Set([
+                ...(activeMachine?.id && activeMachine.id !== 'design' ? [activeMachine.id] : []),
+                ...Object.keys(MACHINE_KINEMATICS),
+                ...MACHINE_DEFINITIONS_CATALOG.map((m) => m.id)
+              ])].map((id) => {
+                const m = MACHINE_DEFINITIONS_CATALOG.find((c) => c.id === id) || MACHINE_KINEMATICS[id] || (activeMachine?.id === id ? activeMachine : null);
+                if (!m) return null;
+                return (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                );
+              })}
             </select>
 
             <button className="modal-close-btn" onClick={onClose} title="Close Simulation">

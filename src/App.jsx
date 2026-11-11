@@ -32,6 +32,14 @@ import MeshWorkbenchModal from './components/MeshWorkbenchModal';
 import DraftingCADModal from './components/DraftingCADModal';
 import TransformCADModal from './components/TransformCADModal';
 import MachineConfigModal from './components/MachineConfigModal';
+import MachineMenuManagementModal from './components/MachineMenuManagementModal';
+import {
+  MACHINE_DEFINITIONS_CATALOG,
+  DEFAULT_MACHINE_DIRECTORY,
+  DEFAULT_MENU_IDS_BY_CATEGORY,
+  DESIGN_MODE_MACHINE,
+  resolveMachineById
+} from './config/machineDefinitionsCatalog';
 import ATPModal from './components/ATPModal';
 import ViewStudioModal from './components/ViewStudioModal';
 import CAMOperationsWizardModal from './components/CAMOperationsWizardModal';
@@ -263,14 +271,35 @@ export default function App() {
   ]);
   const [activeViewsheetId, setActiveViewsheetId] = useState('vs_1');
 
-  // Machine Definition
-  const [machines, setMachines] = useState([
-    { id: 'dmu50', name: 'DMG MORI DMU 50 (5X)', type: '5-Axis Trunnion B/C', controller: 'Heidenhain TNC 640' },
-    { id: 'haas_vf2', name: 'Haas VF-2 (3X VMC)', type: '3-Axis Vertical', controller: 'Haas NGC' },
-    { id: 'robodrill', name: 'Fanuc Robodrill D21', type: 'High Speed 3-Axis', controller: 'Fanuc 31i' },
-    { id: 'integrex', name: 'Mazak Integrex i-200', type: '5-Axis Mill-Turn', controller: 'Mazak Matrix' }
-  ]);
-  const [activeMachineId, setActiveMachineId] = useState('dmu50');
+  // Machine Definition & Mastercam Menu Configuration
+  const [machines, setMachines] = useState(() => {
+    try {
+      const savedCustom = JSON.parse(localStorage.getItem('argus_custom_machines_v1') || '[]');
+      if (Array.isArray(savedCustom) && savedCustom.length > 0) {
+        return [...MACHINE_DEFINITIONS_CATALOG, ...savedCustom.filter((c) => c?.id && !MACHINE_DEFINITIONS_CATALOG.some((m) => m.id === c.id))];
+      }
+    } catch {
+      // ignore storage errors
+    }
+    return [...MACHINE_DEFINITIONS_CATALOG];
+  });
+  const [machineDirectory, setMachineDirectory] = useState(() => {
+    return localStorage.getItem('argus_machine_directory_v1') || DEFAULT_MACHINE_DIRECTORY;
+  });
+  const [machineMenuByCategory, setMachineMenuByCategory] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('argus_machine_menu_config_v1') || 'null');
+      if (saved && typeof saved === 'object') {
+        return { ...DEFAULT_MENU_IDS_BY_CATEGORY, ...saved };
+      }
+    } catch {
+      // ignore storage errors
+    }
+    return { ...DEFAULT_MENU_IDS_BY_CATEGORY };
+  });
+  const [isMachineMenuModalOpen, setIsMachineMenuModalOpen] = useState(false);
+  const [machineMenuCategory, setMachineMenuCategory] = useState('mill');
+  const [activeMachineId, setActiveMachineId] = useState('mill_3x_default');
   const [activeWcs, setActiveWcs] = useState('G54');
 
   // Mastercam Manager Sidebar Tab ('Toolpaths', 'Levels', 'Solids', 'Planes')
@@ -849,7 +878,53 @@ export default function App() {
     }
   ]);
 
-  const activeMachine = machines.find((m) => m.id === activeMachineId) || machines[0];
+  const activeMachine = useMemo(() => {
+    return resolveMachineById(activeMachineId, machines) || machines[0] || DESIGN_MODE_MACHINE;
+  }, [activeMachineId, machines]);
+
+  const handleSelectMachine = (nextMachineId) => {
+    if (!nextMachineId) return;
+    setActiveMachineId(nextMachineId);
+    const resolved = resolveMachineById(nextMachineId, machines) || DESIGN_MODE_MACHINE;
+    showToast(`Machine selected: ${resolved.name} (${resolved.type} • ${resolved.controller})`, 'success');
+  };
+
+  const handleOpenMachineMenuManager = (category = 'mill') => {
+    setMachineMenuCategory(category || 'mill');
+    setIsMachineMenuModalOpen(true);
+  };
+
+  const handleSaveMachineMenu = ({ category, directory, menuItemIds }) => {
+    if (directory) {
+      setMachineDirectory(directory);
+      localStorage.setItem('argus_machine_directory_v1', directory);
+    }
+    setMachineMenuByCategory((prev) => {
+      const next = { ...prev, [category]: menuItemIds };
+      try {
+        localStorage.setItem('argus_machine_menu_config_v1', JSON.stringify(next));
+      } catch {
+        // ignore storage quota errors
+      }
+      return next;
+    });
+    showToast(`Updated Machine Definition menu list (${menuItemIds.length} item(s))`, 'success');
+  };
+
+  const handleImportCustomMachine = (newMachine) => {
+    if (!newMachine?.id) return;
+    setMachines((prev) => {
+      const next = [...prev, newMachine];
+      try {
+        const customOnly = next.filter((m) => !MACHINE_DEFINITIONS_CATALOG.some((c) => c.id === m.id));
+        localStorage.setItem('argus_custom_machines_v1', JSON.stringify(customOnly));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+    showToast(`Imported machine definition: ${newMachine.fileName || newMachine.name}`, 'success');
+  };
 
   // Sync entity counts with Levels and keep synchronous refs updated
   useEffect(() => {
@@ -5160,7 +5235,11 @@ export default function App() {
         onRegenerateAll={handleRegenerateAll}
         onDeleteActiveOp={handleDeleteActiveOp}
         activeMachine={activeMachine}
-        onSelectMachine={setActiveMachineId}
+        machines={machines}
+        machineMenuByCategory={machineMenuByCategory}
+        machineDirectory={machineDirectory}
+        onSelectMachine={handleSelectMachine}
+        onOpenMachineMenuManager={handleOpenMachineMenuManager}
         onSelectWcs={setActiveWcs}
         activeWcs={activeWcs}
         workspaceViewMode={workspaceViewMode}
@@ -5770,7 +5849,7 @@ export default function App() {
         tools={tools}
         stockConfig={stockConfig}
         partMetrics={partMetrics}
-        activeMachine={machines.find(m => m.id === activeMachineId)}
+        activeMachine={activeMachine}
       />
 
       {/* CNC Automatic Corner Relief & Dog-Bone / T-Bone Studio */}
@@ -5787,7 +5866,7 @@ export default function App() {
       <KioskOperatorModal
         isOpen={isKioskModalOpen}
         onClose={() => setIsKioskModalOpen(false)}
-        activeMachine={machines.find(m => m.id === activeMachineId)}
+        activeMachine={activeMachine}
         activeOperations={operations}
         tools={tools}
       />
@@ -5797,7 +5876,7 @@ export default function App() {
         isOpen={isTombstoneModalOpen}
         onClose={() => setIsTombstoneModalOpen(false)}
         operations={operations}
-        activeMachine={machines.find(m => m.id === activeMachineId)}
+        activeMachine={activeMachine}
         onApplyTombstoneToCAM={(tombLayout) => {
           console.log('Tombstone Layout Applied to CAM Operations:', tombLayout);
         }}
@@ -5809,7 +5888,7 @@ export default function App() {
         onClose={() => setIsCustomPostModalOpen(false)}
         operations={operations}
         tools={tools}
-        activeMachine={machines.find(m => m.id === activeMachineId)}
+        activeMachine={activeMachine}
         onSaveCustomPost={(customProfile) => {
           console.log('Custom Post Profile Saved for Machine:', customProfile);
         }}
@@ -5955,18 +6034,34 @@ export default function App() {
         onApplyCustomTransform={handleApplyCustomTransform}
       />
 
+      {/* CNC Machine Definition Menu Management Modal */}
+      <MachineMenuManagementModal
+        isOpen={isMachineMenuModalOpen}
+        onClose={() => setIsMachineMenuModalOpen(false)}
+        category={machineMenuCategory}
+        machines={machines}
+        menuItemIds={machineMenuByCategory[machineMenuCategory] || []}
+        machineDirectory={machineDirectory}
+        onSaveMenu={handleSaveMachineMenu}
+        onImportCustomMachine={handleImportCustomMachine}
+        theme={theme}
+      />
+
       {/* CNC Machine Definition & Kinematic Envelope Modal (Tab 10) */}
       <MachineConfigModal
         isOpen={isMachineConfigModalOpen}
         onClose={() => setIsMachineConfigModalOpen(false)}
         machines={machines}
         activeMachine={activeMachine}
-        onSelectMachine={setActiveMachineId}
+        onSelectMachine={handleSelectMachine}
         onUpdateMachineConfig={(updatedConfig) => {
           setActiveMachineId(updatedConfig.id);
-          setMachines((prev) =>
-            prev.map((m) => (m.id === updatedConfig.id ? { ...m, ...updatedConfig } : m))
-          );
+          setMachines((prev) => {
+            const exists = prev.some((m) => m.id === updatedConfig.id);
+            return exists
+              ? prev.map((m) => (m.id === updatedConfig.id ? { ...m, ...updatedConfig } : m))
+              : [...prev, updatedConfig];
+          });
           showToast(`Saved Machine Definition: ${updatedConfig.name}`, 'success');
         }}
       />
@@ -6145,6 +6240,7 @@ export default function App() {
         partMetrics={partMetrics}
         currentModel={currentModel}
         customGeometry={customGeometry}
+        activeMachine={activeMachine}
         currentProjectName={currentProjectName}
       />
 

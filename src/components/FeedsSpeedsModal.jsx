@@ -12,7 +12,7 @@ export default function FeedsSpeedsModal({
   activeToolId = null,
   operations = [],
   activeOpId = null,
-  activeMachine = { name: "DMG MORI DMU 50", type: "5-Axis Mill-Turn", maxRpm: 18000, powerKw: 15.0, torqueNm: 85.0 },
+  activeMachine = { name: "MILL 3 - AXIS VMC MM", type: "3-Axis Vertical VMC", maxRpm: 12000, powerKw: 15.0, torqueNm: 75.0 },
   onUpdateToolParams = null,
   onUpdateOpParams = null,
   onNotify = null

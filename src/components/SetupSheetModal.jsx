@@ -101,7 +101,7 @@ export default function SetupSheetModal({
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Target Machine:</span>
-              <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{activeMachine?.name || 'DMG MORI DMU 50 (5-Axis)'}</div>
+              <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{activeMachine?.name || 'No Machine Selected'}</div>
             </div>
             <div>
               <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase' }}>Work Offset (WCS):</span>

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { resolveMachineById } from '../config/machineDefinitionsCatalog.js';
 
 /**
  * Argus CAM Machine Simulation Kinematics & Collision Envelope Engine
@@ -62,6 +63,25 @@ export const MACHINE_KINEMATICS = {
     spindleNoseHeight: 80,
     softLimitBufferMm: 10.0
   },
+  hmc_4x: {
+    id: 'hmc_4x',
+    name: '4-Axis Horizontal / VMC',
+    type: '4-Axis VMC / HMC Rotary',
+    controller: 'Fanuc 31i (4-Axis)',
+    axes: {
+      X: { min: -400, max: 400, unit: 'mm', label: 'X Axis (Table Travel)' },
+      Y: { min: -250, max: 250, unit: 'mm', label: 'Y Axis (Cross Travel)' },
+      Z: { min: -100, max: 450, unit: 'mm', label: 'Z Axis (Spindle Travel)' },
+      C: { min: -360, max: 360, unit: 'deg', label: 'A/B Rotary Indexer' }
+    },
+    maxRpm: 14000,
+    maxFeed: 32000,
+    tableWidth: 700,
+    tableDepth: 500,
+    spindleNoseRadius: 75,
+    spindleNoseHeight: 90,
+    softLimitBufferMm: 15.0
+  },
   integrex: {
     id: 'integrex',
     name: 'Mazak Integrex i-200',
@@ -83,14 +103,71 @@ export const MACHINE_KINEMATICS = {
 };
 
 /**
+ * Dynamically resolves kinematic axis envelope, rotary configuration, and spindle ratings
+ * for any machine ID or Machine Definition object (3-axis, 4-axis, 5-axis, lathe, wire, router).
+ */
+export function resolveMachineKinematics(machineOrId = 'mill_3x_default', customMachines = []) {
+  const rawObj = typeof machineOrId === 'object' && machineOrId !== null ? machineOrId : null;
+  const id = rawObj?.id || (typeof machineOrId === 'string' ? machineOrId : 'mill_3x_default');
+  const catalogMatch = rawObj ? { ...(resolveMachineById(id, customMachines) || {}), ...rawObj } : resolveMachineById(id, customMachines);
+
+  if (catalogMatch) {
+    const basePreset =
+      MACHINE_KINEMATICS[id] ||
+      MACHINE_KINEMATICS[catalogMatch.kinematicsPresetId] ||
+      MACHINE_KINEMATICS.haas_vf2;
+
+    const xT = Number(catalogMatch.travel?.x ?? catalogMatch.xTravel) || (basePreset.axes.X.max - basePreset.axes.X.min);
+    const yT = Number(catalogMatch.travel?.y ?? catalogMatch.yTravel) || (basePreset.axes.Y.max - basePreset.axes.Y.min);
+    const zT = Number(catalogMatch.travel?.z ?? catalogMatch.zTravel) || basePreset.axes.Z.max;
+
+    const axesCount = Number(catalogMatch.axesCount)
+      || (String(catalogMatch.type || '').includes('5-Axis') ? 5
+        : String(catalogMatch.type || '').includes('4-Axis') ? 4
+        : 3);
+
+    const axes = {
+      X: { min: -Math.round(xT / 2), max: Math.round(xT / 2), unit: 'mm', label: 'X Axis (Table Travel)' },
+      Y: { min: -Math.round(Math.max(100, yT) / 2), max: Math.round(Math.max(100, yT) / 2), unit: 'mm', label: 'Y Axis (Cross Travel)' },
+      Z: { min: -100, max: Math.max(200, zT - 50), unit: 'mm', label: 'Z Axis (Spindle Travel)' }
+    };
+    if (axesCount >= 4) {
+      axes.C = { min: -360, max: 360, unit: 'deg', label: axesCount === 4 ? 'A/B Rotary Indexer' : 'C Axis (Rotary Table)' };
+    }
+    if (axesCount >= 5) {
+      axes.B = {
+        min: Number(catalogMatch.rotary?.bMin ?? catalogMatch.bMin ?? -35),
+        max: Number(catalogMatch.rotary?.bMax ?? catalogMatch.bMax ?? 110),
+        unit: 'deg',
+        label: 'B Axis (Swivel/Trunnion Tilt)'
+      };
+    }
+
+    return {
+      ...basePreset,
+      id: catalogMatch.id || id,
+      name: catalogMatch.name || basePreset.name,
+      type: catalogMatch.type || basePreset.type,
+      controller: catalogMatch.controller || basePreset.controller,
+      axesCount,
+      axes,
+      maxRpm: Number(catalogMatch.spindle?.maxRpm ?? catalogMatch.maxRpm) || basePreset.maxRpm,
+      maxFeed: Number(catalogMatch.spindle?.maxFeed ?? catalogMatch.maxFeed) || basePreset.maxFeed
+    };
+  }
+
+  return MACHINE_KINEMATICS[id] || MACHINE_KINEMATICS.haas_vf2;
+}
+
+/**
  * Builds a 3D Three.js visual representation of the machine's physical travel envelope.
  * Features translucent bounding cage, corner corner-brackets, axis limit planes, and table outline.
  */
-export function buildMachineEnvelope3D(machineId = 'dmu50', activeOvertravel = null) {
+export function buildMachineEnvelope3D(machineOrId = 'mill_3x_default', activeOvertravel = null) {
   const group = new THREE.Group();
   group.name = "Machine_Kinematic_Collision_Envelope";
 
-  const config = MACHINE_KINEMATICS[machineId] || MACHINE_KINEMATICS.dmu50;
+  const config = resolveMachineKinematics(machineOrId);
   const ax = config.axes;
 
   const minX = ax.X ? ax.X.min : -250;
@@ -167,8 +244,8 @@ export function buildMachineEnvelope3D(machineId = 'dmu50', activeOvertravel = n
 /**
  * Performs comprehensive pre-flight & real-time kinematic collision and axis over-travel audit.
  */
-export function auditKinematicsAndCollisions(motionBlocks = [], machineId = 'dmu50', tools = [], stockConfig = {}) {
-  const config = MACHINE_KINEMATICS[machineId] || MACHINE_KINEMATICS.dmu50;
+export function auditKinematicsAndCollisions(motionBlocks = [], machineOrId = 'mill_3x_default', tools = [], stockConfig = {}) {
+  const config = resolveMachineKinematics(machineOrId);
   const ax = config.axes;
   const buf = config.softLimitBufferMm || 15.0;
 

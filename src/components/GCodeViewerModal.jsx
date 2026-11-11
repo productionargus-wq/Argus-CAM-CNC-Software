@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, FileCode, Download, Copy, Check, Search, Clock, Cpu, ArrowDown } from 'lucide-react';
 import { CONTROLLER_DIALECTS, generateNCProgram, downloadNCFile } from '../utils/postProcessor';
+import { deriveControllerDialect } from '../config/machineDefinitionsCatalog';
 
 export default function GCodeViewerModal({
   isOpen,
@@ -11,19 +12,25 @@ export default function GCodeViewerModal({
   partMetrics,
   currentModel = null,
   customGeometry = [],
-  defaultController = CONTROLLER_DIALECTS.HEIDENHAIN,
-  currentProjectName = 'Base_Structure-ALU.step'
+  activeMachine = null,
+  defaultController = CONTROLLER_DIALECTS.FANUC,
+  currentProjectName = 'Part1.mcam'
 }) {
   const dialogRef = useRef(null);
 
   const cleanProgName = currentProjectName
     ? currentProjectName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_')
-    : 'Base_Structure_ALU';
+    : 'Argus_CAM_Job';
 
-  const [selectedController, setSelectedController] = useState(defaultController);
+  const resolvedDefaultController = activeMachine ? deriveControllerDialect(activeMachine) : defaultController;
+  const [selectedController, setSelectedController] = useState(resolvedDefaultController);
   const [searchTerm, setSearchTerm] = useState('');
   const [copied, setCopied] = useState(false);
   const [ncData, setNcData] = useState(null);
+
+  useEffect(() => {
+    setSelectedController(activeMachine ? deriveControllerDialect(activeMachine) : defaultController);
+  }, [activeMachine, defaultController]);
 
   // Generate G-code when opened or parameters change
   useEffect(() => {
@@ -34,13 +41,14 @@ export default function GCodeViewerModal({
         stockConfig,
         partMetrics,
         controller: selectedController,
+        machineName: activeMachine?.name || '',
         programName: cleanProgName,
         model: currentModel,
         customGeometry
       });
       setNcData(generated);
     }
-  }, [isOpen, selectedController, operations, tools, stockConfig, partMetrics, currentModel, customGeometry, cleanProgName]);
+  }, [isOpen, selectedController, operations, tools, stockConfig, partMetrics, currentModel, customGeometry, cleanProgName, activeMachine]);
 
   useEffect(() => {
     const dialog = dialogRef.current;

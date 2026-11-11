@@ -10,69 +10,57 @@ export const MACHINE_RIBBON_CONFIG = [
     items: [
       {
         id: 'mill',
+        category: 'mill',
         type: 'large',
         label: 'Mill',
         icon: 'MachineMill',
         action: 'machine_mill',
         hasDropdown: true,
-        dropdownItems: [
-          { id: 'mill_default', label: 'Default Mill (3-Axis VMC)', action: 'machine_mill_default' },
-          { id: 'mill_4axis', label: '4-Axis Horizontal (HMC Tombstone)', action: 'machine_mill_4axis' },
-          { id: 'mill_5axis', label: '5-Axis Trunnion Table (DMU 50)', action: 'machine_mill_5axis' }
-        ],
+        supportsMachineMenu: true,
         tooltip: 'Select Milling Machine Definition'
       },
       {
         id: 'lathe',
+        category: 'lathe',
         type: 'large',
         label: 'Lathe',
         icon: 'MachineLathe',
         action: 'machine_lathe',
         hasDropdown: true,
-        dropdownItems: [
-          { id: 'lathe_2axis', label: '2-Axis Slant Bed Lathe', action: 'machine_lathe_2axis' },
-          { id: 'lathe_live_tool', label: 'C-Axis Live Tooling Lathe', action: 'machine_lathe_live_tool' },
-          { id: 'lathe_dual_spindle', label: 'Dual Spindle Sub-Spindle Lathe', action: 'machine_lathe_dual_spindle' }
-        ],
+        supportsMachineMenu: true,
         tooltip: 'Select Turning / Lathe Machine Definition'
       },
       {
         id: 'mill_turn',
+        category: 'mill_turn',
         type: 'large',
         label: 'Mill-Turn',
         icon: 'MachineMillTurn',
         action: 'machine_mill_turn',
         hasDropdown: true,
-        dropdownItems: [
-          { id: 'mt_integrex', label: 'Mazak Integrex i-200 (B-Axis)', action: 'machine_mt_integrex' },
-          { id: 'mt_multiturret', label: 'Dual Turret Twin Spindle Mill-Turn', action: 'machine_mt_multiturret' }
-        ],
+        supportsMachineMenu: true,
         tooltip: 'Select Multi-Tasking Mill-Turn Machine'
       },
       {
         id: 'wire',
+        category: 'wire',
         type: 'large',
         label: 'Wire',
         icon: 'MachineWire',
         action: 'machine_wire',
         hasDropdown: true,
-        dropdownItems: [
-          { id: 'wire_4axis', label: '4-Axis Wire EDM (AgieCharmilles)', action: 'machine_wire_4axis' },
-          { id: 'wire_submerged', label: 'High-Precision Submerged Wire EDM', action: 'machine_wire_submerged' }
-        ],
+        supportsMachineMenu: true,
         tooltip: 'Select Wire EDM Machine Definition'
       },
       {
         id: 'router',
+        category: 'router',
         type: 'large',
         label: 'Router',
         icon: 'MachineRouter',
         action: 'machine_router',
         hasDropdown: true,
-        dropdownItems: [
-          { id: 'router_3axis', label: '3-Axis Gantry Wood/Composite Router', action: 'machine_router_3axis' },
-          { id: 'router_5axis', label: '5-Axis Overhead Gantry Router', action: 'machine_router_5axis' }
-        ],
+        supportsMachineMenu: true,
         tooltip: 'Select CNC Router Machine Definition'
       },
       {

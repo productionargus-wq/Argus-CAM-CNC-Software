@@ -28,8 +28,9 @@ export function generateNCProgram({
   tools,
   stockConfig,
   partMetrics,
-  controller = CONTROLLER_DIALECTS.HEIDENHAIN,
-  programName = 'DMU50_ZeroClamp_Job',
+  controller = CONTROLLER_DIALECTS.FANUC,
+  machineName = '',
+  programName = 'ARGUS_CAM_JOB',
   programNumber = '0001',
   model = null,
   customGeometry = []
@@ -72,17 +73,19 @@ export function generateNCProgram({
     useIsoParens ? `(${sanitizeIsoCommentText(text)})` : `; ${text}`;
 
   // 1. Program Header based on Controller Dialect
+  const resolvedMachineLabel = machineName || controller;
   if (useHeidenhain) {
     lines.push(`0 BEGIN PGM ${programName.toUpperCase()} MM`);
-    lines.push(`; --- ARGUS CAM 5-AXIS HEIDENHAIN TNC 640 POST ---`);
+    lines.push(`; --- ARGUS CAM HEIDENHAIN POST ---`);
     lines.push(`; DATE: ${dateStr} | TIME STAMP`);
-    lines.push(`; MACHINE: DMU 50 EVO 5-AXIS MILL-TURN`);
+    lines.push(`; MACHINE: ${resolvedMachineLabel}`);
     lines.push(`; BLK FORM 0.1 Z X${bounds.min.x.toFixed(2)} Y${(-bounds.max.z).toFixed(2)} Z${bounds.min.y.toFixed(2)}`);
     lines.push(`; BLK FORM 0.2 X${bounds.max.x.toFixed(2)} Y${(-bounds.min.z).toFixed(2)} Z${(bounds.max.y + (stockConfig?.allowanceTop ?? 2)).toFixed(2)}`);
     lines.push(`; ------------------------------------------------`);
   } else if (useSiemens) {
     lines.push(`; %_N_${programName.toUpperCase()}_MPF`);
-    lines.push(`; --- ARGUS CAM SIEMENS 840D sl 5-AXIS POST ---`);
+    lines.push(`; --- ARGUS CAM SIEMENS 840D sl POST ---`);
+    lines.push(`; MACHINE: ${resolvedMachineLabel}`);
     lines.push(`; DATE: ${dateStr}`);
     lines.push(`G90 G710 G64 G17 G54`);
     lines.push(`SOFT ; JERK LIMITATION`);
@@ -91,6 +94,7 @@ export function generateNCProgram({
     lines.push(`%`);
     lines.push(`O${formattedProgNum} (${sanitizeIsoCommentText(programName.toUpperCase())})`);
     lines.push(formatComment('--- ARGUS CAM POST-PROCESSOR ---'));
+    if (machineName) lines.push(formatComment(`MACHINE: ${machineName}`));
     lines.push(formatComment(`CONTROLLER: ${controller}`));
     lines.push(formatComment(`DATE: ${dateStr}`));
     lines.push(formatComment(`MATERIAL: ${stockConfig?.material || '6061 Aluminum'}`));

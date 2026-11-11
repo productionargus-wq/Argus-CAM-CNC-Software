@@ -42,7 +42,7 @@ export default function OperationsTree({
   onSelectSolid,
   onToggleSolidVisibility,
   onOpenSolidsModal,
-  activeMachine = { name: '4 - AXIS VMC', controller: 'Haas_VF2.mcam-control' },
+  activeMachine = null,
   stockConfig = { dimensions: { x: 120, y: 80, z: 25 } },
   currentProjectName = 'Base Structure-ALU.mcam',
   onOpenPostModal,
@@ -884,7 +884,7 @@ export default function OperationsTree({
                   </span>
                   {/* Bar chart icon */}
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="#0284c7"><rect x="3" y="12" width="4" height="8" /><rect x="10" y="8" width="4" height="12" /><rect x="17" y="4" width="4" height="16" /></svg>
-                  <span style={{ color: '#334155' }}>Properties - {activeMachine?.name || '4 - AXIS VMC'}</span>
+                  <span style={{ color: '#334155' }}>Properties - {activeMachine?.name || 'No Machine Selected'}</span>
                 </div>
 
                 {/* Sub-properties when expanded */}

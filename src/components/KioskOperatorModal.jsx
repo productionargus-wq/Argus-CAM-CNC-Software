@@ -267,7 +267,7 @@ export default function KioskOperatorModal({
   };
 
   // Active Machine Display Name
-  const machineName = activeMachine?.name || 'DMG MORI DMU 50 (5-Axis VMC)';
+  const machineName = activeMachine?.name || 'No Machine Selected';
 
   if (!isOpen) return null;
 

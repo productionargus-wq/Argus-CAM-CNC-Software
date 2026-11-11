@@ -141,7 +141,11 @@ export default function RibbonBar({
   onRegenerateAll,
   onDeleteActiveOp,
   activeMachine,
+  machines = [],
+  machineMenuByCategory = null,
+  machineDirectory = '',
   onSelectMachine,
+  onOpenMachineMenuManager,
   onSelectWcs,
   activeWcs,
   onOpenFileBackstage,
@@ -1434,6 +1438,10 @@ export default function RibbonBar({
         {/* ==================== 10. MACHINE TAB ==================== */}
         {activeTab === 'Machine' && (
           <MachineRibbonGroup
+            activeMachine={activeMachine}
+            machines={machines}
+            machineMenuByCategory={machineMenuByCategory}
+            machineDirectory={machineDirectory}
             onAction={(action, id) => {
               if (action.startsWith('machine_atp') && onOpenATPModal) {
                 const tab = action === 'machine_atp_reports' ? 'reports' : action === 'machine_atp_options' ? 'options' : 'wizard';
@@ -1476,27 +1484,16 @@ export default function RibbonBar({
               if (action === 'machine_clear_image_list') {
                 return;
               }
-              if (action.startsWith('machine_mill') && onSelectMachine) {
-                onSelectMachine('dmu50');
+              if (action === 'machine_select_id' && id && onSelectMachine) {
+                onSelectMachine(id);
                 return;
               }
-              if (action.startsWith('machine_lathe') && onSelectMachine) {
-                onSelectMachine('integrex');
+              if (action === 'machine_manage_list' && onOpenMachineMenuManager) {
+                onOpenMachineMenuManager(id || 'mill');
                 return;
               }
-              if (action === 'machine_mill_turn' && onSelectMachine) {
-                onSelectMachine('integrex');
-                return;
-              }
-              if (action === 'machine_wire' && onSelectMachine) {
-                onSelectMachine('robodrill');
-                return;
-              }
-              if (action === 'machine_router' && onSelectMachine) {
-                onSelectMachine('haas_vf2');
-                return;
-              }
-              if (action === 'machine_design') {
+              if (action === 'machine_design' && onSelectMachine) {
+                onSelectMachine('design');
                 return;
               }
             }}

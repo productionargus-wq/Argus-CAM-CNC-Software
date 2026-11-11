@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 import { CONTROLLER_DIALECTS, generateNCProgram, downloadNCFile } from '../utils/postProcessor';
 import { checkToolpathCollisions } from '../utils/toolpathEngine';
-import { MACHINE_KINEMATICS } from '../utils/machineKinematics.js';
+import { resolveMachineKinematics } from '../utils/machineKinematics.js';
+import { deriveControllerDialect } from '../config/machineDefinitionsCatalog';
 import { extractClosedChainsFromCAD } from '../utils/cadDrawingEngine';
 
 export default function NC2CheckModal({
@@ -18,10 +19,10 @@ export default function NC2CheckModal({
   stockConfig = {},
   partMetrics = null,
   currentModel = null,
-  activeMachine = { name: "DMG MORI DMU 50", type: "5-Axis Mill-Turn" },
+  activeMachine = null,
   activeWcs = 'G54',
   onNotify = null,
-  currentProjectName = 'Base_Structure-ALU.step',
+  currentProjectName = 'Part1.mcam',
   customGeometry = []
 }) {
   const dialogRef = useRef(null);
@@ -29,10 +30,10 @@ export default function NC2CheckModal({
   const cleanProgName = useMemo(() => {
     return currentProjectName
       ? currentProjectName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_')
-      : 'Base_Structure_ALU';
+      : 'Argus_CAM_Job';
   }, [currentProjectName]);
 
-  const [controller, setController] = useState(CONTROLLER_DIALECTS.HEIDENHAIN);
+  const [controller, setController] = useState(() => deriveControllerDialect(activeMachine));
   const [tolerance, setTolerance] = useState('0.02');
   const [targetOffset, setTargetOffset] = useState('0.00');
   const [simEngine, setSimEngine] = useState('nc2check');
@@ -40,16 +41,21 @@ export default function NC2CheckModal({
   const [isGenerated, setIsGenerated] = useState(false);
   const [ncResult, setNcResult] = useState(null);
 
+  useEffect(() => {
+    setController(deriveControllerDialect(activeMachine));
+    setIsGenerated(false);
+  }, [activeMachine]);
+
   // Machine physical stroke limits from active machine kinematics
   const limits = useMemo(() => {
-    const config = MACHINE_KINEMATICS[activeMachine?.id] || MACHINE_KINEMATICS.dmu50;
+    const config = resolveMachineKinematics(activeMachine);
     const ax = config.axes;
     return {
       x: { min: ax.X?.min ?? -250, max: ax.X?.max ?? 250 },
       y: { min: ax.Y?.min ?? -200, max: ax.Y?.max ?? 200 },
       z: { min: ax.Z?.min ?? -100, max: ax.Z?.max ?? 350 },
-      b: { min: ax.B?.min ?? -5, max: ax.B?.max ?? 110 },
-      c: { min: ax.C?.min ?? -360, max: ax.C?.max ?? 360 }
+      b: { min: ax.B?.min ?? 0, max: ax.B?.max ?? 0 },
+      c: { min: ax.C?.min ?? 0, max: ax.C?.max ?? 0 }
     };
   }, [activeMachine]);
 
@@ -147,6 +153,7 @@ export default function NC2CheckModal({
         stockConfig: stockConfig || {},
         partMetrics: partMetrics,
         controller: controller,
+        machineName: activeMachine?.name || '',
         programName: cleanProgName,
         model: currentModel,
         customGeometry
@@ -229,10 +236,10 @@ export default function NC2CheckModal({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
                   <Cpu size={14} color="#38bdf8" />
                   <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {activeMachine?.name || 'DMG MORI DMU 50'}
+                    {activeMachine?.name || 'No Machine Selected'}
                   </span>
                   <span style={{ fontSize: '9px', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '2px 5px', borderRadius: '3px', marginLeft: 'auto' }}>
-                    {activeMachine?.type || '5-Axis Mill-Turn'}
+                    {activeMachine?.type || '3-Axis Vertical'}
                   </span>
                 </div>
               </div>

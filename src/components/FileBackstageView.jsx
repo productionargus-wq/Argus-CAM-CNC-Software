@@ -15,6 +15,7 @@ import {
   getAutoSaveSnapshot
 } from '../utils/projectStorage';
 import { generateNCProgram } from '../utils/postProcessor';
+import { deriveControllerDialect } from '../config/machineDefinitionsCatalog';
 import {
   CAD_FILE_FORMATS,
   parseAnyCADFile,
@@ -200,6 +201,8 @@ export default function FileBackstageView({
             tools: tools || [],
             stockConfig,
             partMetrics,
+            controller: deriveControllerDialect(activeMachine),
+            machineName: activeMachine?.name || '',
             model: currentModel,
             customGeometry,
             programName: currentProjectName ? currentProjectName.replace(/\.[^/.]+$/, "") : 'MASTERCAM_PART'
@@ -207,7 +210,7 @@ export default function FileBackstageView({
           code = generated?.gcodeText || (typeof generated === 'string' ? generated : '');
         } else {
           code = `( PROGRAM: ${currentProjectName || 'MASTERCAM_PART'} )\n` +
-                 `( MACHINE: ${activeMachine?.name || 'DMG MORI DMU 50'} )\n` +
+                 `( MACHINE: ${activeMachine?.name || 'No Machine Selected'} )\n` +
                  `( DATE: ${new Date().toLocaleDateString()} )\n` +
                  `G21 (METRIC)\nG90 G94 G17 G40 G49 G80\nG54\nT01 M06 (12MM ENDMILL)\nS3500 M03\nG00 X0. Y0. Z50.\nM08\nG01 Z-5. F450.\nG01 X50. Y0.\nG01 Y50.\nG01 X0.\nG01 Y0.\nG00 Z50.\nM09\nM05\nG28 G91 Z0.\nM30\n%`;
         }
@@ -1710,7 +1713,7 @@ export default function FileBackstageView({
                     <span style={{ fontSize: '13px', color: '#64748b' }}>Project: {currentProjectName}</span>
                   </div>
                   <div style={{ textAlign: 'right', fontSize: '12px', color: '#475569' }}>
-                    <div><strong>Machine:</strong> {activeMachine?.name || 'DMG MORI DMU 50'}</div>
+                    <div><strong>Machine:</strong> {activeMachine?.name || 'No Machine Selected'}</div>
                     <div><strong>WCS Origin:</strong> {activeWcs}</div>
                     <div><strong>Date:</strong> {new Date().toLocaleDateString()}</div>
                   </div>

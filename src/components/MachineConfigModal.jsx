@@ -2,124 +2,41 @@ import React, { useState, useEffect, useRef, useId } from 'react';
 import {
   X, Settings, Cpu, Gauge, Sliders, Sparkles, Save, Check
 } from 'lucide-react';
+import {
+  MACHINE_DEFINITIONS_CATALOG,
+  resolveMachineById
+} from '../config/machineDefinitionsCatalog';
 
-const MACHINE_FLEET_ORDER = ['dmu50', 'haas_vf2', 'robodrill', 'integrex'];
-
-const MACHINE_PRESETS = {
-  dmu50: {
-    id: 'dmu50',
-    cardName: 'DMG MORI DMU 50',
-    name: 'DMG MORI DMU 50 (5X)',
-    type: '5-Axis Trunnion B/C',
-    shortType: '5-Axis Trunnion',
-    controller: 'Heidenhain TNC 640',
-    xTravel: 650,
-    yTravel: 520,
-    zTravel: 475,
-    bMin: -35,
-    bMax: 110,
-    cRotaryContinuous: true,
-    maxRpm: 15000,
-    maxFeed: 30000,
-    spindleTaper: 'HSK-A63',
-    atcCapacity: 60,
-    coolantTSC: true,
-    tcpEnabled: true,
-    arcFormat: 'ijk',
-    safeZ: 50
-  },
-  haas_vf2: {
-    id: 'haas_vf2',
-    cardName: 'Haas VF-2',
-    name: 'Haas VF-2 (3X VMC)',
-    type: '3-Axis Vertical',
-    shortType: '3-Axis Vertical',
-    controller: 'Haas NGC',
-    xTravel: 762,
-    yTravel: 406,
-    zTravel: 508,
-    bMin: 0,
-    bMax: 0,
-    cRotaryContinuous: false,
-    maxRpm: 10000,
-    maxFeed: 25400,
-    spindleTaper: 'CAT 40',
-    atcCapacity: 24,
-    coolantTSC: false,
-    tcpEnabled: false,
-    arcFormat: 'ijk',
-    safeZ: 50
-  },
-  robodrill: {
-    id: 'robodrill',
-    cardName: 'Fanuc Robodrill',
-    name: 'Fanuc Robodrill D21',
-    type: 'High Speed 3-Axis',
-    shortType: 'High Speed 3-Axis',
-    controller: 'Fanuc 31i-B5',
-    xTravel: 500,
-    yTravel: 400,
-    zTravel: 330,
-    bMin: 0,
-    bMax: 0,
-    cRotaryContinuous: false,
-    maxRpm: 24000,
-    maxFeed: 54000,
-    spindleTaper: 'BT30 / BBT30',
-    atcCapacity: 21,
-    coolantTSC: false,
-    tcpEnabled: false,
-    arcFormat: 'ijk',
-    safeZ: 50
-  },
-  integrex: {
-    id: 'integrex',
-    cardName: 'Mazak Integrex',
-    name: 'Mazak Integrex i-200',
-    type: '5-Axis Mill-Turn',
-    shortType: '5-Axis Mill-Turn',
-    controller: 'Mazak SmoothX',
-    xTravel: 615,
-    yTravel: 260,
-    zTravel: 1077,
-    bMin: -30,
-    bMax: 120,
-    cRotaryContinuous: true,
-    maxRpm: 12000,
-    maxFeed: 38000,
-    spindleTaper: 'Capto C6',
-    atcCapacity: 36,
-    coolantTSC: true,
-    tcpEnabled: true,
-    arcFormat: 'ijk',
-    safeZ: 50
-  }
-};
+const MACHINE_FLEET_ORDER = ['mill_3x_default', 'haas_vf2', 'robodrill', 'dmu50', 'integrex'];
 
 function resolveMachineSnapshot(machineId, machines = [], fallbackMachine = null) {
-  const preset = MACHINE_PRESETS[machineId] || MACHINE_PRESETS.dmu50;
-  const saved = machines.find((m) => m.id === machineId)
+  const fromCatalog = resolveMachineById(machineId, machines)
+    || resolveMachineById(fallbackMachine?.id, machines)
+    || MACHINE_DEFINITIONS_CATALOG[0];
+  const saved = (machines || []).find((m) => m.id === machineId)
     || (fallbackMachine?.id === machineId ? fallbackMachine : null);
 
   return {
-    id: preset.id,
-    name: saved?.name || preset.name,
-    controller: saved?.controller || preset.controller,
-    type: saved?.type || preset.type,
-    xTravel: saved?.travel?.x ?? preset.xTravel,
-    yTravel: saved?.travel?.y ?? preset.yTravel,
-    zTravel: saved?.travel?.z ?? preset.zTravel,
-    bMin: saved?.rotary?.bMin ?? preset.bMin,
-    bMax: saved?.rotary?.bMax ?? preset.bMax,
-    cRotaryContinuous: saved?.rotary?.continuousC ?? preset.cRotaryContinuous,
-    maxRpm: saved?.spindle?.maxRpm ?? saved?.maxRpm ?? preset.maxRpm,
-    maxFeed: saved?.spindle?.maxFeed ?? saved?.maxFeed ?? preset.maxFeed,
-    spindleTaper: saved?.spindle?.taper ?? preset.spindleTaper,
-    atcCapacity: saved?.spindle?.atc ?? preset.atcCapacity,
-    coolantTSC: saved?.spindle?.tsc ?? preset.coolantTSC,
-    tcpEnabled: saved?.post?.tcp ?? preset.tcpEnabled,
-    arcFormat: saved?.post?.arc ?? preset.arcFormat,
-    safeZ: saved?.post?.safeZ ?? preset.safeZ
+    id: saved?.id || fromCatalog.id,
+    cardName: saved?.cardName || fromCatalog.cardName || saved?.name || fromCatalog.name,
+    name: saved?.name || fromCatalog.name,
+    controller: saved?.controller || fromCatalog.controller,
+    type: saved?.type || fromCatalog.type,
+    shortType: saved?.shortType || fromCatalog.shortType || fromCatalog.type,
+    xTravel: saved?.travel?.x ?? saved?.xTravel ?? fromCatalog.xTravel ?? 762,
+    yTravel: saved?.travel?.y ?? saved?.yTravel ?? fromCatalog.yTravel ?? 406,
+    zTravel: saved?.travel?.z ?? saved?.zTravel ?? fromCatalog.zTravel ?? 508,
+    bMin: saved?.rotary?.bMin ?? saved?.bMin ?? fromCatalog.bMin ?? 0,
+    bMax: saved?.rotary?.bMax ?? saved?.bMax ?? fromCatalog.bMax ?? 0,
+    cRotaryContinuous: saved?.rotary?.continuousC ?? saved?.cRotaryContinuous ?? fromCatalog.cRotaryContinuous ?? false,
+    maxRpm: saved?.spindle?.maxRpm ?? saved?.maxRpm ?? fromCatalog.maxRpm ?? 12000,
+    maxFeed: saved?.spindle?.maxFeed ?? saved?.maxFeed ?? fromCatalog.maxFeed ?? 24000,
+    spindleTaper: saved?.spindle?.taper ?? saved?.spindleTaper ?? fromCatalog.spindleTaper ?? 'CAT 40',
+    atcCapacity: saved?.spindle?.atc ?? saved?.atcCapacity ?? fromCatalog.atcCapacity ?? 24,
+    coolantTSC: saved?.spindle?.tsc ?? saved?.coolantTSC ?? fromCatalog.coolantTSC ?? false,
+    tcpEnabled: saved?.post?.tcp ?? saved?.tcpEnabled ?? fromCatalog.tcpEnabled ?? false,
+    arcFormat: saved?.post?.arc ?? saved?.arcFormat ?? fromCatalog.arcFormat ?? 'ijk',
+    safeZ: saved?.post?.safeZ ?? saved?.safeZ ?? fromCatalog.safeZ ?? 50
   };
 }
 
@@ -132,7 +49,7 @@ function MachineConfigForm({
   onClose
 }) {
   const uid = useId();
-  const initialSnap = resolveMachineSnapshot(activeMachine?.id || 'dmu50', machines, activeMachine);
+  const initialSnap = resolveMachineSnapshot(activeMachine?.id || 'mill_3x_default', machines, activeMachine);
 
   // Machine Parameters state
   const [selectedMachineId, setSelectedMachineId] = useState(initialSnap.id);
@@ -197,7 +114,7 @@ function MachineConfigForm({
       const n = Number(val);
       return Number.isFinite(n) ? n : fallback;
     };
-    const preset = MACHINE_PRESETS[selectedMachineId] || MACHINE_PRESETS.dmu50;
+    const preset = resolveMachineSnapshot(selectedMachineId, machines, activeMachine);
 
     if (onUpdateMachineConfig) {
       onUpdateMachineConfig({
@@ -308,10 +225,8 @@ function MachineConfigForm({
             </h3>
 
             <div className="mcm-fleet-grid">
-              {MACHINE_FLEET_ORDER.map((id) => {
-                const preset = MACHINE_PRESETS[id];
-                const saved = machines.find((m) => m.id === id);
-                const displayCtrl = saved?.controller || preset.controller;
+              {[...new Set([...(activeMachine?.id && activeMachine.id !== 'design' ? [activeMachine.id] : []), ...MACHINE_FLEET_ORDER])].map((id) => {
+                const snap = resolveMachineSnapshot(id, machines, activeMachine);
                 const isSelected = selectedMachineId === id;
 
                 return (
@@ -324,7 +239,7 @@ function MachineConfigForm({
                     className={`mcm-fleet-card ${isSelected ? 'is-selected' : ''}`}
                   >
                     <div className="mcm-card-top">
-                      <span className="mcm-card-name">{preset.cardName}</span>
+                      <span className="mcm-card-name">{snap.cardName}</span>
                       {isSelected && (
                         <span className="mcm-active-pill">
                           <Check size={10} strokeWidth={3} />
@@ -332,8 +247,8 @@ function MachineConfigForm({
                         </span>
                       )}
                     </div>
-                    <span className="mcm-card-type">{preset.shortType}</span>
-                    <span className="mcm-card-ctrl">{displayCtrl}</span>
+                    <span className="mcm-card-type">{snap.shortType}</span>
+                    <span className="mcm-card-ctrl">{snap.controller}</span>
                   </button>
                 );
               })}
@@ -673,6 +588,7 @@ export default function MachineConfigModal({
     >
       {isOpen && (
         <MachineConfigForm
+          key={activeMachine?.id || 'default'}
           titleId={titleId}
           machines={machines}
           activeMachine={activeMachine}
