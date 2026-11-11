@@ -195,7 +195,9 @@ export default function ChainingPalette({
       >
         {selectedChains.length > 0
           ? `${selectedChains.length} Chain(s) Selected — Click Green Check to Extrude`
-          : `${promptText} 1`}
+          : selectionMethod === 'window'
+            ? 'Drag L→R (Window) or R→L (Crossing) on canvas to select chains'
+            : `${promptText} 1`}
       </div>
 
       {/* Body Controls */}

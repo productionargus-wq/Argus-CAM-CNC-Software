@@ -7,7 +7,8 @@ import {
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
   Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge,
   Copy, Cpu, Activity, Type, DollarSign, Tablet, PenTool, Edit3, Columns2,
-  Clipboard, Ruler, Search, ChevronDown, CornerDownRight, X, Circle, Square
+  Clipboard, Ruler, Search, ChevronDown, CornerDownRight, X, Circle, Square,
+  MousePointer
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
@@ -59,6 +60,8 @@ export default function RibbonBar({
   onStartInteractiveSketch,
   isSketchModeActive = false,
   sketchTool = 'line',
+  isSelectModeActive = false,
+  onToggleSelectMode,
   onOpenSurfacesModal,
   onOpenSolidsModal,
   onOpenModelPrepModal,
@@ -750,9 +753,18 @@ export default function RibbonBar({
               <span className="ribbon-group-title">Organize</span>
             </div>
 
-            {/* 4. Delete */}
+            {/* 4. Select & Delete */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
+                <button
+                  className={`ribbon-btn-large ${isSelectModeActive || (isSketchModeActive && sketchTool === 'select') ? 'active' : ''}`}
+                  onClick={() => onToggleSelectMode && onToggleSelectMode(!(isSelectModeActive || (isSketchModeActive && sketchTool === 'select')))}
+                  title="Window / Crossing Selection Mode (V) — Drag L->R Enclosed, R->L Crossing"
+                >
+                  <MousePointer size={20} color="#0284c7" />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Window<br />Select</span>
+                </button>
+
                 {/* Large Delete Entities Button */}
                 <button
                   className="ribbon-btn-large"
@@ -913,6 +925,21 @@ export default function RibbonBar({
         {/* ==================== 3. WIREFRAME TAB ==================== */}
         {activeTab === 'Wireframe' && (
           <>
+            {/* 0. Select */}
+            <div className="ribbon-group">
+              <div className="ribbon-group-items">
+                <button
+                  className={`ribbon-btn-large ${isSelectModeActive || (isSketchModeActive && sketchTool === 'select') ? 'active' : ''}`}
+                  onClick={() => onToggleSelectMode && onToggleSelectMode(!(isSelectModeActive || (isSketchModeActive && sketchTool === 'select')))}
+                  title="Window / Crossing Selection (V) — Drag L->R Enclosed, R->L Crossing, Shift to Add"
+                >
+                  <MousePointer size={22} color="#0284c7" />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Window<br />Select</span>
+                </button>
+              </div>
+              <span className="ribbon-group-title">Select</span>
+            </div>
+
             {/* 1. Points */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">

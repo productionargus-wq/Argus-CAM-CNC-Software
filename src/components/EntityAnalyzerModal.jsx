@@ -1,12 +1,15 @@
 import React, { useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import { X, Ruler, Box, Scale, Compass, CheckCircle2 } from 'lucide-react';
+import { summarizeSelectedEntities } from '../utils/cadSelectionEngine';
 
 export default function EntityAnalyzerModal({
   isOpen,
   onClose,
   partMetrics,
   stockConfig,
-  currentProjectName
+  currentProjectName,
+  selectedEntities = []
 }) {
   const dialogRef = useRef(null);
 
@@ -29,8 +32,17 @@ export default function EntityAnalyzerModal({
 
   if (!isOpen) return null;
 
-  const dim = partMetrics?.dimensions || { x: 0, y: 0, z: 0 };
-  const center = partMetrics?.center || { x: 0, y: 0, z: 0 };
+  const hasSelection = Array.isArray(selectedEntities) && selectedEntities.length > 0;
+  const selSummary = hasSelection ? summarizeSelectedEntities(selectedEntities) : null;
+  const selDims = selSummary?.combinedBox ? selSummary.combinedBox.getSize(new THREE.Vector3()) : null;
+  const selCenter = selSummary?.combinedBox ? selSummary.combinedBox.getCenter(new THREE.Vector3()) : null;
+
+  const dim = selDims
+    ? { x: Number(selDims.x.toFixed(2)), y: Number(selDims.y.toFixed(2)), z: Number(selDims.z.toFixed(2)) }
+    : (partMetrics?.dimensions || { x: 0, y: 0, z: 0 });
+  const center = selCenter
+    ? { x: Number(selCenter.x.toFixed(2)), y: Number(selCenter.y.toFixed(2)), z: Number(selCenter.z.toFixed(2)) }
+    : (partMetrics?.center || { x: 0, y: 0, z: 0 });
   const volume = partMetrics?.volumeCm3 || 0;
   const area = partMetrics?.surfaceAreaMm2 || 0;
   const triangles = partMetrics?.triangles || 0;
@@ -67,8 +79,17 @@ export default function EntityAnalyzerModal({
             alignItems: 'center'
           }}>
             <div>
-              <div style={{ fontSize: '11px', color: '#94a3b8' }}>Target CAD Entity:</div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#38bdf8' }}>{currentProjectName}</div>
+              <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                {hasSelection ? 'Window-Selected Canvas Entities:' : 'Target CAD Entity:'}
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#38bdf8' }}>
+                {hasSelection ? `${selSummary.count} Selected (${selSummary.label})` : currentProjectName}
+              </div>
+              {hasSelection && selSummary.totalLengthMm > 0 && (
+                <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '2px' }}>
+                  Total Selected Wireframe Length: <strong>{selSummary.totalLengthMm} mm</strong>
+                </div>
+              )}
             </div>
             <div style={{
               background: 'rgba(16, 185, 129, 0.15)',

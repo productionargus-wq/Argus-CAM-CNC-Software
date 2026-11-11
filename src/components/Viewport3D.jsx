@@ -2,8 +2,16 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import {
   Eye, Layers, Rotate3D, UploadCloud, Box, Info, Scissors, Camera, Sun, Sliders,
-  Play, Pause, SkipForward, SkipBack, RotateCcw, X, AlertTriangle, CheckCircle2, Gauge
+  Play, Pause, SkipForward, SkipBack, RotateCcw, X, AlertTriangle, CheckCircle2, Gauge,
+  MousePointer, Trash2, Move
 } from 'lucide-react';
+import {
+  getCustomEntityId,
+  sampleEntityWorldGeometry,
+  hitTestEntitiesInMarquee,
+  hitTestEntityAtScreenPoint,
+  summarizeSelectedEntities
+} from '../utils/cadSelectionEngine';
 import { parseSTLFile, calculatePartMetrics, createWireframeLine, createWireframeRect, createWireframeCircle, createPointMarker, createParametricChainExtrusion } from '../utils/cadGeometry';
 import { parseAnyCADFile } from '../utils/universalCadParser';
 import ScaleRulerHUD from './ScaleRulerHUD';
@@ -130,14 +138,24 @@ export default function Viewport3D({
   onDrawingUpdate = null,
   reselectTrigger = 0,
   undoTrigger = 0,
-  // Chaining & Live Surface Extrude Preview Props
+  // Chaining, Selection & Live Surface Extrude Preview Props
   isChainingActive = false,
   chainingPlaneMode = '3d',
+  chainingSelectionMethod = 'chain',
   isBasePointPickActive = false,
   selectedExtrudeChains = [],
   onSelectChainEntity = null,
+  onWindowSelectChains = null,
   onPickBasePoint = null,
-  surfaceExtrudePreview = null
+  surfaceExtrudePreview = null,
+  selectedEntityIds = [],
+  onChangeSelectedEntities = null,
+  isSelectModeActive = false,
+  onToggleSelectMode = null,
+  onDeleteSelectedEntities = null,
+  onBlankSelectedEntities = null,
+  onRequestExtrudeSelection = null,
+  onRequestTransformSelection = null
 }) {
   const isLight = theme !== 'dark';
   const mountRef = useRef(null);
@@ -211,16 +229,28 @@ export default function Viewport3D({
   const [snapMode, setSnapMode] = useState('auto');
   const [isSnapLocked, setIsSnapLocked] = useState(false);
   const [camDist, setCamDist] = useState(350);
+  const [selectionMarquee, setSelectionMarquee] = useState(null);
+  const [hoveredEntityId, setHoveredEntityId] = useState(null);
 
   const sketchGhostGroupRef = useRef(null);
   const snapIndicatorGroupRef = useRef(null);
   const chainHighlightGroupRef = useRef(null);
+  const selectionHighlightGroupRef = useRef(null);
   const surfacePreviewGroupRef = useRef(null);
   const isChainingActiveRef = useRef(isChainingActive);
   const chainingPlaneModeRef = useRef(chainingPlaneMode);
+  const chainingSelectionMethodRef = useRef(chainingSelectionMethod);
   const isBasePointPickActiveRef = useRef(isBasePointPickActive);
   const onSelectChainEntityRef = useRef(onSelectChainEntity);
+  const onWindowSelectChainsRef = useRef(onWindowSelectChains);
   const onPickBasePointRef = useRef(onPickBasePoint);
+  const selectedEntityIdsRef = useRef(selectedEntityIds);
+  const onChangeSelectedEntitiesRef = useRef(onChangeSelectedEntities);
+  const isSelectModeRef = useRef(isSelectModeActive);
+  const onToggleSelectModeRef = useRef(onToggleSelectMode);
+  const onDeleteSelectedEntitiesRef = useRef(onDeleteSelectedEntities);
+  const layerVisibilityRef = useRef(layerVisibility);
+  const hoverCheckFrameRef = useRef(0);
   const sketchAnchorRef = useRef(null);
   const isSketchModeRef = useRef(isSketchModeActive);
   const activeSketchToolRef = useRef(sketchTool || 'line');
@@ -264,9 +294,17 @@ export default function Viewport3D({
   useEffect(() => { onDrawingUpdateRef.current = onDrawingUpdate; }, [onDrawingUpdate]);
   useEffect(() => { isChainingActiveRef.current = isChainingActive; }, [isChainingActive]);
   useEffect(() => { chainingPlaneModeRef.current = chainingPlaneMode; }, [chainingPlaneMode]);
+  useEffect(() => { chainingSelectionMethodRef.current = chainingSelectionMethod; }, [chainingSelectionMethod]);
   useEffect(() => { isBasePointPickActiveRef.current = isBasePointPickActive; }, [isBasePointPickActive]);
   useEffect(() => { onSelectChainEntityRef.current = onSelectChainEntity; }, [onSelectChainEntity]);
+  useEffect(() => { onWindowSelectChainsRef.current = onWindowSelectChains; }, [onWindowSelectChains]);
   useEffect(() => { onPickBasePointRef.current = onPickBasePoint; }, [onPickBasePoint]);
+  useEffect(() => { selectedEntityIdsRef.current = selectedEntityIds; }, [selectedEntityIds]);
+  useEffect(() => { onChangeSelectedEntitiesRef.current = onChangeSelectedEntities; }, [onChangeSelectedEntities]);
+  useEffect(() => { isSelectModeRef.current = isSelectModeActive; }, [isSelectModeActive]);
+  useEffect(() => { onToggleSelectModeRef.current = onToggleSelectMode; }, [onToggleSelectMode]);
+  useEffect(() => { onDeleteSelectedEntitiesRef.current = onDeleteSelectedEntities; }, [onDeleteSelectedEntities]);
+  useEffect(() => { layerVisibilityRef.current = layerVisibility; }, [layerVisibility]);
 
   const renderLockedPreviewAt = (basePt, opts = {}) => {
     if (!isSketchModeRef.current || !sketchGhostGroupRef.current) return;
@@ -545,6 +583,12 @@ export default function Viewport3D({
     scene.add(chainHighlightGroup);
     chainHighlightGroupRef.current = chainHighlightGroup;
 
+    const selectionHighlightGroup = new THREE.Group();
+    selectionHighlightGroup.name = "Selection_Highlight_Group";
+    selectionHighlightGroup.position.set(0, 49, 0);
+    scene.add(selectionHighlightGroup);
+    selectionHighlightGroupRef.current = selectionHighlightGroup;
+
     const surfacePreviewGroup = new THREE.Group();
     surfacePreviewGroup.name = "Surface_Preview_Group";
     surfacePreviewGroup.position.set(0, 49, 0);
@@ -616,10 +660,15 @@ export default function Viewport3D({
       return { entity: null, localPt: getSketchIntersection(e) };
     };
 
-    // Mouse Drag Orbit & Pan
+    // Mouse Drag Orbit, Pan & Window/Crossing Selection
     let isDragging = false;
     let isPanning = false;
     let isDrawingDrag = false;
+    let isMarqueeDrag = false;
+    let marqueeTarget = null; // 'selection' | 'chaining_window'
+    let marqueeShiftAdd = false;
+    let marqueeStartX = 0;
+    let marqueeStartY = 0;
     let dragStartScreenX = 0;
     let dragStartScreenY = 0;
     let pickDownX = 0;
@@ -627,6 +676,17 @@ export default function Viewport3D({
     let prevMouseX = 0;
     let prevMouseY = 0;
     let spherical = new THREE.Spherical(340, Math.PI / 3.4, Math.PI / 4);
+
+    const resolveMarqueeTargetForDown = (e) => {
+      if (e.button !== 0 || isBasePointPickActiveRef.current) return null;
+      if (isChainingActiveRef.current && chainingSelectionMethodRef.current === 'window') {
+        return 'chaining_window';
+      }
+      const inSelectTool = isSelectModeRef.current || (isSketchModeRef.current && activeSketchToolRef.current === 'select');
+      if (inSelectTool) return 'selection';
+      if (e.shiftKey && !isSketchModeRef.current && !isChainingActiveRef.current) return 'selection';
+      return null;
+    };
 
     const getDefaultPromptForTool = (tool) => (
       tool === 'rect' ? 'Select position of first corner' :
@@ -751,13 +811,36 @@ export default function Viewport3D({
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
 
+      if (e.button === 2) {
+        isPanning = true;
+        return;
+      }
+      if (e.button === 1) {
+        isDragging = true;
+        return;
+      }
+
+      const activeMarqueeTarget = resolveMarqueeTargetForDown(e);
+      if (activeMarqueeTarget) {
+        const rect = dom.getBoundingClientRect();
+        isMarqueeDrag = true;
+        marqueeTarget = activeMarqueeTarget;
+        marqueeShiftAdd = !!(e.shiftKey || e.ctrlKey || e.metaKey);
+        marqueeStartX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        marqueeStartY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        setSelectionMarquee({
+          minX: marqueeStartX,
+          maxX: marqueeStartX,
+          minY: marqueeStartY,
+          maxY: marqueeStartY,
+          mode: 'window',
+          previewCount: 0
+        });
+        return;
+      }
+
       if (isSketchModeRef.current) {
-        // Pan on right-click or orbit on middle-click / Shift+Click
-        if (e.button === 2) {
-          isPanning = true;
-          return;
-        }
-        if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+        if (e.button === 0 && e.shiftKey) {
           isDragging = true;
           return;
         }
@@ -853,6 +936,33 @@ export default function Viewport3D({
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
 
+      if (isMarqueeDrag) {
+        const rect = dom.getBoundingClientRect();
+        const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        const mode = curX >= marqueeStartX ? 'window' : 'crossing';
+        const marqueeBox = {
+          minX: Math.min(marqueeStartX, curX),
+          maxX: Math.max(marqueeStartX, curX),
+          minY: Math.min(marqueeStartY, curY),
+          maxY: Math.max(marqueeStartY, curY)
+        };
+        const previewHits = hitTestEntitiesInMarquee(
+          customGeometryRef.current || [],
+          camera,
+          rect.width,
+          rect.height,
+          marqueeBox,
+          {
+            mode: mode === 'window' ? 'enclosed' : 'crossing',
+            worldYOffset: 49,
+            layerVisibility: layerVisibilityRef.current
+          }
+        );
+        setSelectionMarquee({ ...marqueeBox, mode, previewCount: previewHits.length });
+        return;
+      }
+
       if (isDragging) {
         spherical.theta -= deltaX * 0.008;
         spherical.phi = Math.max(0.1, Math.min(Math.PI / 2.05, spherical.phi - deltaY * 0.008));
@@ -863,6 +973,27 @@ export default function Viewport3D({
         camera.position.x -= deltaX * 0.4;
         camera.position.y += deltaY * 0.4;
         return;
+      }
+
+      // Live hover highlight in Select Mode
+      const inSelectHover = isSelectModeRef.current || (isSketchModeRef.current && activeSketchToolRef.current === 'select');
+      if (inSelectHover && e.target === dom) {
+        const now = performance.now();
+        if (now - hoverCheckFrameRef.current > 40) {
+          hoverCheckFrameRef.current = now;
+          const rect = dom.getBoundingClientRect();
+          const picked = hitTestEntityAtScreenPoint(
+            customGeometryRef.current || [],
+            camera,
+            { x: e.clientX - rect.left, y: e.clientY - rect.top },
+            rect.width,
+            rect.height,
+            { worldYOffset: 49, layerVisibility: layerVisibilityRef.current }
+          );
+          setHoveredEntityId(picked ? getCustomEntityId(picked) : null);
+        }
+      } else if (!inSelectHover) {
+        setHoveredEntityId((prev) => (prev !== null ? null : prev));
       }
 
       // Sketch Mode Hover & Ghost Preview (ignore cursor movement once user moves off canvas into left panel/UI unless dragging)
@@ -981,6 +1112,82 @@ export default function Viewport3D({
     const onMouseUp = (e) => {
       isDragging = false;
       isPanning = false;
+
+      if (isMarqueeDrag) {
+        const rect = dom.getBoundingClientRect();
+        const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        const dragDist = Math.hypot(curX - marqueeStartX, curY - marqueeStartY);
+        const entities = customGeometryRef.current || [];
+        const target = marqueeTarget;
+        const additive = marqueeShiftAdd || !!(e.shiftKey || e.ctrlKey || e.metaKey);
+
+        isMarqueeDrag = false;
+        marqueeTarget = null;
+        setSelectionMarquee(null);
+
+        if (dragDist < 6) {
+          const picked = hitTestEntityAtScreenPoint(
+            entities,
+            camera,
+            { x: curX, y: curY },
+            rect.width,
+            rect.height,
+            { worldYOffset: 49, layerVisibility: layerVisibilityRef.current }
+          );
+          if (target === 'chaining_window') {
+            if (picked && onSelectChainEntityRef.current) {
+              onSelectChainEntityRef.current(picked);
+            }
+          } else if (onChangeSelectedEntitiesRef.current) {
+            if (picked) {
+              const pickedId = getCustomEntityId(picked);
+              if (additive) {
+                const curSet = new Set(selectedEntityIdsRef.current || []);
+                if (curSet.has(pickedId)) curSet.delete(pickedId);
+                else curSet.add(pickedId);
+                onChangeSelectedEntitiesRef.current([...curSet]);
+              } else {
+                onChangeSelectedEntitiesRef.current([pickedId]);
+              }
+            } else if (!additive) {
+              onChangeSelectedEntitiesRef.current([]);
+            }
+          }
+          return;
+        }
+
+        const mode = curX >= marqueeStartX ? 'enclosed' : 'crossing';
+        const marqueeBox = {
+          minX: Math.min(marqueeStartX, curX),
+          maxX: Math.max(marqueeStartX, curX),
+          minY: Math.min(marqueeStartY, curY),
+          maxY: Math.max(marqueeStartY, curY)
+        };
+        const matched = hitTestEntitiesInMarquee(
+          entities,
+          camera,
+          rect.width,
+          rect.height,
+          marqueeBox,
+          { mode, worldYOffset: 49, layerVisibility: layerVisibilityRef.current }
+        );
+
+        if (target === 'chaining_window') {
+          if (onWindowSelectChainsRef.current) {
+            onWindowSelectChainsRef.current(matched, { append: additive });
+          }
+        } else if (onChangeSelectedEntitiesRef.current) {
+          const matchedIds = matched.map(getCustomEntityId).filter(Boolean);
+          if (additive) {
+            const combined = [...new Set([...(selectedEntityIdsRef.current || []), ...matchedIds])];
+            onChangeSelectedEntitiesRef.current(combined);
+          } else {
+            onChangeSelectedEntitiesRef.current(matchedIds);
+          }
+        }
+        return;
+      }
 
       if ((isChainingActiveRef.current || isBasePointPickActiveRef.current) && e.button === 0 && !isSketchModeRef.current) {
         const clickDist = Math.hypot(e.clientX - pickDownX, e.clientY - pickDownY);
@@ -1688,6 +1895,62 @@ export default function Viewport3D({
     });
   }, [isChainingActive, selectedExtrudeChains]);
 
+  // 11a-1b. Render 3D Selection & Hover Highlights across Selected Shapes, Surfaces & Points
+  useEffect(() => {
+    const group = selectionHighlightGroupRef.current;
+    if (!group) return;
+    disposeGroupMeshes(group);
+
+    const selectedSet = new Set(selectedEntityIds || []);
+    if (selectedSet.size === 0 && !hoveredEntityId) return;
+
+    const addEntityHighlight = (entity, colorHex, isHoverOnly) => {
+      const { points, segments } = sampleEntityWorldGeometry(entity, 0);
+      if (segments.length > 0) {
+        const linePts = [];
+        segments.forEach(([a, b]) => {
+          linePts.push(a.x, a.y + 0.18, a.z, b.x, b.y + 0.18, b.z);
+        });
+        const lineGeo = new THREE.BufferGeometry();
+        lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePts, 3));
+        const lineMat = new THREE.LineBasicMaterial({
+          color: colorHex,
+          linewidth: 2,
+          transparent: isHoverOnly,
+          opacity: isHoverOnly ? 0.85 : 1.0
+        });
+        group.add(new THREE.LineSegments(lineGeo, lineMat));
+      }
+
+      if (!isHoverOnly && points.length > 0) {
+        // Endpoint, corner, or center grip markers for crisp Mastercam selection feedback
+        const gripPts = [];
+        const ud = entity.userData || {};
+        if (ud.center) {
+          gripPts.push(ud.center.x || 0, (ud.center.y || 0) + 0.22, ud.center.z || 0);
+        }
+        const stride = points.length > 24 ? Math.max(1, Math.floor(points.length / 8)) : 1;
+        for (let i = 0; i < points.length; i += stride) {
+          gripPts.push(points[i].x, points[i].y + 0.22, points[i].z);
+        }
+        const ptGeo = new THREE.BufferGeometry();
+        ptGeo.setAttribute('position', new THREE.Float32BufferAttribute(gripPts, 3));
+        const ptMat = new THREE.PointsMaterial({ color: 0xfef08a, size: 6, sizeAttenuation: false });
+        group.add(new THREE.Points(ptGeo, ptMat));
+      }
+    };
+
+    (customGeometry || []).forEach((entity) => {
+      if (!entity || entity.visible === false) return;
+      const eid = getCustomEntityId(entity);
+      if (selectedSet.has(eid)) {
+        addEntityHighlight(entity, 0xfacc15, false);
+      } else if (hoveredEntityId && eid === hoveredEntityId) {
+        addEntityHighlight(entity, 0x38bdf8, true);
+      }
+    });
+  }, [selectedEntityIds, hoveredEntityId, customGeometry]);
+
   // 11a-2. Render Live Parametric Cyan Surface Extrude Preview
   useEffect(() => {
     const group = surfacePreviewGroupRef.current;
@@ -2021,58 +2284,112 @@ export default function Viewport3D({
     return () => window.removeEventListener('keydown', handleBackplotKey);
   }, [isBackplotActive, onCloseBackplot]);
 
-  // 15. CAD Sketcher Keyboard Shortcuts
+  // 15. CAD Window Selection & Sketcher Keyboard Shortcuts
   useEffect(() => {
-    if (!isSketchModeActive) return;
-
-    const handleSketchKey = (e) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const handleCadSelectionAndSketchKeys = (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target?.isContentEditable) return;
 
       const key = e.key.toLowerCase();
-      if (key === 'l') {
+      if ((e.ctrlKey || e.metaKey) && key === 'a') {
+        const entities = (customGeometryRef.current || []).filter((ent) => ent && ent.visible !== false);
+        if (entities.length > 0 && onChangeSelectedEntitiesRef.current) {
+          e.preventDefault();
+          onChangeSelectedEntitiesRef.current(entities.map(getCustomEntityId).filter(Boolean));
+        }
+        return;
+      }
+
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      if (key === 'v' && !isBackplotActive) {
         e.preventDefault();
-        setActiveSketchTool('line');
-        if (onChangeSketchTool) onChangeSketchTool('line');
-      } else if (key === 'r') {
+        if (isSketchModeRef.current) {
+          const nextTool = activeSketchToolRef.current === 'select' ? 'line' : 'select';
+          setActiveSketchTool(nextTool);
+          if (onChangeSketchTool) onChangeSketchTool(nextTool);
+          if (onToggleSelectModeRef.current) onToggleSelectModeRef.current(nextTool === 'select');
+        } else if (onToggleSelectModeRef.current) {
+          onToggleSelectModeRef.current(!isSelectModeRef.current);
+        }
+        return;
+      }
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && (selectedEntityIdsRef.current?.length || 0) > 0) {
         e.preventDefault();
-        setActiveSketchTool('rect');
-        if (onChangeSketchTool) onChangeSketchTool('rect');
-      } else if (key === 'c') {
-        e.preventDefault();
-        setActiveSketchTool('circle');
-        if (onChangeSketchTool) onChangeSketchTool('circle');
-      } else if (key === 'p') {
-        e.preventDefault();
-        setActiveSketchTool('drill');
-        if (onChangeSketchTool) onChangeSketchTool('drill');
-      } else if (key === 'v') {
-        e.preventDefault();
-        setActiveSketchTool('select');
-        if (onChangeSketchTool) onChangeSketchTool('select');
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
+        if (onDeleteSelectedEntitiesRef.current) {
+          onDeleteSelectedEntitiesRef.current(selectedEntityIdsRef.current);
+        }
+        return;
+      }
+
+      if (e.key === 'Escape') {
         if (sketchAnchorRef.current) {
+          e.preventDefault();
           sketchAnchorRef.current = null;
           setSketchAnchor(null);
           setDimensionFeedback(null);
           if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
-        } else if (onToggleSketchMode) {
+          return;
+        }
+        if ((selectedEntityIdsRef.current?.length || 0) > 0 && onChangeSelectedEntitiesRef.current) {
+          e.preventDefault();
+          onChangeSelectedEntitiesRef.current([]);
+          return;
+        }
+        if (isSelectModeRef.current && onToggleSelectModeRef.current) {
+          e.preventDefault();
+          onToggleSelectModeRef.current(false);
+          return;
+        }
+        if (isSketchModeRef.current && onToggleSketchMode) {
+          e.preventDefault();
           onToggleSketchMode(false);
+          return;
         }
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (customGeometryRef.current && customGeometryRef.current.length > 0) {
-          const last = customGeometryRef.current[customGeometryRef.current.length - 1];
-          if (onRemoveCustomEntity && last) {
-            onRemoveCustomEntity(last.uuid || last.name);
-          }
-        }
+      }
+
+      if (!isSketchModeActive) return;
+
+      if (key === 'l') {
+        e.preventDefault();
+        setActiveSketchTool('line');
+        if (onChangeSketchTool) onChangeSketchTool('line');
+        if (onToggleSelectModeRef.current) onToggleSelectModeRef.current(false);
+      } else if (key === 'r') {
+        e.preventDefault();
+        setActiveSketchTool('rect');
+        if (onChangeSketchTool) onChangeSketchTool('rect');
+        if (onToggleSelectModeRef.current) onToggleSelectModeRef.current(false);
+      } else if (key === 'c') {
+        e.preventDefault();
+        setActiveSketchTool('circle');
+        if (onChangeSketchTool) onChangeSketchTool('circle');
+        if (onToggleSelectModeRef.current) onToggleSelectModeRef.current(false);
+      } else if (key === 'p') {
+        e.preventDefault();
+        setActiveSketchTool('drill');
+        if (onChangeSketchTool) onChangeSketchTool('drill');
+        if (onToggleSelectModeRef.current) onToggleSelectModeRef.current(false);
       }
     };
 
-    window.addEventListener('keydown', handleSketchKey);
-    return () => window.removeEventListener('keydown', handleSketchKey);
-  }, [isSketchModeActive, onChangeSketchTool, onToggleSketchMode, onRemoveCustomEntity]);
+    window.addEventListener('keydown', handleCadSelectionAndSketchKeys);
+    return () => window.removeEventListener('keydown', handleCadSelectionAndSketchKeys);
+  }, [isSketchModeActive, isBackplotActive, onChangeSketchTool, onToggleSketchMode]);
+
+  const selectedEntitiesList = useMemo(() => {
+    const idSet = new Set(selectedEntityIds || []);
+    return (customGeometry || []).filter((ent) => ent && idSet.has(getCustomEntityId(ent)));
+  }, [customGeometry, selectedEntityIds]);
+
+  const selectionSummary = useMemo(
+    () => summarizeSelectedEntities(selectedEntitiesList),
+    [selectedEntitiesList]
+  );
+
+  const isSelectCursorArmed = isSelectModeActive
+    || (isSketchModeActive && activeSketchTool === 'select')
+    || (isChainingActive && chainingSelectionMethod === 'window');
 
   // Active Tool Telemetry Sample for HUD
   const currentSample = useMemo(() => {
@@ -2135,7 +2452,244 @@ export default function Viewport3D({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div ref={mountRef} className="canvas-container" />
+      <div
+        ref={mountRef}
+        className="canvas-container"
+        style={{ cursor: isSelectCursorArmed ? 'crosshair' : 'default' }}
+      />
+
+      {/* Window / Crossing Marquee Overlay */}
+      {selectionMarquee && (
+        <div
+          data-testid="selection-marquee"
+          style={{
+            position: 'absolute',
+            left: `${selectionMarquee.minX}px`,
+            top: `${selectionMarquee.minY}px`,
+            width: `${Math.max(2, selectionMarquee.maxX - selectionMarquee.minX)}px`,
+            height: `${Math.max(2, selectionMarquee.maxY - selectionMarquee.minY)}px`,
+            border: selectionMarquee.mode === 'window'
+              ? '1.5px solid #0284c7'
+              : '1.5px dashed #10b981',
+            backgroundColor: selectionMarquee.mode === 'window'
+              ? 'rgba(2, 132, 199, 0.14)'
+              : 'rgba(16, 185, 129, 0.14)',
+            pointerEvents: 'none',
+            zIndex: 80
+          }}
+        >
+          {(selectionMarquee.maxX - selectionMarquee.minX > 18 || selectionMarquee.maxY - selectionMarquee.minY > 18) && (
+            <span
+              style={{
+                position: 'absolute',
+                top: '-20px',
+                left: '0px',
+                background: selectionMarquee.mode === 'window' ? '#0284c7' : '#059669',
+                color: '#ffffff',
+                fontSize: '10px',
+                fontWeight: 700,
+                padding: '1px 6px',
+                borderRadius: '3px',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+              }}
+            >
+              {selectionMarquee.mode === 'window' ? 'Window (Inside)' : 'Crossing (Touch)'} &bull; {selectionMarquee.previewCount}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Top Canvas Selection & Action Bar HUD */}
+      {!isBackplotActive && (
+        <div
+          data-testid="canvas-selection-hud"
+          style={{
+            position: 'absolute',
+            top: '10px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 45,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: isLight ? 'rgba(255, 255, 255, 0.92)' : 'rgba(15, 23, 42, 0.90)',
+            border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+            borderRadius: '999px',
+            padding: '4px 10px',
+            boxShadow: '0 4px 14px rgba(15, 23, 42, 0.12)',
+            backdropFilter: 'blur(8px)',
+            userSelect: 'none',
+            fontSize: '11px',
+            color: isLight ? '#0f172a' : '#f8fafc'
+          }}
+        >
+          <button
+            type="button"
+            data-testid="window-select-toggle-btn"
+            onClick={() => {
+              if (isSketchModeActive) {
+                const nextTool = activeSketchTool === 'select' ? 'line' : 'select';
+                setActiveSketchTool(nextTool);
+                if (onChangeSketchTool) onChangeSketchTool(nextTool);
+                if (onToggleSelectMode) onToggleSelectMode(nextTool === 'select');
+              } else if (onToggleSelectMode) {
+                onToggleSelectMode(!isSelectModeActive);
+              }
+            }}
+            title="Window / Crossing Select Mode (V) — Drag L->R for Window (Inside), R->L for Crossing (Touch), Middle-Drag to Orbit"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: isSelectCursorArmed ? '#0284c7' : (isLight ? '#f1f5f9' : '#1e293b'),
+              color: isSelectCursorArmed ? '#ffffff' : (isLight ? '#334155' : '#e2e8f0'),
+              border: `1px solid ${isSelectCursorArmed ? '#0284c7' : (isLight ? '#cbd5e1' : '#475569')}`,
+              borderRadius: '999px',
+              padding: '3px 9px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            <MousePointer size={12} />
+            <span>Window Select (V)</span>
+          </button>
+
+          {isSelectCursorArmed && selectionSummary.count === 0 && (
+            <span style={{ fontSize: '10px', color: isLight ? '#475569' : '#94a3b8', paddingRight: '4px' }}>
+              Drag L→R Inside &bull; R→L Crossing &bull; Shift+Add
+            </span>
+          )}
+
+          {selectionSummary.count > 0 && (
+            <>
+              <div style={{ width: '1px', height: '16px', background: isLight ? '#cbd5e1' : '#475569' }} />
+              <span
+                data-testid="selection-count-badge"
+                style={{
+                  fontWeight: 700,
+                  color: '#0284c7',
+                  background: isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.25)',
+                  padding: '2px 7px',
+                  borderRadius: '999px',
+                  fontSize: '10.5px',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {selectionSummary.count} Selected{selectionSummary.label ? ` (${selectionSummary.label})` : ''}
+              </span>
+
+              {(selectionSummary.byCategory.circle || selectionSummary.byCategory.rect || selectionSummary.byCategory.spline || selectionSummary.byCategory.line) > 0 && onRequestExtrudeSelection && (
+                <button
+                  type="button"
+                  onClick={() => onRequestExtrudeSelection(selectedEntitiesList)}
+                  title="Extrude Selected Shapes into 3D Surfaces"
+                  style={{
+                    background: isLight ? '#ecfeff' : '#164e63',
+                    color: isLight ? '#0e7490' : '#67e8f9',
+                    border: `1px solid ${isLight ? '#67e8f9' : '#0891b2'}`,
+                    borderRadius: '4px',
+                    padding: '2px 7px',
+                    fontSize: '10.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Extrude
+                </button>
+              )}
+
+              {onRequestTransformSelection && (
+                <button
+                  type="button"
+                  onClick={() => onRequestTransformSelection(selectedEntitiesList)}
+                  title="Translate, Rotate, Mirror, or Copy Selected Shapes"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    background: isLight ? '#f8fafc' : '#1e293b',
+                    color: isLight ? '#334155' : '#e2e8f0',
+                    border: `1px solid ${isLight ? '#cbd5e1' : '#475569'}`,
+                    borderRadius: '4px',
+                    padding: '2px 7px',
+                    fontSize: '10.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Move size={11} />
+                  <span>Transform</span>
+                </button>
+              )}
+
+              {onBlankSelectedEntities && (
+                <button
+                  type="button"
+                  onClick={() => onBlankSelectedEntities(selectedEntityIds)}
+                  title="Hide / Blank Selected Entities"
+                  style={{
+                    background: isLight ? '#f8fafc' : '#1e293b',
+                    color: isLight ? '#334155' : '#e2e8f0',
+                    border: `1px solid ${isLight ? '#cbd5e1' : '#475569'}`,
+                    borderRadius: '4px',
+                    padding: '2px 7px',
+                    fontSize: '10.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Blank
+                </button>
+              )}
+
+              {onDeleteSelectedEntities && (
+                <button
+                  type="button"
+                  onClick={() => onDeleteSelectedEntities(selectedEntityIds)}
+                  title="Delete Selected Entities (Del)"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    background: isLight ? '#fef2f2' : '#7f1d1d',
+                    color: '#dc2626',
+                    border: '1px solid #fca5a5',
+                    borderRadius: '4px',
+                    padding: '2px 7px',
+                    fontSize: '10.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Trash2 size={11} />
+                  <span>Delete</span>
+                </button>
+              )}
+
+              {onChangeSelectedEntities && (
+                <button
+                  type="button"
+                  onClick={() => onChangeSelectedEntities([])}
+                  title="Clear Selection (Esc)"
+                  style={{
+                    background: 'transparent',
+                    color: isLight ? '#64748b' : '#94a3b8',
+                    border: 'none',
+                    padding: '2px 4px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Drag & Drop Visual Overlay */}
       {isDragOver && (

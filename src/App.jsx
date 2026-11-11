@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box } from 'lucide-react';
 import TitleBar from './components/TitleBar';
@@ -112,7 +112,8 @@ import {
   clearWorkspaceSession
 } from './utils/workspacePersistence';
 import { parseAnyCADFile } from './utils/universalCadParser';
-import { extractClosedChainsFromCAD, buildChainFromEntity, computeRectPlacement, computeLineEnd } from './utils/cadDrawingEngine';
+import { extractClosedChainsFromCAD, buildChainFromEntity, computeRectPlacement, computeLineEnd, isSelectableWireframeEntity } from './utils/cadDrawingEngine';
+import { getCustomEntityId, transformCustomEntityClone } from './utils/cadSelectionEngine';
 import CNCDesignBoard from './components/CNCDesignBoard';
 import { convertBoardDiagramsToToolpaths, getCADTemplate } from './utils/cncBoardEngine';
 
@@ -293,6 +294,8 @@ export default function App() {
   const [wireframeModalTool, setWireframeModalTool] = useState('line');
   const [isSketchModeActive, setIsSketchModeActive] = useState(false);
   const [sketchTool, setSketchTool] = useState('line');
+  const [isSelectModeActive, setIsSelectModeActive] = useState(false);
+  const [selectedEntityIds, setSelectedEntityIds] = useState([]);
   const [activeDrawingTool, setActiveDrawingTool] = useState(null);
   const [circleParams, setCircleParams] = useState({
     radius: 25.0,
@@ -1273,8 +1276,13 @@ export default function App() {
   // ================= Undo / Redo Handlers (Atomic State) =================
   const commitCustomGeometry = (nextGeo, shouldPush = true) => {
     const safeList = Array.isArray(nextGeo) ? nextGeo : [];
+    const validIds = new Set(safeList.map(getCustomEntityId).filter(Boolean));
     customGeometryRef.current = safeList;
     setCustomGeometry(safeList);
+    setSelectedEntityIds((prev) => {
+      const filtered = prev.filter((id) => validIds.has(id));
+      return filtered.length === prev.length ? prev : filtered;
+    });
     if (shouldPush) {
       pushSnapshot({ customGeometry: safeList });
     }
@@ -1471,6 +1479,10 @@ export default function App() {
   };
 
   const handleDeleteActiveOp = () => {
+    if (selectedEntityIds.length > 0) {
+      handleDeleteSelectedEntities(selectedEntityIds);
+      return;
+    }
     handleDeleteOpById(activeOpId);
   };
 
@@ -2721,9 +2733,12 @@ export default function App() {
     if (deletedEntitiesStack.length > 0) {
       const restored = deletedEntitiesStack[deletedEntitiesStack.length - 1];
       setDeletedEntitiesStack((prev) => prev.slice(0, -1));
-      const nextList = [...(customGeometryRef.current || []), restored];
+      const items = Array.isArray(restored) ? restored : [restored];
+      items.forEach((it) => { if (it) it.visible = true; });
+      const nextList = [...(customGeometryRef.current || []), ...items];
       commitCustomGeometry(nextList, true);
-      showToast('Undelete: Restored previous entity to workspace', 'success');
+      setSelectedEntityIds(items.map(getCustomEntityId).filter(Boolean));
+      showToast(`Undelete: Restored ${items.length} previous entity(s) to workspace`, 'success');
     } else {
       showToast('No deleted entities in undo buffer', 'info');
     }
@@ -3147,7 +3162,15 @@ export default function App() {
       wcs: true,
       dimensions: true
     });
-    showToast("All Levels and 3D layers unblanked.", 'info');
+    const currentList = customGeometryRef.current || [];
+    if (currentList.some((ent) => ent && ent.visible === false)) {
+      const restored = currentList.map((ent) => {
+        if (ent) ent.visible = true;
+        return ent;
+      });
+      commitCustomGeometry([...restored], false);
+    }
+    showToast("All Levels, entities, and 3D layers unblanked.", 'info');
   };
 
   const handleInvertVisibility = () => {
@@ -3349,6 +3372,14 @@ export default function App() {
 
   const handleStartInteractiveSketch = (tool = 'line') => {
     setSketchTool(tool);
+    if (tool === 'select') {
+      setIsSelectModeActive(true);
+      setIsSketchModeActive(true);
+      setDrawingToolSync(null);
+      showToast('Window Select Mode (V): Drag L->R to enclose or R->L to cross shapes', 'info');
+      return;
+    }
+    setIsSelectModeActive(false);
     setIsSketchModeActive(true);
     if (tool === 'circle') {
       setDrawingToolSync('circle');
@@ -4142,9 +4173,179 @@ export default function App() {
 
   const handleRemoveCustomEntity = (target) => {
     const currentList = customGeometryRef.current || [];
-    const targetKey = target?.id || target?.uuid || target?.name;
-    const next = currentList.filter((item) => item !== target && (item.id || item.uuid || item.name) !== targetKey);
+    const targetKey = target?.id || target?.uuid || target?.name || target;
+    const removed = currentList.filter((item) => item === target || getCustomEntityId(item) === targetKey || item.name === targetKey);
+    const next = currentList.filter((item) => !removed.includes(item));
+    if (removed.length > 0) {
+      setDeletedEntitiesStack((prev) => [...prev, ...removed]);
+    }
     commitCustomGeometry(next, true);
+    setSelectedEntityIds((prev) => prev.filter((id) => id !== targetKey));
+  };
+
+  const selectedEntitiesList = useMemo(() => {
+    const idSet = new Set(selectedEntityIds);
+    return (customGeometry || []).filter((ent) => ent && idSet.has(getCustomEntityId(ent)));
+  }, [customGeometry, selectedEntityIds]);
+
+  const handleToggleSelectMode = (nextVal) => {
+    const enabled = typeof nextVal === 'boolean' ? nextVal : !isSelectModeActive;
+    setIsSelectModeActive(enabled);
+    if (enabled) {
+      setSketchTool('select');
+      setDrawingToolSync(null);
+      showToast('Window Select (V): Drag L->R (Inside) or R->L (Crossing) on canvas', 'info');
+    } else if (sketchTool === 'select') {
+      setSketchTool('line');
+    }
+  };
+
+  const handleDeleteSelectedEntities = (ids = selectedEntityIds) => {
+    const idSet = new Set(Array.isArray(ids) ? ids : []);
+    if (idSet.size === 0) return;
+    const currentList = customGeometryRef.current || [];
+    const removed = currentList.filter((ent) => ent && idSet.has(getCustomEntityId(ent)));
+    if (removed.length === 0) return;
+    const next = currentList.filter((ent) => !ent || !idSet.has(getCustomEntityId(ent)));
+    setDeletedEntitiesStack((prev) => [...prev, removed]);
+    commitCustomGeometry(next, true);
+    syncPartMetricsFromCustomSurfaces(next);
+    setSelectedEntityIds([]);
+    showToast(`Deleted ${removed.length} selected entity(s) (Use Undelete Entity to restore)`, 'success');
+  };
+
+  const handleBlankSelectedEntities = (ids = selectedEntityIds) => {
+    const idSet = new Set(Array.isArray(ids) ? ids : []);
+    if (idSet.size === 0) {
+      handleToggleLayer('part');
+      return;
+    }
+    const currentList = customGeometryRef.current || [];
+    let hiddenCount = 0;
+    const next = currentList.map((ent) => {
+      if (ent && idSet.has(getCustomEntityId(ent))) {
+        ent.visible = false;
+        hiddenCount++;
+      }
+      return ent;
+    });
+    if (hiddenCount > 0) {
+      commitCustomGeometry([...next], false);
+      setSelectedEntityIds([]);
+      showToast(`Blanked ${hiddenCount} selected entity(s) (Click View/Home Unblank to restore)`, 'info');
+    }
+  };
+
+  const handleWindowSelectChains = (matchedEntities = [], { append = false } = {}) => {
+    const pool = customGeometryRef.current || [];
+    const newChains = [];
+    const seenEntIds = new Set();
+
+    matchedEntities.forEach((ent) => {
+      if (!ent || !isSelectableWireframeEntity(ent)) return;
+      const eid = getCustomEntityId(ent);
+      if (seenEntIds.has(eid)) return;
+      const chain = buildChainFromEntity(ent, pool, {
+        method: 'chain',
+        planeMode: chainingConfig.planeMode
+      });
+      if (!chain) return;
+      (chain.sourceEntityIds || [eid]).forEach((srcId) => seenEntIds.add(srcId));
+      newChains.push(chain);
+    });
+
+    if (newChains.length === 0) {
+      if (!append) setSelectedExtrudeChains([]);
+      return;
+    }
+
+    setSelectedExtrudeChains((prev) => {
+      const base = (append || chainingConfig.waitMode) ? prev : [];
+      const existingIds = new Set(base.map((c) => c.id));
+      const merged = [...base];
+      newChains.forEach((ch) => {
+        if (!existingIds.has(ch.id)) merged.push(ch);
+      });
+      return merged;
+    });
+
+    if (newChains[0]?.center) {
+      setExtrudeParams((prev) => ({
+        ...prev,
+        basePoint: prev.locks?.basePoint ? prev.basePoint : {
+          x: newChains[0].center.x,
+          y: newChains[0].center.y,
+          z: newChains[0].center.z
+        }
+      }));
+    }
+    showToast(`Window Select: ${newChains.length} contour chain(s) added`, 'success');
+  };
+
+  const handleExtrudeFromSelection = (entities = selectedEntitiesList) => {
+    const pool = customGeometryRef.current || [];
+    const wireMatches = (entities || []).filter((e) => e && isSelectableWireframeEntity(e));
+    if (wireMatches.length === 0) {
+      showToast('Select one or more wireframe shapes to extrude.', 'warning');
+      return;
+    }
+    const chains = [];
+    const seen = new Set();
+    wireMatches.forEach((ent) => {
+      const ch = buildChainFromEntity(ent, pool, { method: 'chain', planeMode: chainingConfig.planeMode });
+      if (!ch || seen.has(ch.id)) return;
+      seen.add(ch.id);
+      chains.push(ch);
+    });
+    if (chains.length === 0) return;
+
+    setSelectedExtrudeChains(chains);
+    setActiveSurfaceTool('extrude');
+    setActiveManagerTab('Surface Ex...');
+    setIsChainingPaletteOpen(false);
+    setIsSketchModeActive(false);
+    setIsSelectModeActive(false);
+    setExtrudeParams((prev) => ({
+      ...prev,
+      basePoint: chains[0]?.center ? { x: chains[0].center.x, y: chains[0].center.y, z: chains[0].center.z } : prev.basePoint
+    }));
+    showToast(`Loaded ${chains.length} selected shape chain(s) into Surface Extrude`, 'success');
+  };
+
+  const handleApplyCustomTransform = (matrices = [], mode = 'move') => {
+    if (!Array.isArray(matrices) || matrices.length === 0 || selectedEntitiesList.length === 0) return;
+    const currentList = customGeometryRef.current || [];
+    const selectedSet = new Set(selectedEntitiesList.map(getCustomEntityId));
+
+    if (mode === 'move') {
+      const m = matrices[0];
+      const nextIds = [];
+      const nextList = currentList.map((ent) => {
+        if (!ent || !selectedSet.has(getCustomEntityId(ent))) return ent;
+        const transformed = transformCustomEntityClone(ent, m, { preserveName: true });
+        nextIds.push(getCustomEntityId(transformed));
+        return transformed;
+      });
+      commitCustomGeometry(nextList, true);
+      syncPartMetricsFromCustomSurfaces(nextList);
+      setSelectedEntityIds(nextIds.filter(Boolean));
+    } else {
+      const clones = [];
+      const cloneIds = [];
+      matrices.forEach((m, mIdx) => {
+        selectedEntitiesList.forEach((ent) => {
+          const copy = transformCustomEntityClone(ent, m, { suffix: `Copy${mIdx + 1}` });
+          if (copy) {
+            clones.push(copy);
+            cloneIds.push(getCustomEntityId(copy));
+          }
+        });
+      });
+      const nextList = [...currentList, ...clones];
+      commitCustomGeometry(nextList, true);
+      syncPartMetricsFromCustomSurfaces(nextList);
+      setSelectedEntityIds(cloneIds.filter(Boolean));
+    }
   };
 
   const handleAddWireframe = (type) => {
@@ -4614,7 +4815,7 @@ export default function App() {
         onToggleArcCenters={() => setShowArcCenters((prev) => !prev)}
         showEndpoints={showEndpoints}
         onToggleEndpoints={() => setShowEndpoints((prev) => !prev)}
-        onToggleBlank={() => handleToggleLayer('part')}
+        onToggleBlank={() => handleBlankSelectedEntities()}
         onOpenToolpathAnalyzer={() => showToast('Toolpath Analyzer: Inspecting G-Code vector feeds & dynamics', 'info')}
         onOpenDynamicAnalyzer={() => showToast('Dynamic Analyzer: Live cursor coordinates & radius measuring active', 'info')}
         onOpenAngleAnalyzer={() => setIsDistanceCaliperOpen(true)}
@@ -4646,6 +4847,8 @@ export default function App() {
         onStartInteractiveSketch={handleStartInteractiveSketch}
         isSketchModeActive={isSketchModeActive}
         sketchTool={sketchTool}
+        isSelectModeActive={isSelectModeActive}
+        onToggleSelectMode={handleToggleSelectMode}
         onOpenSurfacesModal={handleOpenSurfacesModal}
         onOpenSolidsModal={handleOpenSolidsModal}
         onOpenModelPrepModal={handleOpenModelPrepModal}
@@ -4964,6 +5167,14 @@ export default function App() {
                 onDrawingUpdate={handleDrawingUpdate}
                 reselectTrigger={reselectTrigger}
                 undoTrigger={undoTrigger}
+                selectedEntityIds={selectedEntityIds}
+                onChangeSelectedEntities={setSelectedEntityIds}
+                isSelectModeActive={isSelectModeActive}
+                onToggleSelectMode={handleToggleSelectMode}
+                onDeleteSelectedEntities={handleDeleteSelectedEntities}
+                onBlankSelectedEntities={handleBlankSelectedEntities}
+                onRequestExtrudeSelection={handleExtrudeFromSelection}
+                onRequestTransformSelection={() => handleOpenTransformModal('translate')}
               />
             </div>
           </div>
@@ -5050,15 +5261,25 @@ export default function App() {
               undoTrigger={undoTrigger}
               isChainingActive={isChainingPaletteOpen}
               chainingPlaneMode={chainingConfig.planeMode}
+              chainingSelectionMethod={chainingConfig.selectionMethod}
               isBasePointPickActive={isBasePointPickActive}
               selectedExtrudeChains={selectedExtrudeChains}
               onSelectChainEntity={handleSelectChainEntityOnViewport}
+              onWindowSelectChains={handleWindowSelectChains}
               onPickBasePoint={handlePickExtrudeBasePoint}
               surfaceExtrudePreview={
                 activeSurfaceTool === 'extrude' && !isChainingPaletteOpen && selectedExtrudeChains.length > 0
                   ? { chains: selectedExtrudeChains, params: extrudeParams }
                   : null
               }
+              selectedEntityIds={selectedEntityIds}
+              onChangeSelectedEntities={setSelectedEntityIds}
+              isSelectModeActive={isSelectModeActive}
+              onToggleSelectMode={handleToggleSelectMode}
+              onDeleteSelectedEntities={handleDeleteSelectedEntities}
+              onBlankSelectedEntities={handleBlankSelectedEntities}
+              onRequestExtrudeSelection={handleExtrudeFromSelection}
+              onRequestTransformSelection={() => handleOpenTransformModal('translate')}
             />
           </div>
         )}
@@ -5082,7 +5303,7 @@ export default function App() {
         activeWcs={currentModel ? activeWcs : 'Top'}
         activeCPlane={currentModel ? activePlane : 'Top'}
         activeTPlane="Top"
-        selectedCount={currentModel ? 1 : 0}
+        selectedCount={selectedEntityIds.length || (currentModel ? 1 : 0)}
         isSectionView={clippingPlane?.enabled}
         onToggleSectionView={() => setClippingPlane(cp => ({ ...cp, enabled: !cp?.enabled }))}
         unitSystem={unitSystem}
@@ -5484,6 +5705,8 @@ export default function App() {
         onUpdateTransform={setPartTransform}
         onResetTransform={handleResetTransform}
         onAddCustomEntity={handleAddCustomEntity}
+        selectedEntities={selectedEntitiesList}
+        onApplyCustomTransform={handleApplyCustomTransform}
       />
 
       {/* CNC Machine Definition & Kinematic Envelope Modal (Tab 10) */}
@@ -5686,6 +5909,7 @@ export default function App() {
         partMetrics={partMetrics}
         stockConfig={stockConfig}
         currentProjectName={currentProjectName}
+        selectedEntities={selectedEntitiesList}
       />
 
       {/* 13. Precision Distance Caliper Modal (Tab 2) */}

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import {
   X, Move, RotateCcw, Maximize2, Copy, Grid,
   RefreshCw, Sparkles, Orbit, Layers, Compass, ChevronRight, Check
 } from 'lucide-react';
+import { summarizeSelectedEntities } from '../utils/cadSelectionEngine';
 import {
   cloneAndTransformModel,
   mirrorModelAcrossPlane,
@@ -47,7 +49,9 @@ export default function TransformCADModal({
   onUpdateTransform,
   onResetTransform,
   onAddCustomEntity,
-  onOpenNestingStudio
+  onOpenNestingStudio,
+  selectedEntities = [],
+  onApplyCustomTransform = null
 }) {
   const dialogRef = useRef(null);
   const [activeTab, setActiveTab] = useState(() => normalizeTabId(initialTab));
@@ -131,11 +135,35 @@ export default function TransformCADModal({
 
   if (!isOpen) return null;
 
+  const hasCustomSelection = Array.isArray(selectedEntities) && selectedEntities.length > 0;
+  const selectionSummary = hasCustomSelection ? summarizeSelectedEntities(selectedEntities) : null;
+
+  const applyToCustomSelection = (matrices, mode, msg) => {
+    if (!hasCustomSelection || !onApplyCustomTransform) return false;
+    onApplyCustomTransform(matrices, mode);
+    setFeedback(msg);
+    return true;
+  };
+
   // ================= 1. POSITION HANDLERS =================
   const handleApplyTranslate = () => {
     const dx = parseFloat(transX) || 0;
     const dy = parseFloat(transY) || 0;
     const dz = parseFloat(transZ) || 0;
+
+    if (hasCustomSelection) {
+      const matrices = transMode === 'move'
+        ? [new THREE.Matrix4().makeTranslation(dx, dy, dz)]
+        : Array.from({ length: Math.max(1, parseInt(copyCount) || 1) }, (_, idx) =>
+            new THREE.Matrix4().makeTranslation(dx * (idx + 1), dy * (idx + 1), dz * (idx + 1))
+          );
+      applyToCustomSelection(
+        matrices,
+        transMode,
+        `${transMode === 'move' ? 'Moved' : `Copied (${matrices.length}x)`} ${selectedEntities.length} selected entity(s) by (${dx}, ${dy}, ${dz}) mm`
+      );
+      return;
+    }
 
     if (transMode === 'move') {
       if (onUpdateTransform) {
@@ -169,6 +197,19 @@ export default function TransformCADModal({
 
   const handleApplyRotate = () => {
     const angleRad = ((parseFloat(rotAngle) || 0) * Math.PI) / 180;
+
+    if (hasCustomSelection) {
+      const m = new THREE.Matrix4();
+      if (rotAxis === 'x') m.makeRotationX(angleRad);
+      else if (rotAxis === 'y') m.makeRotationY(angleRad);
+      else m.makeRotationZ(angleRad);
+      applyToCustomSelection(
+        [m],
+        rotMode,
+        `${rotMode === 'move' ? 'Rotated' : 'Copied & rotated'} ${selectedEntities.length} selected entity(s) ${rotAngle}° around ${rotAxis.toUpperCase()}-Axis`
+      );
+      return;
+    }
 
     if (rotMode === 'move') {
       if (onUpdateTransform) {
@@ -222,6 +263,20 @@ export default function TransformCADModal({
   };
 
   const handleApplyMirror = () => {
+    if (hasCustomSelection) {
+      const m = new THREE.Matrix4().makeScale(
+        mirrorPlane === 'YZ' ? -1 : 1,
+        mirrorPlane === 'XZ' ? -1 : 1,
+        mirrorPlane === 'XY' ? -1 : 1
+      );
+      applyToCustomSelection(
+        [m],
+        mirrorMode,
+        `${mirrorMode === 'move' ? 'Mirrored' : 'Mirrored & copied'} ${selectedEntities.length} selected entity(s) across ${mirrorPlane} Plane`
+      );
+      return;
+    }
+
     if (currentModel && onAddCustomEntity) {
       const mirrored = mirrorModelAcrossPlane(currentModel, mirrorPlane);
       mirrored.name = `Part_Mirrored_${mirrorPlane}_${Date.now()}`;
@@ -268,6 +323,42 @@ export default function TransformCADModal({
 
   // ================= 3. LAYOUT HANDLERS =================
   const handleApplyPattern = () => {
+    if (hasCustomSelection) {
+      const matrices = [];
+      if (patternType === 'rect') {
+        const cols = parseInt(gridCols) || 2;
+        const rows = parseInt(gridRows) || 2;
+        const sx = parseFloat(spacingX) || 100;
+        const sz = parseFloat(spacingZ) || 100;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            if (r === 0 && c === 0) continue;
+            matrices.push(new THREE.Matrix4().makeTranslation(c * sx, 0, r * sz));
+          }
+        }
+      } else {
+        const count = parseInt(circCount) || 6;
+        const radius = parseFloat(circRadius) || 80;
+        const step = (Math.PI * 2) / count;
+        for (let i = 1; i < count; i++) {
+          const angle = i * step;
+          matrices.push(
+            new THREE.Matrix4()
+              .makeTranslation(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
+              .multiply(new THREE.Matrix4().makeRotationY(-angle))
+          );
+        }
+      }
+      if (matrices.length > 0) {
+        applyToCustomSelection(
+          matrices,
+          'copy',
+          `Generated ${matrices.length} pattern duplicate sets of ${selectedEntities.length} selected entity(s)`
+        );
+      }
+      return;
+    }
+
     if (!currentModel || !onAddCustomEntity) {
       setFeedback('No active model loaded to pattern');
       return;
@@ -319,6 +410,20 @@ export default function TransformCADModal({
 
   // ================= 4. SIZE HANDLERS =================
   const handleApplyScale = () => {
+    if (hasCustomSelection) {
+      const factor = parseFloat(uniformScale) || 1.0;
+      const sx = scaleType === 'uniform' ? factor : (parseFloat(scaleX) || 1.0);
+      const sy = scaleType === 'uniform' ? factor : (parseFloat(scaleY) || 1.0);
+      const sz = scaleType === 'uniform' ? factor : (parseFloat(scaleZ) || 1.0);
+      const m = new THREE.Matrix4().makeScale(sx, sy, sz);
+      applyToCustomSelection(
+        [m],
+        'move',
+        `Scaled ${selectedEntities.length} selected entity(s) (${sx}x, ${sy}y, ${sz}z)`
+      );
+      return;
+    }
+
     if (!onUpdateTransform) return;
     const curScale = partTransform?.scale || { x: 1, y: 1, z: 1 };
 
@@ -421,6 +526,20 @@ export default function TransformCADModal({
             <X size={15} />
           </button>
         </div>
+
+        {/* Active Canvas Selection Scope Banner */}
+        {hasCustomSelection && (
+          <div style={{
+            background: 'rgba(250, 204, 21, 0.14)',
+            borderBottom: '1px solid rgba(250, 204, 21, 0.35)',
+            padding: '5px 14px',
+            fontSize: '11px',
+            color: '#facc15',
+            fontWeight: 600
+          }}>
+            Targeting {selectedEntities.length} Window-Selected Canvas Entity(s): {selectionSummary?.label}
+          </div>
+        )}
 
         {/* Feedback notification toast */}
         {feedback && (
