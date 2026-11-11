@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { X, Check, HelpCircle, MousePointer, ChevronRight, FolderCog } from 'lucide-react';
 import {
   resolveMachineToolpathCapabilities,
+  isDriveSurfaceEntity,
   computeSurfaceSpeedCs,
   computeRpmFromCs,
   computeFeedPerTooth,
@@ -129,33 +130,45 @@ function SurfaceFinishContourModalInner({
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
   const detectedSurfaces = useMemo(() => {
-    const list = [];
-    customGeometry.forEach((item, idx) => {
-      const box = item.boundingBox || (item.mesh ? new THREE.Box3().setFromObject(item.mesh) : null);
-      if (box && !box.isEmpty()) {
-        list.push({
-          id: item.id || `surf_${idx}`,
-          name: item.name || item.type || `3D Drive Surface #${idx + 1}`,
-          height: Number((box.max.y - box.min.y).toFixed(2)),
-          box
-        });
-      } else {
-        list.push({
-          id: item.id || `surf_${idx}`,
-          name: item.name || item.type || `3D Drive Surface #${idx + 1}`,
-          height: 20.0,
-          box: null
-        });
+    const surfaceItems = (customGeometry || []).filter((item) => isDriveSurfaceEntity(item));
+    const sourceItems = surfaceItems.length > 0
+      ? surfaceItems
+      : (customGeometry || []).filter((item) => item && item.visible !== false && !item.isLine && !item.isLineSegments);
+
+    return sourceItems.map((item, idx) => {
+      let box = item.boundingBox || null;
+      if (!box && item.mesh && typeof item.mesh.clone === 'function') {
+        box = new THREE.Box3().setFromObject(item.mesh);
+      } else if (!box && typeof item.clone === 'function') {
+        // Clone without customGeoGroup's +49 parent matrix so local surface coordinates match drive bounds
+        const localClone = item.clone(true);
+        localClone.updateMatrixWorld(true);
+        box = new THREE.Box3().setFromObject(localClone);
       }
+      const validBox = box && !box.isEmpty() ? box : null;
+      return {
+        id: String(item.userData?.customId || item.uuid || item.id || `surf_${idx}`),
+        name: item.name || item.userData?.type || `3D Drive Surface #${idx + 1}`,
+        height: validBox ? Number((validBox.max.y - validBox.min.y).toFixed(2)) : 20.0,
+        box: validBox
+      };
     });
-    return list;
   }, [customGeometry]);
 
   const initialTool = useMemo(() => {
     if (operation?.toolId) {
-      return tools.find((t) => String(t.id) === String(operation.toolId)) || tools[0] || null;
+      return (
+        tools.find((t) => String(t.id) === String(operation.toolId)) ||
+        tools.find((t) => Number(t.number) === Number(operation.toolNumber)) ||
+        tools[0] ||
+        null
+      );
     }
-    return tools[0] || null;
+    return (
+      tools.find((t) => ['flat', 'bull', 'ball'].includes(String(t.type || '').toLowerCase())) ||
+      tools[0] ||
+      null
+    );
   }, [operation, tools]);
 
   const initialDefaults = useMemo(
@@ -355,9 +368,10 @@ function SurfaceFinishContourModalInner({
       strategyKey: isPocket ? 'surface_finish_pocket' : 'surface_finish_contour',
       badgeClass: isPocket ? 'pocket' : 'contour',
       badgeText: isPocket ? 'SP' : 'SC',
-      toolId: toolParams.toolId || activeTool?.id || 1,
+      toolId: activeTool?.id || toolParams.toolId || 1,
       toolName: toolParams.toolName,
       toolNumber: Number(toolParams.toolNumber) || 1,
+      toolType: activeTool?.type || 'flat',
       toolDiameter: Number(toolParams.toolDiameter) || 10.0,
       cornerRadius: Number(toolParams.cornerRadius) || 0,
       feedRate: Number(toolParams.feedRate) || 250,

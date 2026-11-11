@@ -10,6 +10,67 @@ import { MACHINING_MATERIALS, calculateMachiningParameters } from '../utils/mach
 export const DEFAULT_OPERATION_DEFAULTS_STORAGE_KEY = 'argus_cam_surface_finish_defaults_v1';
 
 /**
+ * Shared predicate determining whether a Three.js scene entity is a selectable
+ * 3D drive/check surface or solid model (excluding wireframe/sketch curves and hidden objects).
+ */
+export function isDriveSurfaceEntity(ent) {
+  if (!ent || ent.visible === false) return false;
+  if (ent.isLine || ent.isLineSegments || ent.isPoints) return false;
+  const name = String(ent.name || '');
+  const cadType = String(ent.userData?.cadType || ent.userData?.type || '').toLowerCase();
+  if (
+    name.startsWith('Wireframe_') ||
+    name.startsWith('Drill_') ||
+    name.startsWith('Hole_') ||
+    cadType.startsWith('wireframe')
+  ) {
+    return false;
+  }
+  return (
+    name.startsWith('Surface_') ||
+    name.startsWith('CAD_Surface') ||
+    name.startsWith('Solid_') ||
+    cadType === 'surface_extrusion' ||
+    cadType === 'surface_cylinder' ||
+    cadType === 'surface_plane' ||
+    cadType === 'surface_revolve' ||
+    cadType === 'surface_loft' ||
+    cadType === 'surface_fillet' ||
+    cadType === 'solid' ||
+    cadType === 'extrude'
+  );
+}
+
+/**
+ * Formats internal tool type slugs into Mastercam operation-tree descriptor strings.
+ */
+export function formatMastercamToolType(toolType = 'flat') {
+  const map = {
+    flat: 'ENDMILL FLAT',
+    bull: 'BULL ENDMILL',
+    ball: 'BALL ENDMILL',
+    face: 'FACE MILL',
+    radius: 'RADIUS MILL',
+    chamfer: 'CHAMFER MILL',
+    slot: 'SLOT MILL',
+    taper: 'TAPER MILL',
+    dove: 'DOVETAIL MILL',
+    lollipop: 'LOLLIPOP MILL',
+    engrave: 'ENGRAVE TOOL',
+    thread: 'THREAD MILL',
+    barrel: 'BARREL MILL',
+    high_feed: 'HIGH FEED MILL',
+    drill: 'DRILL',
+    spot_drill: 'SPOT DRILL',
+    center_drill: 'CENTER DRILL',
+    reamer: 'REAMER',
+    boring_bar: 'BORING BAR',
+    probe: 'TOUCH PROBE'
+  };
+  return map[String(toolType || 'flat').toLowerCase()] || String(toolType || 'ENDMILL').toUpperCase();
+}
+
+/**
  * Resolves dynamic UI capabilities and CNC limits from the active machine definition.
  * Every control that depends on kinematics (3X vs 4X vs 5X vs Lathe/Mill-Turn),
  * spindle limits, coolant plumbing, or controller dialect is driven from here.
@@ -481,7 +542,7 @@ export function createDefaultSurfaceFinishState({
       totalTolerance: 0.025,
       maxStepdown: 1.0,
       stepover: Number((diameter * 0.5).toFixed(2)),
-      cuttingMethod: 'Zigzag',
+      cuttingMethod: 'Constant Overlap Spiral',
       machiningDirection: 'climb',
       roughEntryHelix: true,
       finishOuterBoundary: true,

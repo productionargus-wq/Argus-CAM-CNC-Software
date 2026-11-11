@@ -12,6 +12,7 @@ import RectanglePanel from './RectanglePanel';
 import LineEndpointsPanel from './LineEndpointsPanel';
 import ArcTangentPanel from './ArcTangentPanel';
 import SurfaceExtrudePanel from './SurfaceExtrudePanel';
+import { formatMastercamToolType } from '../config/surfaceFinishSchema';
 
 export default function OperationsTree({
   operations = [],
@@ -1038,7 +1039,7 @@ export default function OperationsTree({
                                 {/* Tool Silhouette */}
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="#1e3a8a"><path d="M10 2h4v8h-4z" /><path d="M7 10h10v12H7z" /></svg>
                                 <span>
-                                  #{op.toolId || op.tool?.id || (idx + 1)} - M{op.toolDia || op.tool?.diameter || 10}.00 ENDMILL 1 FLAT - {op.toolName || op.tool?.name || '10 FLAT ENDMILL'}
+                                  #{op.toolNumber || op.toolId || (idx + 1)} - M{Number(op.toolDiameter || op.toolDia || op.tool?.diameter || 10).toFixed(2)} {formatMastercamToolType(op.toolType || op.tool?.type)} - {op.toolName || op.tool?.name || '10 FLAT ENDMILL'}
                                 </span>
                               </div>
 
@@ -1049,7 +1050,9 @@ export default function OperationsTree({
                                 title="Click to view chained geometry and drive surfaces"
                               >
                                 <span style={{ fontFamily: 'monospace', fontSize: '9px', color: '#06b6d4', fontWeight: 800 }}>[S]</span>
-                                <span>Geometry - (1 Chain / Drive Surface)</span>
+                                <span>
+                                  Geometry - ({op.driveSurfaceIds?.length ? `${op.driveSurfaceIds.length} Drive Surface(s)` : '1 Chain / Drive Surface'})
+                                </span>
                               </div>
 
                               {/* 4. Toolpath info */}

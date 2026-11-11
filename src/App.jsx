@@ -2823,7 +2823,11 @@ export default function App() {
   const handleApplySurfaceFinishContour = (updatedOp) => {
     const prevOps = operationsRef.current || operations || [];
     const nextId = updatedOp.id || (prevOps.length > 0 ? Math.max(...prevOps.map((o) => Number(o.id) || 0)) + 1 : 1);
-    const assignedTool = tools.find((t) => Number(t.id) === Number(updatedOp.toolId)) || tools[0] || { id: 1, number: 1, name: updatedOp.toolName || '10mm Flat Endmill' };
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(updatedOp.toolId)) ||
+      tools.find((t) => Number(t.number) === Number(updatedOp.toolNumber)) ||
+      tools[0] ||
+      { id: 1, number: 1, type: 'flat', diameter: 10, name: updatedOp.toolName || '10mm Flat Endmill' };
     const finalOp = {
       ...updatedOp,
       id: nextId,
@@ -2832,8 +2836,11 @@ export default function App() {
       enabled: true,
       locked: false,
       ghosted: false,
-      toolId: assignedTool.id || 1,
-      toolName: `T${assignedTool.number || 1} - ${assignedTool.name}`,
+      toolId: assignedTool.id,
+      toolNumber: Number(updatedOp.toolNumber ?? assignedTool.number) || 1,
+      toolType: updatedOp.toolType || assignedTool.type || 'flat',
+      toolDiameter: Number(updatedOp.toolDiameter ?? assignedTool.diameter) || 10,
+      toolName: updatedOp.toolName || assignedTool.name,
       usesCustomSurfaces: true
     };
 

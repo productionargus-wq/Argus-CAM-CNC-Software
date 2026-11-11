@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { offsetContour2D } from './cadGeometry.js';
+import { isDriveSurfaceEntity } from '../config/surfaceFinishSchema.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -145,12 +146,14 @@ export function buildEffectiveDriveModel(currentModel = null, customGeometry = [
     : null;
 
   const surfaceEntities = (Array.isArray(customGeometry) ? customGeometry : []).filter((ent) => {
-    if (!ent || ent.visible === false) return false;
-    const cadType = String(ent.userData?.cadType || ent.userData?.type || '').toLowerCase();
-    const isSurf = ent.name?.startsWith('Surface_') || ent.name?.startsWith('CAD_Surface') || cadType === 'surface_extrusion' || cadType === 'surface_plane';
-    if (!isSurf) return false;
+    if (!isDriveSurfaceEntity(ent)) return false;
     if (driveIds) {
-      return driveIds.has(String(ent.uuid)) || driveIds.has(String(ent.userData?.customId)) || driveIds.has(String(ent.name));
+      return (
+        driveIds.has(String(ent.uuid)) ||
+        driveIds.has(String(ent.id)) ||
+        driveIds.has(String(ent.userData?.customId)) ||
+        driveIds.has(String(ent.name))
+      );
     }
     return true;
   });
@@ -435,12 +438,14 @@ export function detectHoleFeatures(object3D, bounds) {
 export function buildPocketParamsFromOp(op = {}) {
   const sp = op.surfaceParams || {};
   const pp = op.pocketParams || {};
-  const fallbackStepoverPct = pp.stepover && op.tool?.diameter
-    ? Math.max(5, Math.min(95, Math.round((Number(pp.stepover) / Number(op.tool.diameter)) * 100)))
+  const refDiam = Number(op.toolDiameter ?? op.tool?.diameter);
+  const fallbackStepoverPct = pp.stepover && refDiam > 0
+    ? Math.max(5, Math.min(95, Math.round((Number(pp.stepover) / refDiam) * 100)))
     : 45;
+  const hasExplicitDepth = op.totalDepth != null || sp.totalDepth != null;
   return {
     stepoverPct: Number(pp.stepoverPct ?? op.stepoverPct) || fallbackStepoverPct,
-    totalDepth: Number(op.totalDepth ?? sp.totalDepth) || 15.0,
+    totalDepth: hasExplicitDepth ? Number(op.totalDepth ?? sp.totalDepth) : null,
     stepdown: Number(pp.maxStepdown ?? sp.maxStepdown ?? op.stepdown) || 2.0,
     rapidHeight: sp.clearanceEnabled && sp.clearanceMode === 'abs'
       ? Number(sp.clearance)
