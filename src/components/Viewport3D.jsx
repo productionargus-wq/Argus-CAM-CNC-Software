@@ -19,26 +19,12 @@ import {
   hitTestWireframeEntity
 } from '../utils/cadDrawingEngine';
 import {
-  generateFacingToolpath,
-  generateSurfacePocketToolpath,
-  generateWaterlineToolpath,
-  generateSwarfToolpath,
-  generateDrillingToolpath,
-  generateCircleMillToolpath,
-  generateSpotDrillToolpath,
-  generateTapToolpath,
-  generateAdaptiveRoughingToolpath,
-  generateChamferToolpath,
-  generateSurfaceParallelToolpath,
-  generateRestMillingToolpath,
-  generatePencilTracingToolpath,
-  generateProbingToolpath,
+  generateToolpathForOperation,
+  buildLinkedOperationSegments,
   buildToolpathMeshes,
   createToolAssembly3D,
   compileBackplotTrajectory,
   sampleTrajectoryAtT,
-  buildContourParamsFromOp,
-  buildPocketParamsFromOp,
   buildEffectiveDriveModel,
   resolveOperationDriveBounds
 } from '../utils/toolpathEngine';
@@ -52,6 +38,28 @@ import {
 } from '../utils/toleranceHeatmap';
 import { VoxelStockSimulator } from '../utils/voxelStockEngine';
 import { createParametricFixture3D, DEFAULT_FIXTURE_CONFIG } from '../utils/fixtureEngine';
+
+function resolveStockAllowances(stockConfig) {
+  return {
+    sides: Number(stockConfig?.allowanceSides ?? 4),
+    top: Number(stockConfig?.allowanceTop ?? 2)
+  };
+}
+
+function disposeGroupMeshes(group) {
+  if (!group) return;
+  while (group.children.length > 0) {
+    const child = group.children[0];
+    group.remove(child);
+    child.traverse?.((node) => {
+      if (node.geometry) node.geometry.dispose();
+      if (node.material) {
+        if (Array.isArray(node.material)) node.material.forEach((m) => m.dispose());
+        else node.material.dispose();
+      }
+    });
+  }
+}
 
 export default function Viewport3D({
   currentModel,
@@ -167,6 +175,7 @@ export default function Viewport3D({
   const backplotTrailRef = useRef(null);
   const backplotVerifyGroupRef = useRef(null);
   const viewportSimulatorRef = useRef(null);
+  const lastVerifyProgressRef = useRef(-1);
   const backplotAnimRef = useRef(null);
   const lastAnimTimeRef = useRef(performance.now());
   const waypointsRef = useRef([]);
@@ -1413,16 +1422,20 @@ export default function Viewport3D({
     if (stockWireframeRef.current) scene.remove(stockWireframeRef.current);
 
     const dim = partMetrics.dimensions;
+    const { sides: allowSides, top: allowTop } = resolveStockAllowances(stockConfig);
     const shape = stockConfig?.shape || 'box';
     const axis = stockConfig?.axis || 'X';
+    const partCenter = partMetrics?.box?.getCenter
+      ? partMetrics.box.getCenter(new THREE.Vector3())
+      : new THREE.Vector3(partMetrics?.center?.x || 0, 0, partMetrics?.center?.z || 0);
 
     let stockGeo;
     let posY = 49;
 
     if (shape === 'cylinder' || shape === 'tube') {
-      const dia = stockConfig.diameter || (Math.max(dim.y, dim.z) + (stockConfig.allowanceSides || 4) * 2);
+      const dia = stockConfig.diameter || (Math.max(dim.y, dim.z) + allowSides * 2);
       const rad = dia / 2;
-      const len = stockConfig.length || (dim.x + (stockConfig.allowanceTop || 2) * 2);
+      const len = stockConfig.length || (dim.x + allowTop * 2);
 
       stockGeo = new THREE.CylinderGeometry(rad, rad, len, 48);
       if (axis === 'X') {
@@ -1435,9 +1448,9 @@ export default function Viewport3D({
         posY = 49 + len / 2;
       }
     } else {
-      const stockW = dim.x + (stockConfig.allowanceSides || 4) * 2;
-      const stockH = dim.y + (stockConfig.allowanceTop || 2);
-      const stockD = dim.z + (stockConfig.allowanceSides || 4) * 2;
+      const stockW = dim.x + allowSides * 2;
+      const stockH = dim.y + allowTop;
+      const stockD = dim.z + allowSides * 2;
       stockGeo = new THREE.BoxGeometry(stockW, stockH, stockD);
       posY = 49 + stockH / 2;
     }
@@ -1452,7 +1465,7 @@ export default function Viewport3D({
     });
 
     const stockMesh = new THREE.Mesh(stockGeo, stockMat);
-    stockMesh.position.set(0, posY, 0);
+    stockMesh.position.set(partCenter.x, posY, partCenter.z);
     stockMesh.visible = layerVisibility.stock !== false;
     scene.add(stockMesh);
     stockMeshRef.current = stockMesh;
@@ -1563,94 +1576,18 @@ export default function Viewport3D({
       const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10 };
       const effectiveModel = buildEffectiveDriveModel(currentModel, customGeometry, op);
       const opBounds = resolveOperationDriveBounds(effectiveModel, op, bounds);
-
-      let toolpathData;
-      if (op.badgeClass === 'face') {
-        toolpathData = generateFacingToolpath(opBounds, assignedTool, {
-          stepoverPct: op.stepoverPct || 65,
-          faceAllowance: stockConfig.allowanceTop || 2.0,
-          depthOfCut: op.stepdown || 1.0,
-          rapidHeight: op.rapidHeight || 15.0
-        });
-      } else if (op.badgeClass === 'pocket' || op.badgeClass === 'surface_pocket') {
-        toolpathData = generateSurfacePocketToolpath(opBounds, assignedTool, buildPocketParamsFromOp(op), effectiveModel);
-      } else if (op.badgeClass === 'circlemill') {
-        toolpathData = generateCircleMillToolpath(opBounds, assignedTool, {
-          diameter: op.diameter || (op.chain?.radius ? op.chain.radius * 2 : 50.8),
-          totalDepth: op.totalDepth || 50.8,
-          stepdown: op.stepdown || 6.35,
-          rapidHeight: op.rapidHeight || 15.0,
-          chain: op.chain,
-          center: op.center || op.chain?.center
-        });
-      } else if (op.badgeClass === 'contour' || op.badgeClass === 'waterline') {
-        toolpathData = generateWaterlineToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
-      } else if (op.badgeClass === 'swarf') {
-        toolpathData = generateSwarfToolpath(opBounds, assignedTool, {
-          tiltAngleDeg: 15.0,
-          passes: 3
-        }, effectiveModel);
-      } else if (op.badgeClass === 'drill') {
-        toolpathData = generateDrillingToolpath(opBounds, assignedTool, {
-          drillDepth: op.totalDepth || 25.0,
-          peckDepth: op.stepdown || 5.0,
-          rapidHeight: op.rapidHeight || 10.0
-        }, effectiveModel);
-      } else if (op.badgeClass === 'spotdrill') {
-        toolpathData = generateSpotDrillToolpath(opBounds, assignedTool, {
-          spotDepth: op.stepdown || op.totalDepth || 3.8,
-          rapidHeight: op.rapidHeight || 10.0
-        }, effectiveModel);
-      } else if (op.badgeClass === 'adaptive' || op.badgeClass === 'dynamic') {
-        toolpathData = generateAdaptiveRoughingToolpath(opBounds, assignedTool, {
-          stepoverPct: op.stepoverPct || 25,
-          stepdown: op.stepdown || 6.0,
-          totalDepth: op.totalDepth || 18.0,
-          rapidHeight: op.rapidHeight || 15.0
-        });
-      } else if (op.badgeClass === 'chamfer') {
-        toolpathData = generateChamferToolpath(opBounds, assignedTool, {
-          chamferWidth: op.chamferWidth || op.stepdown || 0.508,
-          tipOffset: op.tipOffset || 1.27,
-          rapidHeight: op.rapidHeight || 15.0
-        }, effectiveModel);
-      } else if (op.badgeClass === 'tap') {
-        toolpathData = generateTapToolpath(opBounds, assignedTool, {
-          pitch: op.pitch || 0.79375,
-          totalDepth: op.totalDepth || 12.19,
-          rapidHeight: op.rapidHeight || 10.0
-        }, effectiveModel);
-      } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
-        toolpathData = generateSurfaceParallelToolpath(opBounds, assignedTool, {
-          stepoverPct: op.stepoverPct || 20,
-          rapidHeight: op.rapidHeight || 15.0
-        }, effectiveModel);
-      } else if (op.badgeClass === 'rest' || op.badgeClass === 'rest_milling') {
-        toolpathData = generateRestMillingToolpath(opBounds, assignedTool, {
-          refToolDiameter: op.refToolDiameter || 12.0,
-          stepdown: op.stepdown || 2.5,
-          totalDepth: op.totalDepth || 15.0,
-          stepoverPct: op.stepoverPct || 30,
-          rapidHeight: op.rapidHeight || 15.0
-        }, effectiveModel);
-      } else if (op.badgeClass === 'pencil') {
-        toolpathData = generatePencilTracingToolpath(opBounds, assignedTool, {
-          totalDepth: op.totalDepth || 15.0,
-          stepdown: op.stepdown || 1.0,
-          biTangencyRadius: op.biTangencyRadius || 3.0,
-          rapidHeight: op.rapidHeight || 15.0
-        }, effectiveModel);
-      } else if (op.badgeClass === 'probe') {
-        const center = op.center || {
-          x: (opBounds.min.x + opBounds.max.x) / 2,
-          y: opBounds.max.y,
-          z: (opBounds.min.z + opBounds.max.z) / 2
-        };
-        toolpathData = generateProbingToolpath(op.strategyKey || 'bore_centering', center, op.probingParams || {});
-      }
+      const toolpathData = generateToolpathForOperation(op, opBounds, assignedTool, effectiveModel, stockConfig);
 
       if (toolpathData) {
-        const { cutGeo, rapidGeo } = buildToolpathMeshes(toolpathData);
+        const keepGeneratorRapids = ['drill', 'spotdrill', 'tap', 'probe'].includes(op.badgeClass);
+        let linkedRapidLines = null;
+        if (!keepGeneratorRapids && toolpathData.cuttingLines?.length > 0) {
+          const { segments } = buildLinkedOperationSegments(toolpathData, op, opBounds, assignedTool);
+          linkedRapidLines = segments
+            .filter((s) => s.isRapid)
+            .map((s) => [s.p1, s.p2]);
+        }
+        const { cutGeo, rapidGeo } = buildToolpathMeshes(toolpathData, linkedRapidLines);
         // CAD entities sit inside customGeoGroup at Y = 49; align CAD/surface toolpaths to that height
         const usesCadSpace = !!op.chain || !!op.usesCustomSurfaces || !!(op.driveSurfaceIds?.length) || !currentModel;
         const visualYOffset = usesCadSpace ? 49 : 0;
@@ -1840,6 +1777,7 @@ export default function Viewport3D({
       backplotTrailRef.current = null;
     }
     if (backplotVerifyGroupRef.current) {
+      disposeGroupMeshes(backplotVerifyGroupRef.current);
       scene.remove(backplotVerifyGroupRef.current);
       backplotVerifyGroupRef.current = null;
     }
@@ -1852,8 +1790,9 @@ export default function Viewport3D({
       ? null
       : Number(backplotSelectedOpFilter);
 
-    const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, effectiveOpId, 49, customGeometry);
+    const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, effectiveOpId, 49, customGeometry, stockConfig);
     waypointsRef.current = trajectory.waypoints;
+    lastVerifyProgressRef.current = -1;
 
     if (trajectory.waypoints.length === 0) return;
 
@@ -1883,18 +1822,39 @@ export default function Viewport3D({
       const verifyGroup = new THREE.Group();
       verifyGroup.name = "Solid_Verify_Carved_Stock";
 
+      const { sides: allowSides, top: allowTop } = resolveStockAllowances(stockConfig);
       const dim = partMetrics.dimensions;
-      const sw = dim.x + (stockConfig?.allowanceSides || 4) * 2;
-      const sh = dim.y + (stockConfig?.allowanceTop || 2);
-      const sd = dim.z + (stockConfig?.allowanceSides || 4) * 2;
+      const sh = dim.y + allowTop;
+      const stockYOffset = currentModel ? 0 : 49;
 
       const stockBounds = new THREE.Box3(
-        new THREE.Vector3(bounds.min.x - (stockConfig?.allowanceSides || 4), bounds.min.y, bounds.min.z - (stockConfig?.allowanceSides || 4)),
-        new THREE.Vector3(bounds.max.x + (stockConfig?.allowanceSides || 4), bounds.min.y + sh, bounds.max.z + (stockConfig?.allowanceSides || 4))
+        new THREE.Vector3(bounds.min.x - allowSides, bounds.min.y + stockYOffset, bounds.min.z - allowSides),
+        new THREE.Vector3(bounds.max.x + allowSides, bounds.min.y + stockYOffset + sh, bounds.max.z + allowSides)
       );
+      const verifyMetrics = stockYOffset
+        ? {
+            ...partMetrics,
+            box: new THREE.Box3(
+              new THREE.Vector3(bounds.min.x, bounds.min.y + stockYOffset, bounds.min.z),
+              new THREE.Vector3(bounds.max.x, bounds.max.y + stockYOffset, bounds.max.z)
+            )
+          }
+        : partMetrics;
 
-      if (backplotInternalMode === 'heatmap' && currentModel) {
-        const modelTriangles = extractModelTriangles(currentModel, 1500);
+      const activeOpObj = operations.find((op) => effectiveOpId == null || String(op.id) === String(effectiveOpId)) || operations[0] || null;
+      const heatmapSource = (currentModel && partHolderGroupRef.current)
+        ? partHolderGroupRef.current
+        : (() => {
+            const drive = buildEffectiveDriveModel(null, customGeometry, activeOpObj);
+            if (drive) {
+              drive.position.y += 49;
+              drive.updateMatrixWorld(true);
+            }
+            return drive;
+          })();
+
+      if (backplotInternalMode === 'heatmap' && heatmapSource) {
+        const modelTriangles = extractModelTriangles(heatmapSource, 1500);
         const { mesh: heatmapMesh, stats } = buildDeviationHeatmapStock({
           stockBounds,
           triangles: modelTriangles,
@@ -1905,11 +1865,12 @@ export default function Viewport3D({
         verifyGroup.add(heatmapMesh);
         setHeatmapStats(stats);
       } else {
-        const sim = new VoxelStockSimulator(stockBounds, partMetrics, { gridResX: 42 });
+        const sim = new VoxelStockSimulator(stockBounds, verifyMetrics, { gridResX: 42 });
         sim.simulateToProgress(trajectory.waypoints, 0.0, tools);
         const stockMesh = sim.buildMesh('tool');
         verifyGroup.add(stockMesh);
         viewportSimulatorRef.current = sim;
+        lastVerifyProgressRef.current = 0.0;
       }
 
       scene.add(verifyGroup);
@@ -1924,9 +1885,12 @@ export default function Viewport3D({
     return () => {
       if (backplotToolRef.current) scene.remove(backplotToolRef.current);
       if (backplotTrailRef.current) scene.remove(backplotTrailRef.current);
-      if (backplotVerifyGroupRef.current) scene.remove(backplotVerifyGroupRef.current);
+      if (backplotVerifyGroupRef.current) {
+        disposeGroupMeshes(backplotVerifyGroupRef.current);
+        scene.remove(backplotVerifyGroupRef.current);
+      }
     };
-  }, [isBackplotActive, activeOpId, backplotSelectedOpFilter, operations, tools, partMetrics, currentModel, customGeometry, backplotInternalMode, heatmapTolerance]);
+  }, [isBackplotActive, activeOpId, backplotSelectedOpFilter, operations, tools, partMetrics, stockConfig, currentModel, customGeometry, backplotInternalMode, heatmapTolerance]);
 
   // 13. Backplot Animation & Sampling Frame Loop
   useEffect(() => {
@@ -1997,11 +1961,17 @@ export default function Viewport3D({
           backplotTrailRef.current.geometry.attributes.position.needsUpdate = true;
         }
 
-        // Dynamic material removal carving in verify mode
-        if (backplotInternalMode === 'verify' && viewportSimulatorRef.current && backplotVerifyGroupRef.current) {
+        // Dynamic material removal carving in verify mode (only rebuild on progress change & dispose previous mesh)
+        if (
+          backplotInternalMode === 'verify' &&
+          viewportSimulatorRef.current &&
+          backplotVerifyGroupRef.current &&
+          Math.abs(currentP - lastVerifyProgressRef.current) > 0.0005
+        ) {
+          lastVerifyProgressRef.current = currentP;
           viewportSimulatorRef.current.simulateToProgress(waypointsRef.current, currentP, tools);
           const updatedMesh = viewportSimulatorRef.current.buildMesh('tool');
-          backplotVerifyGroupRef.current.clear();
+          disposeGroupMeshes(backplotVerifyGroupRef.current);
           backplotVerifyGroupRef.current.add(updatedMesh);
         }
       }
@@ -2028,16 +1998,21 @@ export default function Viewport3D({
       } else if (e.code === 'ArrowLeft') {
         e.preventDefault();
         setIsBackplotPlaying(false);
-        setBackplotProgress((prev) => Math.max(0, prev - 0.02));
+        const nextP = Math.max(0, backplotProgressRef.current - 0.02);
+        backplotProgressRef.current = nextP;
+        setBackplotProgress(nextP);
       } else if (e.code === 'ArrowRight') {
         e.preventDefault();
         setIsBackplotPlaying(false);
-        setBackplotProgress((prev) => Math.min(1, prev + 0.02));
+        const nextP = Math.min(1, backplotProgressRef.current + 0.02);
+        backplotProgressRef.current = nextP;
+        setBackplotProgress(nextP);
       } else if (e.code === 'Escape') {
         e.preventDefault();
         if (onCloseBackplot) onCloseBackplot();
       } else if (e.code === 'Home') {
         e.preventDefault();
+        backplotProgressRef.current = 0;
         setBackplotProgress(0);
       }
     };

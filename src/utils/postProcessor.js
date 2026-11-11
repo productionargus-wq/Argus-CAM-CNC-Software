@@ -1,18 +1,6 @@
 import * as THREE from 'three';
 import {
-  generateFacingToolpath,
-  generateSurfacePocketToolpath,
-  generateWaterlineToolpath,
-  generateSwarfToolpath,
-  generateDrillingToolpath,
-  generateCircleMillToolpath,
-  generateSpotDrillToolpath,
-  generateChamferToolpath,
-  generateTapToolpath,
-  generateSurfaceParallelToolpath,
-  generateAdaptiveRoughingToolpath,
-  buildContourParamsFromOp,
-  buildPocketParamsFromOp,
+  generateToolpathForOperation,
   buildEffectiveDriveModel,
   resolveOperationDriveBounds
 } from './toolpathEngine.js';
@@ -42,6 +30,7 @@ export function generateNCProgram({
   partMetrics,
   controller = CONTROLLER_DIALECTS.HEIDENHAIN,
   programName = 'DMU50_ZeroClamp_Job',
+  programNumber = '0001',
   model = null,
   customGeometry = []
 }) {
@@ -49,6 +38,7 @@ export function generateNCProgram({
     new THREE.Vector3(-40, 49, -35),
     new THREE.Vector3(40, 85, 35)
   );
+  const formattedProgNum = String(programNumber ?? '0001').replace(/\D/g, '').padStart(4, '0').slice(-4) || '0001';
 
   const lines = [];
   let blockNum = 10;
@@ -88,7 +78,7 @@ export function generateNCProgram({
     lines.push(`; DATE: ${dateStr} | TIME STAMP`);
     lines.push(`; MACHINE: DMU 50 EVO 5-AXIS MILL-TURN`);
     lines.push(`; BLK FORM 0.1 Z X${bounds.min.x.toFixed(2)} Y${(-bounds.max.z).toFixed(2)} Z${bounds.min.y.toFixed(2)}`);
-    lines.push(`; BLK FORM 0.2 X${bounds.max.x.toFixed(2)} Y${(-bounds.min.z).toFixed(2)} Z${(bounds.max.y + (stockConfig?.allowanceTop || 2)).toFixed(2)}`);
+    lines.push(`; BLK FORM 0.2 X${bounds.max.x.toFixed(2)} Y${(-bounds.min.z).toFixed(2)} Z${(bounds.max.y + (stockConfig?.allowanceTop ?? 2)).toFixed(2)}`);
     lines.push(`; ------------------------------------------------`);
   } else if (useSiemens) {
     lines.push(`; %_N_${programName.toUpperCase()}_MPF`);
@@ -99,7 +89,7 @@ export function generateNCProgram({
   } else {
     // Standard ISO (Fanuc, Haas, GRBL, Mach3)
     lines.push(`%`);
-    lines.push(`O${Math.floor(1000 + Math.random() * 8000)} (${sanitizeIsoCommentText(programName.toUpperCase())})`);
+    lines.push(`O${formattedProgNum} (${sanitizeIsoCommentText(programName.toUpperCase())})`);
     lines.push(formatComment('--- ARGUS CAM POST-PROCESSOR ---'));
     lines.push(formatComment(`CONTROLLER: ${controller}`));
     lines.push(formatComment(`DATE: ${dateStr}`));
@@ -138,69 +128,8 @@ export function generateNCProgram({
     const effectiveModel = buildEffectiveDriveModel(model, customGeometry, op);
     const effectiveBounds = resolveOperationDriveBounds(effectiveModel, op, bounds);
 
-    // Calculate trajectory data
-    let toolpathData;
-    if (op.badgeClass === 'face') {
-      toolpathData = generateFacingToolpath(effectiveBounds, tool, {
-        stepoverPct: op.stepoverPct || 65,
-        faceAllowance: stockConfig?.allowanceTop || 2.0,
-        depthOfCut: op.stepdown || 1.0,
-        rapidHeight: op.rapidHeight || 15.0
-      });
-    } else if (op.badgeClass === 'pocket' || op.badgeClass === 'surface_pocket') {
-      toolpathData = generateSurfacePocketToolpath(effectiveBounds, tool, buildPocketParamsFromOp(op), effectiveModel);
-    } else if (op.badgeClass === 'circlemill') {
-      toolpathData = generateCircleMillToolpath(effectiveBounds, tool, {
-        diameter: op.diameter || (op.chain?.radius ? op.chain.radius * 2 : 50.8),
-        totalDepth: op.totalDepth || 5.0,
-        stepdown: op.stepdown || 1.0,
-        rapidHeight: op.rapidHeight || 15.0,
-        chain: op.chain,
-        center: op.center || op.chain?.center
-      });
-    } else if (op.badgeClass === 'contour' || op.badgeClass === 'waterline') {
-      toolpathData = generateWaterlineToolpath(effectiveBounds, tool, buildContourParamsFromOp(op), effectiveModel);
-    } else if (op.badgeClass === 'swarf') {
-      toolpathData = generateSwarfToolpath(effectiveBounds, tool, {
-        tiltAngleDeg: 15.0,
-        passes: 2
-      }, effectiveModel);
-    } else if (op.badgeClass === 'drill') {
-      toolpathData = generateDrillingToolpath(effectiveBounds, tool, {
-        drillDepth: op.totalDepth || 25.0,
-        peckDepth: op.stepdown || 5.0,
-        rapidHeight: op.rapidHeight || 10.0
-      }, effectiveModel);
-    } else if (op.badgeClass === 'spotdrill') {
-      toolpathData = generateSpotDrillToolpath(effectiveBounds, tool, {
-        spotDepth: op.stepdown || op.totalDepth || 3.8,
-        rapidHeight: op.rapidHeight || 10.0
-      }, effectiveModel);
-    } else if (op.badgeClass === 'chamfer') {
-      toolpathData = generateChamferToolpath(effectiveBounds, tool, {
-        chamferWidth: op.chamferWidth || op.stepdown || 0.508,
-        tipOffset: op.tipOffset || 1.27,
-        rapidHeight: op.rapidHeight || 15.0
-      }, effectiveModel);
-    } else if (op.badgeClass === 'tap') {
-      toolpathData = generateTapToolpath(effectiveBounds, tool, {
-        pitch: op.pitch || 0.79375,
-        totalDepth: op.totalDepth || 12.19,
-        rapidHeight: op.rapidHeight || 10.0
-      }, effectiveModel);
-    } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
-      toolpathData = generateSurfaceParallelToolpath(effectiveBounds, tool, {
-        stepoverPct: op.stepoverPct || 20,
-        rapidHeight: op.rapidHeight || 15.0
-      }, effectiveModel);
-    } else if (op.badgeClass === 'adaptive' || op.badgeClass === 'dynamic') {
-      toolpathData = generateAdaptiveRoughingToolpath(effectiveBounds, tool, {
-        stepoverPct: op.stepoverPct || 25,
-        stepdown: op.stepdown || 18.0,
-        totalDepth: op.totalDepth || 20.0,
-        rapidHeight: op.rapidHeight || 15.0
-      });
-    }
+    // Calculate trajectory data via shared dispatch helper
+    const toolpathData = generateToolpathForOperation(op, effectiveBounds, tool, effectiveModel, stockConfig);
 
     if (!toolpathData) return;
 

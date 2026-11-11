@@ -1045,8 +1045,9 @@ export function generateSpotDrillToolpath(bounds, tool, params = {}, model = nul
 /**
  * Converts line segments into Three.js LineSegments geometries
  */
-export function buildToolpathMeshes(toolpathData) {
-  const { cuttingLines, rapidLines } = toolpathData;
+export function buildToolpathMeshes(toolpathData, linkedRapidLines = null) {
+  const { cuttingLines = [], rapidLines = [] } = toolpathData || {};
+  const effectiveRapidLines = Array.isArray(linkedRapidLines) ? linkedRapidLines : rapidLines;
 
   const cutPoints = [];
   cuttingLines.forEach(([p1, p2]) => {
@@ -1055,7 +1056,7 @@ export function buildToolpathMeshes(toolpathData) {
   });
 
   const rapidPoints = [];
-  rapidLines.forEach(([p1, p2]) => {
+  effectiveRapidLines.forEach(([p1, p2]) => {
     rapidPoints.push(p1.x, p1.y, p1.z);
     rapidPoints.push(p2.x, p2.y, p2.z);
   });
@@ -1801,9 +1802,267 @@ export function createToolAssembly3D(tool = {}) {
 }
 
 /**
+ * Generates raw cutting/rapid toolpath data for any supported CAM operation strategy.
+ * Shared across 3D viewport display, Backplot simulation, and NC post-processing.
+ */
+export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool = {}, effectiveModel = null, stockConfig = null) {
+  const opBounds = resolveSafeBounds(opSafeBounds);
+  const strategy = op.badgeClass;
+
+  if (strategy === 'face') {
+    return generateFacingToolpath(opBounds, assignedTool, {
+      stepoverPct: op.stepoverPct || 65,
+      faceAllowance: stockConfig?.allowanceTop ?? 2.0,
+      depthOfCut: op.stepdown || 1.0,
+      rapidHeight: op.rapidHeight || 15.0
+    });
+  }
+  if (strategy === 'pocket' || strategy === 'surface_pocket') {
+    return generateSurfacePocketToolpath(opBounds, assignedTool, buildPocketParamsFromOp(op), effectiveModel);
+  }
+  if (strategy === 'circlemill') {
+    return generateCircleMillToolpath(opBounds, assignedTool, {
+      diameter: op.diameter || (op.chain?.radius ? op.chain.radius * 2 : 50.8),
+      totalDepth: op.totalDepth || 5.0,
+      stepdown: op.stepdown || 1.0,
+      rapidHeight: op.rapidHeight || 15.0,
+      chain: op.chain,
+      center: op.center || op.chain?.center
+    });
+  }
+  if (strategy === 'contour' || strategy === 'waterline') {
+    return generateWaterlineToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
+  }
+  if (strategy === 'swarf') {
+    return generateSwarfToolpath(opBounds, assignedTool, {
+      tiltAngleDeg: 15.0,
+      passes: op.passes || 3
+    }, effectiveModel);
+  }
+  if (strategy === 'drill') {
+    return generateDrillingToolpath(opBounds, assignedTool, {
+      drillDepth: op.totalDepth || 25.0,
+      peckDepth: op.stepdown || 5.0,
+      rapidHeight: op.rapidHeight || 10.0
+    }, effectiveModel);
+  }
+  if (strategy === 'spotdrill') {
+    return generateSpotDrillToolpath(opBounds, assignedTool, {
+      spotDepth: op.stepdown || op.totalDepth || 3.8,
+      rapidHeight: op.rapidHeight || 10.0
+    }, effectiveModel);
+  }
+  if (strategy === 'adaptive' || strategy === 'dynamic') {
+    return generateAdaptiveRoughingToolpath(opBounds, assignedTool, {
+      stepoverPct: op.stepoverPct || 25,
+      stepdown: op.stepdown || 6.0,
+      totalDepth: op.totalDepth || 18.0,
+      rapidHeight: op.rapidHeight || 15.0
+    });
+  }
+  if (strategy === 'chamfer') {
+    return generateChamferToolpath(opBounds, assignedTool, {
+      chamferWidth: op.chamferWidth || op.stepdown || 0.508,
+      tipOffset: op.tipOffset || 1.27,
+      rapidHeight: op.rapidHeight || 15.0
+    }, effectiveModel);
+  }
+  if (strategy === 'tap') {
+    return generateTapToolpath(opBounds, assignedTool, {
+      pitch: op.pitch || 0.79375,
+      totalDepth: op.totalDepth || 12.19,
+      rapidHeight: op.rapidHeight || 10.0
+    }, effectiveModel);
+  }
+  if (strategy === 'parallel' || strategy === 'surface') {
+    return generateSurfaceParallelToolpath(opBounds, assignedTool, {
+      stepoverPct: op.stepoverPct || 20,
+      rapidHeight: op.rapidHeight || 15.0
+    }, effectiveModel);
+  }
+  if (strategy === 'rest' || strategy === 'rest_milling') {
+    return generateRestMillingToolpath(opBounds, assignedTool, {
+      refToolDiameter: op.refToolDiameter || 12.0,
+      stepdown: op.stepdown || 2.5,
+      totalDepth: op.totalDepth || 15.0,
+      stepoverPct: op.stepoverPct || 30,
+      rapidHeight: op.rapidHeight || 15.0
+    }, effectiveModel);
+  }
+  if (strategy === 'pencil') {
+    return generatePencilTracingToolpath(opBounds, assignedTool, {
+      totalDepth: op.totalDepth || 15.0,
+      stepdown: op.stepdown || 1.0,
+      biTangencyRadius: op.biTangencyRadius || 3.0,
+      rapidHeight: op.rapidHeight || 15.0
+    }, effectiveModel);
+  }
+  if (strategy === 'probe') {
+    const pCenter = op.center || {
+      x: (opBounds.min.x + opBounds.max.x) / 2,
+      y: opBounds.max.y,
+      z: (opBounds.min.z + opBounds.max.z) / 2
+    };
+    return generateProbingToolpath(op.strategyKey || 'bore_centering', pCenter, op.probingParams || {});
+  }
+  return null;
+}
+
+/**
+ * Links cutting passes into an exact chronological CNC motion sequence
+ * (clearance entry -> feed plane -> plunge -> cut -> retract -> rapid XY -> next pass -> final retract),
+ * matching the posted NC block order so simulation and G-code stay synchronized.
+ */
+export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds, tool = {}, options = {}) {
+  const { rapidFeed = 5000, prevRawPos = null } = options;
+  const safeBounds = resolveSafeBounds(opSafeBounds);
+  const topY = safeBounds.max.y;
+  const isProbeOp = op.badgeClass === 'probe';
+  const opRpm = isProbeOp ? 0 : (Number(op.spindleSpeed) || op.spindleRpm || tool.rpm || 8000);
+  const effFeed = isProbeOp ? 150 : (Number(op.feedRate) > 0 ? Math.round(Number(op.feedRate)) : (tool.feedRate || 1500));
+  const effPlunge = isProbeOp ? 150 : (Number(op.plungeFeedRate) > 0 ? Math.round(Number(op.plungeFeedRate)) : (tool.plungeRate || 450));
+
+  // Probing already emits an exact ordered waypoint sequence including protected moves
+  if (isProbeOp && Array.isArray(toolpathData?.waypoints) && toolpathData.waypoints.length >= 2) {
+    const wps = toolpathData.waypoints;
+    const segments = [];
+    for (let i = 1; i < wps.length; i++) {
+      const p1 = wps[i - 1].pos.clone();
+      const p2 = wps[i].pos.clone();
+      const isRapid = wps[i].mode === 'rapid';
+      segments.push({
+        p1,
+        p2,
+        kind: isRapid ? 'rapid' : 'cut',
+        isRapid,
+        feedRate: isRapid ? rapidFeed : effFeed,
+        rpm: 0
+      });
+    }
+    return {
+      segments,
+      finalPos: segments.length > 0 ? segments[segments.length - 1].p2.clone() : (prevRawPos ? prevRawPos.clone() : null)
+    };
+  }
+
+  const cuttingLines = toolpathData?.cuttingLines || [];
+  const rapidLines = toolpathData?.rapidLines || [];
+  if (cuttingLines.length === 0) {
+    const segments = rapidLines.map(([a, b]) => ({
+      p1: a.clone(),
+      p2: b.clone(),
+      kind: 'rapid',
+      isRapid: true,
+      feedRate: rapidFeed,
+      rpm: opRpm
+    }));
+    return {
+      segments,
+      finalPos: segments.length > 0 ? segments[segments.length - 1].p2.clone() : (prevRawPos ? prevRawPos.clone() : null)
+    };
+  }
+
+  const clearanceY = topY + (Number(op.rapidHeight) || 15.0);
+  const retractRel = Number(op.retractHeight) || 5.0;
+  const retractY = Math.min(clearanceY, topY + retractRel);
+  const topStockLocal = Number(op.topOfStock) || 0;
+  const feedPlaneVal = Number(op.feedPlane) || 2.5;
+  const feedPlaneAbsY = topY + (op.feedPlaneMode === 'absolute' ? feedPlaneVal : topStockLocal + feedPlaneVal);
+
+  const segments = [];
+  const firstEntry = cuttingLines[0][0].clone();
+  let curPos = prevRawPos
+    ? prevRawPos.clone()
+    : new THREE.Vector3(firstEntry.x, clearanceY, firstEntry.z);
+
+  const pushMove = (toPt, kind, feedRate) => {
+    const target = toPt.clone();
+    if (curPos.distanceTo(target) > 1e-4) {
+      segments.push({
+        p1: curPos.clone(),
+        p2: target.clone(),
+        kind,
+        isRapid: kind === 'rapid',
+        feedRate,
+        rpm: opRpm
+      });
+      curPos = target;
+    }
+  };
+
+  const appendLinkTo = (targetPt, useClearance) => {
+    const safeY = useClearance
+      ? clearanceY
+      : Math.max(retractY, curPos.y + 0.5, targetPt.y + 1.0);
+    const feedY = Math.min(safeY, Math.max(targetPt.y + 0.5, feedPlaneAbsY));
+
+    if (!useClearance && curPos.y < safeY - 0.001) {
+      pushMove(new THREE.Vector3(curPos.x, safeY, curPos.z), 'rapid', rapidFeed);
+    }
+    if (Math.hypot(targetPt.x - curPos.x, targetPt.z - curPos.z) > 0.001) {
+      if (useClearance && curPos.y < safeY - 0.001) {
+        pushMove(new THREE.Vector3(curPos.x, safeY, curPos.z), 'rapid', rapidFeed);
+      }
+      pushMove(new THREE.Vector3(targetPt.x, curPos.y, targetPt.z), 'rapid', rapidFeed);
+    }
+    if (Math.abs(safeY - curPos.y) > 0.001) {
+      pushMove(new THREE.Vector3(targetPt.x, safeY, targetPt.z), 'rapid', rapidFeed);
+    }
+    if (feedY < safeY - 0.05 && feedY > targetPt.y + 0.05) {
+      pushMove(new THREE.Vector3(targetPt.x, feedY, targetPt.z), 'rapid', rapidFeed);
+    }
+    if (targetPt.y < curPos.y - 0.01) {
+      pushMove(targetPt, 'plunge', effPlunge);
+    } else if (Math.abs(targetPt.y - curPos.y) > 0.001) {
+      pushMove(targetPt, 'rapid', rapidFeed);
+    }
+  };
+
+  appendLinkTo(firstEntry, true);
+
+  cuttingLines.forEach(([segStart, segEnd], idx) => {
+    const p1 = segStart.clone();
+    const p2 = segEnd.clone();
+
+    if (curPos.distanceTo(p1) > 0.05) {
+      const xyGap = Math.hypot(p1.x - curPos.x, p1.z - curPos.z);
+      if (xyGap > 0.05) {
+        appendLinkTo(p1, false);
+      } else if (p1.y < curPos.y - 0.05) {
+        pushMove(p1, 'plunge', effPlunge);
+      } else {
+        pushMove(p1, 'rapid', rapidFeed);
+      }
+    }
+
+    let segFeed = effFeed;
+    if (op.feedOptimization) {
+      const rctf = op.feedOptimization.rctfMultiplier || 1.35;
+      const minPct = (op.feedOptimization.minCornerFeedPct || 45) / 100;
+      segFeed = idx % 6 === 0 ? Math.round(effFeed * minPct) : Math.round(effFeed * rctf);
+    }
+    pushMove(p2, 'cut', segFeed);
+  });
+
+  const finalRetractY = Math.max(clearanceY, curPos.y + 1.0);
+  pushMove(new THREE.Vector3(curPos.x, finalRetractY, curPos.z), 'rapid', rapidFeed);
+
+  return { segments, finalPos: curPos.clone() };
+}
+
+/**
  * Compiles toolpath operations into an ordered sequence of continuous 3D waypoints for smooth backplot animation.
  */
-export function compileBackplotTrajectory(operations = [], tools = [], bounds, model = null, targetOpId = null, cadWorldYOffset = 0, customGeometry = []) {
+export function compileBackplotTrajectory(
+  operations = [],
+  tools = [],
+  bounds,
+  model = null,
+  targetOpId = null,
+  cadWorldYOffset = 0,
+  customGeometry = [],
+  stockConfig = null
+) {
   const waypoints = [];
   const validTargetId = (typeof targetOpId === 'number' || (typeof targetOpId === 'string' && targetOpId !== 'all')) ? targetOpId : null;
   const activeOps = (validTargetId && operations.some((op) => String(op.id) === String(validTargetId)))
@@ -1818,7 +2077,7 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
 
   const safeBounds = resolveSafeBounds(bounds);
   let totalDist = 0;
-  let lastPos = new THREE.Vector3(0, safeBounds.max.y + 20, 0);
+  let lastVisualPos = null;
 
   finalOps.forEach((op) => {
     let assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10, rpm: 8000, feedRate: 1500 };
@@ -1828,137 +2087,51 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
     const toCncPos = (threePt) => new THREE.Vector3(threePt.x, -threePt.z, threePt.y - opZOffset);
     const usesCadSpace = !!op.chain || !!op.usesCustomSurfaces || !!(op.driveSurfaceIds?.length) || !model;
     const visualYOffset = (cadWorldYOffset && usesCadSpace) ? cadWorldYOffset : 0;
-    let data = null;
 
-    if (op.badgeClass === 'face') {
-      data = generateFacingToolpath(opSafeBounds, assignedTool, {
-        stepoverPct: op.stepoverPct || 65,
-        faceAllowance: 2.0,
-        depthOfCut: op.stepdown || 1.0,
-        rapidHeight: op.rapidHeight || 15.0
-      });
-    } else if (op.badgeClass === 'pocket' || op.badgeClass === 'surface_pocket') {
-      data = generateSurfacePocketToolpath(opSafeBounds, assignedTool, buildPocketParamsFromOp(op), effectiveModel);
-    } else if (op.badgeClass === 'circlemill') {
-      data = generateCircleMillToolpath(opSafeBounds, assignedTool, {
-        diameter: op.diameter || (op.chain?.radius ? op.chain.radius * 2 : 50.8),
-        totalDepth: op.totalDepth || 5.0,
-        stepdown: op.stepdown || 1.0,
-        rapidHeight: op.rapidHeight || 15.0,
-        chain: op.chain,
-        center: op.center || op.chain?.center
-      });
-    } else if (op.badgeClass === 'contour' || op.badgeClass === 'waterline') {
-      data = generateWaterlineToolpath(opSafeBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
-    } else if (op.badgeClass === 'swarf') {
-      data = generateSwarfToolpath(opSafeBounds, assignedTool, {
-        tiltAngleDeg: 15.0,
-        passes: 3
-      }, effectiveModel);
-    } else if (op.badgeClass === 'drill') {
-      data = generateDrillingToolpath(opSafeBounds, assignedTool, {
-        drillDepth: op.totalDepth || 25.0,
-        peckDepth: op.stepdown || 5.0,
-        rapidHeight: op.rapidHeight || 10.0
-      }, effectiveModel);
-    } else if (op.badgeClass === 'adaptive' || op.badgeClass === 'dynamic') {
-      data = generateAdaptiveRoughingToolpath(opSafeBounds, assignedTool, {
-        stepoverPct: op.stepoverPct || 25,
-        stepdown: op.stepdown || 6.0,
-        totalDepth: op.totalDepth || 18.0,
-        rapidHeight: op.rapidHeight || 15.0
-      });
-    } else if (op.badgeClass === 'chamfer') {
-      data = generateChamferToolpath(opSafeBounds, assignedTool, {
-        chamferWidth: op.stepdown || 1.0,
-        rapidHeight: op.rapidHeight || 15.0
-      });
-    } else if (op.badgeClass === 'parallel' || op.badgeClass === 'surface') {
-      data = generateSurfaceParallelToolpath(opSafeBounds, assignedTool, {
-        stepoverPct: op.stepoverPct || 20,
-        rapidHeight: op.rapidHeight || 15.0
-      }, effectiveModel);
-    } else if (op.badgeClass === 'rest' || op.badgeClass === 'rest_milling') {
-      data = generateRestMillingToolpath(opSafeBounds, assignedTool, {
-        refToolDiameter: op.refToolDiameter || 12.0,
-        stepdown: op.stepdown || 2.5,
-        totalDepth: op.totalDepth || 15.0,
-        stepoverPct: op.stepoverPct || 30,
-        rapidHeight: op.rapidHeight || 15.0
-      }, effectiveModel);
-    } else if (op.badgeClass === 'pencil') {
-      data = generatePencilTracingToolpath(opSafeBounds, assignedTool, {
-        totalDepth: op.totalDepth || 15.0,
-        stepdown: op.stepdown || 1.0,
-        biTangencyRadius: op.biTangencyRadius || 3.0,
-        rapidHeight: op.rapidHeight || 15.0
-      }, effectiveModel);
-    } else if (op.badgeClass === 'probe') {
-      const pCenter = op.center || {
-        x: (opSafeBounds.min.x + opSafeBounds.max.x) / 2,
-        y: opSafeBounds.max.y,
-        z: (opSafeBounds.min.z + opSafeBounds.max.z) / 2
-      };
-      data = generateProbingToolpath(op.strategyKey || 'bore_centering', pCenter, op.probingParams || {});
-      assignedTool = data.probeTool || assignedTool;
-    }
-
+    const data = generateToolpathForOperation(op, opSafeBounds, assignedTool, effectiveModel, stockConfig);
     if (!data) return;
-
-    // Ordered continuous sequence
-    const segments = [];
-    if (data.rapidLines && data.rapidLines.length > 0) {
-      data.rapidLines.forEach((seg) => segments.push({ seg, isRapid: true }));
-    }
-    if (data.cuttingLines && data.cuttingLines.length > 0) {
-      data.cuttingLines.forEach((seg) => segments.push({ seg, isRapid: false }));
+    if (op.badgeClass === 'probe' && data.probeTool) {
+      assignedTool = data.probeTool;
     }
 
-    const isProbeOp = op.badgeClass === 'probe';
-    const opRpm = isProbeOp ? 0 : (Number(op.spindleSpeed) || op.spindleRpm || assignedTool.rpm || 8000);
-    const opFeed = isProbeOp ? 150 : (Number(op.feedRate) || assignedTool.feedRate || 1500);
+    const prevRawPos = lastVisualPos
+      ? new THREE.Vector3(lastVisualPos.x, lastVisualPos.y - visualYOffset, lastVisualPos.z)
+      : null;
 
-    segments.forEach(({ seg, isRapid }) => {
-      const p1Raw = seg[0].clone();
-      const p2Raw = seg[1].clone();
-      const p1 = p1Raw.clone();
-      const p2 = p2Raw.clone();
-      if (visualYOffset) {
-        p1.y += visualYOffset;
-        p2.y += visualYOffset;
+    const { segments } = buildLinkedOperationSegments(data, op, opSafeBounds, assignedTool, {
+      rapidFeed: 5000,
+      prevRawPos
+    });
+
+    if (segments.length === 0) return;
+
+    const pushWaypoint = (rawPt, seg) => {
+      const worldPt = rawPt.clone();
+      if (visualYOffset) worldPt.y += visualYOffset;
+      if (lastVisualPos) {
+        totalDist += lastVisualPos.distanceTo(worldPt);
       }
-
-      const distToP1 = lastPos.distanceTo(p1);
-      if (distToP1 > 0.05) {
-        totalDist += distToP1;
-        waypoints.push({
-          pos: p1,
-          cncPos: toCncPos(p1Raw),
-          isRapid: true,
-          opId: op.id,
-          opName: op.name,
-          tool: assignedTool,
-          feedRate: 5000,
-          spindleRpm: opRpm,
-          cumulativeDist: totalDist
-        });
-      }
-
-      const segDist = p1.distanceTo(p2);
-      totalDist += segDist;
       waypoints.push({
-        pos: p2,
-        cncPos: toCncPos(p2Raw),
-        isRapid,
+        pos: worldPt,
+        cncPos: toCncPos(rawPt),
+        isRapid: seg.isRapid,
+        mode: seg.isRapid ? 'rapid' : 'cut',
+        moveKind: seg.kind,
         opId: op.id,
         opName: op.name,
         tool: assignedTool,
-        feedRate: isRapid ? 5000 : opFeed,
-        spindleRpm: opRpm,
+        feedRate: seg.feedRate,
+        spindleRpm: seg.rpm,
         cumulativeDist: totalDist
       });
+      lastVisualPos = worldPt;
+    };
 
-      lastPos.copy(p2);
+    if (!lastVisualPos) {
+      pushWaypoint(segments[0].p1, { isRapid: true, kind: 'rapid', feedRate: 5000, rpm: segments[0].rpm });
+    }
+    segments.forEach((seg) => {
+      pushWaypoint(seg.p2, seg);
     });
   });
 

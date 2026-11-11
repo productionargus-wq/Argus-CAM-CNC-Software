@@ -4259,16 +4259,36 @@ export default function App() {
     if (surfs.length === 0) return;
     const box = new THREE.Box3();
     surfs.forEach((s) => {
-      s.updateMatrixWorld?.(true);
-      box.expandByObject(s);
+      // Measure unparented local CAD bounds so customGeoGroup's +49 world Y offset doesn't leak in on subsequent extrudes
+      const localClone = s.clone(true);
+      localClone.updateMatrixWorld(true);
+      box.expandByObject(localClone);
     });
     if (!box.isEmpty()) {
+      const dims = box.getSize(new THREE.Vector3());
       setPartMetrics({
         box,
         bounds: box,
         center: box.getCenter(new THREE.Vector3()),
-        dimensions: box.getSize(new THREE.Vector3()),
+        dimensions: dims,
         triangles: 0
+      });
+      setStockConfig((prev) => {
+        const allowSides = Number(prev?.allowanceSides ?? 4);
+        const allowTop = Number(prev?.allowanceTop ?? 2);
+        return {
+          ...prev,
+          dimensions: {
+            x: Number(dims.x.toFixed(2)),
+            y: Number(dims.y.toFixed(2)),
+            z: Number(dims.z.toFixed(2))
+          },
+          rawDimensions: {
+            x: Number((dims.x + allowSides * 2).toFixed(2)),
+            y: Number((dims.y + allowTop).toFixed(2)),
+            z: Number((dims.z + allowSides * 2).toFixed(2))
+          }
+        };
       });
     }
   };
@@ -5202,6 +5222,8 @@ export default function App() {
         activeOpId={activeOpId}
         stockConfig={stockConfig}
         partMetrics={partMetrics}
+        currentModel={currentModel}
+        customGeometry={customGeometry}
       />
 
       {/* CNC Workholding, Clamping & Fixture Setup Studio (5-Axis Vises & Toe Clamps) */}

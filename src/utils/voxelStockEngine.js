@@ -189,7 +189,7 @@ export class VoxelStockSimulator {
       const p2 = waypoints[i];
       activeWp = p2;
 
-      if (p2.mode === 'rapid') continue; // G00 rapid clearance does not cut
+      if (p2.isRapid || p2.mode === 'rapid') continue; // G00 rapid clearance does not cut
 
       const tool = p2.tool || tools.find((t) => t.id === p2.toolId) || { diameter: 10, type: 'FLAT' };
       const toolIdx = (tools.findIndex((t) => t.id === tool.id) % TOOL_PALETTE.length) + 1;
@@ -198,7 +198,7 @@ export class VoxelStockSimulator {
     }
 
     const dist = waypoints[Math.max(0, targetIdx - 1)]?.pos?.distanceTo(activeWp?.pos || waypoints[0].pos) || 1;
-    const feed = activeWp?.tool?.feedRate || 1500;
+    const feed = activeWp?.feedRate || activeWp?.tool?.feedRate || 1500;
     const dtMin = Math.max(0.0001, dist / feed);
     const instantaneousMRR = (lastRemovedStep / dtMin); // cm3/min
 

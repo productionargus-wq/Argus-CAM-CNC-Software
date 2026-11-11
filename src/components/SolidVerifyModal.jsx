@@ -20,7 +20,9 @@ export default function SolidVerifyModal({
   tools = [],
   activeOpId = null,
   stockConfig = null,
-  partMetrics = null
+  partMetrics = null,
+  currentModel = null,
+  customGeometry = []
 }) {
   const dialogRef = useRef(null);
   const mountRef = useRef(null);
@@ -59,8 +61,8 @@ export default function SolidVerifyModal({
   const stockBounds = useMemo(() => {
     const b = partMetrics?.box || partMetrics?.bounds;
     if (b && b.min && b.max) {
-      const allowanceSides = stockConfig?.allowanceSides || 4.0;
-      const allowanceTop = stockConfig?.allowanceTop || 2.0;
+      const allowanceSides = Number(stockConfig?.allowanceSides ?? 4.0);
+      const allowanceTop = Number(stockConfig?.allowanceTop ?? 2.0);
       return new THREE.Box3(
         new THREE.Vector3(b.min.x - allowanceSides, b.min.y, b.min.z - allowanceSides),
         new THREE.Vector3(b.max.x + allowanceSides, b.max.y + allowanceTop, b.max.z + allowanceSides)
@@ -72,8 +74,8 @@ export default function SolidVerifyModal({
   // Compile full trajectory waypoints across operations
   const trajectory = useMemo(() => {
     if (!stockBounds) return { waypoints: [], totalDistance: 0, totalDurationSec: 0 };
-    return compileBackplotTrajectory(operations, tools, stockBounds);
-  }, [operations, tools, stockBounds]);
+    return compileBackplotTrajectory(operations, tools, stockBounds, currentModel, null, 0, customGeometry, stockConfig);
+  }, [operations, tools, stockBounds, currentModel, customGeometry, stockConfig]);
 
   // Initialize Voxel Simulator
   const simulator = useMemo(() => {

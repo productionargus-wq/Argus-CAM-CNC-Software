@@ -163,41 +163,79 @@ export function buildDeviationHeatmapStock({
     }
   }
 
-  // 2. Carve stock height using swept toolpath passes up to progress T
+  // 2. Carve stock height using swept toolpath cutting segments up to progress T
   const maxWpIdx = Math.max(0, Math.min(waypoints.length - 1, Math.floor(progress * (waypoints.length - 1))));
-  const activeWaypoints = waypoints.slice(0, maxWpIdx + 1);
-
-  for (let i = 0; i < activeWaypoints.length; i++) {
-    const wp = activeWaypoints[i];
-    if (wp.mode === 'rapid') continue; // G00 rapid clearance does not cut
-
-    const toolRadius = (wp.tool?.diameter || 10) / 2;
-    const cutY = wp.pos.y;
-
-    // Bounding grid range for this tool position
-    const minGridX = Math.max(0, Math.floor((wp.pos.x - toolRadius - minX) / dx));
-    const maxGridX = Math.min(gridResX - 1, Math.ceil((wp.pos.x + toolRadius - minX) / dx));
-    const minGridZ = Math.max(0, Math.floor((wp.pos.z - toolRadius - minZ) / dz));
-    const maxGridZ = Math.min(gridResZ - 1, Math.ceil((wp.pos.z + toolRadius - minZ) / dz));
-
+  const stampCutterAt = (px, py, pz, toolRadius) => {
+    const minGridX = Math.max(0, Math.floor((px - toolRadius - minX) / dx));
+    const maxGridX = Math.min(gridResX - 1, Math.ceil((px + toolRadius - minX) / dx));
+    const minGridZ = Math.max(0, Math.floor((pz - toolRadius - minZ) / dz));
+    const maxGridZ = Math.min(gridResZ - 1, Math.ceil((pz + toolRadius - minZ) / dz));
     const rSq = toolRadius * toolRadius;
 
     for (let gx = minGridX; gx <= maxGridX; gx++) {
-      const px = minX + gx * dx;
-      const distX = px - wp.pos.x;
+      const distX = (minX + gx * dx) - px;
       const distXsq = distX * distX;
-
       for (let gz = minGridZ; gz <= maxGridZ; gz++) {
-        const pz = minZ + gz * dz;
-        const distZ = pz - wp.pos.z;
-        if (distXsq + distZ * distZ <= rSq) {
-          if (cutY < heightGrid[gx][gz]) {
-            heightGrid[gx][gz] = Math.max(bottomY, cutY);
-          }
+        const distZ = (minZ + gz * dz) - pz;
+        if (distXsq + distZ * distZ <= rSq && py < heightGrid[gx][gz]) {
+          heightGrid[gx][gz] = Math.max(bottomY, py);
         }
       }
     }
+  };
+
+  for (let i = 1; i <= maxWpIdx; i++) {
+    const prevWp = waypoints[i - 1];
+    const wp = waypoints[i];
+    if (wp.isRapid || wp.mode === 'rapid') continue; // G00 rapid clearance does not cut
+
+    const toolRadius = (wp.tool?.diameter || 10) / 2;
+    const segLen = prevWp.pos.distanceTo(wp.pos);
+    const steps = Math.max(1, Math.ceil(segLen / Math.max(0.8, toolRadius * 0.4)));
+    for (let s = 0; s <= steps; s++) {
+      const u = s / steps;
+      stampCutterAt(
+        prevWp.pos.x + (wp.pos.x - prevWp.pos.x) * u,
+        prevWp.pos.y + (wp.pos.y - prevWp.pos.y) * u,
+        prevWp.pos.z + (wp.pos.z - prevWp.pos.z) * u,
+        toolRadius
+      );
+    }
   }
+
+  // Precompute XZ bounding boxes for fast vertical surface height lookup
+  const indexedTris = triangles.map((tri) => ({
+    ...tri,
+    minX: Math.min(tri.a.x, tri.b.x, tri.c.x),
+    maxX: Math.max(tri.a.x, tri.b.x, tri.c.x),
+    minZ: Math.min(tri.a.z, tri.b.z, tri.c.z),
+    maxZ: Math.max(tri.a.z, tri.b.z, tri.c.z)
+  }));
+
+  const findPartTopYAtXZ = (px, pz) => {
+    let highestY = null;
+    for (let t = 0; t < indexedTris.length; t++) {
+      const tri = indexedTris[t];
+      if (px < tri.minX || px > tri.maxX || pz < tri.minZ || pz > tri.maxZ) continue;
+      const v0x = tri.b.x - tri.a.x;
+      const v0z = tri.b.z - tri.a.z;
+      const v1x = tri.c.x - tri.a.x;
+      const v1z = tri.c.z - tri.a.z;
+      const denom = v0x * v1z - v1x * v0z;
+      if (Math.abs(denom) < 1e-6) continue;
+      const qx = px - tri.a.x;
+      const qz = pz - tri.a.z;
+      const u = (qx * v1z - v1x * qz) / denom;
+      const v = (v0x * qz - qx * v0z) / denom;
+      if (u >= -1e-4 && v >= -1e-4 && u + v <= 1.0001) {
+        const yHit = tri.a.y + u * (tri.b.y - tri.a.y) + v * (tri.c.y - tri.a.y);
+        if (highestY === null || yHit > highestY) {
+          highestY = yHit;
+        }
+      }
+    }
+    return highestY;
+  };
 
   // 3. Generate Triangulated Surface and Calculate Signed Distance Deviation
   const positions = [];
@@ -216,32 +254,32 @@ export function buildDeviationHeatmapStock({
   function evaluateDeviation(px, py, pz) {
     tempPt.set(px, py, pz);
 
-    // If still at untouched raw stock top -> pure excess stock
-    if (Math.abs(py - rawTopY) < 0.001) {
-      countExcess++;
-      return COLOR_EXCESS_STOCK;
-    }
-
-    // Find nearest distance to finished CAD model triangles
-    let minDist = Infinity;
-    if (triangles.length > 0) {
-      for (let t = 0; t < triangles.length; t++) {
-        const tri = triangles[t];
-        // Quick bounding distance check
-        if (tempPt.distanceToSquared(tri.center) < minDist * minDist + 400) {
-          const d = distToTriangle(tempPt, tri.a, tri.b, tri.c);
-          if (d < minDist) minDist = d;
+    let signedDev = 0;
+    if (indexedTris.length > 0) {
+      const partTopY = findPartTopYAtXZ(px, pz);
+      if (partTopY !== null) {
+        signedDev = py - partTopY;
+      } else if (Math.abs(py - bottomY) <= tolerance) {
+        signedDev = 0;
+      } else {
+        // Exterior floor or uncut stock away from finished CAD silhouette
+        let minDist = Infinity;
+        for (let t = 0; t < indexedTris.length; t++) {
+          const tri = indexedTris[t];
+          if (tempPt.distanceToSquared(tri.center) < minDist * minDist + 400) {
+            const d = distToTriangle(tempPt, tri.a, tri.b, tri.c);
+            if (d < minDist) minDist = d;
+          }
         }
+        signedDev = py < bottomY - tolerance ? -(bottomY - py) : Math.max(0, Math.min(py - bottomY, minDist));
       }
     } else {
-      // Nominal part boundary approximation
-      minDist = Math.abs(py - (rawTopY - 15));
+      if (Math.abs(py - rawTopY) < 0.001) {
+        countExcess++;
+        return COLOR_EXCESS_STOCK;
+      }
+      signedDev = py < bottomY - tolerance ? -(bottomY - py) : Math.max(0, py - bottomY);
     }
-
-    // Determine signed deviation (negative = gouge, positive = excess stock)
-    // Check if point is inside CAD model boundary
-    const isGouge = py < bottomY + 2.0; // severe drop
-    const signedDev = isGouge ? -minDist : minDist;
 
     if (signedDev < -tolerance) {
       countGouge++;

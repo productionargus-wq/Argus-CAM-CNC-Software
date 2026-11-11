@@ -912,7 +912,7 @@ export default function OperationsTree({
                       title="Stock setup bounding box"
                     >
                       <span>📦</span>
-                      <span>Stock setup - [{stockConfig?.dimensions?.x || 120} × {stockConfig?.dimensions?.y || 80} × {stockConfig?.dimensions?.z || 25} mm]</span>
+                      <span>Stock setup - [{stockConfig?.rawDimensions?.x || stockConfig?.dimensions?.x || 120} × {stockConfig?.rawDimensions?.y || stockConfig?.dimensions?.y || 80} × {stockConfig?.rawDimensions?.z || stockConfig?.dimensions?.z || 25} mm]</span>
                     </div>
                   </div>
                 )}
