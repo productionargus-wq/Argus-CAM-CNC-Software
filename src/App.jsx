@@ -346,6 +346,8 @@ export default function App() {
   const [isCustomPostModalOpen, setIsCustomPostModalOpen] = useState(false);
   const [isAnomalyScannerOpen, setIsAnomalyScannerOpen] = useState(false);
   const [isDefineToolModalOpen, setIsDefineToolModalOpen] = useState(false);
+  const [editingDefinedTool, setEditingDefinedTool] = useState(null);
+  const [lastDefinedToolState, setLastDefinedToolState] = useState({ seq: 0, tool: null });
   const [isSurfaceFinishContourOpen, setIsSurfaceFinishContourOpen] = useState(false);
   const [surfaceFinishStrategyMode, setSurfaceFinishStrategyMode] = useState('contour');
   const [editingSurfaceFinishOp, setEditingSurfaceFinishOp] = useState(null);
@@ -2802,7 +2804,14 @@ export default function App() {
 
   const handleAddDefinedTool = (newTool) => {
     setTools((prev) => [...prev, newTool]);
+    setLastDefinedToolState((prev) => ({ seq: prev.seq + 1, tool: newTool }));
     showToast(`Created Tool: ${newTool.name} (T${newTool.number})`, 'success');
+  };
+
+  const handleUpdateDefinedTool = (updatedTool) => {
+    setTools((prev) => prev.map((t) => (String(t.id) === String(updatedTool.id) ? { ...t, ...updatedTool } : t)));
+    setLastDefinedToolState((prev) => ({ seq: prev.seq + 1, tool: updatedTool }));
+    showToast(`Updated Tool: ${updatedTool.name} (T${updatedTool.number})`, 'success');
   };
 
   const openSurfaceFinishModal = (mode = 'contour', opToEdit = null) => {
@@ -6280,15 +6289,7 @@ export default function App() {
         onClose={() => setIsHelpGuideOpen(false)}
       />
 
-      {/* 16. Mastercam Define Tool Creation Wizard Modal */}
-      <DefineToolModal
-        isOpen={isDefineToolModalOpen}
-        onClose={() => setIsDefineToolModalOpen(false)}
-        onAddTool={handleAddDefinedTool}
-        onNotify={showToast}
-      />
-
-      {/* 17. Mastercam Surface Finish Contour & Pocket Parameters Modal */}
+      {/* 16. Mastercam Surface Finish Contour & Pocket Parameters Modal */}
       <SurfaceFinishContourModal
         isOpen={isSurfaceFinishContourOpen}
         onClose={() => {
@@ -6299,15 +6300,37 @@ export default function App() {
         strategyMode={surfaceFinishStrategyMode}
         tools={tools}
         customGeometry={customGeometry}
+        activeMachine={activeMachine}
+        stockConfig={stockConfig}
+        lastDefinedTool={lastDefinedToolState}
         onSaveOperation={(op) => {
           handleApplySurfaceFinishContour(op);
           setIsSurfaceFinishContourOpen(false);
         }}
         onOpenDefineToolModal={() => {
-          setIsSurfaceFinishContourOpen(false);
+          setEditingDefinedTool(null);
+          setIsDefineToolModalOpen(true);
+        }}
+        onEditTool={(toolToEdit) => {
+          setEditingDefinedTool(toolToEdit);
           setIsDefineToolModalOpen(true);
         }}
         onNotify={showToast}
+      />
+
+      {/* 17. Mastercam Define Tool Creation Wizard Modal (stacks cleanly over Surface Finish modals) */}
+      <DefineToolModal
+        isOpen={isDefineToolModalOpen}
+        onClose={() => {
+          setIsDefineToolModalOpen(false);
+          setEditingDefinedTool(null);
+        }}
+        initialTool={editingDefinedTool}
+        activeMachine={activeMachine}
+        onAddTool={handleAddDefinedTool}
+        onUpdateTool={handleUpdateDefinedTool}
+        onNotify={showToast}
+        zIndex={100005}
       />
 
       {/* 18. Mastercam Command Finder Search Dialog */}
