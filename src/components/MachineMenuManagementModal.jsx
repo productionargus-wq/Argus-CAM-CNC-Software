@@ -170,13 +170,16 @@ function MachineMenuManagementDialog({
       className="mcam-dialog-reset"
       style={{
         padding: 0,
+        margin: 'auto',
+        boxSizing: 'border-box',
         border: `1px solid ${isLight ? '#94a3b8' : '#475569'}`,
         borderRadius: '4px',
         background: isLight ? '#f1f5f9' : '#1e293b',
         color: isLight ? '#0f172a' : '#f1f5f9',
-        width: 'min(740px, 94vw)',
+        width: 'min(760px, 90vw)',
+        maxWidth: '90vw',
         boxShadow: '0 18px 48px rgba(0, 0, 0, 0.35)',
-        overflow: 'visible'
+        overflow: 'hidden'
       }}
     >
       {/* Classic Mastercam Titlebar */}
@@ -333,19 +336,22 @@ function MachineMenuManagementDialog({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 86px 1fr 34px',
+            gridTemplateColumns: 'minmax(0, 1fr) 82px minmax(0, 1fr) 32px',
             gap: '10px',
-            alignItems: 'center'
+            alignItems: 'center',
+            width: '100%'
           }}
         >
           {/* Left Box: Directory Available Machine Definitions */}
-          <div>
-            <div style={{ fontSize: '11.5px', fontWeight: 500, marginBottom: '4px', height: '16px', color: isLight ? '#475569' : '#94a3b8' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '11.5px', fontWeight: 500, marginBottom: '4px', height: '16px', color: isLight ? '#475569' : '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Available Definitions ({availableInCategory.length}):
             </div>
             <div
               data-testid="machine-available-list"
               style={{
+                width: '100%',
+                boxSizing: 'border-box',
                 height: '295px',
                 overflowY: 'auto',
                 overflowX: 'auto',
@@ -388,7 +394,7 @@ function MachineMenuManagementDialog({
           </div>
 
           {/* Center Add / Remove Buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', paddingTop: '20px' }}>
             <button
               type="button"
               onClick={handleAddSelected}
@@ -430,13 +436,15 @@ function MachineMenuManagementDialog({
           </div>
 
           {/* Right Box: Machine Definition Menu Items */}
-          <div>
-            <div style={{ fontSize: '11.5px', fontWeight: 500, marginBottom: '4px', height: '16px' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '11.5px', fontWeight: 500, marginBottom: '4px', height: '16px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               Machine Definition Menu Items:
             </div>
             <div
               data-testid="machine-menu-items-list"
               style={{
+                width: '100%',
+                boxSizing: 'border-box',
                 height: '295px',
                 overflowY: 'auto',
                 overflowX: 'auto',
@@ -481,7 +489,7 @@ function MachineMenuManagementDialog({
           </div>
 
           {/* Far Right Up / Down Reorder Arrows */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', paddingTop: '20px' }}>
             <button
               type="button"
               onClick={handleMoveUp}
