@@ -188,6 +188,19 @@ export function computeDriveModelBounds(driveModel, fallbackBounds = null) {
 }
 
 /**
+ * Resolves consistent operation bounds matching the active drive model when present,
+ * preventing Z-datum drift between toolpath generation, backplot, and G-code post.
+ */
+export function resolveOperationDriveBounds(effectiveModel, op = null, fallbackBounds = null) {
+  const opBounds = op?.bounds ? resolveSafeBounds(op.bounds) : null;
+  const baseBounds = opBounds || resolveSafeBounds(fallbackBounds);
+  if (effectiveModel) {
+    return computeDriveModelBounds(effectiveModel, baseBounds);
+  }
+  return baseBounds;
+}
+
+/**
  * Offsets a closed 3D loop in the XZ horizontal plane (Y preserved) by signedOffset
  * (> 0 outward, < 0 inward) using shared miter-clamped 2D contour offsetting.
  */
@@ -1810,9 +1823,9 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
   finalOps.forEach((op) => {
     let assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10, rpm: 8000, feedRate: 1500 };
     const effectiveModel = buildEffectiveDriveModel(model, customGeometry, op);
-    const opSafeBounds = (op.usesCustomSurfaces && effectiveModel)
-      ? computeDriveModelBounds(effectiveModel, op.bounds || safeBounds)
-      : (op.bounds ? resolveSafeBounds(op.bounds) : safeBounds);
+    const opSafeBounds = resolveOperationDriveBounds(effectiveModel, op, safeBounds);
+    const opZOffset = opSafeBounds.max.y;
+    const toCncPos = (threePt) => new THREE.Vector3(threePt.x, -threePt.z, threePt.y - opZOffset);
     const usesCadSpace = !!op.chain || !!op.usesCustomSurfaces || !!(op.driveSurfaceIds?.length) || !model;
     const visualYOffset = (cadWorldYOffset && usesCadSpace) ? cadWorldYOffset : 0;
     let data = null;
@@ -1906,8 +1919,10 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
     const opFeed = isProbeOp ? 150 : (Number(op.feedRate) || assignedTool.feedRate || 1500);
 
     segments.forEach(({ seg, isRapid }) => {
-      const p1 = seg[0].clone();
-      const p2 = seg[1].clone();
+      const p1Raw = seg[0].clone();
+      const p2Raw = seg[1].clone();
+      const p1 = p1Raw.clone();
+      const p2 = p2Raw.clone();
       if (visualYOffset) {
         p1.y += visualYOffset;
         p2.y += visualYOffset;
@@ -1918,6 +1933,7 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
         totalDist += distToP1;
         waypoints.push({
           pos: p1,
+          cncPos: toCncPos(p1Raw),
           isRapid: true,
           opId: op.id,
           opName: op.name,
@@ -1932,6 +1948,7 @@ export function compileBackplotTrajectory(operations = [], tools = [], bounds, m
       totalDist += segDist;
       waypoints.push({
         pos: p2,
+        cncPos: toCncPos(p2Raw),
         isRapid,
         opId: op.id,
         opName: op.name,
@@ -1959,6 +1976,7 @@ export function sampleTrajectoryAtT(waypoints, t) {
   if (!waypoints || waypoints.length === 0) {
     return {
       currentPos: new THREE.Vector3(0, 50, 0),
+      currentCncPos: new THREE.Vector3(0, 0, 0),
       activeWaypoint: null,
       heading: new THREE.Vector3(1, 0, 0),
       traversedPoints: [],
@@ -1984,6 +2002,9 @@ export function sampleTrajectoryAtT(waypoints, t) {
   const u = Math.max(0, Math.min(1, (targetDist - distA) / segLen));
 
   const currentPos = new THREE.Vector3().lerpVectors(wpA.pos, wpB.pos, u);
+  const currentCncPos = (wpA.cncPos && wpB.cncPos)
+    ? new THREE.Vector3().lerpVectors(wpA.cncPos, wpB.cncPos, u)
+    : new THREE.Vector3(currentPos.x, -currentPos.z, currentPos.y);
   const heading = new THREE.Vector3().subVectors(wpB.pos, wpA.pos).normalize();
   if (heading.lengthSq() < 0.001) heading.set(1, 0, 0);
 
@@ -1995,6 +2016,7 @@ export function sampleTrajectoryAtT(waypoints, t) {
 
   return {
     currentPos,
+    currentCncPos,
     activeWaypoint: wpB,
     heading,
     traversedPoints,

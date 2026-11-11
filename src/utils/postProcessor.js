@@ -14,7 +14,7 @@ import {
   buildContourParamsFromOp,
   buildPocketParamsFromOp,
   buildEffectiveDriveModel,
-  computeDriveModelBounds
+  resolveOperationDriveBounds
 } from './toolpathEngine.js';
 import { generateProbingGCode } from './probingEngine.js';
 
@@ -136,9 +136,7 @@ export function generateNCProgram({
     };
 
     const effectiveModel = buildEffectiveDriveModel(model, customGeometry, op);
-    const effectiveBounds = (op.usesCustomSurfaces && effectiveModel)
-      ? computeDriveModelBounds(effectiveModel, op.bounds || bounds)
-      : (op.bounds || bounds);
+    const effectiveBounds = resolveOperationDriveBounds(effectiveModel, op, bounds);
 
     // Calculate trajectory data
     let toolpathData;
@@ -312,11 +310,15 @@ export function generateNCProgram({
       }
     };
 
+    let lastPos = null;
     const emitLinkToPoint = (targetThreePt, useClearance) => {
       const targetX = targetThreePt.x;
       const targetY = toCncY(targetThreePt.z);
       const targetZ = toCncZ(targetThreePt.y);
-      const safeZ = useClearance ? clearanceZ : Math.max(retractZ, targetZ + 1.0);
+      const lastCncZ = lastPos ? toCncZ(lastPos.y) : targetZ;
+      const safeZ = useClearance
+        ? clearanceZ
+        : Math.max(retractZ, lastCncZ + 0.5, targetZ + 1.0);
       const feedZ = op.feedPlaneMode === 'absolute'
         ? Math.min(safeZ, Math.max(targetZ + 0.5, feedPlaneVal))
         : Math.min(safeZ, Math.max(targetZ + 0.5, stockTopCncZ + feedPlaneVal));
@@ -336,7 +338,6 @@ export function generateNCProgram({
       }
     };
 
-    let lastPos = null;
     const entryStart = toolpathData.cuttingLines[0]?.[0] || toolpathData.rapidLines[0]?.[0] || null;
     if (entryStart) {
       emitLinkToPoint(entryStart, true);
@@ -415,7 +416,10 @@ export function generateNCProgram({
     });
 
     // Operation Final Clearance Retract
-    const finalRetractZ = isWcsTop ? fmtNum(clearanceZ) : fmtNum(effectiveBounds.max.y + 40 - zOffset);
+    const lastEndCncZ = lastPos ? toCncZ(lastPos.y) : 0;
+    const finalRetractZ = isWcsTop
+      ? fmtNum(Math.max(clearanceZ, lastEndCncZ + 1.0))
+      : fmtNum(Math.max(effectiveBounds.max.y + 40 - zOffset, lastEndCncZ + 1.0));
     if (useHeidenhain) {
       if (op.badgeClass === 'swarf') {
         lines.push(`${nextN()} FUNCTION RESET TCPM`);

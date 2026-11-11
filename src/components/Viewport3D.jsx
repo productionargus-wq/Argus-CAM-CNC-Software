@@ -40,7 +40,7 @@ import {
   buildContourParamsFromOp,
   buildPocketParamsFromOp,
   buildEffectiveDriveModel,
-  computeDriveModelBounds
+  resolveOperationDriveBounds
 } from '../utils/toolpathEngine';
 import {
   buildCPlaneHelperGroup,
@@ -1562,9 +1562,7 @@ export default function Viewport3D({
     operations.forEach((op) => {
       const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10 };
       const effectiveModel = buildEffectiveDriveModel(currentModel, customGeometry, op);
-      const opBounds = (op.usesCustomSurfaces && effectiveModel)
-        ? computeDriveModelBounds(effectiveModel, op.bounds || bounds)
-        : (toBox3(op.bounds) || bounds);
+      const opBounds = resolveOperationDriveBounds(effectiveModel, op, bounds);
 
       let toolpathData;
       if (op.badgeClass === 'face') {
@@ -1977,7 +1975,9 @@ export default function Viewport3D({
         const topY = currentModel
           ? (partMetrics?.box?.max?.y || 45)
           : ((partMetrics?.box?.max?.y || 0) + 49);
-        const currentDepth = topY - sample.currentPos.y;
+        const currentDepth = sample.currentCncPos
+          ? Math.max(0, -sample.currentCncPos.z)
+          : (topY - sample.currentPos.y);
         const isGouge = currentDepth > cutLen + 2.0;
         setHolderCollisionAlert(isGouge);
 
@@ -2104,6 +2104,7 @@ export default function Viewport3D({
     if (!isBackplotActive || waypointsRef.current.length === 0) {
       return {
         pos: new THREE.Vector3(0, 0, 0),
+        cncPos: new THREE.Vector3(0, 0, 0),
         isRapid: false,
         opName: 'Operation',
         feedRate: 1500,
@@ -2114,6 +2115,7 @@ export default function Viewport3D({
     const sample = sampleTrajectoryAtT(waypointsRef.current, backplotProgress);
     return {
       pos: sample.currentPos,
+      cncPos: sample.currentCncPos || new THREE.Vector3(sample.currentPos.x, -sample.currentPos.z, sample.currentPos.y),
       isRapid: sample.activeWaypoint?.isRapid || false,
       opName: sample.activeWaypoint?.opName || 'Milling Pass',
       feedRate: sample.activeWaypoint?.feedRate || 1500,
@@ -2572,22 +2574,25 @@ export default function Viewport3D({
               </select>
             </div>
 
-            {/* Live Tool Telemetry Readout */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontFamily: 'monospace',
-              fontSize: '10px',
-              color: isLight ? '#0f172a' : '#f8fafc',
-              background: isLight ? '#f1f5f9' : '#090d14',
-              padding: '3px 8px',
-              borderRadius: '4px',
-              border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b'
-            }}>
-              <span>X: <strong style={{ color: '#0f5a9e' }}>{currentSample.pos.x.toFixed(2)}</strong></span>
-              <span>Y: <strong style={{ color: '#10b981' }}>{currentSample.pos.y.toFixed(2)}</strong></span>
-              <span>Z: <strong style={{ color: '#d97706' }}>{currentSample.pos.z.toFixed(2)}</strong></span>
+            {/* Live Tool Telemetry Readout (G54 CNC Coordinates) */}
+            <div
+              title="G54 CNC Coordinates (X, Y, Z)"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontFamily: 'monospace',
+                fontSize: '10px',
+                color: isLight ? '#0f172a' : '#f8fafc',
+                background: isLight ? '#f1f5f9' : '#090d14',
+                padding: '3px 8px',
+                borderRadius: '4px',
+                border: isLight ? '1px solid #cbd5e1' : '1px solid #1e293b'
+              }}
+            >
+              <span>X: <strong style={{ color: '#0f5a9e' }}>{currentSample.cncPos.x.toFixed(2)}</strong></span>
+              <span>Y: <strong style={{ color: '#10b981' }}>{currentSample.cncPos.y.toFixed(2)}</strong></span>
+              <span>Z: <strong style={{ color: '#d97706' }}>{currentSample.cncPos.z.toFixed(2)}</strong></span>
               <span style={{ color: currentSample.isRapid ? '#0f5a9e' : '#10b981', fontWeight: 700 }}>
                 {currentSample.isRapid ? 'G0' : 'G1'}
               </span>
