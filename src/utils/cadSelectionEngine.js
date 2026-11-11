@@ -1,5 +1,8 @@
 import * as THREE from 'three';
-import { extractPointsFromCadEntity } from './cadDrawingEngine.js';
+import {
+  extractPointsFromCadEntity,
+  buildChainFromEntity
+} from './cadDrawingEngine.js';
 
 /**
  * Returns the stable unique key used to identify a custom CAD/CAM entity across renders & undo history.
@@ -43,6 +46,27 @@ export function getCustomEntityCategory(entity) {
   if (entity.isLine) return 'line';
   if (entity.isMesh) return 'surface';
   return 'other';
+}
+
+/**
+ * Checks whether an entity passes the active Solid/Topology filter toggle in the floating pill.
+ */
+export function matchesTopologyFilter(entity, solidFilter = 'all') {
+  if (!entity || !solidFilter || solidFilter === 'all') return true;
+  const cat = getCustomEntityCategory(entity);
+  if (solidFilter === 'wireframe') {
+    return ['line', 'circle', 'rect', 'arc', 'spline', 'point', 'drafting'].includes(cat);
+  }
+  if (solidFilter === 'solid_edge') {
+    return ['line', 'circle', 'rect', 'arc', 'spline', 'surface', 'solid'].includes(cat);
+  }
+  if (solidFilter === 'solid_face') {
+    return cat === 'surface' || cat === 'solid';
+  }
+  if (solidFilter === 'solid_body') {
+    return cat === 'solid' || cat === 'surface';
+  }
+  return true;
 }
 
 /**
@@ -272,15 +296,133 @@ function distToSegment2D(px, py, x1, y1, x2, y2) {
 }
 
 /**
+ * Ray-casting 2D point-in-polygon check.
+ */
+export function pointInPolygon2D(px, py, polyPts = []) {
+  if (!Array.isArray(polyPts) || polyPts.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = polyPts.length - 1; i < polyPts.length; j = i++) {
+    const xi = polyPts[i].x;
+    const yi = polyPts[i].y;
+    const xj = polyPts[j].x;
+    const yj = polyPts[j].y;
+    const intersect = ((yi > py) !== (yj > py))
+      && (px < ((xj - xi) * (py - yi)) / ((yj - yi) || 1e-12) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+/**
+ * 2D segment-segment intersection helper (handles endpoint contact and collinear overlap).
+ */
+export function segmentsIntersect2D(ax, ay, bx, by, cx, cy, dx, dy) {
+  const orient = (px, py, qx, qy, rx, ry) => (qx - px) * (ry - py) - (qy - py) * (rx - px);
+  const onSeg = (px, py, qx, qy, rx, ry) =>
+    Math.min(px, rx) - 1e-6 <= qx && qx <= Math.max(px, rx) + 1e-6 &&
+    Math.min(py, ry) - 1e-6 <= qy && qy <= Math.max(py, ry) + 1e-6;
+
+  const o1 = orient(ax, ay, bx, by, cx, cy);
+  const o2 = orient(ax, ay, bx, by, dx, dy);
+  const o3 = orient(cx, cy, dx, dy, ax, ay);
+  const o4 = orient(cx, cy, dx, dy, bx, by);
+
+  if ((o1 > 1e-8 && o2 < -1e-8 || o1 < -1e-8 && o2 > 1e-8) &&
+      (o3 > 1e-8 && o4 < -1e-8 || o3 < -1e-8 && o4 > 1e-8)) {
+    return true;
+  }
+  if (Math.abs(o1) <= 1e-8 && onSeg(ax, ay, cx, cy, bx, by)) return true;
+  if (Math.abs(o2) <= 1e-8 && onSeg(ax, ay, dx, dy, bx, by)) return true;
+  if (Math.abs(o3) <= 1e-8 && onSeg(cx, cy, ax, ay, dx, dy)) return true;
+  if (Math.abs(o4) <= 1e-8 && onSeg(cx, cy, bx, by, dx, dy)) return true;
+  return false;
+}
+
+function polygonArea2D(polyPts = []) {
+  if (!Array.isArray(polyPts) || polyPts.length < 3) return 0;
+  let sum = 0;
+  for (let i = 0; i < polyPts.length; i++) {
+    const a = polyPts[i];
+    const b = polyPts[(i + 1) % polyPts.length];
+    sum += a.x * b.y - b.x * a.y;
+  }
+  return Math.abs(sum) * 0.5;
+}
+
+function filterSelectableEntities(entities, { mask = 'all', solidFilter = 'all', layerVisibility = null } = {}) {
+  return entities.filter((entity) => {
+    if (!entity || !matchesSelectionMask(entity, mask) || !matchesTopologyFilter(entity, solidFilter)) {
+      return false;
+    }
+    const cat = getCustomEntityCategory(entity);
+    if (layerVisibility) {
+      const isSurf = cat === 'surface' || cat === 'solid';
+      if (isSurf && layerVisibility.surfaces === false) return false;
+      if (!isSurf && layerVisibility.wireframe === false) return false;
+    }
+    return true;
+  });
+}
+
+function evaluateProjectedContainment(entity, camera, width, height, { worldYOffset = 49, containment = 'in_cross', pointInsideFn, segIntersectsRegionFn, segCrossesBorderFn, enclosingSeedPt }) {
+  const { points, segments } = sampleEntityWorldGeometry(entity, worldYOffset);
+  if (points.length === 0) return false;
+
+  const projPts = points.map((p) => projectPointToViewport(p, camera, width, height));
+  const insideList = projPts.map((pt) => pt.visible && pointInsideFn(pt));
+  const allInside = insideList.length > 0 && insideList.every(Boolean);
+  const anyInside = insideList.some(Boolean);
+
+  const checkAnySegment = (fn) =>
+    segments.some(([a, b]) => {
+      const pa = projectPointToViewport(a, camera, width, height);
+      const pb = projectPointToViewport(b, camera, width, height);
+      if (!pa.visible && !pb.visible) return false;
+      return fn(pa, pb);
+    });
+
+  if (containment === 'enclosed' || containment === 'inside') {
+    return allInside && (!segCrossesBorderFn || !checkAnySegment(segCrossesBorderFn));
+  }
+
+  if (containment === 'outside') {
+    return !anyInside && !checkAnySegment(segIntersectsRegionFn);
+  }
+
+  if (containment === 'crossing_strict') {
+    return (segCrossesBorderFn ? checkAnySegment(segCrossesBorderFn) : checkAnySegment(segIntersectsRegionFn)) || (anyInside && !allInside);
+  }
+
+  // 'in_cross' / 'crossing' (default Mastercam C+: inside OR crossing OR encloses seed)
+  if (anyInside || checkAnySegment(segIntersectsRegionFn)) return true;
+
+  const cat = getCustomEntityCategory(entity);
+  if (enclosingSeedPt && (cat === 'surface' || cat === 'solid')) {
+    let sMinX = Infinity, sMaxX = -Infinity, sMinY = Infinity, sMaxY = -Infinity;
+    projPts.forEach((p) => {
+      if (!p.visible) return;
+      if (p.x < sMinX) sMinX = p.x;
+      if (p.x > sMaxX) sMaxX = p.x;
+      if (p.y < sMinY) sMinY = p.y;
+      if (p.y > sMaxY) sMaxY = p.y;
+    });
+    if (enclosingSeedPt.x >= sMinX && enclosingSeedPt.x <= sMaxX && enclosingSeedPt.y >= sMinY && enclosingSeedPt.y <= sMaxY) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Evaluates which CAD entities match a screen-space marquee rectangle.
- * - mode === 'enclosed': Window mode (L -> R drag) — requires every entity vertex inside box.
- * - mode === 'crossing': Crossing mode (R -> L drag) — matches if inside, intersected by box, or encloses box.
+ * Supports containment modes: 'enclosed' | 'inside' | 'in_cross' | 'crossing' | 'crossing_strict' | 'outside'.
  */
 export function hitTestEntitiesInMarquee(entities = [], camera, width, height, marqueeRect, options = {}) {
   const {
     mode = 'enclosed',
     worldYOffset = 49,
     mask = 'all',
+    solidFilter = 'all',
     layerVisibility = null
   } = options;
 
@@ -292,65 +434,237 @@ export function hitTestEntitiesInMarquee(entities = [], camera, width, height, m
     minY: Math.min(marqueeRect.minY, marqueeRect.maxY),
     maxY: Math.max(marqueeRect.minY, marqueeRect.maxY)
   };
-  const rectMidX = (normRect.minX + normRect.maxX) * 0.5;
-  const rectMidY = (normRect.minY + normRect.maxY) * 0.5;
+  const rectMid = {
+    x: (normRect.minX + normRect.maxX) * 0.5,
+    y: (normRect.minY + normRect.maxY) * 0.5
+  };
+  const rectBorders = [
+    [{ x: normRect.minX, y: normRect.minY }, { x: normRect.maxX, y: normRect.minY }],
+    [{ x: normRect.maxX, y: normRect.minY }, { x: normRect.maxX, y: normRect.maxY }],
+    [{ x: normRect.maxX, y: normRect.maxY }, { x: normRect.minX, y: normRect.maxY }],
+    [{ x: normRect.minX, y: normRect.maxY }, { x: normRect.minX, y: normRect.minY }]
+  ];
 
-  const hits = [];
-  entities.forEach((entity) => {
-    if (!entity || !matchesSelectionMask(entity, mask)) return;
-    const cat = getCustomEntityCategory(entity);
-    if (layerVisibility) {
-      const isSurf = cat === 'surface' || cat === 'solid';
-      if (isSurf && layerVisibility.surfaces === false) return;
-      if (!isSurf && layerVisibility.wireframe === false) return;
-    }
+  return filterSelectableEntities(entities, { mask, solidFilter, layerVisibility }).filter((entity) =>
+    evaluateProjectedContainment(entity, camera, width, height, {
+      worldYOffset,
+      containment: mode,
+      pointInsideFn: (pt) => pointInRect2D(pt, normRect),
+      segIntersectsRegionFn: (pa, pb) => segmentIntersectsRect2D(pa.x, pa.y, pb.x, pb.y, normRect),
+      segCrossesBorderFn: (pa, pb) => rectBorders.some(([e1, e2]) => segmentsIntersect2D(pa.x, pa.y, pb.x, pb.y, e1.x, e1.y, e2.x, e2.y)),
+      enclosingSeedPt: rectMid
+    })
+  );
+}
 
+/**
+ * Evaluates which CAD entities match a screen-space Polygon lasso.
+ */
+export function hitTestEntitiesInPolygon(entities = [], camera, width, height, polyPoints = [], options = {}) {
+  const {
+    mode = 'in_cross',
+    worldYOffset = 49,
+    mask = 'all',
+    solidFilter = 'all',
+    layerVisibility = null
+  } = options;
+
+  if (!camera || !Array.isArray(polyPoints) || polyPoints.length < 3 || width <= 0 || height <= 0) {
+    return [];
+  }
+
+  const centroid = polyPoints.reduce(
+    (acc, p) => ({ x: acc.x + p.x / polyPoints.length, y: acc.y + p.y / polyPoints.length }),
+    { x: 0, y: 0 }
+  );
+
+  const polyEdges = polyPoints.map((p, i) => [p, polyPoints[(i + 1) % polyPoints.length]]);
+
+  return filterSelectableEntities(entities, { mask, solidFilter, layerVisibility }).filter((entity) =>
+    evaluateProjectedContainment(entity, camera, width, height, {
+      worldYOffset,
+      containment: mode,
+      pointInsideFn: (pt) => pointInPolygon2D(pt.x, pt.y, polyPoints),
+      segIntersectsRegionFn: (pa, pb) =>
+        pointInPolygon2D(pa.x, pa.y, polyPoints) ||
+        pointInPolygon2D(pb.x, pb.y, polyPoints) ||
+        polyEdges.some(([e1, e2]) => segmentsIntersect2D(pa.x, pa.y, pb.x, pb.y, e1.x, e1.y, e2.x, e2.y)),
+      segCrossesBorderFn: (pa, pb) =>
+        polyEdges.some(([e1, e2]) => segmentsIntersect2D(pa.x, pa.y, pb.x, pb.y, e1.x, e1.y, e2.x, e2.y)),
+      enclosingSeedPt: centroid
+    })
+  );
+}
+
+/**
+ * Evaluates which CAD entities intersect a 2D Vector ray segment [p1 -> p2], sorted in crossing order along the vector.
+ */
+export function hitTestEntitiesByVector(entities = [], camera, width, height, p1, p2, options = {}) {
+  const {
+    tolerancePx = 7,
+    worldYOffset = 49,
+    mask = 'all',
+    solidFilter = 'all',
+    layerVisibility = null
+  } = options;
+
+  if (!camera || !p1 || !p2 || width <= 0 || height <= 0) return [];
+  const vx = p2.x - p1.x;
+  const vy = p2.y - p1.y;
+  const vLenSq = vx * vx + vy * vy;
+  if (vLenSq < 1) return [];
+
+  const matched = [];
+  filterSelectableEntities(entities, { mask, solidFilter, layerVisibility }).forEach((entity) => {
     const { points, segments } = sampleEntityWorldGeometry(entity, worldYOffset);
-    if (points.length === 0) return;
+    let bestT = Infinity;
 
-    const projPts = points.map((p) => projectPointToViewport(p, camera, width, height));
-
-    if (mode === 'enclosed') {
-      if (projPts.every((pt) => pointInRect2D(pt, normRect))) {
-        hits.push(entity);
+    segments.forEach(([a, b]) => {
+      const sa = projectPointToViewport(a, camera, width, height);
+      const sb = projectPointToViewport(b, camera, width, height);
+      if (!sa.visible && !sb.visible) return;
+      if (segmentsIntersect2D(p1.x, p1.y, p2.x, p2.y, sa.x, sa.y, sb.x, sb.y)) {
+        const midX = (sa.x + sb.x) * 0.5;
+        const midY = (sa.y + sb.y) * 0.5;
+        const t = Math.max(0, Math.min(1, ((midX - p1.x) * vx + (midY - p1.y) * vy) / vLenSq));
+        if (t < bestT) bestT = t;
       }
-      return;
-    }
-
-    // Crossing mode
-    if (projPts.some((pt) => pointInRect2D(pt, normRect))) {
-      hits.push(entity);
-      return;
-    }
-
-    const crossed = segments.some(([a, b]) => {
-      const pa = projectPointToViewport(a, camera, width, height);
-      const pb = projectPointToViewport(b, camera, width, height);
-      if (!pa.visible && !pb.visible) return false;
-      return segmentIntersectsRect2D(pa.x, pa.y, pb.x, pb.y, normRect);
     });
-    if (crossed) {
-      hits.push(entity);
+
+    if (!Number.isFinite(bestT)) {
+      points.forEach((pt) => {
+        const sp = projectPointToViewport(pt, camera, width, height);
+        if (!sp.visible) return;
+        const d = distToSegment2D(sp.x, sp.y, p1.x, p1.y, p2.x, p2.y);
+        if (d <= tolerancePx) {
+          const t = Math.max(0, Math.min(1, ((sp.x - p1.x) * vx + (sp.y - p1.y) * vy) / vLenSq));
+          if (t < bestT) bestT = t;
+        }
+      });
+    }
+
+    if (Number.isFinite(bestT)) {
+      matched.push({ entity, t: bestT });
+    }
+  });
+
+  matched.sort((a, b) => a.t - b.t);
+  return matched.map((m) => m.entity);
+}
+
+/**
+ * Area Selection: finds the tightest closed contour loop (single closed shape or connected chain) enclosing the clicked screen point.
+ */
+export function hitTestEntitiesByArea(entities = [], camera, width, height, screenPt, options = {}) {
+  const {
+    worldYOffset = 49,
+    mask = 'all',
+    solidFilter = 'all',
+    layerVisibility = null
+  } = options;
+
+  if (!camera || !screenPt || width <= 0 || height <= 0) return [];
+
+  const filtered = filterSelectableEntities(entities, { mask, solidFilter, layerVisibility });
+  const candidateLoops = [];
+  const seenChainKeys = new Set();
+
+  filtered.forEach((entity) => {
+    const cat = getCustomEntityCategory(entity);
+    if (cat === 'surface' || cat === 'solid' || cat === 'point') return;
+    const { points: worldPts } = sampleEntityWorldGeometry(entity, worldYOffset);
+    if (worldPts.length >= 3 && worldPts[0].distanceTo(worldPts[worldPts.length - 1]) < 0.8) {
+      const id = getCustomEntityId(entity);
+      seenChainKeys.add(id);
+      candidateLoops.push({ pts3d: worldPts, entities: [entity] });
       return;
     }
 
-    // Also match closed shapes whose projected silhouette completely surrounds the tiny crossing marquee
-    if (cat === 'surface' || cat === 'solid') {
-      let sMinX = Infinity, sMaxX = -Infinity, sMinY = Infinity, sMaxY = -Infinity;
-      projPts.forEach((p) => {
-        if (!p.visible) return;
-        if (p.x < sMinX) sMinX = p.x;
-        if (p.x > sMaxX) sMaxX = p.x;
-        if (p.y < sMinY) sMinY = p.y;
-        if (p.y > sMaxY) sMaxY = p.y;
-      });
-      if (rectMidX >= sMinX && rectMidX <= sMaxX && rectMidY >= sMinY && rectMidY <= sMaxY) {
-        hits.push(entity);
+    const chain = buildChainFromEntity(entity, filtered, { method: 'chain', planeMode: '3d' });
+    if (chain?.isClosed && Array.isArray(chain.points) && chain.points.length >= 3) {
+      const ids = Array.isArray(chain.sourceEntityIds) ? chain.sourceEntityIds : [getCustomEntityId(entity)];
+      const key = [...ids].sort().join('|');
+      if (!seenChainKeys.has(key)) {
+        seenChainKeys.add(key);
+        const loopEntities = filtered.filter((ent) => {
+          const eid = getCustomEntityId(ent);
+          return ids.includes(eid) || ids.includes(ent.uuid) || ids.includes(ent.name);
+        });
+        if (loopEntities.length > 0) {
+          const chainWorldPts = chain.points.map((p) => new THREE.Vector3(p.x, p.y + worldYOffset, p.z));
+          candidateLoops.push({ pts3d: chainWorldPts, entities: loopEntities });
+        }
       }
     }
   });
 
-  return hits;
+  let bestLoop = null;
+  let bestArea = Infinity;
+
+  candidateLoops.forEach((loop) => {
+    const screenPoly = loop.pts3d
+      .map((worldP) => projectPointToViewport(worldP, camera, width, height))
+      .filter((sp) => sp.visible);
+
+    if (screenPoly.length < 3) return;
+    if (pointInPolygon2D(screenPt.x, screenPt.y, screenPoly)) {
+      const area = polygonArea2D(screenPoly);
+      if (area > 4 && area < bestArea) {
+        bestArea = area;
+        bestLoop = loop.entities;
+      }
+    }
+  });
+
+  if (bestLoop) return bestLoop;
+
+  // Fallback to surface/solid face under cursor
+  const direct = hitTestEntityAtScreenPoint(filtered, camera, screenPt, width, height, {
+    worldYOffset,
+    mask,
+    solidFilter,
+    layerVisibility
+  });
+  return direct ? [direct] : [];
+}
+
+/**
+ * Chain Selection: picks the closest wireframe entity under the cursor and expands all connected chain members.
+ */
+export function hitTestChainAtScreenPoint(entities = [], camera, width, height, screenPt, options = {}) {
+  const {
+    tolerancePx = 11,
+    worldYOffset = 49,
+    mask = 'all',
+    solidFilter = 'all',
+    planeMode = '3d',
+    layerVisibility = null
+  } = options;
+
+  const filtered = filterSelectableEntities(entities, { mask, solidFilter, layerVisibility });
+  const seed = hitTestEntityAtScreenPoint(filtered, camera, screenPt, width, height, {
+    tolerancePx,
+    worldYOffset,
+    mask,
+    solidFilter,
+    layerVisibility
+  });
+  if (!seed) return [];
+
+  const chain = buildChainFromEntity(seed, filtered, { method: 'chain', planeMode });
+  if (!chain || !Array.isArray(chain.sourceEntityIds) || chain.sourceEntityIds.length === 0) {
+    return [seed];
+  }
+
+  const members = filtered.filter((ent) => {
+    const eid = getCustomEntityId(ent);
+    return (
+      chain.sourceEntityIds.includes(eid) ||
+      chain.sourceEntityIds.includes(ent.uuid) ||
+      chain.sourceEntityIds.includes(ent.name)
+    );
+  });
+  return members.length > 0 ? members : [seed];
 }
 
 /**
@@ -361,21 +675,13 @@ export function hitTestEntityAtScreenPoint(entities = [], camera, screenPt, widt
     tolerancePx = 11,
     worldYOffset = 49,
     mask = 'all',
+    solidFilter = 'all',
     layerVisibility = null
   } = options;
 
   if (!camera || !screenPt || width <= 0 || height <= 0) return null;
 
-  const visibleEntities = entities.filter((entity) => {
-    if (!entity || !matchesSelectionMask(entity, mask)) return false;
-    const cat = getCustomEntityCategory(entity);
-    if (layerVisibility) {
-      const isSurf = cat === 'surface' || cat === 'solid';
-      if (isSurf && layerVisibility.surfaces === false) return false;
-      if (!isSurf && layerVisibility.wireframe === false) return false;
-    }
-    return true;
-  });
+  const visibleEntities = filterSelectableEntities(entities, { mask, solidFilter, layerVisibility });
 
   // 1. Highest priority: crisp curve/point distance pick
   let bestWire = null;

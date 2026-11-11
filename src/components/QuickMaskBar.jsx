@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Plus, Minus, Circle, Dot, Box, Layers,
-  Compass, Palette, Ban, CheckSquare, Sparkles
+  Compass, Palette, Ban
 } from 'lucide-react';
 
 /**
@@ -30,6 +30,7 @@ export default function QuickMaskBar({
   return (
     <div
       className="quick-mask-bar"
+      data-testid="quick-mask-bar"
       style={{
         position: 'absolute',
         top: '50%',

@@ -49,6 +49,7 @@ export default function TransformCADModal({
   onUpdateTransform,
   onResetTransform,
   onAddCustomEntity,
+  onAddCustomEntitiesBatch,
   onOpenNestingStudio,
   selectedEntities = [],
   onApplyCustomTransform = null
@@ -181,6 +182,7 @@ export default function TransformCADModal({
     } else {
       // Copy mode
       if (currentModel && onAddCustomEntity) {
+        const copies = [];
         for (let i = 1; i <= copyCount; i++) {
           const cloned = cloneAndTransformModel(currentModel, {
             position: { x: dx * i, y: dy * i, z: dz * i },
@@ -188,8 +190,10 @@ export default function TransformCADModal({
             scale: { x: 1, y: 1, z: 1 }
           });
           cloned.name = `Part_Copy_Trans_${Date.now()}_${i}`;
-          onAddCustomEntity(cloned);
+          copies.push(cloned);
         }
+        if (onAddCustomEntitiesBatch) onAddCustomEntitiesBatch(copies);
+        else copies.forEach((c) => onAddCustomEntity(c));
         setFeedback(`Created ${copyCount} translated duplicate(s)`);
       }
     }
@@ -371,6 +375,7 @@ export default function TransformCADModal({
       const sz = parseFloat(spacingZ) || 100;
       let count = 0;
 
+      const clones = [];
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (r === 0 && c === 0) continue;
@@ -380,15 +385,18 @@ export default function TransformCADModal({
             scale: { x: 1, y: 1, z: 1 }
           });
           cloned.name = `Grid_Instance_R${r}_C${c}`;
-          onAddCustomEntity(cloned);
+          clones.push(cloned);
           count++;
         }
       }
+      if (onAddCustomEntitiesBatch) onAddCustomEntitiesBatch(clones);
+      else clones.forEach((c) => onAddCustomEntity(c));
       setFeedback(`Generated ${count} Grid Matrix duplicates across CNC table`);
     } else {
       const count = parseInt(circCount) || 6;
       const radius = parseFloat(circRadius) || 80;
       const step = (Math.PI * 2) / count;
+      const clones = [];
 
       for (let i = 1; i < count; i++) {
         const angle = i * step;
@@ -398,8 +406,10 @@ export default function TransformCADModal({
           scale: { x: 1, y: 1, z: 1 }
         });
         cloned.name = `Rotary_PCD_Instance_${i}`;
-        onAddCustomEntity(cloned);
+        clones.push(cloned);
       }
+      if (onAddCustomEntitiesBatch) onAddCustomEntitiesBatch(clones);
+      else clones.forEach((c) => onAddCustomEntity(c));
       setFeedback(`Generated ${count - 1} Bolt Pattern duplicates on PCD Ø${(radius * 2).toFixed(1)} mm`);
     }
   };

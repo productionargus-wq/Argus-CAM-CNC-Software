@@ -109,7 +109,8 @@ import {
 import {
   saveWorkspaceSession,
   loadWorkspaceSession,
-  clearWorkspaceSession
+  clearWorkspaceSession,
+  deserializeHistoryFromPersistence
 } from './utils/workspacePersistence';
 import { parseAnyCADFile } from './utils/universalCadParser';
 import { extractClosedChainsFromCAD, buildChainFromEntity, computeRectPlacement, computeLineEnd, isSelectableWireframeEntity } from './utils/cadDrawingEngine';
@@ -137,23 +138,62 @@ function countWireframes(list = []) {
   ).length;
 }
 
+function cloneSerializableUserData(value, seen = new WeakMap()) {
+  if (value === null || value === undefined) return value;
+  if (typeof value !== 'object') return value;
+  if (typeof value.clone === 'function' && (value.isVector3 || value.isVector2 || value.isQuaternion || value.isMatrix4 || value.isBox3 || value.isColor)) {
+    return value.clone();
+  }
+  if (value.isObject3D || typeof value === 'function') return undefined;
+  if (seen.has(value)) return seen.get(value);
+  if (Array.isArray(value)) {
+    const arr = [];
+    seen.set(value, arr);
+    for (let i = 0; i < value.length; i++) {
+      const item = cloneSerializableUserData(value[i], seen);
+      if (item !== undefined) arr.push(item);
+    }
+    return arr;
+  }
+  const copy = {};
+  seen.set(value, copy);
+  for (const [k, v] of Object.entries(value)) {
+    if (k.startsWith('__') || typeof v === 'function') continue;
+    const clonedVal = cloneSerializableUserData(v, seen);
+    if (clonedVal !== undefined) copy[k] = clonedVal;
+  }
+  return copy;
+}
+
 function cloneEntityForSnapshot(entity) {
   if (!entity || typeof entity.clone !== 'function') return entity;
   const cloned = entity.clone(true);
   cloned.uuid = entity.uuid;
-  if (entity.userData) {
-    cloned.userData = { ...entity.userData };
-  }
-  const cloneMaterial = (obj) => {
-    if (!obj?.material) return;
-    obj.material = Array.isArray(obj.material)
-      ? obj.material.map((m) => (typeof m?.clone === 'function' ? m.clone() : m))
-      : (typeof obj.material.clone === 'function' ? obj.material.clone() : obj.material);
+  cloned.visible = entity.visible !== false;
+
+  const cloneNodeDeep = (srcNode, dstNode) => {
+    if (!dstNode) return;
+    if (srcNode?.uuid) dstNode.uuid = srcNode.uuid;
+    dstNode.visible = srcNode?.visible !== false;
+    if (srcNode?.userData) {
+      dstNode.userData = cloneSerializableUserData(srcNode.userData) || {};
+    }
+    if (dstNode.geometry && typeof dstNode.geometry.clone === 'function') {
+      dstNode.geometry = dstNode.geometry.clone();
+    }
+    if (dstNode.material) {
+      dstNode.material = Array.isArray(srcNode?.material || dstNode.material)
+        ? (srcNode?.material || dstNode.material).map((m) => (typeof m?.clone === 'function' ? m.clone() : m))
+        : (typeof (srcNode?.material || dstNode.material).clone === 'function'
+            ? (srcNode?.material || dstNode.material).clone()
+            : dstNode.material);
+    }
+    if (Array.isArray(dstNode.children)) {
+      dstNode.children.forEach((child, idx) => cloneNodeDeep(srcNode?.children?.[idx], child));
+    }
   };
-  cloneMaterial(cloned);
-  if (Array.isArray(cloned.children)) {
-    cloned.children.forEach(cloneMaterial);
-  }
+
+  cloneNodeDeep(entity, cloned);
   return cloned;
 }
 
@@ -296,6 +336,14 @@ export default function App() {
   const [sketchTool, setSketchTool] = useState('line');
   const [isSelectModeActive, setIsSelectModeActive] = useState(false);
   const [selectedEntityIds, setSelectedEntityIds] = useState([]);
+  const [previousSelectionIds, setPreviousSelectionIds] = useState([]);
+  const [snapMode, setSnapMode] = useState('auto');
+  const [isAutoCursorLocked, setIsAutoCursorLocked] = useState(false);
+  const [canvasSelectionMethod, setCanvasSelectionMethod] = useState('automatic');
+  const [containmentMode, setContainmentMode] = useState('in_cross');
+  const [solidFilterMode, setSolidFilterMode] = useState('all');
+  const [selectionMask, setSelectionMask] = useState('all');
+  const [stickyMultiSelect, setStickyMultiSelect] = useState(false);
   const [activeDrawingTool, setActiveDrawingTool] = useState(null);
   const [circleParams, setCircleParams] = useState({
     radius: 25.0,
@@ -356,6 +404,15 @@ export default function App() {
     waitMode: false
   });
   const [selectedExtrudeChains, setSelectedExtrudeChains] = useState([]);
+  const selectedExtrudeChainsRef = useRef([]);
+  const setSelectedExtrudeChainsSync = (updater) => {
+    const prev = selectedExtrudeChainsRef.current || [];
+    const next = typeof updater === 'function' ? updater(prev) : updater;
+    const safeNext = Array.isArray(next) ? next : [];
+    selectedExtrudeChainsRef.current = safeNext;
+    setSelectedExtrudeChains(safeNext);
+    return safeNext;
+  };
   const [extrudeParams, setExtrudeParams] = useState({
     height: 20.0,
     scale: 1.0,
@@ -1135,12 +1192,18 @@ export default function App() {
             }
           }
 
-          resetHistory({
-            operations: restoredSessionOps,
-            partTransform: session.partTransform || partTransformRef.current,
-            solidsList: restoredSessionSolids,
-            customGeometry: restoredSessionGeo
-          });
+          const restoredHistory = deserializeHistoryFromPersistence(session.undoHistory);
+          if (restoredHistory && Array.isArray(restoredHistory.entries) && restoredHistory.entries.length > 0) {
+            historyStateRef.current = restoredHistory;
+            setHistoryState(restoredHistory);
+          } else {
+            resetHistory({
+              operations: restoredSessionOps,
+              partTransform: session.partTransform || partTransformRef.current,
+              solidsList: restoredSessionSolids,
+              customGeometry: restoredSessionGeo
+            });
+          }
 
           showToast(`Workspace restored: ${session.projectName || 'Active Session'}`, 'success');
         }
@@ -1216,7 +1279,8 @@ export default function App() {
         tools,
         operations,
         fixtureConfig,
-        cadSource
+        cadSource,
+        undoHistory: historyStateRef.current
       });
 
       saveAutoSaveSnapshot({
@@ -1256,7 +1320,8 @@ export default function App() {
     fixtureConfig,
     cadSource,
     activeMachine,
-    partMetrics
+    partMetrics,
+    historyState
   ]);
 
   // Synchronize dynamic Theme attribute to root DOM element
@@ -1311,6 +1376,27 @@ export default function App() {
     setArcParams((prev) => ({ ...prev, isLocked: false }));
   };
 
+  const shouldBypassAppUndoRedo = (target) => {
+    if (!target) return false;
+    if (target.isContentEditable) return true;
+    const tag = target.tagName;
+    if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (tag === 'INPUT') {
+      const inputType = String(target.type || 'text').toLowerCase();
+      if (['checkbox', 'radio', 'range', 'button', 'submit', 'color'].includes(inputType)) {
+        return false;
+      }
+      if (target.dataset?.sketchNumeric === 'true') {
+        return target.dataset?.dirty === 'true';
+      }
+      if (['text', 'search', 'email', 'url', 'password'].includes(inputType)) {
+        return true;
+      }
+      return target.dataset?.dirty === 'true';
+    }
+    return false;
+  };
+
   const applyHistorySnapshot = (snap, nextIdx, msg) => {
     if (!snap) return;
     if (snap.operations) {
@@ -1330,7 +1416,17 @@ export default function App() {
       setSolidsList(snap.solidsList);
     }
     if (snap.customGeometry !== undefined) {
-      commitCustomGeometry(cloneCustomGeometryList(snap.customGeometry), false);
+      const restoredGeo = cloneCustomGeometryList(snap.customGeometry);
+      commitCustomGeometry(restoredGeo, false);
+      syncPartMetricsFromCustomSurfaces(restoredGeo);
+      if (snap.selectedExtrudeChains !== undefined) {
+        setSelectedExtrudeChainsSync(snap.selectedExtrudeChains);
+      } else if (activeSurfaceToolRef.current === 'extrude' && selectedExtrudeChainsRef.current.length > 0) {
+        const validChains = extractClosedChainsFromCAD(restoredGeo);
+        const validIds = new Set(validChains.map((c) => c.id));
+        const surviving = selectedExtrudeChainsRef.current.filter((c) => validIds.has(c.id));
+        setSelectedExtrudeChainsSync(surviving);
+      }
     }
     resetPendingSketchLocks();
     setUndoTrigger((prev) => prev + 1);
@@ -1343,6 +1439,19 @@ export default function App() {
   };
 
   const handleUndo = () => {
+    // Step 1: If actively picking Surface Extrude chains (uncommitted preview), step back last chain first
+    if (activeSurfaceToolRef.current === 'extrude' && selectedExtrudeChainsRef.current.length > 0) {
+      const remaining = setSelectedExtrudeChainsSync((prev) => prev.slice(0, -1));
+      setUndoTrigger((prev) => prev + 1);
+      if (remaining.length === 0) {
+        setIsChainingPaletteOpen(true);
+        showToast('Undo: Cleared Surface Extrude chain preview', 'info');
+      } else {
+        showToast(`Undo: Removed last Surface Extrude chain (${remaining.length} remaining)`, 'info');
+      }
+      return;
+    }
+
     const cur = historyStateRef.current;
     if (cur.index > 0) {
       const newIdx = cur.index - 1;
@@ -1396,12 +1505,7 @@ export default function App() {
       const lowerKey = (e.key || '').toLowerCase();
 
       if (isCtrlOrMeta && (lowerKey === 'z' || e.code === 'KeyZ')) {
-        const isSketchInput = target?.tagName === 'INPUT' && target.dataset?.sketchNumeric === 'true';
-        const isDirtyTextInput =
-          target?.isContentEditable ||
-          ['TEXTAREA', 'SELECT'].includes(target?.tagName) ||
-          (target?.tagName === 'INPUT' && (!isSketchInput || target.dataset?.dirty === 'true'));
-        if (isDirtyTextInput) return;
+        if (shouldBypassAppUndoRedo(target)) return;
 
         e.preventDefault();
         if (e.shiftKey) {
@@ -1413,12 +1517,7 @@ export default function App() {
       }
 
       if (isCtrlOrMeta && (lowerKey === 'y' || e.code === 'KeyY')) {
-        const isSketchInput = target?.tagName === 'INPUT' && target.dataset?.sketchNumeric === 'true';
-        const isDirtyTextInput =
-          target?.isContentEditable ||
-          ['TEXTAREA', 'SELECT'].includes(target?.tagName) ||
-          (target?.tagName === 'INPUT' && (!isSketchInput || target.dataset?.dirty === 'true'));
-        if (isDirtyTextInput) return;
+        if (shouldBypassAppUndoRedo(target)) return;
 
         e.preventDefault();
         handleRedoRef.current();
@@ -3165,10 +3264,13 @@ export default function App() {
     const currentList = customGeometryRef.current || [];
     if (currentList.some((ent) => ent && ent.visible === false)) {
       const restored = currentList.map((ent) => {
-        if (ent) ent.visible = true;
-        return ent;
+        if (!ent || ent.visible !== false) return ent;
+        const cloned = cloneEntityForSnapshot(ent);
+        cloned.visible = true;
+        if (cloned.userData) cloned.userData.isBlanked = false;
+        return cloned;
       });
-      commitCustomGeometry([...restored], false);
+      commitCustomGeometry(restored, true);
     }
     showToast("All Levels, entities, and 3D layers unblanked.", 'info');
   };
@@ -4139,13 +4241,17 @@ export default function App() {
     setActiveRibbonTab('Toolpaths');
   };
 
-  const handleAddCustomEntity = (entity) => {
+  const handleAddCustomEntity = (entity, options = {}) => {
+    if (!entity) return;
     const curTool = activeDrawingToolRef.current || activeDrawingTool;
-    const activeIdToCommit =
+    const entityCadType = String(entity.userData?.cadType || entity.userData?.type || '').toLowerCase();
+    const allowActiveBind = options.bindActive !== false && !entity.userData?.fromModal && isSketchModeActive;
+    const activeIdToCommit = allowActiveBind ? (
       curTool === 'circle' ? activeCircleIdRef.current :
       curTool === 'rect' ? activeRectIdRef.current :
       curTool === 'line' ? activeLineIdRef.current :
-      null;
+      null
+    ) : null;
 
     const currentList = customGeometryRef.current || [];
     const baseList = activeIdToCommit
@@ -4158,17 +4264,30 @@ export default function App() {
       : currentList;
 
     const entId = entity.id || entity.uuid || entity.name;
-    if (curTool === 'circle') {
-      setActiveCircle(entId);
-    } else if (curTool === 'rect') {
-      setActiveRect(entId);
-    } else if (curTool === 'line') {
-      setActiveLine(entId);
-    } else if (curTool === 'arc_tangent' || curTool === 'arctangent') {
-      setActiveArcId(entId);
+    if (allowActiveBind) {
+      if (curTool === 'circle' && entityCadType === 'circle') {
+        setActiveCircle(entId);
+      } else if (curTool === 'rect' && (entityCadType === 'rect' || entityCadType === 'rectangle')) {
+        setActiveRect(entId);
+      } else if (curTool === 'line' && entityCadType === 'line') {
+        setActiveLine(entId);
+      } else if ((curTool === 'arc_tangent' || curTool === 'arctangent') && entityCadType === 'arc') {
+        setActiveArcId(entId);
+      }
     }
 
-    commitCustomGeometry([...baseList, entity], true);
+    const nextList = [...baseList, entity];
+    commitCustomGeometry(nextList, true);
+    syncPartMetricsFromCustomSurfaces(nextList);
+  };
+
+  const handleAddCustomEntitiesBatch = (entities = []) => {
+    const valid = (Array.isArray(entities) ? entities : []).filter(Boolean);
+    if (valid.length === 0) return;
+    const currentList = customGeometryRef.current || [];
+    const nextList = [...currentList, ...valid];
+    commitCustomGeometry(nextList, true);
+    syncPartMetricsFromCustomSurfaces(nextList);
   };
 
   const handleRemoveCustomEntity = (target) => {
@@ -4214,6 +4333,35 @@ export default function App() {
     showToast(`Deleted ${removed.length} selected entity(s) (Use Undelete Entity to restore)`, 'success');
   };
 
+  const handleUpdateSelectedEntities = (updater) => {
+    setSelectedEntityIds((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      const safeNext = Array.isArray(next) ? next : [];
+      if (prev.length > 0 && safeNext.length !== prev.length) {
+        setPreviousSelectionIds(prev);
+      }
+      return safeNext;
+    });
+  };
+
+  const handleReselectPreviousSelection = () => {
+    const validIds = new Set((customGeometryRef.current || []).map(getCustomEntityId).filter(Boolean));
+    const surviving = previousSelectionIds.filter((id) => validIds.has(id));
+    if (surviving.length === 0) {
+      showToast('No previous selection available to reselect.', 'info');
+      return;
+    }
+    setSelectedEntityIds(surviving);
+    showToast(`Reselected ${surviving.length} previous entity(s).`, 'success');
+  };
+
+  const handleClearSelection = () => {
+    setSelectedEntityIds((prev) => {
+      if (prev.length > 0) setPreviousSelectionIds(prev);
+      return [];
+    });
+  };
+
   const handleBlankSelectedEntities = (ids = selectedEntityIds) => {
     const idSet = new Set(Array.isArray(ids) ? ids : []);
     if (idSet.size === 0) {
@@ -4224,16 +4372,51 @@ export default function App() {
     let hiddenCount = 0;
     const next = currentList.map((ent) => {
       if (ent && idSet.has(getCustomEntityId(ent))) {
-        ent.visible = false;
+        const cloned = cloneEntityForSnapshot(ent);
+        cloned.visible = false;
+        if (cloned.userData) cloned.userData.isBlanked = true;
         hiddenCount++;
+        return cloned;
       }
       return ent;
     });
     if (hiddenCount > 0) {
-      commitCustomGeometry([...next], false);
-      setSelectedEntityIds([]);
-      showToast(`Blanked ${hiddenCount} selected entity(s) (Click View/Home Unblank to restore)`, 'info');
+      commitCustomGeometry(next, true);
+      syncPartMetricsFromCustomSurfaces(next);
+      handleClearSelection();
+      showToast(`Blanked ${hiddenCount} selected entity(s) (Ctrl+Z to Undo or Unblank to restore)`, 'info');
     }
+  };
+
+  const handleCommitPartTransform = (nextTransform) => {
+    partTransformRef.current = nextTransform;
+    setPartTransform(nextTransform);
+    pushSnapshot({ partTransform: nextTransform });
+  };
+
+  const handleFastPointSubmit = (pt) => {
+    const x = Number(pt?.x) || 0;
+    const y = Number(pt?.y) || 0; // CAD Y -> -Z in Three.js
+    const z = Number(pt?.z) || 0; // CAD Z -> Y height in Three.js
+    const worldPt = { x, y: z, z: -y };
+
+    if (activeSurfaceToolRef.current === 'extrude' && isBasePointPickActive) {
+      handlePickExtrudeBasePoint(worldPt);
+      return;
+    }
+    if (isSketchModeActive && activeDrawingToolRef.current === 'circle') {
+      const center = { x, y: z, z: -y };
+      const r = Math.max(0.5, Number(circleParamsRef.current.radius) || 25);
+      const circ = createWireframeCircle(r, center.y, [center.x, center.z], 0, 360, 'G17', { color: 0x38bdf8 });
+      circ.userData = { ...(circ.userData || {}), cadType: 'circle', center, radius: r };
+      updateCircleParams((prev) => ({ ...prev, center }));
+      handleAddCustomEntity(circ);
+      showToast(`Fast Point Circle at X${x.toFixed(1)} Y${y.toFixed(1)} Z${z.toFixed(1)}`, 'success');
+      return;
+    }
+    const marker = createPointMarker([worldPt.x, worldPt.y, worldPt.z], `Point_${x.toFixed(1)}_${y.toFixed(1)}_${z.toFixed(1)}`, 0xf59e0b);
+    handleAddCustomEntity(marker, { bindActive: false });
+    showToast(`Fast Point created at X${x.toFixed(2)} Y${y.toFixed(2)} Z${z.toFixed(2)}`, 'success');
   };
 
   const handleWindowSelectChains = (matchedEntities = [], { append = false } = {}) => {
@@ -4255,11 +4438,11 @@ export default function App() {
     });
 
     if (newChains.length === 0) {
-      if (!append) setSelectedExtrudeChains([]);
+      if (!append) setSelectedExtrudeChainsSync([]);
       return;
     }
 
-    setSelectedExtrudeChains((prev) => {
+    setSelectedExtrudeChainsSync((prev) => {
       const base = (append || chainingConfig.waitMode) ? prev : [];
       const existingIds = new Set(base.map((c) => c.id));
       const merged = [...base];
@@ -4299,7 +4482,7 @@ export default function App() {
     });
     if (chains.length === 0) return;
 
-    setSelectedExtrudeChains(chains);
+    setSelectedExtrudeChainsSync(chains);
     setActiveSurfaceTool('extrude');
     setActiveManagerTab('Surface Ex...');
     setIsChainingPaletteOpen(false);
@@ -4452,14 +4635,25 @@ export default function App() {
   // Surface Creation & Mastercam Surface Extrude Handlers
   const syncPartMetricsFromCustomSurfaces = (entityList = []) => {
     if (currentModel) return;
-    const surfs = (Array.isArray(entityList) ? entityList : []).filter((ent) => {
-      if (!ent || ent.visible === false) return false;
+    const visibleAll = (Array.isArray(entityList) ? entityList : []).filter((ent) => ent && ent.visible !== false);
+    const surfs = visibleAll.filter((ent) => {
       const ct = String(ent.userData?.cadType || ent.userData?.type || '').toLowerCase();
-      return ent.name?.startsWith('Surface_') || ent.name?.startsWith('CAD_Surface') || ct === 'surface_extrusion';
+      return ent.name?.startsWith('Surface_') || ent.name?.startsWith('CAD_Surface') || ct === 'surface_extrusion' || ct === 'solid';
     });
-    if (surfs.length === 0) return;
+    const measureTargets = surfs.length > 0 ? surfs : visibleAll;
+    if (measureTargets.length === 0) {
+      const emptyBox = new THREE.Box3(new THREE.Vector3(-50, 0, -50), new THREE.Vector3(50, 20, 50));
+      setPartMetrics({
+        box: emptyBox,
+        bounds: emptyBox,
+        center: emptyBox.getCenter(new THREE.Vector3()),
+        dimensions: emptyBox.getSize(new THREE.Vector3()),
+        triangles: 0
+      });
+      return;
+    }
     const box = new THREE.Box3();
-    surfs.forEach((s) => {
+    measureTargets.forEach((s) => {
       // Measure unparented local CAD bounds so customGeoGroup's +49 world Y offset doesn't leak in on subsequent extrudes
       const localClone = s.clone(true);
       localClone.updateMatrixWorld(true);
@@ -4501,7 +4695,7 @@ export default function App() {
       resetPendingSketchLocks();
       setActiveSurfaceTool('extrude');
       setActiveManagerTab('Surface Ex...');
-      setSelectedExtrudeChains([]);
+      setSelectedExtrudeChainsSync([]);
       setExtrudeParams({
         height: 20.0,
         scale: 1.0,
@@ -4533,7 +4727,7 @@ export default function App() {
     });
     if (!chain) return;
 
-    setSelectedExtrudeChains((prev) => {
+    setSelectedExtrudeChainsSync((prev) => {
       const exists = prev.some((c) => c.id === chain.id);
       if (chainingConfig.waitMode) {
         return exists ? prev.filter((c) => c.id !== chain.id) : [...prev, chain];
@@ -4550,7 +4744,7 @@ export default function App() {
   };
 
   const handleReverseExtrudeChain = () => {
-    setSelectedExtrudeChains((prev) =>
+    setSelectedExtrudeChainsSync((prev) =>
       prev.map((c) => ({
         ...c,
         points: [...c.points].reverse(),
@@ -4565,7 +4759,7 @@ export default function App() {
       showToast('No closed wireframe contours found in viewport.', 'warning');
       return;
     }
-    setSelectedExtrudeChains(detected);
+    setSelectedExtrudeChainsSync(detected);
     if (detected[0]?.center) {
       setExtrudeParams((prev) => ({
         ...prev,
@@ -4579,7 +4773,7 @@ export default function App() {
     if (selectedExtrudeChains.length === 0) {
       const detected = extractClosedChainsFromCAD(customGeometryRef.current || []);
       if (detected.length === 1) {
-        setSelectedExtrudeChains(detected);
+        setSelectedExtrudeChainsSync(detected);
         if (detected[0]?.center) {
           setExtrudeParams((prev) => ({
             ...prev,
@@ -4625,13 +4819,13 @@ export default function App() {
     syncPartMetricsFromCustomSurfaces(nextList);
 
     if (keepOpen) {
-      setSelectedExtrudeChains([]);
+      setSelectedExtrudeChainsSync([]);
       setIsChainingPaletteOpen(true);
       showToast(`Created ${surfMesh.name} on Level 15 — select next chain.`, 'success');
     } else {
       setIsChainingPaletteOpen(false);
       setIsBasePointPickActive(false);
-      setSelectedExtrudeChains([]);
+      setSelectedExtrudeChainsSync([]);
       setActiveSurfaceTool(null);
       setActiveManagerTab('Toolpaths');
       showToast(`Surface Extrude created (${surfMesh.name}) on Level 15.`, 'success');
@@ -4641,7 +4835,7 @@ export default function App() {
   const handleCancelSurfaceExtrude = () => {
     setIsChainingPaletteOpen(false);
     setIsBasePointPickActive(false);
-    setSelectedExtrudeChains([]);
+    setSelectedExtrudeChainsSync([]);
     setActiveSurfaceTool(null);
     setActiveManagerTab('Toolpaths');
   };
@@ -4783,7 +4977,20 @@ export default function App() {
         onOpenHelpGuide={() => setIsHelpGuideOpen(true)}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        canUndo={historyIndex > 0}
+        canUndo={Boolean(
+          historyIndex > 0 ||
+          (activeSurfaceTool === 'extrude' && selectedExtrudeChains.length > 0) ||
+          circleParams.isLocked ||
+          rectParams.isWidthLocked ||
+          rectParams.isHeightLocked ||
+          rectParams.firstCorner ||
+          lineParams.isLengthLocked ||
+          lineParams.isAngleLocked ||
+          lineParams.pt1 ||
+          activeCircleId ||
+          activeRectId ||
+          activeLineId
+        )}
         canRedo={historyIndex < history.length - 1}
         onNotify={showToast}
       />
@@ -5168,13 +5375,29 @@ export default function App() {
                 reselectTrigger={reselectTrigger}
                 undoTrigger={undoTrigger}
                 selectedEntityIds={selectedEntityIds}
-                onChangeSelectedEntities={setSelectedEntityIds}
+                onChangeSelectedEntities={handleUpdateSelectedEntities}
                 isSelectModeActive={isSelectModeActive}
                 onToggleSelectMode={handleToggleSelectMode}
                 onDeleteSelectedEntities={handleDeleteSelectedEntities}
                 onBlankSelectedEntities={handleBlankSelectedEntities}
                 onRequestExtrudeSelection={handleExtrudeFromSelection}
                 onRequestTransformSelection={() => handleOpenTransformModal('translate')}
+                snapMode={snapMode}
+                onChangeSnapMode={setSnapMode}
+                isAutoCursorLocked={isAutoCursorLocked}
+                onToggleAutoCursorLock={() => setIsAutoCursorLocked((v) => !v)}
+                canvasSelectionMethod={canvasSelectionMethod}
+                onChangeCanvasSelectionMethod={setCanvasSelectionMethod}
+                containmentMode={containmentMode}
+                onChangeContainmentMode={setContainmentMode}
+                solidFilterMode={solidFilterMode}
+                onChangeSolidFilterMode={setSolidFilterMode}
+                selectionMask={selectionMask}
+                onChangeSelectionMask={setSelectionMask}
+                stickyMultiSelect={stickyMultiSelect}
+                onToggleStickyMultiSelect={() => setStickyMultiSelect((v) => !v)}
+                onReselectPrevious={handleReselectPreviousSelection}
+                onFastPointSubmit={handleFastPointSubmit}
               />
             </div>
           </div>
@@ -5196,8 +5419,8 @@ export default function App() {
               onToggleWaitMode={(waitMode) => setChainingConfig((prev) => ({ ...prev, waitMode }))}
               selectedChains={selectedExtrudeChains}
               onReverseChain={handleReverseExtrudeChain}
-              onUnselectLast={() => setSelectedExtrudeChains((prev) => prev.slice(0, -1))}
-              onUnselectAll={() => setSelectedExtrudeChains([])}
+              onUnselectLast={() => setSelectedExtrudeChainsSync((prev) => prev.slice(0, -1))}
+              onUnselectAll={() => setSelectedExtrudeChainsSync([])}
               onAddAllClosedChains={handleAddAllClosedChainsToExtrude}
               onConfirm={handleConfirmChaining}
               onCancel={handleCancelSurfaceExtrude}
@@ -5273,13 +5496,34 @@ export default function App() {
                   : null
               }
               selectedEntityIds={selectedEntityIds}
-              onChangeSelectedEntities={setSelectedEntityIds}
+              onChangeSelectedEntities={handleUpdateSelectedEntities}
               isSelectModeActive={isSelectModeActive}
               onToggleSelectMode={handleToggleSelectMode}
               onDeleteSelectedEntities={handleDeleteSelectedEntities}
               onBlankSelectedEntities={handleBlankSelectedEntities}
               onRequestExtrudeSelection={handleExtrudeFromSelection}
               onRequestTransformSelection={() => handleOpenTransformModal('translate')}
+              snapMode={snapMode}
+              onChangeSnapMode={setSnapMode}
+              isAutoCursorLocked={isAutoCursorLocked}
+              onToggleAutoCursorLock={() => setIsAutoCursorLocked((v) => !v)}
+              canvasSelectionMethod={canvasSelectionMethod}
+              onChangeCanvasSelectionMethod={(m) => {
+                setCanvasSelectionMethod(m);
+                if (isChainingPaletteOpen && (m === 'chain' || m === 'window' || m === 'polygon' || m === 'single' || m === 'area' || m === 'vector')) {
+                  setChainingConfig((prev) => ({ ...prev, selectionMethod: m }));
+                }
+              }}
+              containmentMode={containmentMode}
+              onChangeContainmentMode={setContainmentMode}
+              solidFilterMode={solidFilterMode}
+              onChangeSolidFilterMode={setSolidFilterMode}
+              selectionMask={selectionMask}
+              onChangeSelectionMask={setSelectionMask}
+              stickyMultiSelect={stickyMultiSelect}
+              onToggleStickyMultiSelect={() => setStickyMultiSelect((v) => !v)}
+              onReselectPrevious={handleReselectPreviousSelection}
+              onFastPointSubmit={handleFastPointSubmit}
             />
           </div>
         )}
@@ -5691,6 +5935,7 @@ export default function App() {
         layerVisibility={layerVisibility}
         onToggleLayer={handleToggleLayer}
         onAddCustomEntity={handleAddCustomEntity}
+        onAddCustomEntitiesBatch={handleAddCustomEntitiesBatch}
         onRemoveCustomEntity={handleRemoveCustomEntity}
         onClearDimensions={handleClearDraftingDimensions}
       />
@@ -5702,9 +5947,10 @@ export default function App() {
         initialTab={transformModalTab}
         currentModel={currentModel}
         partTransform={partTransform}
-        onUpdateTransform={setPartTransform}
+        onUpdateTransform={handleCommitPartTransform}
         onResetTransform={handleResetTransform}
         onAddCustomEntity={handleAddCustomEntity}
+        onAddCustomEntitiesBatch={handleAddCustomEntitiesBatch}
         selectedEntities={selectedEntitiesList}
         onApplyCustomTransform={handleApplyCustomTransform}
       />

@@ -3,6 +3,7 @@
  * Handles .mcam file packages, auto-save backups, and recent project history.
  */
 
+import * as THREE from 'three';
 import {
   createWireframeCircle,
   createWireframeRect,
@@ -12,13 +13,35 @@ import {
   createPointMarker,
   createParametricChainExtrusion,
   createExtrudedSurface
-} from './cadGeometry';
+} from './cadGeometry.js';
 
 const AUTOSAVE_KEY = 'argus_cam_autosave_v1';
 const RECENT_PROJECTS_KEY = 'argus_cam_recent_projects_v1';
 
+const PARAMETRIC_CAD_TYPES = new Set([
+  'circle',
+  'arc',
+  'rect',
+  'rectangle',
+  'line',
+  'spline',
+  'drill',
+  'datum_point',
+  'surface_extrusion'
+]);
+
+function countObjectVertices(obj) {
+  let count = 0;
+  if (!obj?.traverse) return 0;
+  obj.traverse((node) => {
+    const posAttr = node.geometry?.attributes?.position;
+    if (posAttr?.count) count += posAttr.count;
+  });
+  return count;
+}
+
 /**
- * Serializes custom Three.js geometry entities (circles, rects, lines, drill points)
+ * Serializes custom Three.js geometry entities (circles, rects, lines, drill points, surfaces, solids)
  * into a clean, JSON-serializable array for .mcam and IndexedDB storage.
  */
 export function serializeCustomGeometry(customGeometry = []) {
@@ -34,21 +57,51 @@ export function serializeCustomGeometry(customGeometry = []) {
         : entity.name?.toLowerCase().includes('arc') ? 'arc'
         : entity.name?.toLowerCase().includes('drill') ? 'drill'
         : 'wireframe')
-      : (rawType || 'wireframe');
-    const hexColor = entity.material?.color?.getHex
+      : (rawType || (entity.name?.startsWith('Surface_Extrude_') ? 'surface_extrusion' : 'wireframe'));
+
+    let hexColor = entity.material?.color?.getHex
       ? entity.material.color.getHex()
-      : (typeof entity.color === 'number' ? entity.color : 0x1d4ed8);
+      : (typeof entity.color === 'number' ? entity.color : (typeof ud.color === 'number' ? ud.color : 0x1d4ed8));
+    if (hexColor === 0x1d4ed8 && cadType === 'surface_extrusion') {
+      hexColor = 0x22d3ee;
+    }
 
     const centerVal = ud.center || entity.center;
     const normCenter = Array.isArray(centerVal)
       ? { x: centerVal[0] || 0, y: centerVal[1] || 0, z: centerVal[2] || 0 }
       : (centerVal ? { x: centerVal.x || 0, y: centerVal.y || 0, z: centerVal.z || 0 } : null);
 
+    const hasNonTrivialTransform =
+      Math.abs(entity.rotation?.x || 0) > 1e-5 ||
+      Math.abs(entity.rotation?.y || 0) > 1e-5 ||
+      Math.abs(entity.rotation?.z || 0) > 1e-5 ||
+      Math.abs((entity.scale?.x ?? 1) - 1) > 1e-5 ||
+      Math.abs((entity.scale?.y ?? 1) - 1) > 1e-5 ||
+      Math.abs((entity.scale?.z ?? 1) - 1) > 1e-5;
+
+    const canReconstructParametrically =
+      PARAMETRIC_CAD_TYPES.has(cadType) &&
+      (cadType !== 'surface_extrusion' || (Array.isArray(ud.chains) && ud.chains.length > 0 && ud.params));
+
+    let object3dJson = null;
+    if ((!canReconstructParametrically || hasNonTrivialTransform) && typeof entity.toJSON === 'function') {
+      try {
+        if (countObjectVertices(entity) <= 50000) {
+          object3dJson = entity.toJSON();
+        }
+      } catch (err) {
+        console.warn('Skipped Three.js toJSON serialization for custom entity:', entity.name, err);
+      }
+    }
+
     return {
       name: entity.name || `Wireframe_${cadType}`,
       uuid: entity.uuid || ud.customId || null,
+      customId: ud.customId || entity.uuid || null,
       type: ud.type || cadType,
       cadType,
+      visible: entity.visible !== false,
+      isBlanked: Boolean(ud.isBlanked || entity.visible === false),
       radius: ud.radius !== undefined ? ud.radius : (entity.radius ?? null),
       diameter: ud.diameter !== undefined ? ud.diameter : (ud.radius ? ud.radius * 2 : (entity.diameter ?? null)),
       width: ud.width !== undefined ? ud.width : (entity.width ?? null),
@@ -71,10 +124,21 @@ export function serializeCustomGeometry(customGeometry = []) {
         y: entity.position?.y || 0,
         z: entity.position?.z || 0
       },
+      rotation: {
+        x: entity.rotation?.x || 0,
+        y: entity.rotation?.y || 0,
+        z: entity.rotation?.z || 0
+      },
+      scale: {
+        x: entity.scale?.x ?? 1,
+        y: entity.scale?.y ?? 1,
+        z: entity.scale?.z ?? 1
+      },
       chains: Array.isArray(ud.chains || entity.chains) ? (ud.chains || entity.chains) : null,
       extrudeParams: ud.params || entity.extrudeParams || null,
       surfaceRole: ud.surfaceRole || ud.role || entity.surfaceRole || null,
-      color: hexColor
+      color: hexColor,
+      object3dJson
     };
   }).filter(Boolean);
 }
@@ -104,69 +168,96 @@ export function deserializeCustomGeometry(serializedList = []) {
       ? { x: centerRaw[0] || 0, y: centerRaw[1] || 0, z: centerRaw[2] || 0 }
       : centerRaw;
 
-    if (cadType === 'circle') {
-      const cx = centerObj?.x ?? pos.x ?? 0;
-      const cz = centerObj?.z ?? pos.z ?? 0;
-      const y = centerObj?.y ?? pos.y ?? 0;
-      const r = item.radius ?? ud.radius ?? (item.diameter ? item.diameter / 2 : 25.0);
-      obj = createWireframeCircle(r, y, [cx, cz], 0, 360, 'G17', { color: col, name: item.name });
-    } else if (cadType === 'arc') {
-      const cx = centerObj?.x ?? pos.x ?? 0;
-      const cy = centerObj?.y ?? pos.y ?? 0;
-      const cz = centerObj?.z ?? pos.z ?? 0;
-      const r = item.radius ?? ud.radius ?? 25.0;
-      const sAngle = item.startAngleDeg ?? ud.startAngleDeg ?? 0;
-      const eAngle = item.endAngleDeg ?? ud.endAngleDeg ?? 180;
-      obj = createWireframeArc([cx, cy, cz], r, sAngle, eAngle, { color: col, name: item.name });
-    } else if (cadType === 'rect' || cadType === 'rectangle') {
-      const cx = centerObj?.x ?? pos.x ?? 0;
-      const cz = centerObj?.z ?? pos.z ?? 0;
-      const y = centerObj?.y ?? pos.y ?? 0;
-      const w = item.width ?? ud.width ?? 80.0;
-      const d = item.depth ?? item.height ?? ud.depth ?? ud.height ?? 50.0;
-      const fr = item.filletRadius ?? ud.filletRadius ?? 0;
-      obj = createWireframeRect(w, d, y, fr, [cx, cz], { color: col, name: item.name });
-    } else if (cadType === 'line') {
-      const p1Raw = item.p1 || ud.p1;
-      const p2Raw = item.p2 || ud.p2;
-      const p1 = p1Raw ? [p1Raw.x || 0, p1Raw.y || 0, p1Raw.z || 0] : [-25, 0, 0];
-      const p2 = p2Raw ? [p2Raw.x || 0, p2Raw.y || 0, p2Raw.z || 0] : [25, 0, 0];
-      obj = createWireframeLine(p1, p2, { color: col, name: item.name });
-    } else if (cadType === 'spline') {
-      const ctrl = item.controlPoints || ud.controlPoints;
-      if (Array.isArray(ctrl) && ctrl.length >= 2) {
-        obj = createWireframeSpline(ctrl, { color: col, name: item.name });
+    if (item.object3dJson) {
+      try {
+        obj = new THREE.ObjectLoader().parse(item.object3dJson);
+      } catch (err) {
+        console.warn('Failed to parse Object3D JSON for custom entity, falling back to parametric rebuild:', item.name, err);
       }
-    } else if (cadType === 'drill' || cadType === 'datum_point' || item.name?.startsWith('Drill_')) {
-      const coordsRaw = ud.coords || item.coords;
-      const p = Array.isArray(coordsRaw)
-        ? coordsRaw
-        : [pos.x || 0, pos.y || 0, pos.z || 0];
-      obj = createPointMarker(p, item.name || 'Drill_Point', col);
-    } else if (cadType === 'surface_extrusion' || item.name?.startsWith('Surface_Extrude_')) {
-      const savedChains = item.chains || ud.chains;
-      const savedParams = item.extrudeParams || ud.params;
-      if (Array.isArray(savedChains) && savedChains.length > 0 && savedParams) {
-        obj = createParametricChainExtrusion(savedChains, savedParams, {
-          name: item.name,
-          color: col && col !== 0x1d4ed8 ? col : 0x22d3ee
-        });
-      } else {
-        obj = createExtrudedSurface(
-          item.width ?? ud.width ?? 60,
-          item.depth ?? ud.depth ?? 40,
-          item.height ?? ud.height ?? 30,
-          pos.y || 0,
-          [pos.x || 0, pos.z || 0],
-          { name: item.name, role: item.surfaceRole || ud.surfaceRole || 'drive' }
-        );
+    }
+
+    if (!obj) {
+      if (cadType === 'circle') {
+        const cx = centerObj?.x ?? pos.x ?? 0;
+        const cz = centerObj?.z ?? pos.z ?? 0;
+        const y = centerObj?.y ?? pos.y ?? 0;
+        const r = item.radius ?? ud.radius ?? (item.diameter ? item.diameter / 2 : 25.0);
+        obj = createWireframeCircle(r, y, [cx, cz], 0, 360, 'G17', { color: col, name: item.name });
+      } else if (cadType === 'arc') {
+        const cx = centerObj?.x ?? pos.x ?? 0;
+        const cy = centerObj?.y ?? pos.y ?? 0;
+        const cz = centerObj?.z ?? pos.z ?? 0;
+        const r = item.radius ?? ud.radius ?? 25.0;
+        const sAngle = item.startAngleDeg ?? ud.startAngleDeg ?? 0;
+        const eAngle = item.endAngleDeg ?? ud.endAngleDeg ?? 180;
+        obj = createWireframeArc([cx, cy, cz], r, sAngle, eAngle, { color: col, name: item.name });
+      } else if (cadType === 'rect' || cadType === 'rectangle') {
+        const cx = centerObj?.x ?? pos.x ?? 0;
+        const cz = centerObj?.z ?? pos.z ?? 0;
+        const y = centerObj?.y ?? pos.y ?? 0;
+        const w = item.width ?? ud.width ?? 80.0;
+        const d = item.depth ?? item.height ?? ud.depth ?? ud.height ?? 50.0;
+        const fr = item.filletRadius ?? ud.filletRadius ?? 0;
+        obj = createWireframeRect(w, d, y, fr, [cx, cz], { color: col, name: item.name });
+      } else if (cadType === 'line') {
+        const p1Raw = item.p1 || ud.p1;
+        const p2Raw = item.p2 || ud.p2;
+        const p1 = p1Raw ? [p1Raw.x || 0, p1Raw.y || 0, p1Raw.z || 0] : [-25, 0, 0];
+        const p2 = p2Raw ? [p2Raw.x || 0, p2Raw.y || 0, p2Raw.z || 0] : [25, 0, 0];
+        obj = createWireframeLine(p1, p2, { color: col, name: item.name });
+      } else if (cadType === 'spline') {
+        const ctrl = item.controlPoints || ud.controlPoints;
+        if (Array.isArray(ctrl) && ctrl.length >= 2) {
+          obj = createWireframeSpline(ctrl, { color: col, name: item.name });
+        }
+      } else if (cadType === 'drill' || cadType === 'datum_point' || item.name?.startsWith('Drill_')) {
+        const coordsRaw = ud.coords || item.coords;
+        const p = Array.isArray(coordsRaw)
+          ? coordsRaw
+          : [pos.x || 0, pos.y || 0, pos.z || 0];
+        obj = createPointMarker(p, item.name || 'Drill_Point', col);
+      } else if (cadType === 'surface_extrusion' || item.name?.startsWith('Surface_Extrude_')) {
+        const savedChains = item.chains || ud.chains;
+        const savedParams = item.extrudeParams || ud.params;
+        if (Array.isArray(savedChains) && savedChains.length > 0 && savedParams) {
+          obj = createParametricChainExtrusion(savedChains, savedParams, {
+            name: item.name,
+            color: col && col !== 0x1d4ed8 ? col : 0x22d3ee
+          });
+        } else {
+          obj = createExtrudedSurface(
+            item.width ?? ud.width ?? 60,
+            item.depth ?? ud.depth ?? 40,
+            item.height ?? ud.height ?? 30,
+            pos.y || 0,
+            [pos.x || 0, pos.z || 0],
+            { name: item.name, role: item.surfaceRole || ud.surfaceRole || 'drive' }
+          );
+        }
+      }
+
+      if (obj) {
+        if (item.position && (Math.abs(item.position.x || 0) > 1e-6 || Math.abs(item.position.y || 0) > 1e-6 || Math.abs(item.position.z || 0) > 1e-6)) {
+          if (Math.hypot(obj.position.x, obj.position.y, obj.position.z) < 1e-6 && cadType !== 'circle' && cadType !== 'rect' && cadType !== 'line' && cadType !== 'arc') {
+            obj.position.set(item.position.x || 0, item.position.y || 0, item.position.z || 0);
+          }
+        }
+        if (item.rotation) {
+          obj.rotation.set(item.rotation.x || 0, item.rotation.y || 0, item.rotation.z || 0);
+        }
+        if (item.scale) {
+          obj.scale.set(item.scale.x ?? 1, item.scale.y ?? 1, item.scale.z ?? 1);
+        }
       }
     }
 
     if (obj) {
       if (item.uuid) obj.uuid = item.uuid;
+      const isBlanked = Boolean(item.isBlanked || item.visible === false);
+      obj.visible = !isBlanked;
       if (obj.userData) {
-        obj.userData.customId = item.uuid || obj.uuid;
+        obj.userData.customId = item.customId || item.uuid || obj.uuid;
+        obj.userData.isBlanked = isBlanked;
         if (centerObj) obj.userData.center = centerObj;
         if (item.radius ?? ud.radius) obj.userData.radius = item.radius ?? ud.radius;
         if (item.width ?? ud.width) obj.userData.width = item.width ?? ud.width;

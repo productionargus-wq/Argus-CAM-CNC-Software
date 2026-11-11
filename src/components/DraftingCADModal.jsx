@@ -63,6 +63,7 @@ export default function DraftingCADModal({
   layerVisibility,
   onToggleLayer,
   onAddCustomEntity,
+  onAddCustomEntitiesBatch,
   onRemoveCustomEntity,
   onClearDimensions
 }) {
@@ -223,8 +224,12 @@ export default function DraftingCADModal({
       `Base 2: ${dim.x.toFixed(2)}`,
       { name: `Drafting_Baseline_2_${Date.now()}` }
     );
-    onAddCustomEntity(d1);
-    onAddCustomEntity(d2);
+    if (onAddCustomEntitiesBatch) {
+      onAddCustomEntitiesBatch([d1, d2]);
+    } else {
+      onAddCustomEntity(d1);
+      onAddCustomEntity(d2);
+    }
     setFeedback('Created 2 Stacked Baseline Dimensions from Datum X0');
   };
 
@@ -242,8 +247,12 @@ export default function DraftingCADModal({
       `Chain 2: ${(dim.x / 2).toFixed(2)}`,
       { name: `Drafting_Chain_2_${Date.now()}` }
     );
-    onAddCustomEntity(seg1);
-    onAddCustomEntity(seg2);
+    if (onAddCustomEntitiesBatch) {
+      onAddCustomEntitiesBatch([seg1, seg2]);
+    } else {
+      onAddCustomEntity(seg1);
+      onAddCustomEntity(seg2);
+    }
     setFeedback('Created Continuous Chained Dimension Series');
   };
 

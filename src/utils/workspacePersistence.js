@@ -4,12 +4,13 @@
  * stock setup, machine settings, and viewport states across page reloads (F5/refresh).
  */
 
-import { serializeCustomGeometry } from './projectStorage';
+import { serializeCustomGeometry, deserializeCustomGeometry } from './projectStorage.js';
 
 const DB_NAME = 'ArgusMastercamWorkspaceDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'active_session';
 const SESSION_KEY = 'current_workspace';
+const MAX_PERSISTED_UNDO_ENTRIES = 20;
 
 /**
  * Open (or create) IndexedDB instance
@@ -99,6 +100,47 @@ function sanitizeForIndexedDB(data) {
 }
 
 /**
+ * Serializes bounded Undo/Redo history entries safely for IndexedDB storage.
+ */
+export function serializeHistoryForPersistence(historyState) {
+  const entries = Array.isArray(historyState?.entries) ? historyState.entries : [];
+  if (entries.length === 0) return null;
+  const rawIdx = typeof historyState.index === 'number' ? historyState.index : entries.length - 1;
+  const start = Math.max(0, entries.length - MAX_PERSISTED_UNDO_ENTRIES);
+  const sliced = entries.slice(start);
+  const adjustedIdx = Math.max(0, Math.min(sliced.length - 1, rawIdx - start));
+
+  return {
+    index: adjustedIdx,
+    entries: sliced.map((snap) => ({
+      operations: Array.isArray(snap?.operations) ? snap.operations : [],
+      partTransform: snap?.partTransform || null,
+      solidsList: Array.isArray(snap?.solidsList) ? snap.solidsList : [],
+      customGeometry: Array.isArray(snap?.customGeometry) ? serializeCustomGeometry(snap.customGeometry) : [],
+      selectedExtrudeChains: Array.isArray(snap?.selectedExtrudeChains) ? snap.selectedExtrudeChains : undefined
+    }))
+  };
+}
+
+/**
+ * Reconstructs Three.js customGeometry objects inside persisted Undo/Redo history entries.
+ */
+export function deserializeHistoryFromPersistence(persistedHistory) {
+  if (!persistedHistory || !Array.isArray(persistedHistory.entries) || persistedHistory.entries.length === 0) {
+    return null;
+  }
+  const entries = persistedHistory.entries.map((snap) => ({
+    operations: Array.isArray(snap?.operations) ? snap.operations : [],
+    partTransform: snap?.partTransform || { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+    solidsList: Array.isArray(snap?.solidsList) ? snap.solidsList : [],
+    customGeometry: Array.isArray(snap?.customGeometry) ? deserializeCustomGeometry(snap.customGeometry) : [],
+    ...(Array.isArray(snap?.selectedExtrudeChains) ? { selectedExtrudeChains: snap.selectedExtrudeChains } : {})
+  }));
+  const index = Math.max(0, Math.min(entries.length - 1, Number(persistedHistory.index) || 0));
+  return { entries, index };
+}
+
+/**
  * Save current workspace session state into IndexedDB
  */
 export async function saveWorkspaceSession(sessionData) {
@@ -112,7 +154,10 @@ export async function saveWorkspaceSession(sessionData) {
         ...sessionData,
         customGeometry: Array.isArray(sessionData?.customGeometry)
           ? serializeCustomGeometry(sessionData.customGeometry)
-          : []
+          : [],
+        undoHistory: sessionData?.undoHistory
+          ? serializeHistoryForPersistence(sessionData.undoHistory)
+          : undefined
       };
       const safeData = sanitizeForIndexedDB(prepared) || {};
       const record = {

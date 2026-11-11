@@ -2,16 +2,23 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import {
   Eye, Layers, Rotate3D, UploadCloud, Box, Info, Scissors, Camera, Sun, Sliders,
-  Play, Pause, SkipForward, SkipBack, RotateCcw, X, AlertTriangle, CheckCircle2, Gauge,
-  MousePointer, Trash2, Move
+  Play, Pause, SkipForward, SkipBack, RotateCcw, X, AlertTriangle, CheckCircle2, Gauge
 } from 'lucide-react';
 import {
   getCustomEntityId,
   sampleEntityWorldGeometry,
   hitTestEntitiesInMarquee,
+  hitTestEntitiesInPolygon,
+  hitTestEntitiesByVector,
+  hitTestEntitiesByArea,
+  hitTestChainAtScreenPoint,
   hitTestEntityAtScreenPoint,
+  matchesSelectionMask,
+  matchesTopologyFilter,
   summarizeSelectedEntities
 } from '../utils/cadSelectionEngine';
+import AutoCursorBar from './AutoCursorBar';
+import QuickMaskBar from './QuickMaskBar';
 import { parseSTLFile, calculatePartMetrics, createWireframeLine, createWireframeRect, createWireframeCircle, createPointMarker, createParametricChainExtrusion } from '../utils/cadGeometry';
 import { parseAnyCADFile } from '../utils/universalCadParser';
 import ScaleRulerHUD from './ScaleRulerHUD';
@@ -155,7 +162,23 @@ export default function Viewport3D({
   onDeleteSelectedEntities = null,
   onBlankSelectedEntities = null,
   onRequestExtrudeSelection = null,
-  onRequestTransformSelection = null
+  onRequestTransformSelection = null,
+  snapMode: propSnapMode = 'auto',
+  onChangeSnapMode = null,
+  isAutoCursorLocked = false,
+  onToggleAutoCursorLock = null,
+  canvasSelectionMethod = 'automatic',
+  onChangeCanvasSelectionMethod = null,
+  containmentMode = 'in_cross',
+  onChangeContainmentMode = null,
+  solidFilterMode = 'all',
+  onChangeSolidFilterMode = null,
+  selectionMask = 'all',
+  onChangeSelectionMask = null,
+  stickyMultiSelect = false,
+  onToggleStickyMultiSelect = null,
+  onReselectPrevious = null,
+  onFastPointSubmit = null
 }) {
   const isLight = theme !== 'dark';
   const mountRef = useRef(null);
@@ -226,10 +249,11 @@ export default function Viewport3D({
   const [mouseScreenPos, setMouseScreenPos] = useState({ x: 0, y: 0 });
   const [sketchPromptText, setSketchPromptText] = useState('Enter the center point');
   const [currentViewName, setCurrentViewName] = useState('Top');
-  const [snapMode, setSnapMode] = useState('auto');
-  const [isSnapLocked, setIsSnapLocked] = useState(false);
   const [camDist, setCamDist] = useState(350);
   const [selectionMarquee, setSelectionMarquee] = useState(null);
+  const [polygonPoints, setPolygonPoints] = useState([]);
+  const [polygonCursorPt, setPolygonCursorPt] = useState(null);
+  const [vectorSegment, setVectorSegment] = useState(null);
   const [hoveredEntityId, setHoveredEntityId] = useState(null);
 
   const sketchGhostGroupRef = useRef(null);
@@ -250,6 +274,15 @@ export default function Viewport3D({
   const onToggleSelectModeRef = useRef(onToggleSelectMode);
   const onDeleteSelectedEntitiesRef = useRef(onDeleteSelectedEntities);
   const layerVisibilityRef = useRef(layerVisibility);
+  const canvasSelectionMethodRef = useRef(canvasSelectionMethod);
+  const containmentModeRef = useRef(containmentMode);
+  const solidFilterModeRef = useRef(solidFilterMode);
+  const selectionMaskRef = useRef(selectionMask);
+  const stickyMultiSelectRef = useRef(stickyMultiSelect);
+  const polygonPointsRef = useRef([]);
+  const completePolygonRef = useRef(null);
+  const cancelInteractiveSelectionRef = useRef(null);
+  const vectorStartRef = useRef(null);
   const hoverCheckFrameRef = useRef(0);
   const sketchAnchorRef = useRef(null);
   const isSketchModeRef = useRef(isSketchModeActive);
@@ -305,6 +338,19 @@ export default function Viewport3D({
   useEffect(() => { onToggleSelectModeRef.current = onToggleSelectMode; }, [onToggleSelectMode]);
   useEffect(() => { onDeleteSelectedEntitiesRef.current = onDeleteSelectedEntities; }, [onDeleteSelectedEntities]);
   useEffect(() => { layerVisibilityRef.current = layerVisibility; }, [layerVisibility]);
+  useEffect(() => { canvasSelectionMethodRef.current = canvasSelectionMethod; }, [canvasSelectionMethod]);
+  useEffect(() => { containmentModeRef.current = containmentMode; }, [containmentMode]);
+  useEffect(() => { solidFilterModeRef.current = solidFilterMode; }, [solidFilterMode]);
+  useEffect(() => { selectionMaskRef.current = selectionMask; }, [selectionMask]);
+  useEffect(() => { stickyMultiSelectRef.current = stickyMultiSelect; }, [stickyMultiSelect]);
+  useEffect(() => {
+    // Switching away from polygon/vector clears transient rubber-band overlays cleanly
+    polygonPointsRef.current = [];
+    setPolygonPoints([]);
+    setPolygonCursorPt(null);
+    vectorStartRef.current = null;
+    setVectorSegment(null);
+  }, [canvasSelectionMethod, chainingSelectionMethod, isSelectModeActive]);
 
   const renderLockedPreviewAt = (basePt, opts = {}) => {
     if (!isSketchModeRef.current || !sketchGhostGroupRef.current) return;
@@ -660,15 +706,18 @@ export default function Viewport3D({
       return { entity: null, localPt: getSketchIntersection(e) };
     };
 
-    // Mouse Drag Orbit, Pan & Window/Crossing Selection
+    // Mouse Drag Orbit, Pan & 7-Mode CAD Selection (Automatic, Chain, Window, Polygon, Single, Area, Vector)
     let isDragging = false;
     let isPanning = false;
     let isDrawingDrag = false;
     let isMarqueeDrag = false;
-    let marqueeTarget = null; // 'selection' | 'chaining_window'
+    let isVectorDrag = false;
+    let marqueeTarget = null; // 'selection' | 'chaining'
     let marqueeShiftAdd = false;
     let marqueeStartX = 0;
     let marqueeStartY = 0;
+    let vectorDownScreenX = 0;
+    let vectorDownScreenY = 0;
     let dragStartScreenX = 0;
     let dragStartScreenY = 0;
     let pickDownX = 0;
@@ -677,13 +726,101 @@ export default function Viewport3D({
     let prevMouseY = 0;
     let spherical = new THREE.Spherical(340, Math.PI / 3.4, Math.PI / 4);
 
+    const isSelectionArmed = () =>
+      isChainingActiveRef.current ||
+      isSelectModeRef.current ||
+      (isSketchModeRef.current && activeSketchToolRef.current === 'select');
+
+    const getEffectiveMethod = () => (
+      isChainingActiveRef.current
+        ? (chainingSelectionMethodRef.current || 'chain')
+        : (canvasSelectionMethodRef.current || 'automatic')
+    );
+
+    const resolveSelectionFilterOpts = (extra = {}) => ({
+      worldYOffset: 49,
+      mask: selectionMaskRef.current || 'all',
+      solidFilter: solidFilterModeRef.current || 'all',
+      layerVisibility: layerVisibilityRef.current,
+      ...extra
+    });
+
+    const applyMatchedEntities = (matchedEntities = [], target = 'selection', additive = false, toggleSingle = false) => {
+      if (target === 'chaining') {
+        if (onWindowSelectChainsRef.current) {
+          onWindowSelectChainsRef.current(matchedEntities, { append: additive });
+        }
+        return;
+      }
+      if (!onChangeSelectedEntitiesRef.current) return;
+      const matchedIds = matchedEntities.map(getCustomEntityId).filter(Boolean);
+      if (toggleSingle && matchedIds.length === 1 && additive) {
+        const curSet = new Set(selectedEntityIdsRef.current || []);
+        if (curSet.has(matchedIds[0])) curSet.delete(matchedIds[0]);
+        else curSet.add(matchedIds[0]);
+        onChangeSelectedEntitiesRef.current([...curSet]);
+        return;
+      }
+      if (additive) {
+        const combined = [...new Set([...(selectedEntityIdsRef.current || []), ...matchedIds])];
+        onChangeSelectedEntitiesRef.current(combined);
+      } else {
+        onChangeSelectedEntitiesRef.current(matchedIds);
+      }
+    };
+
+    const completePolygonSelection = (additive = false) => {
+      const pts = polygonPointsRef.current || [];
+      if (pts.length < 3) {
+        polygonPointsRef.current = [];
+        setPolygonPoints([]);
+        setPolygonCursorPt(null);
+        return;
+      }
+      const rect = dom.getBoundingClientRect();
+      const matched = hitTestEntitiesInPolygon(
+        customGeometryRef.current || [],
+        camera,
+        rect.width,
+        rect.height,
+        pts,
+        resolveSelectionFilterOpts({ mode: containmentModeRef.current || 'in_cross' })
+      );
+      applyMatchedEntities(
+        matched,
+        isChainingActiveRef.current ? 'chaining' : 'selection',
+        additive || stickyMultiSelectRef.current
+      );
+      polygonPointsRef.current = [];
+      setPolygonPoints([]);
+      setPolygonCursorPt(null);
+    };
+
+    const cancelInteractiveSelection = () => {
+      polygonPointsRef.current = [];
+      setPolygonPoints([]);
+      setPolygonCursorPt(null);
+      vectorStartRef.current = null;
+      isVectorDrag = false;
+      setVectorSegment(null);
+      isMarqueeDrag = false;
+      setSelectionMarquee(null);
+    };
+
+    completePolygonRef.current = completePolygonSelection;
+    cancelInteractiveSelectionRef.current = cancelInteractiveSelection;
+
     const resolveMarqueeTargetForDown = (e) => {
       if (e.button !== 0 || isBasePointPickActiveRef.current) return null;
       if (isChainingActiveRef.current && chainingSelectionMethodRef.current === 'window') {
-        return 'chaining_window';
+        return 'chaining';
       }
-      const inSelectTool = isSelectModeRef.current || (isSketchModeRef.current && activeSketchToolRef.current === 'select');
-      if (inSelectTool) return 'selection';
+      if (isSelectionArmed()) {
+        const m = getEffectiveMethod();
+        if (m === 'automatic' || m === 'window') {
+          return isChainingActiveRef.current ? 'chaining' : 'selection';
+        }
+      }
       if (e.shiftKey && !isSketchModeRef.current && !isChainingActiveRef.current) return 'selection';
       return null;
     };
@@ -812,6 +949,14 @@ export default function Viewport3D({
       prevMouseY = e.clientY;
 
       if (e.button === 2) {
+        if ((polygonPointsRef.current?.length || 0) >= 3) {
+          completePolygonSelection(!!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current));
+          return;
+        }
+        if ((polygonPointsRef.current?.length || 0) > 0 || vectorStartRef.current) {
+          cancelInteractiveSelection();
+          return;
+        }
         isPanning = true;
         return;
       }
@@ -820,20 +965,72 @@ export default function Viewport3D({
         return;
       }
 
+      if (e.button === 0 && !isBasePointPickActiveRef.current && isSelectionArmed()) {
+        const effMethod = getEffectiveMethod();
+        const rect = dom.getBoundingClientRect();
+        const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        const additive = !!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current);
+
+        if (effMethod === 'polygon') {
+          const curPoly = polygonPointsRef.current || [];
+          if (curPoly.length >= 3 && Math.hypot(curX - curPoly[0].x, curY - curPoly[0].y) <= 12) {
+            completePolygonSelection(additive);
+            return;
+          }
+          const nextPoly = [...curPoly, { x: curX, y: curY }];
+          polygonPointsRef.current = nextPoly;
+          setPolygonPoints(nextPoly);
+          setPolygonCursorPt({ x: curX, y: curY });
+          return;
+        }
+
+        if (effMethod === 'vector') {
+          if (vectorStartRef.current) {
+            const p1 = vectorStartRef.current;
+            const p2 = { x: curX, y: curY };
+            vectorStartRef.current = null;
+            isVectorDrag = false;
+            setVectorSegment(null);
+            const hits = hitTestEntitiesByVector(
+              customGeometryRef.current || [],
+              camera,
+              rect.width,
+              rect.height,
+              p1,
+              p2,
+              resolveSelectionFilterOpts()
+            );
+            applyMatchedEntities(hits, isChainingActiveRef.current ? 'chaining' : 'selection', additive);
+            return;
+          }
+          vectorDownScreenX = e.clientX;
+          vectorDownScreenY = e.clientY;
+          isVectorDrag = true;
+          const startPt = { x: curX, y: curY };
+          vectorStartRef.current = startPt;
+          setVectorSegment({ p1: startPt, p2: startPt });
+          return;
+        }
+      }
+
       const activeMarqueeTarget = resolveMarqueeTargetForDown(e);
       if (activeMarqueeTarget) {
         const rect = dom.getBoundingClientRect();
         isMarqueeDrag = true;
         marqueeTarget = activeMarqueeTarget;
-        marqueeShiftAdd = !!(e.shiftKey || e.ctrlKey || e.metaKey);
+        marqueeShiftAdd = !!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current);
         marqueeStartX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
         marqueeStartY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        const initMode = getEffectiveMethod() === 'window'
+          ? (containmentModeRef.current || 'in_cross')
+          : 'window';
         setSelectionMarquee({
           minX: marqueeStartX,
           maxX: marqueeStartX,
           minY: marqueeStartY,
           maxY: marqueeStartY,
-          mode: 'window',
+          mode: initMode,
           previewCount: 0
         });
         return;
@@ -936,11 +1133,35 @@ export default function Viewport3D({
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
 
+      if ((isVectorDrag || vectorStartRef.current) && getEffectiveMethod() === 'vector') {
+        const rect = dom.getBoundingClientRect();
+        const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        if (vectorStartRef.current) {
+          setVectorSegment({ p1: vectorStartRef.current, p2: { x: curX, y: curY } });
+        }
+        return;
+      }
+
+      if ((polygonPointsRef.current?.length || 0) > 0 && getEffectiveMethod() === 'polygon') {
+        const rect = dom.getBoundingClientRect();
+        const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        setPolygonCursorPt({ x: curX, y: curY });
+      }
+
       if (isMarqueeDrag) {
         const rect = dom.getBoundingClientRect();
         const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
         const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-        const mode = curX >= marqueeStartX ? 'window' : 'crossing';
+        const effMethod = getEffectiveMethod();
+        const isExplicitWindow = effMethod === 'window';
+        const hitMode = isExplicitWindow
+          ? (containmentModeRef.current || 'in_cross')
+          : (curX >= marqueeStartX ? 'enclosed' : 'crossing');
+        const displayMode = isExplicitWindow
+          ? hitMode
+          : (curX >= marqueeStartX ? 'window' : 'crossing');
         const marqueeBox = {
           minX: Math.min(marqueeStartX, curX),
           maxX: Math.max(marqueeStartX, curX),
@@ -953,13 +1174,9 @@ export default function Viewport3D({
           rect.width,
           rect.height,
           marqueeBox,
-          {
-            mode: mode === 'window' ? 'enclosed' : 'crossing',
-            worldYOffset: 49,
-            layerVisibility: layerVisibilityRef.current
-          }
+          resolveSelectionFilterOpts({ mode: hitMode })
         );
-        setSelectionMarquee({ ...marqueeBox, mode, previewCount: previewHits.length });
+        setSelectionMarquee({ ...marqueeBox, mode: displayMode, previewCount: previewHits.length });
         return;
       }
 
@@ -1113,6 +1330,32 @@ export default function Viewport3D({
       isDragging = false;
       isPanning = false;
 
+      if (isVectorDrag && vectorStartRef.current) {
+        isVectorDrag = false;
+        const dragDist = Math.hypot(e.clientX - vectorDownScreenX, e.clientY - vectorDownScreenY);
+        if (dragDist >= 6) {
+          const rect = dom.getBoundingClientRect();
+          const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+          const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+          const p1 = vectorStartRef.current;
+          const p2 = { x: curX, y: curY };
+          vectorStartRef.current = null;
+          setVectorSegment(null);
+          const additive = !!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current);
+          const hits = hitTestEntitiesByVector(
+            customGeometryRef.current || [],
+            camera,
+            rect.width,
+            rect.height,
+            p1,
+            p2,
+            resolveSelectionFilterOpts()
+          );
+          applyMatchedEntities(hits, isChainingActiveRef.current ? 'chaining' : 'selection', additive);
+        }
+        return;
+      }
+
       if (isMarqueeDrag) {
         const rect = dom.getBoundingClientRect();
         const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
@@ -1120,7 +1363,8 @@ export default function Viewport3D({
         const dragDist = Math.hypot(curX - marqueeStartX, curY - marqueeStartY);
         const entities = customGeometryRef.current || [];
         const target = marqueeTarget;
-        const additive = marqueeShiftAdd || !!(e.shiftKey || e.ctrlKey || e.metaKey);
+        const additive = marqueeShiftAdd || !!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current);
+        const effMethod = getEffectiveMethod();
 
         isMarqueeDrag = false;
         marqueeTarget = null;
@@ -1133,31 +1377,21 @@ export default function Viewport3D({
             { x: curX, y: curY },
             rect.width,
             rect.height,
-            { worldYOffset: 49, layerVisibility: layerVisibilityRef.current }
+            resolveSelectionFilterOpts()
           );
-          if (target === 'chaining_window') {
+          if (target === 'chaining') {
             if (picked && onSelectChainEntityRef.current) {
               onSelectChainEntityRef.current(picked);
             }
-          } else if (onChangeSelectedEntitiesRef.current) {
-            if (picked) {
-              const pickedId = getCustomEntityId(picked);
-              if (additive) {
-                const curSet = new Set(selectedEntityIdsRef.current || []);
-                if (curSet.has(pickedId)) curSet.delete(pickedId);
-                else curSet.add(pickedId);
-                onChangeSelectedEntitiesRef.current([...curSet]);
-              } else {
-                onChangeSelectedEntitiesRef.current([pickedId]);
-              }
-            } else if (!additive) {
-              onChangeSelectedEntitiesRef.current([]);
-            }
+          } else {
+            applyMatchedEntities(picked ? [picked] : [], 'selection', additive, true);
           }
           return;
         }
 
-        const mode = curX >= marqueeStartX ? 'enclosed' : 'crossing';
+        const hitMode = effMethod === 'window'
+          ? (containmentModeRef.current || 'in_cross')
+          : (curX >= marqueeStartX ? 'enclosed' : 'crossing');
         const marqueeBox = {
           minX: Math.min(marqueeStartX, curX),
           maxX: Math.max(marqueeStartX, curX),
@@ -1170,23 +1404,46 @@ export default function Viewport3D({
           rect.width,
           rect.height,
           marqueeBox,
-          { mode, worldYOffset: 49, layerVisibility: layerVisibilityRef.current }
+          resolveSelectionFilterOpts({ mode: hitMode })
         );
 
-        if (target === 'chaining_window') {
-          if (onWindowSelectChainsRef.current) {
-            onWindowSelectChainsRef.current(matched, { append: additive });
+        applyMatchedEntities(matched, target, additive);
+        return;
+      }
+
+      if (e.button === 0 && !isBasePointPickActiveRef.current && isSelectionArmed() && !isChainingActiveRef.current) {
+        const effMethod = getEffectiveMethod();
+        const clickDist = Math.hypot(e.clientX - pickDownX, e.clientY - pickDownY);
+        if (clickDist < 6 && (effMethod === 'single' || effMethod === 'chain' || effMethod === 'area')) {
+          const rect = dom.getBoundingClientRect();
+          const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+          const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+          const additive = !!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current);
+          const entities = customGeometryRef.current || [];
+
+          if (effMethod === 'single') {
+            const picked = hitTestEntityAtScreenPoint(entities, camera, { x: curX, y: curY }, rect.width, rect.height, resolveSelectionFilterOpts());
+            applyMatchedEntities(picked ? [picked] : [], 'selection', additive, true);
+            return;
           }
-        } else if (onChangeSelectedEntitiesRef.current) {
-          const matchedIds = matched.map(getCustomEntityId).filter(Boolean);
-          if (additive) {
-            const combined = [...new Set([...(selectedEntityIdsRef.current || []), ...matchedIds])];
-            onChangeSelectedEntitiesRef.current(combined);
-          } else {
-            onChangeSelectedEntitiesRef.current(matchedIds);
+          if (effMethod === 'chain') {
+            const chainHits = hitTestChainAtScreenPoint(
+              entities,
+              camera,
+              rect.width,
+              rect.height,
+              { x: curX, y: curY },
+              resolveSelectionFilterOpts({ planeMode: chainingPlaneModeRef.current })
+            );
+            applyMatchedEntities(chainHits, 'selection', additive);
+            return;
+          }
+          if (effMethod === 'area') {
+            const areaHits = hitTestEntitiesByArea(entities, camera, rect.width, rect.height, { x: curX, y: curY }, resolveSelectionFilterOpts());
+            applyMatchedEntities(areaHits, 'selection', additive);
+            return;
           }
         }
-        return;
       }
 
       if ((isChainingActiveRef.current || isBasePointPickActiveRef.current) && e.button === 0 && !isSketchModeRef.current) {
@@ -1198,10 +1455,24 @@ export default function Viewport3D({
             if (pt) onPickBasePointRef.current({ x: pt.x, y: pt.y, z: pt.z });
             return;
           }
-          if (isChainingActiveRef.current && onSelectChainEntityRef.current) {
-            const picked = resolvePickOnWireframe(e);
-            if (picked?.entity) {
-              onSelectChainEntityRef.current(picked.entity);
+          if (isChainingActiveRef.current) {
+            const effMethod = getEffectiveMethod();
+            const rect = dom.getBoundingClientRect();
+            const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+            const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+            const entities = customGeometryRef.current || [];
+            if (effMethod === 'area') {
+              const areaHits = hitTestEntitiesByArea(entities, camera, rect.width, rect.height, { x: curX, y: curY }, resolveSelectionFilterOpts());
+              if (areaHits.length > 0 && onWindowSelectChainsRef.current) {
+                onWindowSelectChainsRef.current(areaHits, { append: true });
+              }
+              return;
+            }
+            if (onSelectChainEntityRef.current) {
+              const picked = resolvePickOnWireframe(e);
+              if (picked?.entity) {
+                onSelectChainEntityRef.current(picked.entity);
+              }
             }
             return;
           }
@@ -1242,8 +1513,21 @@ export default function Viewport3D({
       }
     };
 
+    const onDoubleClick = (e) => {
+      if ((polygonPointsRef.current?.length || 0) >= 3 && getEffectiveMethod() === 'polygon') {
+        e.preventDefault();
+        // Deduplicate trailing double-click vertex if placed near penultimate
+        const pts = polygonPointsRef.current;
+        if (pts.length > 3 && Math.hypot(pts[pts.length - 1].x - pts[pts.length - 2].x, pts[pts.length - 1].y - pts[pts.length - 2].y) < 5) {
+          polygonPointsRef.current = pts.slice(0, -1);
+        }
+        completePolygonSelection(!!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current));
+      }
+    };
+
     const dom = renderer.domElement;
     dom.addEventListener('mousedown', onMouseDown);
+    dom.addEventListener('dblclick', onDoubleClick);
     dom.addEventListener('mouseleave', onMouseLeave);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
@@ -1272,6 +1556,7 @@ export default function Viewport3D({
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', handleResize);
       dom.removeEventListener('mousedown', onMouseDown);
+      dom.removeEventListener('dblclick', onDoubleClick);
       dom.removeEventListener('mouseleave', onMouseLeave);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
@@ -2322,7 +2607,18 @@ export default function Viewport3D({
         return;
       }
 
+      if (e.key === 'Enter' && (polygonPointsRef.current?.length || 0) >= 3) {
+        e.preventDefault();
+        completePolygonRef.current?.(stickyMultiSelectRef.current);
+        return;
+      }
+
       if (e.key === 'Escape') {
+        if ((polygonPointsRef.current?.length || 0) > 0 || vectorStartRef.current) {
+          e.preventDefault();
+          cancelInteractiveSelectionRef.current?.();
+          return;
+        }
         if (sketchAnchorRef.current) {
           e.preventDefault();
           sketchAnchorRef.current = null;
@@ -2389,7 +2685,44 @@ export default function Viewport3D({
 
   const isSelectCursorArmed = isSelectModeActive
     || (isSketchModeActive && activeSketchTool === 'select')
-    || (isChainingActive && chainingSelectionMethod === 'window');
+    || isChainingActive;
+
+  const getFilteredSelectableEntities = (overrideMask = selectionMask) =>
+    (customGeometry || []).filter((ent) => {
+      if (!ent || !matchesSelectionMask(ent, overrideMask) || !matchesTopologyFilter(ent, solidFilterMode)) {
+        return false;
+      }
+      return true;
+    });
+
+  const handleSelectAllMatchingMask = () => {
+    if (!onChangeSelectedEntities) return;
+    const matchedIds = getFilteredSelectableEntities(selectionMask).map(getCustomEntityId).filter(Boolean);
+    onChangeSelectedEntities(matchedIds);
+  };
+
+  const handleInvertSelection = () => {
+    if (!onChangeSelectedEntities) return;
+    const curSet = new Set(selectedEntityIds || []);
+    const invertedIds = getFilteredSelectableEntities(selectionMask)
+      .map(getCustomEntityId)
+      .filter((id) => id && !curSet.has(id));
+    onChangeSelectedEntities(invertedIds);
+  };
+
+  const handleQuickMaskSelect = (maskId) => {
+    if (maskId === 'clear') {
+      onChangeSelectionMask?.('all');
+      onChangeSelectedEntities?.([]);
+      return;
+    }
+    const nextMask = selectionMask === maskId && maskId !== 'all' ? 'all' : maskId;
+    onChangeSelectionMask?.(nextMask);
+    if (nextMask !== 'all' && nextMask !== 'colors' && onChangeSelectedEntities) {
+      const matchedIds = getFilteredSelectableEntities(nextMask).map(getCustomEntityId).filter(Boolean);
+      onChangeSelectedEntities(matchedIds);
+    }
+  };
 
   // Active Tool Telemetry Sample for HUD
   const currentSample = useMemo(() => {
@@ -2458,7 +2791,7 @@ export default function Viewport3D({
         style={{ cursor: isSelectCursorArmed ? 'crosshair' : 'default' }}
       />
 
-      {/* Window / Crossing Marquee Overlay */}
+      {/* Window / Containment Marquee Overlay */}
       {selectionMarquee && (
         <div
           data-testid="selection-marquee"
@@ -2468,12 +2801,16 @@ export default function Viewport3D({
             top: `${selectionMarquee.minY}px`,
             width: `${Math.max(2, selectionMarquee.maxX - selectionMarquee.minX)}px`,
             height: `${Math.max(2, selectionMarquee.maxY - selectionMarquee.minY)}px`,
-            border: selectionMarquee.mode === 'window'
+            border: (selectionMarquee.mode === 'window' || selectionMarquee.mode === 'inside')
               ? '1.5px solid #0284c7'
-              : '1.5px dashed #10b981',
-            backgroundColor: selectionMarquee.mode === 'window'
+              : selectionMarquee.mode === 'outside'
+                ? '1.5px dashed #e11d48'
+                : '1.5px dashed #10b981',
+            backgroundColor: (selectionMarquee.mode === 'window' || selectionMarquee.mode === 'inside')
               ? 'rgba(2, 132, 199, 0.14)'
-              : 'rgba(16, 185, 129, 0.14)',
+              : selectionMarquee.mode === 'outside'
+                ? 'rgba(225, 29, 72, 0.10)'
+                : 'rgba(16, 185, 129, 0.14)',
             pointerEvents: 'none',
             zIndex: 80
           }}
@@ -2484,7 +2821,11 @@ export default function Viewport3D({
                 position: 'absolute',
                 top: '-20px',
                 left: '0px',
-                background: selectionMarquee.mode === 'window' ? '#0284c7' : '#059669',
+                background: (selectionMarquee.mode === 'window' || selectionMarquee.mode === 'inside')
+                  ? '#0284c7'
+                  : selectionMarquee.mode === 'outside'
+                    ? '#e11d48'
+                    : '#059669',
                 color: '#ffffff',
                 fontSize: '10px',
                 fontWeight: 700,
@@ -2494,201 +2835,125 @@ export default function Viewport3D({
                 boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
               }}
             >
-              {selectionMarquee.mode === 'window' ? 'Window (Inside)' : 'Crossing (Touch)'} &bull; {selectionMarquee.previewCount}
+              {(selectionMarquee.mode === 'window' || selectionMarquee.mode === 'inside')
+                ? 'Window (Inside)'
+                : selectionMarquee.mode === 'outside'
+                  ? 'Window (Outside)'
+                  : selectionMarquee.mode === 'in_cross'
+                    ? 'Window (In + Crossing)'
+                    : 'Crossing (Touch)'} &bull; {selectionMarquee.previewCount}
             </span>
           )}
         </div>
       )}
 
-      {/* Top Canvas Selection & Action Bar HUD */}
-      {!isBackplotActive && (
-        <div
-          data-testid="canvas-selection-hud"
+      {/* Polygon & Vector Selection Interactive SVG Overlay */}
+      {(polygonPoints.length > 0 || vectorSegment) && (
+        <svg
+          data-testid="interactive-selection-svg"
           style={{
             position: 'absolute',
-            top: '10px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 45,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: isLight ? 'rgba(255, 255, 255, 0.92)' : 'rgba(15, 23, 42, 0.90)',
-            border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
-            borderRadius: '999px',
-            padding: '4px 10px',
-            boxShadow: '0 4px 14px rgba(15, 23, 42, 0.12)',
-            backdropFilter: 'blur(8px)',
-            userSelect: 'none',
-            fontSize: '11px',
-            color: isLight ? '#0f172a' : '#f8fafc'
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: 79
           }}
         >
-          <button
-            type="button"
-            data-testid="window-select-toggle-btn"
-            onClick={() => {
-              if (isSketchModeActive) {
-                const nextTool = activeSketchTool === 'select' ? 'line' : 'select';
-                setActiveSketchTool(nextTool);
-                if (onChangeSketchTool) onChangeSketchTool(nextTool);
-                if (onToggleSelectMode) onToggleSelectMode(nextTool === 'select');
-              } else if (onToggleSelectMode) {
-                onToggleSelectMode(!isSelectModeActive);
-              }
-            }}
-            title="Window / Crossing Select Mode (V) — Drag L->R for Window (Inside), R->L for Crossing (Touch), Middle-Drag to Orbit"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              background: isSelectCursorArmed ? '#0284c7' : (isLight ? '#f1f5f9' : '#1e293b'),
-              color: isSelectCursorArmed ? '#ffffff' : (isLight ? '#334155' : '#e2e8f0'),
-              border: `1px solid ${isSelectCursorArmed ? '#0284c7' : (isLight ? '#cbd5e1' : '#475569')}`,
-              borderRadius: '999px',
-              padding: '3px 9px',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-          >
-            <MousePointer size={12} />
-            <span>Window Select (V)</span>
-          </button>
-
-          {isSelectCursorArmed && selectionSummary.count === 0 && (
-            <span style={{ fontSize: '10px', color: isLight ? '#475569' : '#94a3b8', paddingRight: '4px' }}>
-              Drag L→R Inside &bull; R→L Crossing &bull; Shift+Add
-            </span>
-          )}
-
-          {selectionSummary.count > 0 && (
+          {polygonPoints.length > 0 && (
             <>
-              <div style={{ width: '1px', height: '16px', background: isLight ? '#cbd5e1' : '#475569' }} />
-              <span
-                data-testid="selection-count-badge"
-                style={{
-                  fontWeight: 700,
-                  color: '#0284c7',
-                  background: isLight ? '#e0f2fe' : 'rgba(2, 132, 199, 0.25)',
-                  padding: '2px 7px',
-                  borderRadius: '999px',
-                  fontSize: '10.5px',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {selectionSummary.count} Selected{selectionSummary.label ? ` (${selectionSummary.label})` : ''}
-              </span>
-
-              {(selectionSummary.byCategory.circle || selectionSummary.byCategory.rect || selectionSummary.byCategory.spline || selectionSummary.byCategory.line) > 0 && onRequestExtrudeSelection && (
-                <button
-                  type="button"
-                  onClick={() => onRequestExtrudeSelection(selectedEntitiesList)}
-                  title="Extrude Selected Shapes into 3D Surfaces"
-                  style={{
-                    background: isLight ? '#ecfeff' : '#164e63',
-                    color: isLight ? '#0e7490' : '#67e8f9',
-                    border: `1px solid ${isLight ? '#67e8f9' : '#0891b2'}`,
-                    borderRadius: '4px',
-                    padding: '2px 7px',
-                    fontSize: '10.5px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Extrude
-                </button>
-              )}
-
-              {onRequestTransformSelection && (
-                <button
-                  type="button"
-                  onClick={() => onRequestTransformSelection(selectedEntitiesList)}
-                  title="Translate, Rotate, Mirror, or Copy Selected Shapes"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                    background: isLight ? '#f8fafc' : '#1e293b',
-                    color: isLight ? '#334155' : '#e2e8f0',
-                    border: `1px solid ${isLight ? '#cbd5e1' : '#475569'}`,
-                    borderRadius: '4px',
-                    padding: '2px 7px',
-                    fontSize: '10.5px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Move size={11} />
-                  <span>Transform</span>
-                </button>
-              )}
-
-              {onBlankSelectedEntities && (
-                <button
-                  type="button"
-                  onClick={() => onBlankSelectedEntities(selectedEntityIds)}
-                  title="Hide / Blank Selected Entities"
-                  style={{
-                    background: isLight ? '#f8fafc' : '#1e293b',
-                    color: isLight ? '#334155' : '#e2e8f0',
-                    border: `1px solid ${isLight ? '#cbd5e1' : '#475569'}`,
-                    borderRadius: '4px',
-                    padding: '2px 7px',
-                    fontSize: '10.5px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Blank
-                </button>
-              )}
-
-              {onDeleteSelectedEntities && (
-                <button
-                  type="button"
-                  onClick={() => onDeleteSelectedEntities(selectedEntityIds)}
-                  title="Delete Selected Entities (Del)"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                    background: isLight ? '#fef2f2' : '#7f1d1d',
-                    color: '#dc2626',
-                    border: '1px solid #fca5a5',
-                    borderRadius: '4px',
-                    padding: '2px 7px',
-                    fontSize: '10.5px',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Trash2 size={11} />
-                  <span>Delete</span>
-                </button>
-              )}
-
-              {onChangeSelectedEntities && (
-                <button
-                  type="button"
-                  onClick={() => onChangeSelectedEntities([])}
-                  title="Clear Selection (Esc)"
-                  style={{
-                    background: 'transparent',
-                    color: isLight ? '#64748b' : '#94a3b8',
-                    border: 'none',
-                    padding: '2px 4px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  <X size={13} />
-                </button>
-              )}
+              <polygon
+                points={[
+                  ...polygonPoints,
+                  ...(polygonCursorPt ? [polygonCursorPt] : [])
+                ].map((p) => `${p.x},${p.y}`).join(' ')}
+                fill="rgba(2, 132, 199, 0.14)"
+                stroke="#0284c7"
+                strokeWidth="1.6"
+                strokeDasharray="5 3"
+              />
+              {polygonPoints.map((pt, idx) => (
+                <circle
+                  key={idx}
+                  cx={pt.x}
+                  cy={pt.y}
+                  r={idx === 0 && polygonPoints.length >= 3 ? 5.5 : 3.5}
+                  fill={idx === 0 && polygonPoints.length >= 3 ? '#10b981' : '#ffffff'}
+                  stroke="#0284c7"
+                  strokeWidth="1.6"
+                />
+              ))}
             </>
           )}
-        </div>
+          {vectorSegment && (
+            <>
+              <line
+                x1={vectorSegment.p1.x}
+                y1={vectorSegment.p1.y}
+                x2={vectorSegment.p2.x}
+                y2={vectorSegment.p2.y}
+                stroke="#0284c7"
+                strokeWidth="2"
+                strokeDasharray="6 3"
+              />
+              <circle cx={vectorSegment.p1.x} cy={vectorSegment.p1.y} r="4" fill="#10b981" stroke="#ffffff" strokeWidth="1.2" />
+              <circle cx={vectorSegment.p2.x} cy={vectorSegment.p2.y} r="4" fill="#0284c7" stroke="#ffffff" strokeWidth="1.2" />
+            </>
+          )}
+        </svg>
+      )}
+
+      {/* Unified Mastercam Floating AutoCursor & Selection Methods Pill */}
+      {!isBackplotActive && (
+        <AutoCursorBar
+          snapMode={propSnapMode}
+          onSelectSnapMode={(mode) => {
+            onChangeSnapMode?.(mode);
+            objectSnapRef.current = mode !== 'none';
+          }}
+          isLocked={isAutoCursorLocked}
+          onToggleLock={onToggleAutoCursorLock}
+          onFastPointSubmit={onFastPointSubmit}
+          selectionMethod={isChainingActive ? chainingSelectionMethod : canvasSelectionMethod}
+          onChangeSelectionMethod={(method) => onChangeCanvasSelectionMethod?.(method)}
+          containmentMode={containmentMode}
+          onChangeContainmentMode={(mode) => onChangeContainmentMode?.(mode)}
+          solidFilterMode={solidFilterMode}
+          onChangeSolidFilterMode={(mode) => onChangeSolidFilterMode?.(mode)}
+          isSelectModeActive={isSelectCursorArmed}
+          onToggleSelectMode={(nextVal) => {
+            if (isSketchModeActive) {
+              const nextTool = nextVal ? 'select' : 'line';
+              setActiveSketchTool(nextTool);
+              onChangeSketchTool?.(nextTool);
+            }
+            onToggleSelectMode?.(nextVal);
+          }}
+          stickyMultiSelect={stickyMultiSelect}
+          onToggleStickyMultiSelect={onToggleStickyMultiSelect}
+          selectedCount={selectionSummary.count}
+          polygonPointCount={polygonPoints.length}
+          onCompletePolygon={() => completePolygonRef.current?.(stickyMultiSelectRef.current)}
+          onCancelInteractiveSelection={() => cancelInteractiveSelectionRef.current?.()}
+          onSelectAll={handleSelectAllMatchingMask}
+          onReselectPrevious={onReselectPrevious}
+          onInvertSelection={handleInvertSelection}
+          onClearSelection={() => onChangeSelectedEntities?.([])}
+          onExtrudeSelection={onRequestExtrudeSelection ? () => onRequestExtrudeSelection(selectedEntitiesList) : null}
+          onTransformSelection={onRequestTransformSelection ? () => onRequestTransformSelection(selectedEntitiesList) : null}
+          onBlankSelection={onBlankSelectedEntities ? () => onBlankSelectedEntities(selectedEntityIds) : null}
+          onDeleteSelection={onDeleteSelectedEntities ? () => onDeleteSelectedEntities(selectedEntityIds) : null}
+          theme={theme}
+        />
+      )}
+
+      {/* Docked Vertical QuickMask Bar (Right Edge of Viewport) */}
+      {!isBackplotActive && (
+        <QuickMaskBar
+          activeMask={selectionMask}
+          onSelectMask={handleQuickMaskSelect}
+          theme={theme}
+        />
       )}
 
       {/* Drag & Drop Visual Overlay */}
