@@ -223,7 +223,7 @@ export default function App() {
   const [activeViewsheetId, setActiveViewsheetId] = useState('vs_1');
 
   // Machine Definition
-  const [machines] = useState([
+  const [machines, setMachines] = useState([
     { id: 'dmu50', name: 'DMG MORI DMU 50 (5X)', type: '5-Axis Trunnion B/C', controller: 'Heidenhain TNC 640' },
     { id: 'haas_vf2', name: 'Haas VF-2 (3X VMC)', type: '3-Axis Vertical', controller: 'Haas NGC' },
     { id: 'robodrill', name: 'Fanuc Robodrill D21', type: 'High Speed 3-Axis', controller: 'Fanuc 31i' },
@@ -5451,6 +5451,13 @@ export default function App() {
         machines={machines}
         activeMachine={activeMachine}
         onSelectMachine={setActiveMachineId}
+        onUpdateMachineConfig={(updatedConfig) => {
+          setActiveMachineId(updatedConfig.id);
+          setMachines((prev) =>
+            prev.map((m) => (m.id === updatedConfig.id ? { ...m, ...updatedConfig } : m))
+          );
+          showToast(`Saved Machine Definition: ${updatedConfig.name}`, 'success');
+        }}
       />
 
       {/* Automatic Toolpathing (ATP) Studio Modal (Tab 10) */}
