@@ -1110,6 +1110,26 @@ export default function App() {
               else if (cs.sampleType === 'titan_1m' || cs.sampleType === 'titan1m' || cs.sampleType === 'titan') setCurrentModel(createTitan1MPart());
               else if (cs.sampleType === 'base_structure_alu' || cs.sampleType === 'base_structure') setCurrentModel(createMastercamBaseStructureALU());
             }
+          } else if (Array.isArray(session.solidsList) && session.solidsList.length === 0) {
+            // Blank CAD / Surface project had no solid body; clear default Base Structure-ALU model
+            setCadSource(null);
+            setCurrentModel(null);
+            const restoredBox = new THREE.Box3();
+            (restoredSessionGeo || []).forEach((ent) => {
+              if (ent && ent.visible !== false) {
+                ent.updateMatrixWorld?.(true);
+                restoredBox.expandByObject(ent);
+              }
+            });
+            if (!restoredBox.isEmpty()) {
+              setPartMetrics({
+                box: restoredBox,
+                bounds: restoredBox,
+                center: restoredBox.getCenter(new THREE.Vector3()),
+                dimensions: restoredBox.getSize(new THREE.Vector3()),
+                triangles: 0
+              });
+            }
           }
 
           resetHistory({
