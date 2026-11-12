@@ -16,6 +16,7 @@ import {
   MACHINE_DEFINITIONS_CATALOG,
   deriveControllerDialect
 } from '../config/machineDefinitionsCatalog';
+import VirtualizedGCodeList from './VirtualizedGCodeList';
 
 export default function MachineSimModal({
   isOpen,
@@ -564,21 +565,24 @@ export default function MachineSimModal({
                   {/* Synchronized G-Code Streamer */}
                   <div className="sim-status-card" style={{ flex: 1, minHeight: '150px', display: 'flex', flexDirection: 'column' }}>
                     <span className="section-label">SYNCHRONIZED NC PROGRAM STREAM ({gcodeLines.length} BLOCKS)</span>
-                    <div className="gcode-stream-box" style={{ flex: 1, overflowY: 'auto' }}>
-                      {gcodeLines.map((line, idx) => (
-                        <div
-                          key={idx}
-                          className={`gcode-line ${idx === activeLineIdx ? 'active' : ''}`}
-                          onClick={() => {
-                            setActiveLineIdx(idx);
-                            setIsPlaying(false);
-                          }}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          {line}
-                        </div>
-                      ))}
-                    </div>
+                    <VirtualizedGCodeList
+                      lines={gcodeLines}
+                      rowHeight={18}
+                      fallbackHeight={180}
+                      activeIndex={activeLineIdx}
+                      keepActiveInView={true}
+                      showLineNumbers={false}
+                      syntaxHighlight={false}
+                      rowClassName="gcode-line"
+                      activeRowClassName="active"
+                      className="gcode-stream-box"
+                      style={{ flex: 1, minHeight: 0, height: 'auto' }}
+                      resetScrollKey={`${selectedMachineId}|${gcodeLines.length}`}
+                      onLineClick={(_, idx) => {
+                        setActiveLineIdx(idx);
+                        setIsPlaying(false);
+                      }}
+                    />
                   </div>
                 </>
               )}

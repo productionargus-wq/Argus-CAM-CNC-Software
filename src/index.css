@@ -863,6 +863,12 @@ dialog::backdrop {
   overscroll-behavior: contain;
 }
 
+#gcode-viewer-dialog::backdrop,
+#machine-sim-dialog::backdrop {
+  background-color: rgba(5, 8, 14, 0.78);
+  backdrop-filter: none;
+}
+
 .modal-window {
   background: var(--dialog-bg);
   border: 1px solid var(--dialog-border);
