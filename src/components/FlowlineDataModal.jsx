@@ -19,6 +19,7 @@ const MC_BTN = {
 
 /**
  * Non-blocking Mastercam Flowline data floating dialog (Flip Offset/Cut/Step/Start, Edge tolerance, Plot edges).
+ * State badges show current direction on each button, matching Mastercam 2026 style.
  */
 export default function FlowlineDataModal({
   isOpen,
@@ -43,13 +44,21 @@ export default function FlowlineDataModal({
     onChangeFlowlineData?.({ ...flowlineData, ...patch });
   };
 
+  const stepLabel = (() => {
+    const swap = Boolean(flowlineData.swapUV);
+    const sign = (flowlineData.stepDir ?? 1) >= 0 ? '+' : '-';
+    return `${sign}${swap ? 'U' : 'V'}`;
+  })();
+
+  const cornerIndex = (Number(flowlineData.startCorner) || 0) % 4;
+
   return (
     <div
       data-testid="flowline-data-modal"
       style={{
         position: 'fixed',
         left: '12px',
-        top: '132px',
+        top: '96px',
         width: '214px',
         zIndex: 99965,
         background: '#f0f0f0',
@@ -105,10 +114,14 @@ export default function FlowlineDataModal({
               style={{
                 ...MC_BTN,
                 border: flowlineData.offsetDir < 0 ? '1px solid #0284c7' : '1px solid #9ca3af',
-                background: flowlineData.offsetDir < 0 ? '#e0f2fe' : MC_BTN.background
+                background: flowlineData.offsetDir < 0 ? '#e0f2fe' : MC_BTN.background,
+                justifyContent: 'space-between'
               }}
             >
-              Offset
+              <span>Offset</span>
+              <span style={{ color: '#0284c7', fontSize: '10px', fontWeight: 600 }}>
+                ({flowlineData.offsetDir >= 0 ? 'Outer' : 'Inner'})
+              </span>
             </button>
             <button
               type="button"
@@ -118,10 +131,14 @@ export default function FlowlineDataModal({
               style={{
                 ...MC_BTN,
                 border: flowlineData.cutDir < 0 ? '1px solid #0284c7' : '1px solid #9ca3af',
-                background: flowlineData.cutDir < 0 ? '#e0f2fe' : MC_BTN.background
+                background: flowlineData.cutDir < 0 ? '#e0f2fe' : MC_BTN.background,
+                justifyContent: 'space-between'
               }}
             >
-              Cut direction
+              <span>Cut direction</span>
+              <span style={{ color: '#0284c7', fontSize: '11px', fontWeight: 700 }}>
+                ({flowlineData.cutDir >= 0 ? '→' : '←'})
+              </span>
             </button>
             <button
               type="button"
@@ -139,23 +156,31 @@ export default function FlowlineDataModal({
               style={{
                 ...MC_BTN,
                 border: flowlineData.swapUV || flowlineData.stepDir < 0 ? '1px solid #0284c7' : '1px solid #9ca3af',
-                background: flowlineData.swapUV || flowlineData.stepDir < 0 ? '#e0f2fe' : MC_BTN.background
+                background: flowlineData.swapUV || flowlineData.stepDir < 0 ? '#e0f2fe' : MC_BTN.background,
+                justifyContent: 'space-between'
               }}
             >
-              Step direction
+              <span>Step direction</span>
+              <span style={{ color: '#0284c7', fontSize: '10px', fontWeight: 600 }}>
+                ({stepLabel})
+              </span>
             </button>
             <button
               type="button"
               data-testid="flowline-flip-start-btn"
               onClick={() => update({ startCorner: ((Number(flowlineData.startCorner) || 0) + 1) % 4 })}
-              title={`Cycle start corner (Corner #${((Number(flowlineData.startCorner) || 0) % 4) + 1})`}
+              title={`Cycle start corner (Corner #${cornerIndex + 1})`}
               style={{
                 ...MC_BTN,
-                border: (Number(flowlineData.startCorner) || 0) > 0 ? '1px solid #0284c7' : '1px solid #9ca3af',
-                background: (Number(flowlineData.startCorner) || 0) > 0 ? '#dbeafe' : MC_BTN.background
+                border: cornerIndex > 0 ? '1px solid #0284c7' : '1px solid #9ca3af',
+                background: cornerIndex > 0 ? '#dbeafe' : MC_BTN.background,
+                justifyContent: 'space-between'
               }}
             >
-              Start
+              <span>Start</span>
+              <span style={{ color: '#0284c7', fontSize: '10px', fontWeight: 600 }}>
+                (Corner #{cornerIndex + 1})
+              </span>
             </button>
           </div>
         </fieldset>

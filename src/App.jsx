@@ -5322,7 +5322,7 @@ export default function App() {
     surfaceSelectionDraft.driveFaceIds.length > 0
       ? {
           active: true,
-          showGrid: isFlowlineDataOpen,
+          showGrid: true,
           driveFaceIds: surfaceSelectionDraft.driveFaceIds,
           checkFaceIds: surfaceSelectionDraft.checkFaceIds,
           flowlineData: surfaceSelectionDraft.flowlineData
