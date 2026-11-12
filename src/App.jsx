@@ -141,12 +141,16 @@ function rehydrateBox3(b) {
 
 function countWireframes(list = []) {
   return (list || []).filter(
-    (g) =>
-      g &&
-      (g.name?.startsWith('Wireframe_') ||
-        g.name?.startsWith('Drill_') ||
-        g.name?.startsWith('Hole_') ||
-        ['line', 'circle', 'rectangle', 'arc', 'spline'].includes(g.userData?.type))
+    (g) => {
+      if (!g) return false;
+      const gName = typeof g.name === 'string' ? g.name : '';
+      return (
+        gName.startsWith('Wireframe_') ||
+        gName.startsWith('Drill_') ||
+        gName.startsWith('Hole_') ||
+        ['line', 'circle', 'rectangle', 'arc', 'spline'].includes(g.userData?.type)
+      );
+    }
   ).length;
 }
 
@@ -980,8 +984,12 @@ export default function App() {
     solidsListRef.current = solidsList;
 
     const wireframeCount = countWireframes(customGeometry);
-    const surfaceCount = customGeometry.filter(
-      (g) => g && (g.name?.startsWith('Surface_') || g.name?.startsWith('CAD_'))
+    const surfaceCount = (customGeometry || []).filter(
+      (g) => {
+        if (!g) return false;
+        const gName = typeof g.name === 'string' ? g.name : '';
+        return gName.startsWith('Surface_') || gName.startsWith('CAD_');
+      }
     ).length;
 
     setLevels((prev) =>

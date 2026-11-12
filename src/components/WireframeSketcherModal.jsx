@@ -160,9 +160,15 @@ export default function WireframeSketcherModal({
 
   // List of active Level 10 wireframe entities
   const wireframeEntities = useMemo(() => {
-    return customGeometry.filter(
-      (g) => g.name?.startsWith('Wireframe_') || g.name?.startsWith('Drill_') || g.name?.startsWith('CAD_')
-    );
+    return (customGeometry || []).filter((g) => {
+      if (!g) return false;
+      const gName = typeof g.name === 'string' ? g.name : '';
+      return (
+        gName.startsWith('Wireframe_') ||
+        gName.startsWith('Drill_') ||
+        gName.startsWith('CAD_')
+      );
+    });
   }, [customGeometry]);
 
   if (!isOpen) return null;

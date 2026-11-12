@@ -678,9 +678,12 @@ export function createBoxGeometry(
   w = 80,
   h = 35,
   d = 60,
-  name = "Rectangular_Billet",
-  options = {}
+  nameOrOptions = "Rectangular_Billet",
+  optionsParam = {}
 ) {
+  let name = typeof nameOrOptions === 'string' ? nameOrOptions : "Rectangular_Billet";
+  let options = typeof nameOrOptions === 'object' && nameOrOptions !== null ? nameOrOptions : optionsParam;
+
   const group = new THREE.Group();
   group.name = name;
 
@@ -726,9 +729,12 @@ export function createBoxGeometry(
 export function createCylinderGeometry(
   radius = 35,
   height = 45,
-  name = "Cylindrical_Blank",
-  options = {}
+  nameOrOptions = "Cylindrical_Blank",
+  optionsParam = {}
 ) {
+  let name = typeof nameOrOptions === 'string' ? nameOrOptions : "Cylindrical_Blank";
+  let options = typeof nameOrOptions === 'object' && nameOrOptions !== null ? nameOrOptions : optionsParam;
+
   const group = new THREE.Group();
   group.name = name;
 
@@ -798,9 +804,12 @@ export function createConeGeometry(
   radiusBottom = 35,
   radiusTop = 15,
   height = 45,
-  name = "Cone_Solid",
-  options = {}
+  nameOrOptions = "Cone_Solid",
+  optionsParam = {}
 ) {
+  let name = typeof nameOrOptions === 'string' ? nameOrOptions : "Cone_Solid";
+  let options = typeof nameOrOptions === 'object' && nameOrOptions !== null ? nameOrOptions : optionsParam;
+
   const group = new THREE.Group();
   group.name = name;
 
@@ -841,9 +850,12 @@ export function createConeGeometry(
 export function createTorusGeometry(
   radius = 30,
   tubeRadius = 10,
-  name = "Torus_Solid",
-  options = {}
+  nameOrOptions = "Torus_Solid",
+  optionsParam = {}
 ) {
+  let name = typeof nameOrOptions === 'string' ? nameOrOptions : "Torus_Solid";
+  let options = typeof nameOrOptions === 'object' && nameOrOptions !== null ? nameOrOptions : optionsParam;
+
   const group = new THREE.Group();
   group.name = name;
 

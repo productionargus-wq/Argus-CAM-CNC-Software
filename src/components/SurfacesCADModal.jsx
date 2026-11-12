@@ -169,8 +169,12 @@ export default function SurfacesCADModal({
 
   // List of active Surface entities
   const surfaceEntities = useMemo(() => {
-    return customGeometry.filter(
-      (g) => g.name?.startsWith('Surface_') || g.name?.startsWith('CAD_')
+    return (customGeometry || []).filter(
+      (g) => {
+        if (!g) return false;
+        const gName = typeof g.name === 'string' ? g.name : '';
+        return gName.startsWith('Surface_') || gName.startsWith('CAD_');
+      }
     );
   }, [customGeometry]);
 

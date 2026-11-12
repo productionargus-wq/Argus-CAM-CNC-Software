@@ -169,40 +169,40 @@ export default function SolidsCADModal({
 
   // Handlers
   const handleCreateBox = () => {
-    const box = createBoxGeometry(boxW, boxH, boxD, {
+    const box = createBoxGeometry(boxW, boxH, boxD, "Solid_Block", {
       material: activeMaterial.name,
       density: activeMaterial.density
     });
-    if (onAddSolidBody) onAddSolidBody(box);
+    if (onAddSolidBody) onAddSolidBody(box, "Solid_Block");
     notify(`Solid Block (${boxW}x${boxH}x${boxD}mm - ${calcMassKg(boxVol)} kg) added to Level 10.`);
   };
 
   const handleCreateCylinder = () => {
-    const cyl = createCylinderGeometry(cylRadius, cylHeight, {
+    const cyl = createCylinderGeometry(cylRadius, cylHeight, "Solid_Cylinder", {
       innerRadius: cylInnerR,
       axis: 'Y',
       material: activeMaterial.name,
       density: activeMaterial.density
     });
-    if (onAddSolidBody) onAddSolidBody(cyl);
+    if (onAddSolidBody) onAddSolidBody(cyl, "Solid_Cylinder");
     notify(`Cylindrical Solid Blank (Ø${cylRadius * 2}x${cylHeight}mm) added to Level 10.`);
   };
 
   const handleCreateSphere = () => {
     const sph = createSphereGeometry(sphRadius, `Solid_Sphere_R${sphRadius}`);
-    if (onAddSolidBody) onAddSolidBody(sph);
+    if (onAddSolidBody) onAddSolidBody(sph, `Solid_Sphere_R${sphRadius}`);
     notify(`Spherical Solid Body (Ø${sphRadius * 2}mm) added to Level 10.`);
   };
 
   const handleCreateCone = () => {
-    const cone = createConeGeometry(coneRBot, coneRTop, coneHeight);
-    if (onAddSolidBody) onAddSolidBody(cone);
+    const cone = createConeGeometry(coneRBot, coneRTop, coneHeight, "Solid_Cone");
+    if (onAddSolidBody) onAddSolidBody(cone, "Solid_Cone");
     notify(`Conical Solid Frustum (R${coneRBot} to R${coneRTop}) added to Level 10.`);
   };
 
   const handleCreateTorus = () => {
-    const torus = createTorusGeometry(torusRadius, torusTube);
-    if (onAddSolidBody) onAddSolidBody(torus);
+    const torus = createTorusGeometry(torusRadius, torusTube, "Solid_Torus");
+    if (onAddSolidBody) onAddSolidBody(torus, "Solid_Torus");
     notify(`Torus Solid Ring (R${torusRadius}, Tube ${torusTube}mm) added to Level 10.`);
   };
 
