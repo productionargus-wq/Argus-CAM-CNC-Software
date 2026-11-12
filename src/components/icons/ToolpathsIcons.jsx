@@ -261,6 +261,17 @@ export function Tp3dHybridIcon({ size = 16, className = '' }) {
   );
 }
 
+export function Tp3dFlowlineIcon({ size = 16, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" className={className}>
+      <path d="M2 14 C 6 9, 13 16, 18 11" stroke="#0284c7" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+      <path d="M2 17 C 6 12, 13 19, 18 14" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+      <path d="M4 6 H 14" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" />
+      <polygon points="17.5,6 13,3.5 13,8.5" fill="#16a34a" />
+    </svg>
+  );
+}
+
 // ==================== 3. MULTIAXIS GROUP ====================
 
 export function TpMultiCurveIcon({ size = 26, className = '' }) {
@@ -538,6 +549,7 @@ export const TOOLPATHS_ICON_MAP = {
   Tp3dRadial: Tp3dRadialIcon,
   Tp3dPencil: Tp3dPencilIcon,
   Tp3dHybrid: Tp3dHybridIcon,
+  Tp3dFlowline: Tp3dFlowlineIcon,
   TpMultiCurve: TpMultiCurveIcon,
   TpMultiSwarf: TpMultiSwarfIcon,
   TpMultiParallel: TpMultiParallelIcon,

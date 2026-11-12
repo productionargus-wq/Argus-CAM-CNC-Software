@@ -152,6 +152,7 @@ export default function RibbonBar({
   onOpenDefineToolModal,
   onOpenSurfaceFinishContour,
   onOpenSurfaceFinishPocket,
+  onOpenSurfaceFinishFlowline,
   onCopyViewportImage,
   onPasteOp,
   onCutOp,
@@ -1676,6 +1677,10 @@ export default function RibbonBar({
               if (action.startsWith('tp_3d_')) {
                 if (action === 'tp_3d_optirough' && onOpenAdaptiveModal) {
                   onOpenAdaptiveModal();
+                  return;
+                }
+                if (action === 'tp_3d_finish_flowline' && onOpenSurfaceFinishFlowline) {
+                  onOpenSurfaceFinishFlowline();
                   return;
                 }
                 if (action === 'tp_3d_finish_contour' && onOpenSurfaceFinishContour) {

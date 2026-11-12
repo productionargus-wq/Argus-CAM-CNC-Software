@@ -22,6 +22,7 @@ export function isDriveSurfaceEntity(ent) {
     name.startsWith('Wireframe_') ||
     name.startsWith('Drill_') ||
     name.startsWith('Hole_') ||
+    name.startsWith('Drafting_') ||
     cadType.startsWith('wireframe')
   ) {
     return false;
@@ -30,14 +31,12 @@ export function isDriveSurfaceEntity(ent) {
     name.startsWith('Surface_') ||
     name.startsWith('CAD_Surface') ||
     name.startsWith('Solid_') ||
-    cadType === 'surface_extrusion' ||
-    cadType === 'surface_cylinder' ||
-    cadType === 'surface_plane' ||
-    cadType === 'surface_revolve' ||
-    cadType === 'surface_loft' ||
-    cadType === 'surface_fillet' ||
+    cadType.startsWith('surface_') ||
+    cadType.startsWith('solid_') ||
     cadType === 'solid' ||
-    cadType === 'extrude'
+    cadType === 'extrude' ||
+    Boolean(ent.isMesh) ||
+    Boolean(ent.children?.some((c) => c.isMesh))
   );
 }
 
@@ -410,6 +409,35 @@ export function buildPresetApplication({ presetId, tool = {}, activeMachine = nu
 }
 
 /**
+ * Computes flowline stepover distance (mm) from target scallop height and cutter geometry.
+ */
+export function computeFlowlineStepoverFromScallop({
+  scallopHeight = 0.5,
+  toolDiameter = 12.0,
+  cornerRadius = 0.6,
+  toolType = 'bull'
+} = {}) {
+  const diam = Math.max(0.5, Number(toolDiameter) || 12.0);
+  const h = Math.max(0.002, Number(scallopHeight) || 0.5);
+  const t = String(toolType || '').toLowerCase();
+  const cRad = Math.max(0, Number(cornerRadius) || 0);
+
+  let rEff = diam * 0.5;
+  if (t.includes('ball')) {
+    rEff = diam * 0.5;
+  } else if (cRad > 0.05) {
+    // Bull-nose or radius tool: curved edge scallop comes from corner radius, bounded by flat bottom width
+    rEff = Math.max(cRad, Math.min(diam * 0.5, cRad + diam * 0.15));
+  }
+
+  const hClamped = Math.min(h, rEff * 0.85);
+  const rawStep = 2 * Math.sqrt(Math.max(0, hClamped * (2 * rEff - hClamped)));
+  const minStep = Math.max(0.15, diam * 0.03);
+  const maxStep = Math.max(minStep, diam * 0.75);
+  return Number(Math.max(minStep, Math.min(maxStep, rawStep)).toFixed(4));
+}
+
+/**
  * Generates baseline Surface Finish operation state anchored to the active machine & optional stock top.
  */
 export function createDefaultSurfaceFinishState({
@@ -420,7 +448,11 @@ export function createDefaultSurfaceFinishState({
 } = {}) {
   const caps = resolveMachineToolpathCapabilities(activeMachine);
   const diameter = Number(tool?.diameter) || 10.0;
-  const cornerRadius = Number(tool?.cornerRadius ?? (tool?.type === 'ball' ? diameter / 2 : tool?.type === 'flat' ? 0 : 4.0));
+  const cornerRadius = Number(
+    tool?.cornerRadius ??
+      tool?.cornerRad ??
+      (tool?.type === 'ball' ? diameter / 2 : tool?.type === 'flat' ? 0 : 0.6)
+  );
   const flutes = Math.max(1, Number(tool?.flutes) || 4);
   const defaultRpm = Math.min(caps.maxRpm, Number(tool?.spindleSpeed) || 3500);
   const defaultFeed = Math.min(caps.maxFeed, Number(tool?.feedRate) || 250.0);
@@ -548,6 +580,38 @@ export function createDefaultSurfaceFinishState({
       finishOuterBoundary: true,
       finishFloorPasses: 1,
       minStepover: 0.5
+    },
+    flowlineData: {
+      offsetDir: 1,
+      cutDir: 1,
+      stepDir: 1,
+      swapUV: false,
+      startCorner: 0,
+      edgeTolerance: 0.025,
+      plotEdges: false
+    },
+    flowlineParams: {
+      cutControlDistanceEnabled: false,
+      cutControlDistance: 2.0,
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      checkGouge: true,
+      stepoverMode: 'scallop',
+      stepoverDistance: 2.0,
+      scallopHeight: 0.5,
+      cuttingMethod: 'Zigzag',
+      singleRowOnly: false,
+      ribCutEnabled: false,
+      ribCutResolutionPct: 50.0,
+      depthLimitsEnabled: false,
+      cutDepthsMode: 'Incremental',
+      minDepth: -9999,
+      maxDepth: 9999,
+      gapSettingsMode: 'Follow surfaces',
+      maxGapDistance: 10.0,
+      advancedToolAxis: caps.multiAxisOptions[0],
+      advancedCollisionCheck: true
     }
   };
 }

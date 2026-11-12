@@ -369,6 +369,7 @@ export async function parseSTEPText(stepText) {
 
   const positions = [];
   const normals = [];
+  const brepFaceMap = [];
   let faceCount = 0;
 
   // 1. TIER 1: Standard B-Rep ADVANCED_FACE entities (AP203 / AP214 / AP242 Solid Models)
@@ -387,12 +388,27 @@ export async function parseSTEPText(stepText) {
 
       // A. Cylindrical Surface Feature
       if (surfEnt && surfEnt.type === 'CYLINDRICAL_SURFACE') {
+        const startTri = positions.length / 9;
         const cylRes = tessellateCylindricalSurface(face, entityMap, surfEnt, scale);
         positions.push(...cylRes.positions);
         normals.push(...cylRes.normals);
+        const triCount = (positions.length / 9) - startTri;
+        if (triCount > 0) {
+          const radMatch = surfEnt.rawParams.match(/,\s*([0-9\.\+\-eE]+)\s*\)?$/);
+          const cylRadius = radMatch ? parseFloat(radMatch[1]) * scale : null;
+          brepFaceMap.push({
+            stepFaceId: face.id,
+            surfaceType: surfEnt.type,
+            startTri,
+            triCount,
+            radius: cylRadius
+          });
+        }
         faceCount++;
         continue;
       }
+
+      const startTri = positions.length / 9;
 
       // B. Planar / General 3D B-Rep Faces with Inner Holes & Island Pockets
       const isSameSense = !face.rawParams.includes('.F.');
@@ -514,6 +530,16 @@ export async function parseSTEPText(stepText) {
           normals.push(normal.x, normal.y, normal.z, normal.x, normal.y, normal.z, normal.x, normal.y, normal.z);
         }
       }
+      const triCount = (positions.length / 9) - startTri;
+      if (triCount > 0) {
+        brepFaceMap.push({
+          stepFaceId: face.id,
+          surfaceType: surfEnt?.type || 'PLANE',
+          startTri,
+          triCount,
+          radius: null
+        });
+      }
       faceCount++;
     }
   }
@@ -536,6 +562,7 @@ export async function parseSTEPText(stepText) {
       }
 
       if (loopVerts.length >= 3) {
+        const startTri = positions.length / 9;
         const tris = triangulate3DPolygon(loopVerts);
         for (const [v1, v2, v3] of tris) {
           const edgeA = new THREE.Vector3().subVectors(v2, v1);
@@ -544,6 +571,16 @@ export async function parseSTEPText(stepText) {
 
           positions.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
           normals.push(triNorm.x, triNorm.y, triNorm.z, triNorm.x, triNorm.y, triNorm.z, triNorm.x, triNorm.y, triNorm.z);
+        }
+        const triCount = (positions.length / 9) - startTri;
+        if (triCount > 0) {
+          brepFaceMap.push({
+            stepFaceId: el.id,
+            surfaceType: 'PLANE',
+            startTri,
+            triCount,
+            radius: null
+          });
         }
         faceCount++;
       }
@@ -560,6 +597,7 @@ export async function parseSTEPText(stepText) {
     for (const loopEntity of polyLoops) {
       const refMatches = [...loopEntity.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
       if (refMatches.length >= 3) {
+        const startTri = positions.length / 9;
         const loopVerts = refMatches.map(refId => resolvePoint(refId, entityMap, scale));
         const tris = triangulate3DPolygon(loopVerts);
         for (const [v1, v2, v3] of tris) {
@@ -569,6 +607,16 @@ export async function parseSTEPText(stepText) {
 
           positions.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
           normals.push(triNorm.x, triNorm.y, triNorm.z, triNorm.x, triNorm.y, triNorm.z, triNorm.x, triNorm.y, triNorm.z);
+        }
+        const triCount = (positions.length / 9) - startTri;
+        if (triCount > 0) {
+          brepFaceMap.push({
+            stepFaceId: loopEntity.id,
+            surfaceType: 'PLANE',
+            startTri,
+            triCount,
+            radius: null
+          });
         }
         faceCount++;
       }
@@ -619,6 +667,9 @@ export async function parseSTEPText(stepText) {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   mesh.name = headerData.filename.replace(/\.[^/.]+$/, "") || "STEP_Solid_BRep";
+  if (brepFaceMap.length > 0) {
+    mesh.userData = { brepFaceMap };
+  }
 
   // Feature Edges (Mastercam crisp wireframe boundary outlines)
   const edgesGeometry = new THREE.EdgesGeometry(geometry, 28);

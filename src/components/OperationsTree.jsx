@@ -74,6 +74,8 @@ export default function OperationsTree({
   onOpenSetupSheet,
   onOpenSurfaceFinishContour,
   onOpenSurfaceFinishPocket,
+  onOpenSurfaceFinishFlowline,
+  onEditOpGeometry,
   onExportStockSTL,
   activeDrawingTool = null,
   circleParams = { radius: 25, isLocked: false, entityMethod: 'manual' },
@@ -1045,13 +1047,23 @@ export default function OperationsTree({
 
                               {/* 3. Geometry */}
                               <div
-                                onClick={onOpenWireframeModal}
+                                onClick={() => {
+                                  if ((op.strategyKey === 'surface_finish_flowline' || op.badgeClass === 'flowline') && onEditOpGeometry) {
+                                    onEditOpGeometry(op);
+                                  } else {
+                                    onOpenWireframeModal?.();
+                                  }
+                                }}
                                 style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#0f172a', cursor: 'pointer', padding: '1px 0' }}
-                                title="Click to view chained geometry and drive surfaces"
+                                title="Click to view or re-select chained geometry and drive faces"
                               >
                                 <span style={{ fontFamily: 'monospace', fontSize: '9px', color: '#06b6d4', fontWeight: 800 }}>[S]</span>
                                 <span>
-                                  Geometry - ({op.driveSurfaceIds?.length ? `${op.driveSurfaceIds.length} Drive Surface(s)` : '1 Chain / Drive Surface'})
+                                  Geometry - ({op.driveFaceIds?.length
+                                    ? `${op.driveFaceIds.length} Drive Face(s)`
+                                    : op.driveSurfaceIds?.length
+                                      ? `${op.driveSurfaceIds.length} Drive Surface(s)`
+                                      : '1 Chain / Drive Surface'})
                                 </span>
                               </div>
 
@@ -1425,6 +1437,7 @@ export default function OperationsTree({
           onOpenHSMFilter={onOpenHSMFilter}
           onOpenSurfaceFinishContour={onOpenSurfaceFinishContour}
           onOpenSurfaceFinishPocket={onOpenSurfaceFinishPocket}
+          onOpenSurfaceFinishFlowline={onOpenSurfaceFinishFlowline}
           onExportStockSTL={onExportStockSTL}
           onToggleLockOp={onToggleLockOp}
           onToggleGhostOp={onToggleGhostOp}

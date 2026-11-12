@@ -5,6 +5,12 @@ import {
   Play, Pause, SkipForward, SkipBack, RotateCcw, X, AlertTriangle, CheckCircle2, Gauge
 } from 'lucide-react';
 import {
+  buildSolidFaceCatalog,
+  resolveSolidFaceSelectionAction,
+  buildSolidFaceHighlightGroup
+} from '../utils/solidFaceSelectionEngine';
+import { buildFlowlinePreviewForFaces } from '../utils/flowlineToolpathEngine';
+import {
   getCustomEntityId,
   sampleEntityWorldGeometry,
   hitTestEntitiesInMarquee,
@@ -178,7 +184,9 @@ export default function Viewport3D({
   stickyMultiSelect = false,
   onToggleStickyMultiSelect = null,
   onReselectPrevious = null,
-  onFastPointSubmit = null
+  onFastPointSubmit = null,
+  surfaceSelectionSession = null,
+  flowlinePreview = null
 }) {
   const isLight = theme !== 'dark';
   const mountRef = useRef(null);
@@ -255,12 +263,26 @@ export default function Viewport3D({
   const [polygonCursorPt, setPolygonCursorPt] = useState(null);
   const [vectorSegment, setVectorSegment] = useState(null);
   const [hoveredEntityId, setHoveredEntityId] = useState(null);
+  const [hoveredFaceId, setHoveredFaceId] = useState(null);
+  const [faceCursorScreen, setFaceCursorScreen] = useState(null);
+  const [selectedSolidFaceIds, setSelectedSolidFaceIds] = useState([]);
+  const [faceSelectionModeNote, setFaceSelectionModeNote] = useState('');
 
   const sketchGhostGroupRef = useRef(null);
   const snapIndicatorGroupRef = useRef(null);
   const chainHighlightGroupRef = useRef(null);
   const selectionHighlightGroupRef = useRef(null);
+  const faceHighlightGroupRef = useRef(null);
+  const flowlinePreviewGroupRef = useRef(null);
   const surfacePreviewGroupRef = useRef(null);
+  const surfaceSelectionSessionRef = useRef(surfaceSelectionSession);
+  const hoveredFaceIdRef = useRef(null);
+  const selectedSolidFaceIdsRef = useRef([]);
+  const solidFaceCatalog = useMemo(
+    () => buildSolidFaceCatalog({ currentModel, customGeometry, partTransform }),
+    [currentModel, customGeometry, partTransform]
+  );
+  const solidFaceCatalogRef = useRef(solidFaceCatalog);
   const isChainingActiveRef = useRef(isChainingActive);
   const chainingPlaneModeRef = useRef(chainingPlaneMode);
   const chainingSelectionMethodRef = useRef(chainingSelectionMethod);
@@ -343,6 +365,10 @@ export default function Viewport3D({
   useEffect(() => { solidFilterModeRef.current = solidFilterMode; }, [solidFilterMode]);
   useEffect(() => { selectionMaskRef.current = selectionMask; }, [selectionMask]);
   useEffect(() => { stickyMultiSelectRef.current = stickyMultiSelect; }, [stickyMultiSelect]);
+  useEffect(() => { surfaceSelectionSessionRef.current = surfaceSelectionSession; }, [surfaceSelectionSession]);
+  useEffect(() => { solidFaceCatalogRef.current = solidFaceCatalog; }, [solidFaceCatalog]);
+  useEffect(() => { selectedSolidFaceIdsRef.current = selectedSolidFaceIds; }, [selectedSolidFaceIds]);
+  useEffect(() => { hoveredFaceIdRef.current = hoveredFaceId; }, [hoveredFaceId]);
   useEffect(() => {
     // Switching away from polygon/vector clears transient rubber-band overlays cleanly
     polygonPointsRef.current = [];
@@ -635,6 +661,18 @@ export default function Viewport3D({
     scene.add(selectionHighlightGroup);
     selectionHighlightGroupRef.current = selectionHighlightGroup;
 
+    const faceHighlightGroup = new THREE.Group();
+    faceHighlightGroup.name = "Face_Highlight_Group";
+    faceHighlightGroup.position.set(0, 49, 0);
+    scene.add(faceHighlightGroup);
+    faceHighlightGroupRef.current = faceHighlightGroup;
+
+    const flowlinePreviewGroup = new THREE.Group();
+    flowlinePreviewGroup.name = "Flowline_Preview_Group";
+    flowlinePreviewGroup.position.set(0, 49, 0);
+    scene.add(flowlinePreviewGroup);
+    flowlinePreviewGroupRef.current = flowlinePreviewGroup;
+
     const surfacePreviewGroup = new THREE.Group();
     surfacePreviewGroup.name = "Surface_Preview_Group";
     surfacePreviewGroup.position.set(0, 49, 0);
@@ -731,6 +769,56 @@ export default function Viewport3D({
       isSelectModeRef.current ||
       (isSketchModeRef.current && activeSketchToolRef.current === 'select');
 
+    const isSolidFaceSelectActive = () =>
+      Boolean(surfaceSelectionSessionRef.current?.active) ||
+      (isSelectModeRef.current && solidFilterModeRef.current === 'solid_face');
+
+    let lastFaceClickTime = 0;
+    let lastFaceClickX = 0;
+    let lastFaceClickY = 0;
+    let faceClickStreak = 0;
+
+    const raycastSolidFaceAtClient = (clientX, clientY) => {
+      const rect = dom.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return null;
+      const ndc = new THREE.Vector2(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1
+      );
+      raycaster.setFromCamera(ndc, camera);
+
+      const candidateMeshes = [];
+      if (partHolderGroupRef.current && partHolderGroupRef.current.visible !== false) {
+        partHolderGroupRef.current.updateMatrixWorld(true);
+        partHolderGroupRef.current.traverse((child) => {
+          if (child.isMesh && child.visible !== false && !child.userData?.isHelper && !child.name?.startsWith('helper_')) {
+            candidateMeshes.push(child);
+          }
+        });
+      }
+      if (customGeoGroupRef.current && customGeoGroupRef.current.visible !== false) {
+        customGeoGroupRef.current.updateMatrixWorld(true);
+        customGeoGroupRef.current.traverse((child) => {
+          if (child.isMesh && child.visible !== false && !child.userData?.isHelper && !child.name?.startsWith('helper_')) {
+            candidateMeshes.push(child);
+          }
+        });
+      }
+
+      if (candidateMeshes.length === 0) return null;
+      const hits = raycaster.intersectObjects(candidateMeshes, false);
+      if (!hits || hits.length === 0) return null;
+
+      const catalog = solidFaceCatalogRef.current;
+      for (const h of hits) {
+        const hitFace = catalog?.lookupFaceFromHit(h, 49);
+        if (hitFace) {
+          return { hitFace, hits, rect };
+        }
+      }
+      return null;
+    };
+
     const getEffectiveMethod = () => (
       isChainingActiveRef.current
         ? (chainingSelectionMethodRef.current || 'chain')
@@ -812,6 +900,7 @@ export default function Viewport3D({
 
     const resolveMarqueeTargetForDown = (e) => {
       if (e.button !== 0 || isBasePointPickActiveRef.current) return null;
+      if (isSolidFaceSelectActive()) return null;
       if (isChainingActiveRef.current && chainingSelectionMethodRef.current === 'window') {
         return 'chaining';
       }
@@ -1192,8 +1281,28 @@ export default function Viewport3D({
         return;
       }
 
-      // Live hover highlight in Select Mode
-      const inSelectHover = isSelectModeRef.current || (isSketchModeRef.current && activeSketchToolRef.current === 'select');
+      // Live hover highlight in Solid Face Select or general Select Mode
+      if (isSolidFaceSelectActive() && e.target === dom) {
+        setFaceCursorScreen({ x: e.clientX, y: e.clientY });
+        const now = performance.now();
+        if (now - hoverCheckFrameRef.current > 32) {
+          hoverCheckFrameRef.current = now;
+          const res = raycastSolidFaceAtClient(e.clientX, e.clientY);
+          const nextHoverId = res?.hitFace?.id || null;
+          if (hoveredFaceIdRef.current !== nextHoverId) {
+            hoveredFaceIdRef.current = nextHoverId;
+            setHoveredFaceId(nextHoverId);
+          }
+        }
+      } else {
+        if (hoveredFaceIdRef.current !== null) {
+          hoveredFaceIdRef.current = null;
+          setHoveredFaceId(null);
+        }
+        setFaceCursorScreen((prev) => (prev !== null ? null : prev));
+      }
+
+      const inSelectHover = !isSolidFaceSelectActive() && (isSelectModeRef.current || (isSketchModeRef.current && activeSketchToolRef.current === 'select'));
       if (inSelectHover && e.target === dom) {
         const now = performance.now();
         if (now - hoverCheckFrameRef.current > 40) {
@@ -1329,6 +1438,58 @@ export default function Viewport3D({
     const onMouseUp = (e) => {
       isDragging = false;
       isPanning = false;
+
+      if (e.button === 0 && !isBasePointPickActiveRef.current && isSolidFaceSelectActive() && e.target === dom) {
+        const clickDist = Math.hypot(e.clientX - pickDownX, e.clientY - pickDownY);
+        if (clickDist < 6) {
+          const now = performance.now();
+          if (now - lastFaceClickTime <= 420 && Math.hypot(e.clientX - lastFaceClickX, e.clientY - lastFaceClickY) <= 10) {
+            faceClickStreak = Math.min(3, faceClickStreak + 1);
+          } else {
+            faceClickStreak = 1;
+          }
+          lastFaceClickTime = now;
+          lastFaceClickX = e.clientX;
+          lastFaceClickY = e.clientY;
+          const clickCount = Math.max(Number(e.detail) || 1, faceClickStreak);
+
+          const hitRes = raycastSolidFaceAtClient(e.clientX, e.clientY);
+          if (hitRes?.hitFace) {
+            const { faceIds, modeLabel } = resolveSolidFaceSelectionAction(
+              solidFaceCatalogRef.current,
+              hitRes.hitFace,
+              {
+                shiftKey: e.shiftKey,
+                ctrlKey: e.ctrlKey || e.metaKey,
+                altKey: e.altKey,
+                clickCount,
+                rayHits: hitRes.hits
+              }
+            );
+            setFaceSelectionModeNote(modeLabel);
+            const session = surfaceSelectionSessionRef.current;
+            if (session?.active && session.onPickFaces) {
+              session.onPickFaces(faceIds, modeLabel, {
+                clickCount,
+                hasModifier: Boolean(e.shiftKey || e.ctrlKey || e.metaKey || e.altKey),
+                role: session.role
+              });
+            } else {
+              const additive = Boolean(e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || stickyMultiSelectRef.current);
+              setSelectedSolidFaceIds((prev) => {
+                if (clickCount === 1 && !additive && faceIds.length === 1) {
+                  return prev.length === 1 && prev[0] === faceIds[0] ? [] : faceIds;
+                }
+                if (clickCount === 1 && additive && faceIds.length === 1 && !e.shiftKey && !e.altKey) {
+                  return prev.includes(faceIds[0]) ? prev.filter((id) => id !== faceIds[0]) : [...prev, faceIds[0]];
+                }
+                return [...new Set([...prev, ...faceIds])];
+              });
+            }
+          }
+          return;
+        }
+      }
 
       if (isVectorDrag && vectorStartRef.current) {
         isVectorDrag = false;
@@ -2058,6 +2219,7 @@ export default function Viewport3D({
         tap: 0x06b6d4,
         parallel: 0xd946ef,
         surface: 0xd946ef,
+        flowline: 0x10b981,
         rest: 0x14b8a6,
         rest_milling: 0x14b8a6,
         pencil: 0xf97316,
@@ -2081,7 +2243,7 @@ export default function Viewport3D({
         }
         const { cutGeo, rapidGeo } = buildToolpathMeshes(toolpathData, linkedRapidLines);
         // CAD entities sit inside customGeoGroup at Y = 49; align CAD/surface toolpaths to that height
-        const usesCadSpace = !!op.chain || !!op.usesCustomSurfaces || !!(op.driveSurfaceIds?.length) || !currentModel;
+        const usesCadSpace = !!op.chain || !!op.usesCustomSurfaces || !!(op.driveSurfaceIds?.length) || !!(op.driveFaceIds?.length) || op.badgeClass === 'flowline' || !currentModel;
         const visualYOffset = usesCadSpace ? 49 : 0;
 
         // Feed cut line segments
@@ -2253,6 +2415,129 @@ export default function Viewport3D({
     );
     group.add(previewMesh);
   }, [surfaceExtrudePreview]);
+
+  // 11a-3. Render Mastercam Solid Face Hover / Drive / Check Highlights (Yellow/Lime & Coral)
+  useEffect(() => {
+    const group = faceHighlightGroupRef.current;
+    if (!group) return;
+    disposeGroupMeshes(group);
+
+    const driveIds = surfaceSelectionSession?.active
+      ? (surfaceSelectionSession.driveFaceIds || [])
+      : (flowlinePreview?.active ? (flowlinePreview.driveFaceIds || []) : selectedSolidFaceIds);
+    const checkIds = surfaceSelectionSession?.active
+      ? (surfaceSelectionSession.checkFaceIds || [])
+      : (flowlinePreview?.active ? (flowlinePreview.checkFaceIds || []) : []);
+
+    const driveSet = new Set(driveIds);
+    const checkSet = new Set(checkIds);
+
+    const driveFaces = solidFaceCatalog.faces.filter((f) => driveSet.has(f.id));
+    const checkFaces = solidFaceCatalog.faces.filter((f) => checkSet.has(f.id));
+    const hoverFace =
+      hoveredFaceId && !driveSet.has(hoveredFaceId) && !checkSet.has(hoveredFaceId)
+        ? solidFaceCatalog.byId.get(hoveredFaceId)
+        : null;
+
+    if (driveFaces.length > 0) {
+      group.add(
+        buildSolidFaceHighlightGroup(driveFaces, {
+          fillColor: 0xfacc15,
+          edgeColor: 0xeab308,
+          opacity: 0.42
+        })
+      );
+    }
+
+    if (checkFaces.length > 0) {
+      group.add(
+        buildSolidFaceHighlightGroup(checkFaces, {
+          fillColor: 0xf97316,
+          edgeColor: 0xea580c,
+          opacity: 0.40
+        })
+      );
+    }
+
+    if (hoverFace) {
+      group.add(
+        buildSolidFaceHighlightGroup([hoverFace], {
+          fillColor: 0xfef08a,
+          edgeColor: 0xa3e635,
+          opacity: 0.34
+        })
+      );
+    }
+  }, [solidFaceCatalog, surfaceSelectionSession, flowlinePreview, selectedSolidFaceIds, hoveredFaceId]);
+
+  // 11a-4. Render Live 3D Flowline UV Grid & Green Directional Arrows (Flowline Data Preview)
+  useEffect(() => {
+    const group = flowlinePreviewGroupRef.current;
+    if (!group) return;
+    disposeGroupMeshes(group);
+
+    if (!flowlinePreview?.active || flowlinePreview.showGrid === false || !Array.isArray(flowlinePreview.driveFaceIds) || flowlinePreview.driveFaceIds.length === 0) {
+      return;
+    }
+
+    const driveSet = new Set(flowlinePreview.driveFaceIds);
+    const driveFaces = solidFaceCatalog.faces.filter((f) => driveSet.has(f.id));
+    if (driveFaces.length === 0) return;
+
+    const { gridSegments, edgeSegments, arrows } = buildFlowlinePreviewForFaces(
+      driveFaces,
+      flowlinePreview.flowlineData || {}
+    );
+
+    if (gridSegments.length > 0) {
+      const pts = [];
+      gridSegments.forEach(([a, b]) => {
+        pts.push(a.x, a.y, a.z, b.x, b.y, b.z);
+      });
+      const gridGeo = new THREE.BufferGeometry();
+      gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+      const gridMat = new THREE.LineBasicMaterial({
+        color: isLight ? 0x64748b : 0xe2e8f0,
+        transparent: true,
+        opacity: 0.9
+      });
+      group.add(new THREE.LineSegments(gridGeo, gridMat));
+    }
+
+    if (edgeSegments.length > 0) {
+      const ePts = [];
+      edgeSegments.forEach(([a, b]) => {
+        ePts.push(a.x, a.y, a.z, b.x, b.y, b.z);
+      });
+      const edgeGeo = new THREE.BufferGeometry();
+      edgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(ePts, 3));
+      group.add(new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: 0xfef08a })));
+    }
+
+    const arrowMat = new THREE.MeshBasicMaterial({ color: 0x16a34a });
+    const stemMat = new THREE.LineBasicMaterial({ color: 0x16a34a, linewidth: 2 });
+    const upY = new THREE.Vector3(0, 1, 0);
+
+    const addGreenArrow = (origin, dir, len) => {
+      if (!dir || dir.lengthSq() < 1e-6) return;
+      const d = dir.clone().normalize();
+      const tipPos = origin.clone().addScaledVector(d, len);
+      const stemGeo = new THREE.BufferGeometry().setFromPoints([origin, tipPos]);
+      group.add(new THREE.Line(stemGeo, stemMat));
+
+      const coneGeo = new THREE.ConeGeometry(1.15, 3.2, 10);
+      const cone = new THREE.Mesh(coneGeo, arrowMat);
+      cone.position.copy(tipPos);
+      cone.quaternion.setFromUnitVectors(upY, d);
+      group.add(cone);
+    };
+
+    arrows.forEach((arr) => {
+      const baseOrigin = arr.startPos.clone().addScaledVector(arr.normal, 0.35);
+      addGreenArrow(baseOrigin, arr.cutDir, arr.length);
+      addGreenArrow(baseOrigin, arr.stepDir, arr.length * 0.72);
+    });
+  }, [flowlinePreview, solidFaceCatalog, isLight]);
 
   // 11b. Dynamic CPlanes & Construction Coordinate System Grid/Triad
   useEffect(() => {
@@ -2632,6 +2917,12 @@ export default function Viewport3D({
           onChangeSelectedEntitiesRef.current([]);
           return;
         }
+        if (selectedSolidFaceIdsRef.current.length > 0) {
+          e.preventDefault();
+          setSelectedSolidFaceIds([]);
+          setFaceSelectionModeNote('');
+          return;
+        }
         if (isSelectModeRef.current && onToggleSelectModeRef.current) {
           e.preventDefault();
           onToggleSelectModeRef.current(false);
@@ -2685,7 +2976,11 @@ export default function Viewport3D({
 
   const isSelectCursorArmed = isSelectModeActive
     || (isSketchModeActive && activeSketchTool === 'select')
-    || isChainingActive;
+    || isChainingActive
+    || Boolean(surfaceSelectionSession?.active);
+
+  const showSolidFaceGuideOverlay = Boolean(surfaceSelectionSession?.active)
+    || (!isBackplotActive && isSelectModeActive && solidFilterMode === 'solid_face');
 
   const getFilteredSelectableEntities = (overrideMask = selectionMask) =>
     (customGeometry || []).filter((ent) => {
@@ -2919,7 +3214,13 @@ export default function Viewport3D({
           containmentMode={containmentMode}
           onChangeContainmentMode={(mode) => onChangeContainmentMode?.(mode)}
           solidFilterMode={solidFilterMode}
-          onChangeSolidFilterMode={(mode) => onChangeSolidFilterMode?.(mode)}
+          onChangeSolidFilterMode={(mode) => {
+            onChangeSolidFilterMode?.(mode);
+            if (mode !== 'solid_face') {
+              setSelectedSolidFaceIds([]);
+              setFaceSelectionModeNote('');
+            }
+          }}
           isSelectModeActive={isSelectCursorArmed}
           onToggleSelectMode={(nextVal) => {
             if (isSketchModeActive) {
@@ -2931,19 +3232,176 @@ export default function Viewport3D({
           }}
           stickyMultiSelect={stickyMultiSelect}
           onToggleStickyMultiSelect={onToggleStickyMultiSelect}
-          selectedCount={selectionSummary.count}
+          selectedCount={solidFilterMode === 'solid_face' && selectedSolidFaceIds.length > 0 ? selectedSolidFaceIds.length : selectionSummary.count}
           polygonPointCount={polygonPoints.length}
           onCompletePolygon={() => completePolygonRef.current?.(stickyMultiSelectRef.current)}
           onCancelInteractiveSelection={() => cancelInteractiveSelectionRef.current?.()}
           onSelectAll={handleSelectAllMatchingMask}
           onReselectPrevious={onReselectPrevious}
           onInvertSelection={handleInvertSelection}
-          onClearSelection={() => onChangeSelectedEntities?.([])}
+          onClearSelection={() => {
+            onChangeSelectedEntities?.([]);
+            setSelectedSolidFaceIds([]);
+            setFaceSelectionModeNote('');
+          }}
           onExtrudeSelection={onRequestExtrudeSelection ? () => onRequestExtrudeSelection(selectedEntitiesList) : null}
           onTransformSelection={onRequestTransformSelection ? () => onRequestTransformSelection(selectedEntitiesList) : null}
           onBlankSelection={onBlankSelectedEntities ? () => onBlankSelectedEntities(selectedEntityIds) : null}
           onDeleteSelection={onDeleteSelectedEntities ? () => onDeleteSelectedEntities(selectedEntityIds) : null}
           theme={theme}
+        />
+      )}
+
+      {/* Mastercam Top-Left "Select Solid Face or Surface:" Shortcut Legend (Image 1) */}
+      {showSolidFaceGuideOverlay && (
+        <div
+          data-testid="solid-face-selection-guide"
+          style={{
+            position: 'absolute',
+            top: '8px',
+            left: '8px',
+            zIndex: 95,
+            background: '#ffffff',
+            border: '1px solid #64748b',
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.14)',
+            padding: '6px 9px',
+            fontSize: '11.5px',
+            lineHeight: 1.38,
+            color: '#0f172a',
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            pointerEvents: 'none',
+            maxWidth: '285px'
+          }}
+        >
+          <div style={{ fontWeight: 500, marginBottom: '2px' }}>Select Solid Face or Surface:</div>
+          <div>- [Shift+click] to select tangent faces.</div>
+          <div>- [Alt+click] to vector select.</div>
+          <div>- [Ctrl+click] to select matching fillets/holes.</div>
+          <div>- [Ctrl+Shift+click] to select similar faces.</div>
+          <div>- Double-click to select a feature.</div>
+          <div>- [Ctrl+Shift+double-click] to select similar features.</div>
+          <div>- Triple-click to select the solid body.</div>
+          {faceSelectionModeNote && (
+            <div style={{ marginTop: '4px', paddingTop: '3px', borderTop: '1px solid #e2e8f0', color: '#0369a1', fontWeight: 600, fontSize: '10.5px' }}>
+              Active: {faceSelectionModeNote}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Mastercam Center-Top "End Selection" & "Clear Selection" Floating Pills (Image 1) */}
+      {surfaceSelectionSession?.active && (
+        <div
+          data-testid="surface-selection-pills"
+          style={{
+            position: 'absolute',
+            top: '56px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 96,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            pointerEvents: 'auto'
+          }}
+        >
+          <button
+            type="button"
+            data-testid="end-surface-selection-btn"
+            onClick={() => surfaceSelectionSession.onEndSelection?.()}
+            style={{
+              height: '28px',
+              padding: '0 14px',
+              borderRadius: '14px',
+              background: 'rgba(255, 255, 255, 0.96)',
+              border: '1px solid #cbd5e1',
+              boxShadow: '0 3px 10px rgba(15, 23, 42, 0.16)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: 500,
+              color: '#0f172a',
+              cursor: 'pointer'
+            }}
+          >
+            <span
+              style={{
+                width: '15px',
+                height: '15px',
+                borderRadius: '50%',
+                background: '#16a34a',
+                color: '#ffffff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px',
+                fontWeight: 700
+              }}
+            >
+              ✓
+            </span>
+            <span>End Selection</span>
+          </button>
+
+          <button
+            type="button"
+            data-testid="clear-surface-selection-btn"
+            onClick={() => {
+              surfaceSelectionSession.onClearSelection?.();
+              setFaceSelectionModeNote('');
+            }}
+            style={{
+              height: '28px',
+              padding: '0 14px',
+              borderRadius: '14px',
+              background: 'rgba(255, 255, 255, 0.96)',
+              border: '1px solid #cbd5e1',
+              boxShadow: '0 3px 10px rgba(15, 23, 42, 0.16)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: 500,
+              color: '#0f172a',
+              cursor: 'pointer'
+            }}
+          >
+            <span
+              style={{
+                width: '15px',
+                height: '15px',
+                borderRadius: '50%',
+                background: '#dc2626',
+                color: '#ffffff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px',
+                fontWeight: 700
+              }}
+            >
+              ⊘
+            </span>
+            <span>Clear Selection</span>
+          </button>
+        </div>
+      )}
+
+      {/* Mastercam Square Pick Cursor Box when hovering a solid face */}
+      {showSolidFaceGuideOverlay && hoveredFaceId && faceCursorScreen && (
+        <div
+          style={{
+            position: 'fixed',
+            left: faceCursorScreen.x + 10,
+            top: faceCursorScreen.y + 10,
+            width: '10px',
+            height: '10px',
+            background: '#ffffff',
+            border: '1.5px solid #1e293b',
+            pointerEvents: 'none',
+            zIndex: 9999
+          }}
         />
       )}
 

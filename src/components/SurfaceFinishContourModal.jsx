@@ -121,12 +121,15 @@ function SurfaceFinishContourModalInner({
   activeMachine = null,
   stockConfig = null,
   lastDefinedTool = null,
+  flowlineSelection = null,
+  onOpenSurfaceSelection = null,
   onSaveOperation,
   onOpenDefineToolModal,
   onEditTool,
   onNotify
 }) {
   const isPocket = strategyMode === 'pocket' || operation?.strategyKey === 'surface_finish_pocket';
+  const isFlowline = strategyMode === 'flowline' || operation?.strategyKey === 'surface_finish_flowline' || operation?.badgeClass === 'flowline';
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
   const detectedSurfaces = useMemo(() => {
@@ -164,22 +167,30 @@ function SurfaceFinishContourModalInner({
         null
       );
     }
+    if (isFlowline) {
+      return (
+        tools.find((t) => ['bull', 'ball'].includes(String(t.type || '').toLowerCase())) ||
+        tools.find((t) => ['flat', 'bull', 'ball'].includes(String(t.type || '').toLowerCase())) ||
+        tools[0] ||
+        null
+      );
+    }
     return (
       tools.find((t) => ['flat', 'bull', 'ball'].includes(String(t.type || '').toLowerCase())) ||
       tools[0] ||
       null
     );
-  }, [operation, tools]);
+  }, [operation, tools, isFlowline]);
 
   const initialDefaults = useMemo(
     () =>
       createDefaultSurfaceFinishState({
         activeMachine,
         stockConfig,
-        strategyMode: isPocket ? 'pocket' : 'contour',
+        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : 'contour',
         tool: initialTool
       }),
-    [activeMachine, stockConfig, isPocket, initialTool]
+    [activeMachine, stockConfig, isPocket, isFlowline, initialTool]
   );
 
   const [activeTab, setActiveTab] = useState('toolpath_params');
@@ -222,6 +233,11 @@ function SurfaceFinishContourModalInner({
   const [pocketParams, setPocketParams] = useState(() => ({
     ...initialDefaults.pocketParams,
     ...(operation?.pocketParams || {})
+  }));
+
+  const [flowlineParams, setFlowlineParams] = useState(() => ({
+    ...initialDefaults.flowlineParams,
+    ...(operation?.flowlineParams || {})
   }));
 
   // Tool table UI state (view mode, sort order, right-click menu, active sub-dialog)
@@ -311,7 +327,8 @@ function SurfaceFinishContourModalInner({
       machineParams,
       surfaceParams,
       contourParams,
-      pocketParams
+      pocketParams,
+      flowlineParams
     });
     onNotify?.(ok ? 'Saved parameters to Mastercam defaults file.' : 'Unable to persist defaults.', ok ? 'success' : 'error');
   };
@@ -323,6 +340,7 @@ function SurfaceFinishContourModalInner({
       setSurfaceParams(initialDefaults.surfaceParams);
       setContourParams(initialDefaults.contourParams);
       setPocketParams(initialDefaults.pocketParams);
+      setFlowlineParams(initialDefaults.flowlineParams);
       return;
     }
     if (loaded.toolParams) setToolParams((p) => ({ ...p, ...loaded.toolParams }));
@@ -330,6 +348,7 @@ function SurfaceFinishContourModalInner({
     if (loaded.surfaceParams) setSurfaceParams((p) => ({ ...p, ...loaded.surfaceParams }));
     if (loaded.contourParams) setContourParams((p) => ({ ...p, ...loaded.contourParams }));
     if (loaded.pocketParams) setPocketParams((p) => ({ ...p, ...loaded.pocketParams }));
+    if (loaded.flowlineParams) setFlowlineParams((p) => ({ ...p, ...loaded.flowlineParams }));
     onNotify?.('Reloaded Surface Finish parameters from defaults file.', 'success');
   };
 
@@ -348,26 +367,35 @@ function SurfaceFinishContourModalInner({
 
   const handleApply = () => {
     const activeSurfaces = detectedSurfaces.filter((s) => selectedSurfaceIds.includes(s.id));
-    let combinedBox = null;
-    if (activeSurfaces.length > 0) {
+    let combinedBox = flowlineSelection?.driveBounds ? flowlineSelection.driveBounds.clone() : null;
+    if (!combinedBox && activeSurfaces.length > 0) {
       combinedBox = new THREE.Box3();
       activeSurfaces.forEach((s) => {
         if (s.box && !s.box.isEmpty()) combinedBox.union(s.box);
       });
     }
 
-    const opTitle = isPocket ? 'Surface Finish Pocket' : 'Surface Finish Contour';
+    const opTitle = isFlowline
+      ? 'Surface Finish Flowline'
+      : isPocket
+        ? 'Surface Finish Pocket'
+        : 'Surface Finish Contour';
     const rapidHeight = surfaceParams.clearanceEnabled && surfaceParams.clearanceMode === 'abs'
       ? Number(surfaceParams.clearance)
       : (Number(surfaceParams.retract) || 25.0);
 
+    const driveFaceIds = flowlineSelection?.driveFaceIds || operation?.driveFaceIds || [];
+    const checkFaceIds = flowlineSelection?.checkFaceIds || operation?.checkFaceIds || [];
+    const containmentIds = flowlineSelection?.containmentIds || operation?.containmentIds || [];
+    const flowlineData = flowlineSelection?.flowlineData || operation?.flowlineData || initialDefaults.flowlineData;
+
     const updatedOp = {
       ...(operation || {}),
       name: operation?.name || opTitle,
-      type: isPocket ? 'surface_finish_pocket' : 'surface_finish_contour',
-      strategyKey: isPocket ? 'surface_finish_pocket' : 'surface_finish_contour',
-      badgeClass: isPocket ? 'pocket' : 'contour',
-      badgeText: isPocket ? 'SP' : 'SC',
+      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : 'surface_finish_contour',
+      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : 'surface_finish_contour',
+      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : 'contour',
+      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : 'SC',
       toolId: activeTool?.id || toolParams.toolId || 1,
       toolName: toolParams.toolName,
       toolNumber: Number(toolParams.toolNumber) || 1,
@@ -380,23 +408,34 @@ function SurfaceFinishContourModalInner({
       plungeFeedRate: Number(toolParams.plungeRate) || 150,
       retractRate: Number(toolParams.retractRate) || 250,
       rapidHeight,
-      stepdown: Number(isPocket ? pocketParams.maxStepdown : contourParams.maxStepdown) || 0.5,
+      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : contourParams.maxStepdown) || 0.5,
       stockToLeaveXY: Number(surfaceParams.stockToLeaveDrive) || 0.0,
       stockToLeaveZ: Number(surfaceParams.stockToLeaveDrive) || 0.0,
       cuttingDirection: isPocket ? pocketParams.machiningDirection : contourParams.direction,
       contourSide: surfaceParams.containmentMode,
-      cutStyle: pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap',
-      stepoverPct: Math.max(5, Math.min(95, Math.round((Number(pocketParams.stepover || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
+      cutStyle: isFlowline
+        ? String(flowlineParams.cuttingMethod || 'Zigzag').toLowerCase()
+        : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
+      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
       driveSurfaceIds: selectedSurfaceIds,
+      driveFaceIds,
+      checkFaceIds,
+      containmentIds,
       usesCustomSurfaces: true,
       bounds: combinedBox && !combinedBox.isEmpty() ? combinedBox : (operation?.bounds || null),
       comment: toolParams.comment,
       machineId: caps.machineId,
       machineAxes: caps.axesCount,
       machineParams: { ...machineParams },
-      surfaceParams: { ...surfaceParams, driveSurfacesCount: activeSurfaces.length },
+      surfaceParams: {
+        ...surfaceParams,
+        driveSurfacesCount: isFlowline ? (driveFaceIds.length || activeSurfaces.length) : activeSurfaces.length,
+        checkSurfacesCount: checkFaceIds.length
+      },
       contourParams: { ...contourParams },
-      pocketParams: { ...pocketParams }
+      pocketParams: { ...pocketParams },
+      flowlineData: { ...flowlineData },
+      flowlineParams: { ...flowlineParams }
     };
 
     onSaveOperation?.(updatedOp);
@@ -454,7 +493,11 @@ function SurfaceFinishContourModalInner({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontWeight: 500 }}>
-              {isPocket ? 'Surface Finish Pocket' : 'Surface Finish Contour'}
+              {isFlowline
+                ? 'Surface Finish Flowline'
+                : isPocket
+                  ? 'Surface Finish Pocket'
+                  : 'Surface Finish Contour'}
             </span>
             <span
               style={{
@@ -503,7 +546,14 @@ function SurfaceFinishContourModalInner({
           {[
             { id: 'toolpath_params', label: 'Toolpath parameters' },
             { id: 'surface_params', label: 'Surface parameters' },
-            { id: 'finish_contour_params', label: isPocket ? 'Finish pocket parameters' : 'Finish contour parameters' }
+            {
+              id: 'finish_contour_params',
+              label: isFlowline
+                ? 'Finish flowline parameters'
+                : isPocket
+                  ? 'Finish pocket parameters'
+                  : 'Finish contour parameters'
+            }
           ].map((tab) => {
             const active = activeTab === tab.id;
             return (
@@ -1032,7 +1082,13 @@ function SurfaceFinishContourModalInner({
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <button
                     type="button"
-                    onClick={() => setActiveSubDialog('select_surfaces')}
+                    onClick={() => {
+                      if (isFlowline && onOpenSurfaceSelection) {
+                        onOpenSurfaceSelection();
+                      } else {
+                        setActiveSubDialog('select_surfaces');
+                      }
+                    }}
                     style={{ ...MC_BUTTON, width: '58px', height: '24px' }}
                     title="Select Drive / Check Surfaces"
                   >
@@ -1049,7 +1105,9 @@ function SurfaceFinishContourModalInner({
                     onChange={(e) => setSurfaceParams((p) => ({ ...p, stockToLeaveDrive: Number(e.target.value) }))}
                     style={CLASSIC_YELLOW}
                   />
-                  <span style={{ textAlign: 'right' }}>({selectedSurfaceIds.length})</span>
+                  <span style={{ textAlign: 'right' }}>
+                    ({isFlowline ? (flowlineSelection?.driveFaceIds?.length ?? operation?.driveFaceIds?.length ?? selectedSurfaceIds.length) : selectedSurfaceIds.length})
+                  </span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '126px minmax(0, 1fr) 26px', alignItems: 'center', gap: '6px', minWidth: 0 }}>
@@ -1061,7 +1119,9 @@ function SurfaceFinishContourModalInner({
                     onChange={(e) => setSurfaceParams((p) => ({ ...p, stockToLeaveCheck: Number(e.target.value) }))}
                     style={CLASSIC_YELLOW}
                   />
-                  <span style={{ textAlign: 'right' }}>(0)</span>
+                  <span style={{ textAlign: 'right' }}>
+                    ({isFlowline ? (flowlineSelection?.checkFaceIds?.length ?? operation?.checkFaceIds?.length ?? 0) : 0})
+                  </span>
                 </div>
 
                 {/* Tool Containment Box */}
@@ -1069,7 +1129,7 @@ function SurfaceFinishContourModalInner({
                   <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px' }}>Tool containment</legend>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '11px' }}>
                     <span>Compensate to:</span>
-                    <span>(0)</span>
+                    <span>({isFlowline ? (flowlineSelection?.containmentIds?.length ?? operation?.containmentIds?.length ?? 0) : 0})</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     {[
@@ -1112,7 +1172,7 @@ function SurfaceFinishContourModalInner({
           )}
 
           {/* ==================== TAB 3A: FINISH CONTOUR PARAMETERS (IMAGE 5 VERBATIM) ==================== */}
-          {activeTab === 'finish_contour_params' && !isPocket && (
+          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '246px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
                 {/* LEFT COLUMN */}
@@ -1382,7 +1442,7 @@ function SurfaceFinishContourModalInner({
           )}
 
           {/* ==================== TAB 3B: FINISH POCKET PARAMETERS (PRESERVED DYNAMICALLY) ==================== */}
-          {activeTab === 'finish_contour_params' && isPocket && (
+          {activeTab === 'finish_contour_params' && isPocket && !isFlowline && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '11.5px' }}>
               <div style={{ fontWeight: 600, color: '#0369a1' }}>
                 3D Pocket Cutting Method ({caps.machineName})
@@ -1436,6 +1496,202 @@ function SurfaceFinishContourModalInner({
                   <input type="checkbox" checked={pocketParams.finishOuterBoundary} onChange={(e) => setPocketParams((p) => ({ ...p, finishOuterBoundary: e.target.checked }))} />
                   <span>Finish outer boundary wall pass</span>
                 </label>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== TAB 3C: FINISH FLOWLINE PARAMETERS (IMAGE 5 VERBATIM) ==================== */}
+          {activeTab === 'finish_contour_params' && isFlowline && (
+            <div
+              data-testid="finish-flowline-params-tab"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: '340px',
+                fontSize: '11.5px',
+                color: '#0f172a'
+              }}
+            >
+              {/* Top Row: Cut control + Stepover control + Cutting method */}
+              <div style={{ display: 'grid', gridTemplateColumns: '235px 235px minmax(0, 1fr)', gap: '12px', alignItems: 'start' }}>
+                {/* 1. Cut control */}
+                <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', margin: 0, minWidth: 0 }}>
+                  <legend style={{ fontSize: '11px', padding: '0 4px', color: '#0f172a' }}>Cut control</legend>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 72px', alignItems: 'center', gap: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={flowlineParams.cutControlDistanceEnabled}
+                          onChange={(e) => setFlowlineParams((p) => ({ ...p, cutControlDistanceEnabled: e.target.checked }))}
+                        />
+                        <span>Distance</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.25"
+                        min="0.1"
+                        disabled={!flowlineParams.cutControlDistanceEnabled}
+                        value={flowlineParams.cutControlDistance}
+                        onChange={(e) => setFlowlineParams((p) => ({ ...p, cutControlDistance: Number(e.target.value) }))}
+                        style={flowlineParams.cutControlDistanceEnabled ? CLASSIC_YELLOW : DISABLED_GRAY}
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 72px', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSubDialog('total_tolerance')}
+                        style={{ ...MC_BUTTON, width: '100%' }}
+                      >
+                        Total tolerance...
+                      </button>
+                      <input
+                        type="number"
+                        step="0.005"
+                        min="0.001"
+                        value={flowlineParams.totalTolerance}
+                        onChange={(e) => setFlowlineParams((p) => ({ ...p, totalTolerance: Number(e.target.value) }))}
+                        style={CLASSIC_YELLOW}
+                      />
+                    </div>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', paddingTop: '2px' }}>
+                      <input
+                        type="checkbox"
+                        checked={flowlineParams.checkGouge}
+                        onChange={(e) => setFlowlineParams((p) => ({ ...p, checkGouge: e.target.checked }))}
+                      />
+                      <span>Check flowline motion for gouge</span>
+                    </label>
+                  </div>
+                </fieldset>
+
+                {/* 2. Stepover control */}
+                <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', margin: 0, minWidth: 0 }}>
+                  <legend style={{ fontSize: '11px', padding: '0 4px', color: '#0f172a' }}>Stepover control</legend>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 74px', alignItems: 'center', gap: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="flowline_stepover_mode"
+                          checked={flowlineParams.stepoverMode === 'distance'}
+                          onChange={() => setFlowlineParams((p) => ({ ...p, stepoverMode: 'distance' }))}
+                        />
+                        <span>Distance</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0.05"
+                        disabled={flowlineParams.stepoverMode !== 'distance'}
+                        value={flowlineParams.stepoverDistance}
+                        onChange={(e) => setFlowlineParams((p) => ({ ...p, stepoverDistance: Number(e.target.value) }))}
+                        style={flowlineParams.stepoverMode === 'distance' ? CLASSIC_YELLOW : DISABLED_GRAY}
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 74px', alignItems: 'center', gap: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="flowline_stepover_mode"
+                          checked={flowlineParams.stepoverMode === 'scallop'}
+                          onChange={() => setFlowlineParams((p) => ({ ...p, stepoverMode: 'scallop' }))}
+                        />
+                        <span>Scallop height</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.05"
+                        min="0.005"
+                        disabled={flowlineParams.stepoverMode !== 'scallop'}
+                        value={flowlineParams.scallopHeight}
+                        onChange={(e) => setFlowlineParams((p) => ({ ...p, scallopHeight: Number(e.target.value) }))}
+                        style={flowlineParams.stepoverMode === 'scallop' ? CLASSIC_YELLOW : DISABLED_GRAY}
+                      />
+                    </div>
+                  </div>
+                </fieldset>
+
+                {/* 3. Cutting method & Single row only */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '6px', minWidth: 0 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '95px minmax(0, 1fr)', alignItems: 'center', gap: '8px' }}>
+                    <span>Cutting method</span>
+                    <select
+                      value={flowlineParams.cuttingMethod}
+                      onChange={(e) => setFlowlineParams((p) => ({ ...p, cuttingMethod: e.target.value }))}
+                      style={WHITE_INPUT}
+                    >
+                      <option value="Zigzag">Zigzag</option>
+                      <option value="One way">One way</option>
+                      <option value="Spiral">Spiral</option>
+                    </select>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={flowlineParams.singleRowOnly}
+                      onChange={(e) => setFlowlineParams((p) => ({ ...p, singleRowOnly: e.target.checked }))}
+                    />
+                    <span>Single row only</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Bottom Row: Rib cut (left) + Depth limits / Gap settings / Advanced settings (right) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr)', gap: '16px', alignItems: 'center', marginTop: '48px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', margin: 0 }}>
+                  <legend style={{ fontSize: '11px', padding: '0 4px', color: '#0f172a' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={flowlineParams.ribCutEnabled}
+                        onChange={(e) => setFlowlineParams((p) => ({ ...p, ribCutEnabled: e.target.checked }))}
+                      />
+                      <span>Rib cut</span>
+                    </label>
+                  </legend>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 68px', alignItems: 'center', gap: '8px', padding: '6px 0 4px 0', color: flowlineParams.ribCutEnabled ? '#0f172a' : '#64748b' }}>
+                    <span>Resolution percent of tool</span>
+                    <input
+                      type="number"
+                      step="5"
+                      min="5"
+                      max="100"
+                      disabled={!flowlineParams.ribCutEnabled}
+                      value={flowlineParams.ribCutResolutionPct}
+                      onChange={(e) => setFlowlineParams((p) => ({ ...p, ribCutResolutionPct: Number(e.target.value) }))}
+                      style={flowlineParams.ribCutEnabled ? CLASSIC_YELLOW : DISABLED_GRAY}
+                    />
+                  </div>
+                </fieldset>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <input
+                      type="checkbox"
+                      checked={flowlineParams.depthLimitsEnabled}
+                      onChange={(e) => setFlowlineParams((p) => ({ ...p, depthLimitsEnabled: e.target.checked }))}
+                    />
+                    <button
+                      type="button"
+                      disabled={!flowlineParams.depthLimitsEnabled}
+                      onClick={() => setActiveSubDialog('cut_depths')}
+                      style={{ ...MC_BUTTON, opacity: flowlineParams.depthLimitsEnabled ? 1 : 0.6 }}
+                    >
+                      Depth limits...
+                    </button>
+                  </div>
+                  <button type="button" onClick={() => setActiveSubDialog('gap_settings')} style={MC_BUTTON}>
+                    Gap settings...
+                  </button>
+                  <button type="button" onClick={() => setActiveSubDialog('advanced_settings')} style={MC_BUTTON}>
+                    Advanced settings...
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1496,7 +1752,12 @@ function SurfaceFinishContourModalInner({
             </button>
             <button
               type="button"
-              onClick={() => onNotify?.(`${isPocket ? 'Surface Finish Pocket' : 'Surface Finish Contour'} (${caps.machineName} - ${caps.axesCount}-Axis)`, 'info')}
+              onClick={() =>
+                onNotify?.(
+                  `${isFlowline ? 'Surface Finish Flowline' : isPocket ? 'Surface Finish Pocket' : 'Surface Finish Contour'} (${caps.machineName} - ${caps.axesCount}-Axis)`,
+                  'info'
+                )
+              }
               style={{
                 width: '40px',
                 height: '26px',
@@ -1657,8 +1918,10 @@ function SurfaceFinishContourModalInner({
 
         {/* Active Sub-Dialog Portal */}
         <SurfaceFinishSubDialog
+          key={activeSubDialog || 'none'}
           dialog={activeSubDialog}
           onClose={() => setActiveSubDialog(null)}
+          isFlowline={isFlowline}
           toolParams={toolParams}
           setToolParams={setToolParams}
           machineParams={machineParams}
@@ -1667,6 +1930,8 @@ function SurfaceFinishContourModalInner({
           setSurfaceParams={setSurfaceParams}
           contourParams={contourParams}
           setContourParams={setContourParams}
+          flowlineParams={flowlineParams}
+          setFlowlineParams={setFlowlineParams}
           caps={caps}
           tools={displayedTools}
           activeTool={activeTool}

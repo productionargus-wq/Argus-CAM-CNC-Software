@@ -285,6 +285,7 @@ export function TransitionTileSvg({ type }) {
 export function SurfaceFinishSubDialog({
   dialog,
   onClose,
+  isFlowline = false,
   toolParams,
   setToolParams,
   machineParams,
@@ -293,6 +294,8 @@ export function SurfaceFinishSubDialog({
   setSurfaceParams,
   contourParams,
   setContourParams,
+  flowlineParams = null,
+  setFlowlineParams = null,
   caps,
   tools,
   activeTool,
@@ -340,10 +343,11 @@ export function SurfaceFinishSubDialog({
     before: machineParams.cannedTextBefore,
     after: machineParams.cannedTextAfter
   });
+  const activeStrategyParams = isFlowline && flowlineParams ? flowlineParams : contourParams;
   const [localTol, setLocalTol] = useState({
-    totalTolerance: contourParams.totalTolerance,
-    filterRatio: contourParams.filterToleranceRatio,
-    oneWayArcFilter: contourParams.oneWayArcFilter
+    totalTolerance: activeStrategyParams.totalTolerance,
+    filterRatio: activeStrategyParams.filterToleranceRatio ?? 0.5,
+    oneWayArcFilter: Boolean(activeStrategyParams.oneWayArcFilter)
   });
   const [localHelix, setLocalHelix] = useState({
     radius: contourParams.helixRadius,
@@ -357,17 +361,17 @@ export function SurfaceFinishSubDialog({
     extendToStock: contourParams.flatsExtendToStock
   });
   const [localCutDepths, setLocalCutDepths] = useState({
-    mode: contourParams.cutDepthsMode,
-    minDepth: contourParams.minDepth,
-    maxDepth: contourParams.maxDepth
+    mode: activeStrategyParams.cutDepthsMode || 'Incremental',
+    minDepth: activeStrategyParams.minDepth ?? -9999,
+    maxDepth: activeStrategyParams.maxDepth ?? 9999
   });
   const [localGaps, setLocalGaps] = useState({
-    mode: contourParams.gapSettingsMode,
-    maxDist: contourParams.maxGapDistance
+    mode: activeStrategyParams.gapSettingsMode || 'Follow surfaces',
+    maxDist: activeStrategyParams.maxGapDistance ?? 10.0
   });
   const [localAdvanced, setLocalAdvanced] = useState({
-    toolAxis: contourParams.advancedToolAxis,
-    collisionCheck: contourParams.advancedCollisionCheck
+    toolAxis: activeStrategyParams.advancedToolAxis,
+    collisionCheck: activeStrategyParams.advancedCollisionCheck
   });
   const [localDirection, setLocalDirection] = useState(surfaceParams.cutDirectionMode || 'Normal');
 
@@ -828,12 +832,16 @@ export function SurfaceFinishSubDialog({
         width={380}
         onClose={onClose}
         onOk={() => {
-          setContourParams((p) => ({
-            ...p,
+          const patch = {
             totalTolerance: localTol.totalTolerance,
             filterToleranceRatio: localTol.filterRatio,
             oneWayArcFilter: localTol.oneWayArcFilter
-          }));
+          };
+          if (isFlowline && setFlowlineParams) {
+            setFlowlineParams((p) => ({ ...p, ...patch }));
+          } else {
+            setContourParams((p) => ({ ...p, ...patch }));
+          }
           onClose();
         }}
       >
@@ -931,12 +939,16 @@ export function SurfaceFinishSubDialog({
         width={370}
         onClose={onClose}
         onOk={() => {
-          setContourParams((p) => ({
-            ...p,
+          const patch = {
             cutDepthsMode: localCutDepths.mode,
             minDepth: localCutDepths.minDepth,
             maxDepth: localCutDepths.maxDepth
-          }));
+          };
+          if (isFlowline && setFlowlineParams) {
+            setFlowlineParams((p) => ({ ...p, ...patch, depthLimitsEnabled: true }));
+          } else {
+            setContourParams((p) => ({ ...p, ...patch }));
+          }
           onClose();
         }}
       >
@@ -968,7 +980,12 @@ export function SurfaceFinishSubDialog({
         width={380}
         onClose={onClose}
         onOk={() => {
-          setContourParams((p) => ({ ...p, gapSettingsMode: localGaps.mode, maxGapDistance: localGaps.maxDist }));
+          const patch = { gapSettingsMode: localGaps.mode, maxGapDistance: localGaps.maxDist };
+          if (isFlowline && setFlowlineParams) {
+            setFlowlineParams((p) => ({ ...p, ...patch }));
+          } else {
+            setContourParams((p) => ({ ...p, ...patch }));
+          }
           onClose();
         }}
       >
@@ -995,11 +1012,15 @@ export function SurfaceFinishSubDialog({
         width={430}
         onClose={onClose}
         onOk={() => {
-          setContourParams((p) => ({
-            ...p,
+          const patch = {
             advancedToolAxis: localAdvanced.toolAxis,
             advancedCollisionCheck: localAdvanced.collisionCheck
-          }));
+          };
+          if (isFlowline && setFlowlineParams) {
+            setFlowlineParams((p) => ({ ...p, ...patch }));
+          } else {
+            setContourParams((p) => ({ ...p, ...patch }));
+          }
           onClose();
         }}
       >

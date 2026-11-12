@@ -65,6 +65,10 @@ import CustomPostStudioModal from './components/CustomPostStudioModal';
 import AnomalyScannerModal from './components/AnomalyScannerModal';
 import DefineToolModal from './components/DefineToolModal';
 import SurfaceFinishContourModal from './components/SurfaceFinishContourModal';
+import ToolpathSurfaceSelectionModal from './components/ToolpathSurfaceSelectionModal';
+import FlowlineDataModal from './components/FlowlineDataModal';
+import { buildSolidFaceCatalog } from './utils/solidFaceSelectionEngine';
+import { createDefaultSurfaceFinishState } from './config/surfaceFinishSchema';
 import CommandFinderModal from './components/CommandFinderModal';
 import AddInsManagerModal from './components/AddInsManagerModal';
 import PartStatisticsModal from './components/PartStatisticsModal';
@@ -351,6 +355,27 @@ export default function App() {
   const [isSurfaceFinishContourOpen, setIsSurfaceFinishContourOpen] = useState(false);
   const [surfaceFinishStrategyMode, setSurfaceFinishStrategyMode] = useState('contour');
   const [editingSurfaceFinishOp, setEditingSurfaceFinishOp] = useState(null);
+  const [isSurfaceSelectionOpen, setIsSurfaceSelectionOpen] = useState(false);
+  const [isFlowlineDataOpen, setIsFlowlineDataOpen] = useState(false);
+  const [activeFacePickRole, setActiveFacePickRole] = useState(null); // 'drive' | 'check' | 'containment' | null
+  const [surfaceSelectionDraft, setSurfaceSelectionDraft] = useState(() => ({
+    mode: 'flowline',
+    editingOp: null,
+    driveFaceIds: [],
+    checkFaceIds: [],
+    containmentIds: [],
+    cadFileCount: 0,
+    flowlineData: {
+      offsetDir: 1,
+      cutDir: 1,
+      stepDir: 1,
+      swapUV: false,
+      startCorner: 0,
+      edgeTolerance: 0.025,
+      plotEdges: false
+    },
+    editingFromModal: false
+  }));
   const [isCommandFinderOpen, setIsCommandFinderOpen] = useState(false);
   const [isAddInsModalOpen, setIsAddInsModalOpen] = useState(false);
   const [isStatisticsModalOpen, setIsStatisticsModalOpen] = useState(false);
@@ -771,6 +796,25 @@ export default function App() {
       coolant: 'Through'
     },
     {
+      id: 8,
+      number: 8,
+      name: '12 Bull-Nosed Endmill',
+      type: 'bull',
+      diameter: 12,
+      cornerRad: 0.6,
+      cornerRadius: 0.6,
+      fluteLength: 25,
+      overallLength: 75,
+      flutes: 4,
+      cuttingSpeedVc: 403,
+      rpm: 10695,
+      feedPerTooth: 0.07,
+      feedRate: 3000,
+      plungeRate: 450,
+      retractRate: 3000,
+      coolant: 'Flood'
+    },
+    {
       id: 99,
       number: 99,
       name: 'Renishaw OMP60 Optical Touch Probe',
@@ -1179,11 +1223,30 @@ export default function App() {
                 feedRate: 713,
                 plungeRate: 713,
                 coolant: 'Through'
+              },
+              {
+                id: 8,
+                number: 8,
+                name: '12 Bull-Nosed Endmill',
+                type: 'bull',
+                diameter: 12,
+                cornerRad: 0.6,
+                cornerRadius: 0.6,
+                fluteLength: 25,
+                overallLength: 75,
+                flutes: 4,
+                cuttingSpeedVc: 403,
+                rpm: 10695,
+                feedPerTooth: 0.07,
+                feedRate: 3000,
+                plungeRate: 450,
+                retractRate: 3000,
+                coolant: 'Flood'
               }
             ];
 
             const t7 = loadedTools.find((t) => t.number === 7 || (t.type === 'drill' && t.diameter === 5));
-            const hasFullLibrary = loadedTools.length >= 7 && loadedTools.some((t) => t.number === 7);
+            const hasFullLibrary = loadedTools.length >= 7 && Boolean(t7);
 
             if (!hasFullLibrary) {
               const probeTool = loadedTools.find((t) => t.number === 99 || t.type === 'probe') || {
@@ -1204,6 +1267,20 @@ export default function App() {
                 coolant: 'Off'
               };
               loadedTools = [...standardTools, probeTool];
+            } else if (!loadedTools.some((t) => t.type === 'bull')) {
+              const defaultBull = standardTools.find((t) => t.type === 'bull');
+              if (defaultBull) {
+                const maxNum = Math.max(0, ...loadedTools.map((t) => Number(t.number) || 0));
+                const numTaken = loadedTools.some((t) => Number(t.number) === 8);
+                loadedTools = [
+                  ...loadedTools,
+                  {
+                    ...defaultBull,
+                    id: loadedTools.some((t) => t.id === 8) ? Date.now() : 8,
+                    number: numTaken ? maxNum + 1 : 8
+                  }
+                ];
+              }
             }
             setTools(loadedTools);
           }
@@ -1801,9 +1878,36 @@ export default function App() {
   };
 
   const handleEditOp = (op) => {
-    if (op?.strategyKey === 'surface_finish_contour' || op?.strategyKey === 'surface_finish_pocket' || op?.usesCustomSurfaces) {
+    if (
+      op?.strategyKey === 'surface_finish_flowline' ||
+      op?.badgeClass === 'flowline' ||
+      op?.strategyKey === 'surface_finish_contour' ||
+      op?.strategyKey === 'surface_finish_pocket' ||
+      op?.usesCustomSurfaces
+    ) {
+      const mode =
+        op.strategyKey === 'surface_finish_flowline' || op.badgeClass === 'flowline'
+          ? 'flowline'
+          : op.strategyKey === 'surface_finish_pocket' || op.badgeClass === 'pocket'
+            ? 'pocket'
+            : 'contour';
+      if (mode === 'flowline') {
+        setSurfaceSelectionDraft({
+          mode: 'flowline',
+          editingOp: op,
+          driveFaceIds: Array.isArray(op.driveFaceIds) ? op.driveFaceIds : [],
+          checkFaceIds: Array.isArray(op.checkFaceIds) ? op.checkFaceIds : [],
+          containmentIds: Array.isArray(op.containmentIds) ? op.containmentIds : [],
+          cadFileCount: Number(op.cadFileCount) || 0,
+          flowlineData: {
+            ...createDefaultSurfaceFinishState({ activeMachine, stockConfig, strategyMode: 'flowline' }).flowlineData,
+            ...(op.flowlineData || {})
+          },
+          editingFromModal: false
+        });
+      }
       setEditingSurfaceFinishOp(op);
-      setSurfaceFinishStrategyMode(op.strategyKey === 'surface_finish_pocket' || op.badgeClass === 'pocket' ? 'pocket' : 'contour');
+      setSurfaceFinishStrategyMode(mode);
       setIsSurfaceFinishContourOpen(true);
       return;
     }
@@ -2007,6 +2111,9 @@ export default function App() {
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
+    } else if (s === 'flowline' || s === 'surface_finish_flowline') {
+      openSurfaceFinishFlowline(null);
+      return;
     } else if (s === 'swarf' || s === '5axis_swarf') {
       newOp = {
         id: nextId,
@@ -2726,6 +2833,7 @@ export default function App() {
     }
 
     // 2. Clear previous toolpaths & scratch wireframes (Standard clean CAM workflow)
+    resetFlowlineWorkflowState();
     operationsRef.current = [];
     customGeometryRef.current = [];
     setOperations([]);
@@ -2814,9 +2922,133 @@ export default function App() {
     showToast(`Updated Tool: ${updatedTool.name} (T${updatedTool.number})`, 'success');
   };
 
+  const computeDriveBoundsForFaceIds = (faceIds = []) => {
+    if (!Array.isArray(faceIds) || faceIds.length === 0) return null;
+    const catalog = buildSolidFaceCatalog({ currentModel, customGeometry, partTransform });
+    const box = new THREE.Box3();
+    faceIds.forEach((fid) => {
+      const f = catalog.byId.get(fid);
+      if (f?.bounds && !f.bounds.isEmpty()) box.union(f.bounds);
+    });
+    return box.isEmpty() ? null : box;
+  };
+
+  const resetFlowlineWorkflowState = () => {
+    setActiveFacePickRole(null);
+    setIsFlowlineDataOpen(false);
+    setIsSurfaceSelectionOpen(false);
+    setIsSurfaceFinishContourOpen(false);
+    setEditingSurfaceFinishOp(null);
+    setSurfaceSelectionDraft({
+      mode: 'flowline',
+      editingOp: null,
+      driveFaceIds: [],
+      checkFaceIds: [],
+      containmentIds: [],
+      cadFileCount: 0,
+      flowlineData: createDefaultSurfaceFinishState({ activeMachine, stockConfig, strategyMode: 'flowline' }).flowlineData,
+      editingFromModal: false
+    });
+  };
+
   const openSurfaceFinishModal = (mode = 'contour', opToEdit = null) => {
     setEditingSurfaceFinishOp(opToEdit);
     setSurfaceFinishStrategyMode(mode);
+    setIsSurfaceFinishContourOpen(true);
+  };
+
+  const openSurfaceFinishFlowline = (opToEdit = null, options = {}) => {
+    const { fromModal = false } = options;
+    setIsSketchModeActive(false);
+    setIsSelectModeActive(false);
+    setActiveFacePickRole(null);
+    setIsFlowlineDataOpen(false);
+    setSurfaceSelectionDraft({
+      mode: 'flowline',
+      editingOp: opToEdit,
+      driveFaceIds: Array.isArray(opToEdit?.driveFaceIds) ? opToEdit.driveFaceIds : [],
+      checkFaceIds: Array.isArray(opToEdit?.checkFaceIds) ? opToEdit.checkFaceIds : [],
+      containmentIds: Array.isArray(opToEdit?.containmentIds) ? opToEdit.containmentIds : [],
+      cadFileCount: Number(opToEdit?.cadFileCount) || 0,
+      flowlineData: {
+        ...createDefaultSurfaceFinishState({ activeMachine, stockConfig, strategyMode: 'flowline' }).flowlineData,
+        ...(opToEdit?.flowlineData || {})
+      },
+      editingFromModal: fromModal
+    });
+    setIsSurfaceSelectionOpen(true);
+  };
+
+  const handleOpenFlowlineGeometryEdit = (op) => {
+    openSurfaceFinishFlowline(op, { fromModal: false });
+  };
+
+  const handlePickSolidFacesForDraft = (faceIds = [], modeLabel = '', meta = {}) => {
+    const role = meta.role || activeFacePickRole || 'drive';
+    if (!Array.isArray(faceIds) || faceIds.length === 0) return;
+
+    setSurfaceSelectionDraft((prev) => {
+      const field = role === 'check' ? 'checkFaceIds' : role === 'containment' ? 'containmentIds' : 'driveFaceIds';
+      const existing = prev[field] || [];
+      let nextList;
+      if (meta.clickCount === 1 && !meta.hasModifier && faceIds.length === 1) {
+        const fid = faceIds[0];
+        nextList = existing.includes(fid) ? existing.filter((id) => id !== fid) : [...existing, fid];
+      } else {
+        nextList = [...new Set([...existing, ...faceIds])];
+      }
+      return { ...prev, [field]: nextList };
+    });
+
+    if (modeLabel) {
+      showToast(`${role === 'check' ? 'Check' : 'Drive'}: ${modeLabel} (${faceIds.length} face${faceIds.length === 1 ? '' : 's'})`, 'info', 1800);
+    }
+  };
+
+  const handleImportCadDriveFile = async (file) => {
+    try {
+      const modelGroup = await parseAnyCADFile(file);
+      if (!modelGroup) return;
+      const customId = `cad_drive_${Date.now()}`;
+      modelGroup.userData = {
+        ...(modelGroup.userData || {}),
+        customId,
+        cadType: 'surface_extrusion',
+        surfaceRole: 'drive'
+      };
+      modelGroup.name = modelGroup.name || `Surface_${file.name}`;
+      const nextGeo = [...(customGeometryRef.current || []), modelGroup];
+      commitCustomGeometry(nextGeo, true);
+      syncPartMetricsFromCustomSurfaces(nextGeo);
+      const catalog = buildSolidFaceCatalog({ currentModel, customGeometry: nextGeo, partTransform });
+      const newFaces = catalog.faces.filter((f) => String(f.bodyId) === customId).map((f) => f.id);
+      setSurfaceSelectionDraft((prev) => ({
+        ...prev,
+        driveFaceIds: [...new Set([...(prev.driveFaceIds || []), ...newFaces])],
+        cadFileCount: (prev.cadFileCount || 0) + 1
+      }));
+      showToast(`Attached ${file.name} (${newFaces.length} drive face(s))`, 'success');
+    } catch (err) {
+      showToast(`Failed to attach CAD file: ${err.message}`, 'danger');
+    }
+  };
+
+  const handlePlotFlowlineEdges = (enabled) => {
+    const driveCount = surfaceSelectionDraft.driveFaceIds?.length || 0;
+    showToast(
+      enabled
+        ? `Plotting UV boundary edges across ${driveCount} drive face(s).`
+        : 'Hid flowline UV boundary edge overlay.',
+      'info'
+    );
+  };
+
+  const handleConfirmSurfaceSelection = () => {
+    setActiveFacePickRole(null);
+    setIsFlowlineDataOpen(false);
+    setIsSurfaceSelectionOpen(false);
+    setEditingSurfaceFinishOp(surfaceSelectionDraft.editingOp || null);
+    setSurfaceFinishStrategyMode('flowline');
     setIsSurfaceFinishContourOpen(true);
   };
 
@@ -2828,10 +3060,16 @@ export default function App() {
       tools.find((t) => Number(t.number) === Number(updatedOp.toolNumber)) ||
       tools[0] ||
       { id: 1, number: 1, type: 'flat', diameter: 10, name: updatedOp.toolName || '10mm Flat Endmill' };
+    const defaultLabel =
+      updatedOp.strategyKey === 'surface_finish_flowline'
+        ? 'Surface Finish Flowline'
+        : updatedOp.strategyKey === 'surface_finish_pocket'
+          ? 'Surface Finish Pocket'
+          : 'Surface Finish Contour';
     const finalOp = {
       ...updatedOp,
       id: nextId,
-      name: updatedOp.name || `${updatedOp.strategyKey === 'surface_finish_pocket' ? 'Surface Finish Pocket' : 'Surface Finish Contour'} - [${activePlane}]`,
+      name: updatedOp.name || `${defaultLabel} - [${activePlane}]`,
       visible: true,
       enabled: true,
       locked: false,
@@ -2990,6 +3228,9 @@ export default function App() {
       case 'define_tool':
         setIsDefineToolModalOpen(true);
         break;
+      case 'surface_finish_flowline':
+        openSurfaceFinishFlowline(null);
+        break;
       case 'surface_finish_contour':
         openSurfaceFinishModal('contour', null);
         break;
@@ -3035,6 +3276,7 @@ export default function App() {
     setCadSource(null);
 
     // 1. Comprehensive State Teardown & Reset
+    resetFlowlineWorkflowState();
     setIsBackplotActive(false);
     setActiveOpId(null);
     setDeletedEntitiesStack([]);
@@ -3211,6 +3453,7 @@ export default function App() {
   // Restore project from uploaded file or recent list
   const handleProjectLoaded = (data) => {
     if (!data) return;
+    resetFlowlineWorkflowState();
     if (data.projectName) setCurrentProjectName(data.projectName);
     if (data.stockConfig) setStockConfig(data.stockConfig);
     if (data.tools && data.tools.length > 0) setTools(data.tools);
@@ -5055,6 +5298,37 @@ export default function App() {
     setIsTransformModalOpen(true);
   };
 
+  const flowlineSelectionSession = activeFacePickRole
+    ? {
+        active: true,
+        role: activeFacePickRole,
+        driveFaceIds: surfaceSelectionDraft.driveFaceIds,
+        checkFaceIds: surfaceSelectionDraft.checkFaceIds,
+        onPickFaces: handlePickSolidFacesForDraft,
+        onEndSelection: () => setActiveFacePickRole(null),
+        onClearSelection: () => {
+          setSurfaceSelectionDraft((prev) => ({
+            ...prev,
+            [activeFacePickRole === 'check' ? 'checkFaceIds' : 'driveFaceIds']: []
+          }));
+        }
+      }
+    : null;
+
+  const flowlineViewportPreview =
+    (isFlowlineDataOpen ||
+      isSurfaceSelectionOpen ||
+      (isSurfaceFinishContourOpen && surfaceFinishStrategyMode === 'flowline')) &&
+    surfaceSelectionDraft.driveFaceIds.length > 0
+      ? {
+          active: true,
+          showGrid: isFlowlineDataOpen,
+          driveFaceIds: surfaceSelectionDraft.driveFaceIds,
+          checkFaceIds: surfaceSelectionDraft.checkFaceIds,
+          flowlineData: surfaceSelectionDraft.flowlineData
+        }
+      : null;
+
   return (
     <div id="root" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* 1. TitleBar */}
@@ -5094,6 +5368,7 @@ export default function App() {
         onOpenDefineToolModal={() => setIsDefineToolModalOpen(true)}
         onOpenSurfaceFinishContour={() => openSurfaceFinishModal('contour', null)}
         onOpenSurfaceFinishPocket={() => openSurfaceFinishModal('pocket', null)}
+        onOpenSurfaceFinishFlowline={() => openSurfaceFinishFlowline(null)}
         onCopyViewportImage={handleCopyViewportImage}
         onPasteOp={handlePasteOp}
         onCutOp={handleCutOp}
@@ -5326,6 +5601,8 @@ export default function App() {
           onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
           onOpenSurfaceFinishContour={() => openSurfaceFinishModal('contour', null)}
           onOpenSurfaceFinishPocket={() => openSurfaceFinishModal('pocket', null)}
+          onOpenSurfaceFinishFlowline={() => openSurfaceFinishFlowline(null)}
+          onEditOpGeometry={handleOpenFlowlineGeometryEdit}
           onExportStockSTL={handleExportStockSTL}
           activeDrawingTool={activeDrawingTool}
           circleParams={circleParams}
@@ -5486,13 +5763,21 @@ export default function App() {
                 containmentMode={containmentMode}
                 onChangeContainmentMode={setContainmentMode}
                 solidFilterMode={solidFilterMode}
-                onChangeSolidFilterMode={setSolidFilterMode}
+                onChangeSolidFilterMode={(mode) => {
+                  setSolidFilterMode(mode);
+                  if (mode === 'solid_face' && !isSelectModeActive) {
+                    setIsSelectModeActive(true);
+                    setSketchTool('select');
+                  }
+                }}
                 selectionMask={selectionMask}
                 onChangeSelectionMask={setSelectionMask}
                 stickyMultiSelect={stickyMultiSelect}
                 onToggleStickyMultiSelect={() => setStickyMultiSelect((v) => !v)}
                 onReselectPrevious={handleReselectPreviousSelection}
                 onFastPointSubmit={handleFastPointSubmit}
+                surfaceSelectionSession={flowlineSelectionSession}
+                flowlinePreview={flowlineViewportPreview}
               />
             </div>
           </div>
@@ -5612,13 +5897,21 @@ export default function App() {
               containmentMode={containmentMode}
               onChangeContainmentMode={setContainmentMode}
               solidFilterMode={solidFilterMode}
-              onChangeSolidFilterMode={setSolidFilterMode}
+              onChangeSolidFilterMode={(mode) => {
+                setSolidFilterMode(mode);
+                if (mode === 'solid_face' && !isSelectModeActive) {
+                  setIsSelectModeActive(true);
+                  setSketchTool('select');
+                }
+              }}
               selectionMask={selectionMask}
               onChangeSelectionMask={setSelectionMask}
               stickyMultiSelect={stickyMultiSelect}
               onToggleStickyMultiSelect={() => setStickyMultiSelect((v) => !v)}
               onReselectPrevious={handleReselectPreviousSelection}
               onFastPointSubmit={handleFastPointSubmit}
+              surfaceSelectionSession={flowlineSelectionSession}
+              flowlinePreview={flowlineViewportPreview}
             />
           </div>
         )}
@@ -6296,7 +6589,62 @@ export default function App() {
         onClose={() => setIsHelpGuideOpen(false)}
       />
 
-      {/* 16. Mastercam Surface Finish Contour & Pocket Parameters Modal */}
+      {/* 16. Mastercam Toolpath/surface selection & Flowline data Floating Modals */}
+      <ToolpathSurfaceSelectionModal
+        isOpen={isSurfaceSelectionOpen && !activeFacePickRole && !isFlowlineDataOpen}
+        mode={surfaceSelectionDraft.mode}
+        driveCount={surfaceSelectionDraft.driveFaceIds?.length || 0}
+        cadFileCount={surfaceSelectionDraft.cadFileCount || 0}
+        checkCount={surfaceSelectionDraft.checkFaceIds?.length || 0}
+        containmentCount={surfaceSelectionDraft.containmentIds?.length || 0}
+        activePickRole={activeFacePickRole}
+        onStartPick={(role) => {
+          if (role === 'containment') {
+            showToast('Click containment wireframe chains or select drive faces first.', 'info');
+            return;
+          }
+          setActiveFacePickRole(role);
+          showToast(
+            `Select ${role === 'check' ? 'Check' : 'Drive'} solid faces/surfaces in viewport, then click End Selection.`,
+            'info'
+          );
+        }}
+        onClearRole={(role) => {
+          setSurfaceSelectionDraft((prev) => ({
+            ...prev,
+            ...(role === 'drive' ? { driveFaceIds: [] } : role === 'check' ? { checkFaceIds: [] } : role === 'cadfile' ? { cadFileCount: 0 } : { containmentIds: [] })
+          }));
+        }}
+        onImportCadFile={handleImportCadDriveFile}
+        onShowRole={(role) => {
+          const count = role === 'check' ? surfaceSelectionDraft.checkFaceIds.length : surfaceSelectionDraft.driveFaceIds.length;
+          showToast(`Highlighting ${count} selected ${role} face(s) in 3D viewport.`, 'info');
+        }}
+        onOpenFlowlineData={() => setIsFlowlineDataOpen(true)}
+        onConfirm={handleConfirmSurfaceSelection}
+        onCancel={() => {
+          setActiveFacePickRole(null);
+          setIsFlowlineDataOpen(false);
+          setIsSurfaceSelectionOpen(false);
+        }}
+        onHelp={() =>
+          showToast('Pick Drive/Check solid faces, tune Flowline directions, then click OK to configure Surface Finish Flowline parameters.', 'info')
+        }
+      />
+
+      <FlowlineDataModal
+        isOpen={isFlowlineDataOpen}
+        flowlineData={surfaceSelectionDraft.flowlineData}
+        onChangeFlowlineData={(nextData) => setSurfaceSelectionDraft((prev) => ({ ...prev, flowlineData: nextData }))}
+        onPlotEdges={handlePlotFlowlineEdges}
+        onConfirm={() => setIsFlowlineDataOpen(false)}
+        onCancel={() => setIsFlowlineDataOpen(false)}
+        onHelp={() =>
+          showToast('Flip Offset, Cut direction, Step direction, or Start corner while inspecting the live 3D UV flowlines and green arrows.', 'info')
+        }
+      />
+
+      {/* 16b. Mastercam Surface Finish Contour, Pocket & Flowline Parameters Modal */}
       <SurfaceFinishContourModal
         isOpen={isSurfaceFinishContourOpen}
         onClose={() => {
@@ -6310,6 +6658,18 @@ export default function App() {
         activeMachine={activeMachine}
         stockConfig={stockConfig}
         lastDefinedTool={lastDefinedToolState}
+        flowlineSelection={
+          surfaceFinishStrategyMode === 'flowline'
+            ? {
+                ...surfaceSelectionDraft,
+                driveBounds: computeDriveBoundsForFaceIds(surfaceSelectionDraft.driveFaceIds)
+              }
+            : null
+        }
+        onOpenSurfaceSelection={() => {
+          setIsSurfaceFinishContourOpen(false);
+          setIsSurfaceSelectionOpen(true);
+        }}
         onSaveOperation={(op) => {
           handleApplySurfaceFinishContour(op);
           setIsSurfaceFinishContourOpen(false);

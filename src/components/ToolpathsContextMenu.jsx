@@ -125,6 +125,7 @@ export default function ToolpathsContextMenu({
   onOpenHSMFilter,
   onOpenSurfaceFinishContour,
   onOpenSurfaceFinishPocket,
+  onOpenSurfaceFinishFlowline,
   onExportStockSTL,
   onToggleLockOp,
   onToggleGhostOp,
@@ -302,7 +303,7 @@ export default function ToolpathsContextMenu({
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Parallel steep</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('radial'))}>Radial</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('project'))}>Project</div>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('flowline'))}>Flowline</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishFlowline ? onOpenSurfaceFinishFlowline() : onAddOperation?.('flowline'))}>Flowline</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishContour ? onOpenSurfaceFinishContour() : onAddOperation?.('waterline'))}>Contour</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishPocket ? onOpenSurfaceFinishPocket() : onAddOperation?.('pocket'))}>Pocket</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('shallow'))}>Shallow</div>

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { offsetContour2D } from './cadGeometry.js';
 import { isDriveSurfaceEntity } from '../config/surfaceFinishSchema.js';
+import { segmentObjectIntoSolidFaces } from './solidFaceSelectionEngine.js';
+import { generateSurfaceFlowlineToolpath } from './flowlineToolpathEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -141,8 +143,13 @@ export function generateFacingToolpath(bounds, tool, params = {}) {
  * customGeometry surfaces (Level 15 Surface_* / Surface_Extrude_* entities).
  */
 export function buildEffectiveDriveModel(currentModel = null, customGeometry = [], op = null) {
-  const driveIds = Array.isArray(op?.driveSurfaceIds) && op.driveSurfaceIds.length > 0
-    ? new Set(op.driveSurfaceIds.map((id) => String(id)))
+  const isFlowline = op?.badgeClass === 'flowline' || op?.strategyKey === 'surface_finish_flowline';
+  const combinedIds = [
+    ...(Array.isArray(op?.driveSurfaceIds) ? op.driveSurfaceIds : []),
+    ...(Array.isArray(op?.checkSurfaceIds) ? op.checkSurfaceIds : [])
+  ];
+  const driveIds = !isFlowline && combinedIds.length > 0
+    ? new Set(combinedIds.map((id) => String(id)))
     : null;
 
   const surfaceEntities = (Array.isArray(customGeometry) ? customGeometry : []).filter((ent) => {
@@ -159,14 +166,17 @@ export function buildEffectiveDriveModel(currentModel = null, customGeometry = [
   });
 
   if (!currentModel && surfaceEntities.length === 0) return null;
-  if (currentModel && surfaceEntities.length === 0) return currentModel;
 
   const group = new THREE.Group();
   if (currentModel) {
-    group.add(currentModel.clone(true));
+    const modelClone = currentModel.clone(true);
+    modelClone.userData = { ...(currentModel.userData || {}), __bodyId: 'primary_model' };
+    group.add(modelClone);
   }
   surfaceEntities.forEach((ent) => {
     const clone = ent.clone(true);
+    const bodyId = String(ent.userData?.customId || ent.uuid || ent.name);
+    clone.userData = { ...(ent.userData || {}), __bodyId: bodyId };
     clone.traverse((node) => {
       if (node.userData?.isCap) {
         node.userData.isCap = true;
@@ -176,6 +186,87 @@ export function buildEffectiveDriveModel(currentModel = null, customGeometry = [
   });
   group.updateMatrixWorld(true);
   return group;
+}
+
+/**
+ * Resolves Face Patches from effectiveModel matching op.driveFaceIds / op.checkFaceIds for Flowline operations.
+ */
+export function resolveFlowlineFacesFromEffectiveModel(effectiveModel, op = {}) {
+  if (!effectiveModel) return { driveFaces: [], checkFaces: [] };
+  const allFaces = [];
+  const children = effectiveModel.children?.length > 0 ? effectiveModel.children : [effectiveModel];
+  children.forEach((child, idx) => {
+    const bodyId = child.userData?.__bodyId || (idx === 0 ? 'primary_model' : String(child.userData?.customId || child.uuid || child.name || `custom_${idx}`));
+    const extraMatrix = bodyId === 'primary_model' ? null : (child.updateMatrix(), child.matrix.clone());
+    const faces = segmentObjectIntoSolidFaces(child, { bodyId, extraTransform: extraMatrix });
+    allFaces.push(...faces);
+  });
+
+  const driveSet = new Set(Array.isArray(op?.driveFaceIds) ? op.driveFaceIds.map(String) : []);
+  const checkSet = new Set(Array.isArray(op?.checkFaceIds) ? op.checkFaceIds.map(String) : []);
+
+  let driveFaces = driveSet.size > 0 ? allFaces.filter((f) => driveSet.has(f.id)) : [];
+  if (driveFaces.length === 0 && Array.isArray(op?.driveSurfaceIds) && op.driveSurfaceIds.length > 0) {
+    const surfSet = new Set(op.driveSurfaceIds.map(String));
+    driveFaces = allFaces.filter((f) => surfSet.has(String(f.bodyId)));
+  }
+
+  let checkFaces = checkSet.size > 0 ? allFaces.filter((f) => checkSet.has(f.id)) : [];
+  if (checkFaces.length === 0 && (op?.flowlineParams?.checkGouge ?? true) && driveFaces.length > 0) {
+    // Non-selected solid faces serve as implicit gouge-avoidance check obstacles unless tangent to drive
+    const driveTangentSet = new Set();
+    driveFaces.forEach((df) => {
+      driveTangentSet.add(df.id);
+      (df.tangentNeighborIds || []).forEach((tid) => driveTangentSet.add(tid));
+    });
+    checkFaces = allFaces.filter((f) => !driveTangentSet.has(f.id));
+  }
+
+  return { driveFaces, checkFaces };
+}
+
+/**
+ * Normalizes Surface Finish Flowline parameters from an operation record.
+ */
+export function buildFlowlineParamsFromOp(op = {}) {
+  const sp = op.surfaceParams || {};
+  const fp = op.flowlineParams || {};
+  const fd = op.flowlineData || {};
+  return {
+    rapidHeight: sp.clearanceEnabled && sp.clearanceMode === 'abs'
+      ? Number(sp.clearance)
+      : (Number(sp.retract ?? op.rapidHeight) || 25.0),
+    tipComp: sp.tipComp || 'tip',
+    stockToLeaveDrive: Number(sp.stockToLeaveDrive ?? op.stockToLeaveXY) || 0,
+    stockToLeaveCheck: Number(sp.stockToLeaveCheck) || 0,
+    flowlineData: {
+      offsetDir: fd.offsetDir ?? 1,
+      cutDir: fd.cutDir ?? 1,
+      stepDir: fd.stepDir ?? 1,
+      swapUV: Boolean(fd.swapUV),
+      startCorner: Number(fd.startCorner) || 0,
+      edgeTolerance: Number(fd.edgeTolerance) || 0.025,
+      plotEdges: Boolean(fd.plotEdges)
+    },
+    flowlineParams: {
+      cutControlDistanceEnabled: Boolean(fp.cutControlDistanceEnabled),
+      cutControlDistance: Number(fp.cutControlDistance) || 2.0,
+      totalTolerance: Number(fp.totalTolerance) || 0.025,
+      checkGouge: fp.checkGouge !== false,
+      stepoverMode: fp.stepoverMode || 'scallop',
+      stepoverDistance: Number(fp.stepoverDistance) || 2.0,
+      scallopHeight: Number(fp.scallopHeight) || 0.5,
+      cuttingMethod: fp.cuttingMethod || 'Zigzag',
+      singleRowOnly: Boolean(fp.singleRowOnly),
+      ribCutEnabled: Boolean(fp.ribCutEnabled),
+      ribCutResolutionPct: Number(fp.ribCutResolutionPct) || 50.0,
+      depthLimitsEnabled: Boolean(fp.depthLimitsEnabled),
+      minDepth: Number(fp.minDepth ?? -9999),
+      maxDepth: Number(fp.maxDepth ?? 9999),
+      gapSettingsMode: fp.gapSettingsMode || 'Follow surfaces',
+      maxGapDistance: Number(fp.maxGapDistance) || 10.0
+    }
+  };
 }
 
 /**
@@ -1880,6 +1971,10 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
   if (strategy === 'pocket' || strategy === 'surface_pocket') {
     return generateSurfacePocketToolpath(opBounds, assignedTool, buildPocketParamsFromOp(op), effectiveModel);
   }
+  if (strategy === 'flowline' || op.strategyKey === 'surface_finish_flowline') {
+    const { driveFaces, checkFaces } = resolveFlowlineFacesFromEffectiveModel(effectiveModel, op);
+    return generateSurfaceFlowlineToolpath(opBounds, assignedTool, buildFlowlineParamsFromOp(op), driveFaces, checkFaces);
+  }
   if (strategy === 'circlemill') {
     return generateCircleMillToolpath(opBounds, assignedTool, {
       diameter: op.diameter || (op.chain?.radius ? op.chain.radius * 2 : 50.8),
@@ -2145,7 +2240,7 @@ export function compileBackplotTrajectory(
     const opSafeBounds = resolveOperationDriveBounds(effectiveModel, op, safeBounds);
     const opZOffset = opSafeBounds.max.y;
     const toCncPos = (threePt) => new THREE.Vector3(threePt.x, -threePt.z, threePt.y - opZOffset);
-    const usesCadSpace = !!op.chain || !!op.usesCustomSurfaces || !!(op.driveSurfaceIds?.length) || !model;
+    const usesCadSpace = !!op.chain || !!op.usesCustomSurfaces || !!(op.driveSurfaceIds?.length) || !!(op.driveFaceIds?.length) || op.badgeClass === 'flowline' || !model;
     const visualYOffset = (cadWorldYOffset && usesCadSpace) ? cadWorldYOffset : 0;
 
     const data = generateToolpathForOperation(op, opSafeBounds, assignedTool, effectiveModel, stockConfig);

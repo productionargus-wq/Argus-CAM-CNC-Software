@@ -156,6 +156,14 @@ export const TOOLPATHS_RIBBON_CONFIG = [
     ],
     galleryMoreItems: [
       {
+        id: '3d_finish_flowline',
+        label: 'Flowline',
+        icon: 'Tp3dFlowline',
+        action: 'tp_3d_finish_flowline',
+        opType: 'surface_finish_flowline',
+        tooltip: 'Surface Finish Flowline across Selected Drive Faces & Surfaces'
+      },
+      {
         id: '3d_finish_contour',
         label: 'Finish Contour',
         icon: 'Tp3dWaterline',
