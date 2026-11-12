@@ -3411,6 +3411,17 @@ export default function Viewport3D({
           activeMask={selectionMask}
           onSelectMask={handleQuickMaskSelect}
           theme={theme}
+          scaleValue={(() => {
+            const factor = camDist / 350;
+            if (unitSystem === 'imperial') {
+              const v = 0.6671 * factor;
+              return v >= 10 ? v.toFixed(1) : v >= 1 ? v.toFixed(2) : v.toFixed(3);
+            }
+            const v = 16.94 * factor;
+            return v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
+          })()}
+          scaleUnit={unitSystem === 'imperial' ? 'in' : 'mm'}
+          onDeselectAll={() => { onChangeSelectionMask?.('all'); onChangeSelectedEntities?.([]); }}
         />
       )}
 
