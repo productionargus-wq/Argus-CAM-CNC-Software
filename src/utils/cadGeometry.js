@@ -3180,6 +3180,8 @@ export function createWireframeArcEndpoints(
   arc.name = options.name || `Wireframe_Arc_2Pt_R${r}`;
   arc.userData = {
     type: 'arc',
+    cadType: 'arc',
+    points,
     pt1: [p1.x, p1.y, p1.z],
     pt2: [p2.x, p2.y, p2.z],
     center: [center.x, center.y, center.z],

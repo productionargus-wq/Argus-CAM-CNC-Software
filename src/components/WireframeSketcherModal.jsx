@@ -201,7 +201,7 @@ export default function WireframeSketcherModal({
     notify(`Parallel Line offset by ${parallelOffset} mm added to Level 10.`);
   };
 
-  const handleAddCircle = () => {
+  const handleAddCircle = (autoClose = false) => {
     if (arcSubMode === 'endpoints') {
       const arc = createWireframeArcEndpoints(
         [Number(arcP1.x), Number(arcP1.y), Number(arcP1.z)],
@@ -212,7 +212,8 @@ export default function WireframeSketcherModal({
         { color: parseInt(circleColor.replace('#', '0x')) }
       );
       if (onAddEntity) onAddEntity(arc);
-      notify(`Arc Endpoints P1(X${arcP1.x}, Y${arcP1.y}, Z${arcP1.z}) to P2(X${arcP2.x}, Y${arcP2.y}, Z${arcP2.z}) R${arcRadius2Pt} added.`);
+      notify(`Arc Endpoints P1(X${arcP1.x}, Y${arcP1.y}, Z${arcP1.z}) to P2(X${arcP2.x}, Y${arcP2.y}, Z${arcP2.z}) R${arcRadius2Pt} created on Level 10.`);
+      if (autoClose && onClose) onClose();
       return;
     }
     const r = circleIsDiameter ? Number(circleRadius) / 2 : Number(circleRadius);
@@ -229,6 +230,7 @@ export default function WireframeSketcherModal({
     );
     if (onAddEntity) onAddEntity(circle);
     notify(`${isArcMode ? 'Arc' : 'Circle'} (Radius ${r} mm) added to Level 10.`);
+    if (autoClose && onClose) onClose();
   };
 
   const handleAddPCD = () => {
@@ -1110,10 +1112,32 @@ export default function WireframeSketcherModal({
                 </>
                 )}
 
-                <button onClick={handleAddCircle} style={primaryBtnStyle}>
-                  <Plus size={16} />
-                  <span>Insert {arcSubMode === 'endpoints' ? 'Arc (Endpoints R80)' : isArcMode ? 'Arc' : 'Circle'} into Level 10</span>
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleAddCircle(true)}
+                    style={{
+                      ...primaryBtnStyle,
+                      backgroundColor: '#16a34a',
+                      flex: 1
+                    }}
+                    title="Create arc and immediately close sketcher to view canvas"
+                  >
+                    <Plus size={16} />
+                    <span>Create Arc & Return to Canvas</span>
+                  </button>
+                  <button
+                    onClick={() => handleAddCircle(false)}
+                    style={{
+                      ...primaryBtnStyle,
+                      backgroundColor: '#0284c7',
+                      flex: 1
+                    }}
+                    title="Insert arc into Level 10 while keeping sketcher open"
+                  >
+                    <Plus size={16} />
+                    <span>{arcSubMode === 'endpoints' ? 'Create / Insert Arc into Level 10' : isArcMode ? 'Insert Arc' : 'Insert Circle'}</span>
+                  </button>
+                </div>
               </div>
             )}
 
