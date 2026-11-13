@@ -245,20 +245,43 @@ export default function StockSetupModal({
       closedby="any"
       onClose={onClose}
     >
-      <div className="modal-window" style={{ width: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="modal-window" style={{ width: '600px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Modal Header */}
-        <div className="modal-header">
+        <div className="modal-header" style={{ flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Box size={16} color="#f59e0b" />
             <span id="stock-setup-title" style={{ fontWeight: 600 }}>Stock Setup & Raw Material Definition</span>
           </div>
-          <button className="modal-close-btn" onClick={onClose} title="Close Dialog">
-            <X size={15} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={handleApply}
+              style={{
+                background: '#16a34a',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '3px 10px',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Apply Stock Setup (Enter)"
+            >
+              <Check size={13} strokeWidth={3} />
+              <span>OK</span>
+            </button>
+            <button className="modal-close-btn" onClick={onClose} title="Close Dialog">
+              <X size={15} />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}
-        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div className="modal-body" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px', padding: '14px 16px' }}>
           
           {/* Quick Flowline Preset Banner */}
           <div
@@ -730,16 +753,17 @@ export default function StockSetupModal({
             </div>
           </div>
 
-          {/* Modal Actions */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
-            <button type="button" className="btn-secondary" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="button" className="btn-primary" onClick={handleApply}>
-              <Check size={14} />
-              <span>Apply Stock Setup</span>
-            </button>
-          </div>
+        </div>
+
+        {/* Modal Actions - Always Sticky at Bottom */}
+        <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #cbd5e1', padding: '10px 16px', background: '#f8fafc' }}>
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="button" className="btn-primary" onClick={handleApply} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#0284c7', color: '#ffffff', fontWeight: 600, padding: '6px 14px' }}>
+            <Check size={14} />
+            <span>Apply Stock Setup</span>
+          </button>
         </div>
       </div>
     </dialog>
