@@ -1574,7 +1574,7 @@ export function checkToolpathCollisions(operations = [], tools = [], bounds = nu
  * Samples the true elevation of the 3D model using vertical raycasting to follow organic curvatures.
  */
 export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model = null) {
-  bounds = resolveSafeBounds(bounds);
+  const effBounds = model ? computeDriveModelBounds(model, bounds) : resolveSafeBounds(bounds);
   const {
     stepoverPct = 20,
     rapidHeight = 15.0
@@ -1582,15 +1582,15 @@ export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model
 
   const toolRadius = (tool.diameter || 6) / 2;
   const stepover = Math.max(0.8, (tool.diameter * stepoverPct) / 100);
-  const topY = bounds.max.y;
+  const topY = effBounds.max.y;
 
   const cuttingLines = [];
   const rapidLines = [];
 
-  const minX = bounds.min.x - toolRadius;
-  const maxX = bounds.max.x + toolRadius;
-  const minZ = bounds.min.z - toolRadius;
-  const maxZ = bounds.max.z + toolRadius;
+  const minX = effBounds.min.x - toolRadius;
+  const maxX = effBounds.max.x + toolRadius;
+  const minZ = effBounds.min.z - toolRadius;
+  const maxZ = effBounds.max.z + toolRadius;
 
   // Prepare meshes for raycasting if model is present
   const raycastMeshes = [];
@@ -1619,7 +1619,7 @@ export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model
       const t = i / numPoints;
       const x = startX + (endX - startX) * t;
 
-      let surfaceY = bounds.min.y;
+      let surfaceY = null;
 
       if (raycastMeshes.length > 0) {
         const rayOrigin = new THREE.Vector3(x, topY + 25, z);
@@ -1627,8 +1627,6 @@ export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model
         const hits = raycaster.intersectObjects(raycastMeshes, false);
         if (hits.length > 0) {
           surfaceY = hits[0].point.y;
-        } else {
-          surfaceY = bounds.min.y + 5;
         }
       } else {
         // Fallback smooth 3D curved surface
@@ -1637,7 +1635,9 @@ export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model
         surfaceY = topY - Math.abs(Math.sin(normX * 2)) * 10 - Math.abs(Math.cos(normZ * 2)) * 6;
       }
 
-      linePoints.push(new THREE.Vector3(x, surfaceY, z));
+      if (surfaceY != null) {
+        linePoints.push(new THREE.Vector3(x, surfaceY, z));
+      }
     }
 
     if (linePoints.length >= 2) {
@@ -1681,7 +1681,7 @@ export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model
  * with constant stepover and ball nose 3D cutter contact normal compensation.
  */
 export function generateSurfaceShallowToolpath(bounds, tool, params = {}, model = null) {
-  bounds = resolveSafeBounds(bounds);
+  const effBounds = model ? computeDriveModelBounds(model, bounds) : resolveSafeBounds(bounds);
   const {
     stepover = 0.5,
     shallowFromSlope = 0.0,
@@ -1694,14 +1694,14 @@ export function generateSurfaceShallowToolpath(bounds, tool, params = {}, model 
 
   const toolRadius = (tool.diameter || 6) / 2;
   const isBall = tool.type === 'ball' || (Number(tool.cornerRadius) > 0);
-  const topY = bounds.max.y;
+  const topY = effBounds.max.y;
   const cuttingLines = [];
   const rapidLines = [];
 
-  const minX = bounds.min.x;
-  const maxX = bounds.max.x;
-  const minZ = bounds.min.z;
-  const maxZ = bounds.max.z;
+  const minX = effBounds.min.x;
+  const maxX = effBounds.max.x;
+  const minZ = effBounds.min.z;
+  const maxZ = effBounds.max.z;
 
   const safeStepover = Math.max(0.1, Number(stepover) || 0.5);
 
@@ -1760,7 +1760,7 @@ export function generateSurfaceShallowToolpath(bounds, tool, params = {}, model 
       const t = i / numPoints;
       const z = startZ + (endZ - startZ) * t;
 
-      let surfaceY = bounds.min.y;
+      let surfaceY = null;
       let contactNormalY = 1.0;
 
       if (raycastMeshes.length > 0) {
@@ -1782,8 +1782,10 @@ export function generateSurfaceShallowToolpath(bounds, tool, params = {}, model 
         contactNormalY = Math.cos(Math.asin(Math.min(0.99, Math.abs(relX) / R)));
       }
 
-      const tipY = surfaceY + (isBall ? toolRadius * (contactNormalY - 1) : 0) + (Number(stockToLeaveZ) || 0);
-      linePoints.push(new THREE.Vector3(x, tipY, z));
+      if (surfaceY != null) {
+        const tipY = surfaceY + (isBall ? toolRadius * (contactNormalY - 1) : 0) + (Number(stockToLeaveZ) || 0);
+        linePoints.push(new THREE.Vector3(x, tipY, z));
+      }
     }
 
     if (linePoints.length >= 2) {
