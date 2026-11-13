@@ -1904,6 +1904,8 @@ export default function App() {
       op?.badgeClass === 'flowline' ||
       op?.strategyKey === 'surface_finish_contour' ||
       op?.strategyKey === 'surface_finish_pocket' ||
+      op?.strategyKey === 'surface_finish_shallow' ||
+      op?.badgeClass === 'shallow' ||
       op?.usesCustomSurfaces
     ) {
       const mode =
@@ -1911,7 +1913,9 @@ export default function App() {
           ? 'flowline'
           : op.strategyKey === 'surface_finish_pocket' || op.badgeClass === 'pocket'
             ? 'pocket'
-            : 'contour';
+            : op.strategyKey === 'surface_finish_shallow' || op.badgeClass === 'shallow'
+              ? 'shallow'
+              : 'contour';
       if (mode === 'flowline') {
         setSurfaceSelectionDraft({
           mode: 'flowline',
@@ -2134,6 +2138,9 @@ export default function App() {
       };
     } else if (s === 'flowline' || s === 'surface_finish_flowline') {
       openSurfaceFinishFlowline(null);
+      return;
+    } else if (s === 'shallow' || s === 'surface_finish_shallow') {
+      openSurfaceFinishModal('shallow', null);
       return;
     } else if (s === 'swarf' || s === '5axis_swarf') {
       newOp = {
@@ -3138,7 +3145,9 @@ export default function App() {
         ? 'Surface Finish Flowline'
         : updatedOp.strategyKey === 'surface_finish_pocket'
           ? 'Surface Finish Pocket'
-          : 'Surface Finish Contour';
+          : updatedOp.strategyKey === 'surface_finish_shallow'
+            ? 'Surface Finish Shallow'
+            : 'Surface Finish Contour';
     const finalOp = {
       ...updatedOp,
       id: nextId,
@@ -5442,6 +5451,7 @@ export default function App() {
         onOpenSurfaceFinishContour={() => openSurfaceFinishModal('contour', null)}
         onOpenSurfaceFinishPocket={() => openSurfaceFinishModal('pocket', null)}
         onOpenSurfaceFinishFlowline={() => openSurfaceFinishFlowline(null)}
+        onOpenSurfaceFinishShallow={() => openSurfaceFinishModal('shallow', null)}
         onCopyViewportImage={handleCopyViewportImage}
         onPasteOp={handlePasteOp}
         onCutOp={handleCutOp}
@@ -5686,6 +5696,7 @@ export default function App() {
           onOpenSurfaceFinishContour={() => openSurfaceFinishModal('contour', null)}
           onOpenSurfaceFinishPocket={() => openSurfaceFinishModal('pocket', null)}
           onOpenSurfaceFinishFlowline={() => openSurfaceFinishFlowline(null)}
+          onOpenSurfaceFinishShallow={() => openSurfaceFinishModal('shallow', null)}
           onEditOpGeometry={handleOpenFlowlineGeometryEdit}
           onExportStockSTL={handleExportStockSTL}
           activeDrawingTool={activeDrawingTool}

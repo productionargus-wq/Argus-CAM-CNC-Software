@@ -181,6 +181,14 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         tooltip: 'Surface Finish Pocket Clearing inside 3D Extruded / Drive Cavities'
       },
       {
+        id: '3d_finish_shallow',
+        label: 'Finish Shallow',
+        icon: 'Tp3dParallel',
+        action: 'tp_3d_finish_shallow',
+        opType: 'surface_finish_shallow',
+        tooltip: 'Surface Finish Shallow across Flat and Gentle Slopes (0° - 45°)'
+      },
+      {
         id: '3d_equal_scallop',
         label: 'Equal Scallop',
         icon: 'Tp3dEqualScallop',

@@ -75,6 +75,7 @@ export default function OperationsTree({
   onOpenSurfaceFinishContour,
   onOpenSurfaceFinishPocket,
   onOpenSurfaceFinishFlowline,
+  onOpenSurfaceFinishShallow,
   onEditOpGeometry,
   onExportStockSTL,
   activeDrawingTool = null,
@@ -1438,6 +1439,7 @@ export default function OperationsTree({
           onOpenSurfaceFinishContour={onOpenSurfaceFinishContour}
           onOpenSurfaceFinishPocket={onOpenSurfaceFinishPocket}
           onOpenSurfaceFinishFlowline={onOpenSurfaceFinishFlowline}
+          onOpenSurfaceFinishShallow={onOpenSurfaceFinishShallow}
           onExportStockSTL={onExportStockSTL}
           onToggleLockOp={onToggleLockOp}
           onToggleGhostOp={onToggleGhostOp}

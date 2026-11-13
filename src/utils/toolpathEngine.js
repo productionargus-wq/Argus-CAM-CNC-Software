@@ -834,6 +834,11 @@ export function buildContourParamsFromOp(op = {}) {
     orderBottomToTop: Boolean(cp.orderBottomToTop),
     transitionType: cp.transitionType || 'broken',
     totalTolerance: Number(cp.totalTolerance ?? 0.025),
+    shallowEnabled: cp.shallowEnabled ?? (op.strategyKey === 'surface_finish_shallow' || op.badgeClass === 'shallow'),
+    shallowFromSlope: Number(cp.shallowFromSlope ?? 0.0),
+    shallowToSlope: Number(cp.shallowToSlope ?? 35.0),
+    stepover: Number(cp.maxStepdown ?? op.stepdown ?? 0.5),
+    cuttingMethod: cp.openContourDirection || 'zigzag',
     contourSide: resolvedContainment,
     chain: op.chain || null,
     leadConfig: resolvedLeadConfig
@@ -1671,6 +1676,152 @@ export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model
 }
 
 /**
+ * Generates 3D Surface Finish Shallow Toolpath.
+ * Selectively machines flat and gentle sloped regions defined by [shallowFromSlope, shallowToSlope]
+ * with constant stepover and ball nose 3D cutter contact normal compensation.
+ */
+export function generateSurfaceShallowToolpath(bounds, tool, params = {}, model = null) {
+  bounds = resolveSafeBounds(bounds);
+  const {
+    stepover = 0.5,
+    shallowFromSlope = 0.0,
+    shallowToSlope = 35.0,
+    cuttingMethod = 'zigzag',
+    rapidHeight = 15.0,
+    feedPlane = 2.5,
+    stockToLeaveZ = 0
+  } = params;
+
+  const toolRadius = (tool.diameter || 6) / 2;
+  const isBall = tool.type === 'ball' || (Number(tool.cornerRadius) > 0);
+  const topY = bounds.max.y;
+  const cuttingLines = [];
+  const rapidLines = [];
+
+  const minX = bounds.min.x;
+  const maxX = bounds.max.x;
+  const minZ = bounds.min.z;
+  const maxZ = bounds.max.z;
+
+  const safeStepover = Math.max(0.1, Number(stepover) || 0.5);
+
+  const raycastMeshes = [];
+  if (model) {
+    model.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        child.updateMatrixWorld(true);
+        raycastMeshes.push(child);
+      }
+    });
+  }
+
+  const raycaster = new THREE.Raycaster();
+  const rayDown = new THREE.Vector3(0, -1, 0);
+
+  const fromSlope = Math.max(0, Number(shallowFromSlope) || 0);
+  const toSlope = Math.min(90, Math.max(fromSlope + 0.1, Number(shallowToSlope) || 35.0));
+
+  let passDirection = 1;
+
+  for (let x = minX; x <= maxX + 0.001; x += safeStepover) {
+    const zMid = (minZ + maxZ) / 2;
+    let passSlopeDeg = 0;
+    let canRaycast = false;
+
+    if (raycastMeshes.length > 0) {
+      raycaster.set(new THREE.Vector3(x, topY + 50, zMid), rayDown);
+      const hits = raycaster.intersectObjects(raycastMeshes, false);
+      if (hits.length > 0 && hits[0].face) {
+        canRaycast = true;
+        const norm = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld);
+        const cosTheta = Math.min(1, Math.max(0, Math.abs(norm.y)));
+        passSlopeDeg = (Math.acos(cosTheta) * 180) / Math.PI;
+      }
+    }
+
+    if (!canRaycast) {
+      const centerX = (minX + maxX) / 2;
+      const relX = Math.abs(x - centerX);
+      const sinTheta = Math.min(0.999, relX / 80);
+      passSlopeDeg = (Math.asin(sinTheta) * 180) / Math.PI;
+    }
+
+    if (passSlopeDeg < fromSlope || passSlopeDeg > toSlope) {
+      continue;
+    }
+
+    const startZ = passDirection === 1 ? minZ : maxZ;
+    const endZ = passDirection === 1 ? maxZ : minZ;
+    const numPoints = Math.max(12, Math.round(Math.abs(maxZ - minZ) / 1.5));
+
+    const linePoints = [];
+
+    for (let i = 0; i <= numPoints; i++) {
+      const t = i / numPoints;
+      const z = startZ + (endZ - startZ) * t;
+
+      let surfaceY = bounds.min.y;
+      let contactNormalY = 1.0;
+
+      if (raycastMeshes.length > 0) {
+        raycaster.set(new THREE.Vector3(x, topY + 50, z), rayDown);
+        const hits = raycaster.intersectObjects(raycastMeshes, false);
+        if (hits.length > 0) {
+          surfaceY = hits[0].point.y;
+          if (hits[0].face) {
+            const norm = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld);
+            contactNormalY = Math.min(1, Math.max(0, Math.abs(norm.y)));
+          }
+        }
+      } else {
+        const centerX = (minX + maxX) / 2;
+        const relX = x - centerX;
+        const R = 80;
+        const archY = Math.sqrt(Math.max(0, R * R - relX * relX)) - R;
+        surfaceY = topY + archY;
+        contactNormalY = Math.cos(Math.asin(Math.min(0.99, Math.abs(relX) / R)));
+      }
+
+      const tipY = surfaceY + (isBall ? toolRadius * (contactNormalY - 1) : 0) + (Number(stockToLeaveZ) || 0);
+      linePoints.push(new THREE.Vector3(x, tipY, z));
+    }
+
+    if (linePoints.length >= 2) {
+      const firstPt = linePoints[0];
+      const lastPt = linePoints[linePoints.length - 1];
+
+      rapidLines.push([
+        new THREE.Vector3(firstPt.x, topY + rapidHeight, firstPt.z),
+        new THREE.Vector3(firstPt.x, firstPt.y + feedPlane, firstPt.z)
+      ]);
+      cuttingLines.push([
+        new THREE.Vector3(firstPt.x, firstPt.y + feedPlane, firstPt.z),
+        firstPt
+      ]);
+
+      for (let p = 0; p < linePoints.length - 1; p++) {
+        cuttingLines.push([linePoints[p], linePoints[p + 1]]);
+      }
+
+      if (cuttingMethod === 'one_way') {
+        cuttingLines.push([
+          lastPt,
+          new THREE.Vector3(lastPt.x, lastPt.y + feedPlane, lastPt.z)
+        ]);
+        rapidLines.push([
+          new THREE.Vector3(lastPt.x, lastPt.y + feedPlane, lastPt.z),
+          new THREE.Vector3(lastPt.x, topY + rapidHeight, lastPt.z)
+        ]);
+      } else {
+        passDirection *= -1;
+      }
+    }
+  }
+
+  return { cuttingLines, rapidLines };
+}
+
+/**
  * Generates 2D/3D Rest Machining & Corner Cleanout Toolpath
  * Cleans unmachined material left by a previous larger roughing tool in internal corners and fillets.
  * Performs targeted corner picking with inward stepping passes and peripheral sweep arcs.
@@ -1974,6 +2125,9 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
   if (strategy === 'flowline' || op.strategyKey === 'surface_finish_flowline') {
     const { driveFaces, checkFaces } = resolveFlowlineFacesFromEffectiveModel(effectiveModel, op);
     return generateSurfaceFlowlineToolpath(opBounds, assignedTool, buildFlowlineParamsFromOp(op), driveFaces, checkFaces);
+  }
+  if (strategy === 'shallow' || op.strategyKey === 'surface_finish_shallow') {
+    return generateSurfaceShallowToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
   }
   if (strategy === 'circlemill') {
     return generateCircleMillToolpath(opBounds, assignedTool, {

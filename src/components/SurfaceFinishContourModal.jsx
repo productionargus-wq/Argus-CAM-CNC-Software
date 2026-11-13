@@ -130,6 +130,7 @@ function SurfaceFinishContourModalInner({
 }) {
   const isPocket = strategyMode === 'pocket' || operation?.strategyKey === 'surface_finish_pocket';
   const isFlowline = strategyMode === 'flowline' || operation?.strategyKey === 'surface_finish_flowline' || operation?.badgeClass === 'flowline';
+  const isShallow = strategyMode === 'shallow' || operation?.strategyKey === 'surface_finish_shallow' || operation?.badgeClass === 'shallow';
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
   const detectedSurfaces = useMemo(() => {
@@ -187,10 +188,10 @@ function SurfaceFinishContourModalInner({
       createDefaultSurfaceFinishState({
         activeMachine,
         stockConfig,
-        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : 'contour',
+        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : 'contour',
         tool: initialTool
       }),
-    [activeMachine, stockConfig, isPocket, isFlowline, initialTool]
+    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, initialTool]
   );
 
   const [activeTab, setActiveTab] = useState('toolpath_params');
@@ -227,6 +228,14 @@ function SurfaceFinishContourModalInner({
 
   const [contourParams, setContourParams] = useState(() => ({
     ...initialDefaults.contourParams,
+    ...(isShallow
+      ? {
+          shallowEnabled: true,
+          shallowFromSlope: 0.0,
+          shallowToSlope: 35.0,
+          maxStepdown: 0.5
+        }
+      : {}),
     ...(operation?.contourParams || {})
   }));
 
@@ -379,7 +388,9 @@ function SurfaceFinishContourModalInner({
       ? 'Surface Finish Flowline'
       : isPocket
         ? 'Surface Finish Pocket'
-        : 'Surface Finish Contour';
+        : isShallow
+          ? 'Surface Finish Shallow'
+          : 'Surface Finish Contour';
     const rapidHeight = surfaceParams.clearanceEnabled && surfaceParams.clearanceMode === 'abs'
       ? Number(surfaceParams.clearance)
       : (Number(surfaceParams.retract) || 25.0);
@@ -392,10 +403,10 @@ function SurfaceFinishContourModalInner({
     const updatedOp = {
       ...(operation || {}),
       name: operation?.name || opTitle,
-      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : 'surface_finish_contour',
-      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : 'surface_finish_contour',
-      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : 'contour',
-      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : 'SC',
+      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : 'surface_finish_contour',
+      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : 'surface_finish_contour',
+      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : 'contour',
+      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : 'SC',
       toolId: activeTool?.id || toolParams.toolId || 1,
       toolName: toolParams.toolName,
       toolNumber: Number(toolParams.toolNumber) || 1,
@@ -497,7 +508,9 @@ function SurfaceFinishContourModalInner({
                 ? 'Surface Finish Flowline'
                 : isPocket
                   ? 'Surface Finish Pocket'
-                  : 'Surface Finish Contour'}
+                  : isShallow
+                    ? 'Surface Finish Shallow'
+                    : 'Surface Finish Contour'}
             </span>
             <span
               style={{
@@ -611,6 +624,53 @@ function SurfaceFinishContourModalInner({
           </div>
         )}
 
+        {/* Shallow Tutorial Quick Helper Banner */}
+        {isShallow && (
+          <div
+            style={{
+              background: '#ecfdf5',
+              borderBottom: '1px solid #a7f3d0',
+              padding: '6px 12px',
+              fontSize: '11px',
+              color: '#065f46',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px'
+            }}
+          >
+            <div>
+              <strong>Surface Finish Shallow:</strong> 1. Select Ball Endmill &rarr; 2. Surface Parameters (Clearance 50mm Abs) &rarr; 3. Finish Shallow Parameters (Slope 0°–35°, Stepover 0.5mm) &rarr; Click <strong>Green Checkmark (OK)</strong>.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setContourParams((p) => ({
+                  ...p,
+                  shallowEnabled: true,
+                  shallowFromSlope: 0.0,
+                  shallowToSlope: 35.0,
+                  maxStepdown: 0.5
+                }));
+                onNotify?.('Loaded recommended Surface Finish Shallow parameters (0°–35° slope, 0.5mm stepover).', 'success');
+              }}
+              style={{
+                background: '#10b981',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '3px 8px',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⚡ Load Recommended Shallow Values
+            </button>
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', background: '#f0f0f0', padding: '5px 8px 0 8px', borderBottom: '1px solid #d1d5db' }}>
           {[
@@ -622,7 +682,9 @@ function SurfaceFinishContourModalInner({
                 ? 'Finish flowline parameters'
                 : isPocket
                   ? 'Finish pocket parameters'
-                  : 'Finish contour parameters'
+                  : isShallow
+                    ? 'Finish shallow parameters'
+                    : 'Finish contour parameters'
             }
           ].map((tab) => {
             const active = activeTab === tab.id;
@@ -1474,8 +1536,8 @@ function SurfaceFinishContourModalInner({
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                       <input type="checkbox" checked={contourParams.shallowEnabled} onChange={(e) => setContourParams((p) => ({ ...p, shallowEnabled: e.target.checked }))} />
-                      <button type="button" onClick={() => setActiveSubDialog('shallow')} style={{ ...MC_BUTTON, flex: 1, minWidth: 0, opacity: contourParams.shallowEnabled ? 1 : 0.65 }}>
-                        Shallow...
+                      <button type="button" onClick={() => setActiveSubDialog('shallow')} style={{ ...MC_BUTTON, flex: 1, minWidth: 0, opacity: contourParams.shallowEnabled ? 1 : 0.65, borderColor: isShallow ? '#10b981' : undefined, fontWeight: isShallow ? 600 : 400 }}>
+                        Shallow... ({contourParams.shallowFromSlope}°–{contourParams.shallowToSlope}°)
                       </button>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
@@ -1824,7 +1886,7 @@ function SurfaceFinishContourModalInner({
               type="button"
               onClick={() =>
                 onNotify?.(
-                  `${isFlowline ? 'Surface Finish Flowline' : isPocket ? 'Surface Finish Pocket' : 'Surface Finish Contour'} (${caps.machineName} - ${caps.axesCount}-Axis)`,
+                  `${isFlowline ? 'Surface Finish Flowline' : isPocket ? 'Surface Finish Pocket' : isShallow ? 'Surface Finish Shallow' : 'Surface Finish Contour'} (${caps.machineName} - ${caps.axesCount}-Axis)`,
                   'info'
                 )
               }
