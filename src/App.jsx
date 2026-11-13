@@ -418,10 +418,12 @@ export default function App() {
   const [rectParams, setRectParams] = useState({
     width: 80.0,
     height: 50.0,
+    cornerFillet: 0.0,
     dirX: 1,
     dirZ: -1,
     isWidthLocked: false,
     isHeightLocked: false,
+    isFilletLocked: false,
     anchorToCenter: false,
     createSurface: false,
     activePoint: 1,
@@ -4084,9 +4086,12 @@ export default function App() {
       dirZ
     });
 
-    const rectEntity = createWireframeRect(absW, absH, y, 0, [cx, cz], {
+    const maxR = Math.max(0, Math.min(absW, absH) / 2 - 0.05);
+    const filletR = Math.max(0, Math.min(maxR, Number(params.cornerFillet) || 0));
+
+    const rectEntity = createWireframeRect(absW, absH, y, filletR, [cx, cz], {
       color: colorHex,
-      name: `Wireframe_Rect_${Math.round(absW)}x${Math.round(absH)}`
+      name: `Wireframe_Rect_${Math.round(absW)}x${Math.round(absH)}${filletR > 0 ? `_R${filletR}` : ''}`
     });
     rectEntity.userData.firstCorner = { x: anchorVec.x, y, z: anchorVec.z };
     rectEntity.userData.dirX = dirX;
@@ -4241,12 +4246,31 @@ export default function App() {
     );
   };
 
+  const handleChangeRectCornerFillet = (newFillet) => {
+    const safeR = Math.max(0, Math.abs(Number(newFillet) || 0));
+    if (!Number.isFinite(safeR)) return;
+    const liveId = activeRectIdRef.current;
+    const nextParams = updateRectParams((prev) => ({
+      ...prev,
+      cornerFillet: safeR,
+      isFilletLocked: !liveId ? true : prev.isFilletLocked
+    }));
+
+    replaceCustomEntity(liveId, (oldEntity) =>
+      buildRectFromParams(nextParams, oldEntity, 0x38bdf8)
+    );
+  };
+
   const handleToggleRectWidthLock = () => {
     updateRectParams((prev) => ({ ...prev, isWidthLocked: !prev.isWidthLocked }));
   };
 
   const handleToggleRectHeightLock = () => {
     updateRectParams((prev) => ({ ...prev, isHeightLocked: !prev.isHeightLocked }));
+  };
+
+  const handleToggleRectFilletLock = () => {
+    updateRectParams((prev) => ({ ...prev, isFilletLocked: !prev.isFilletLocked }));
   };
 
   const handleToggleRectAnchorToCenter = () => {
@@ -5744,8 +5768,10 @@ export default function App() {
           rectParams={rectParams}
           onChangeRectWidth={handleChangeRectWidth}
           onChangeRectHeight={handleChangeRectHeight}
+          onChangeRectCornerFillet={handleChangeRectCornerFillet}
           onToggleRectWidthLock={handleToggleRectWidthLock}
           onToggleRectHeightLock={handleToggleRectHeightLock}
+          onToggleRectFilletLock={handleToggleRectFilletLock}
           onToggleRectAnchorToCenter={handleToggleRectAnchorToCenter}
           onToggleRectCreateSurface={handleToggleRectCreateSurface}
           onSelectRectPoint={handleSelectRectPoint}
@@ -5865,6 +5891,7 @@ export default function App() {
                 isWidthLocked={rectParams.isWidthLocked}
                 activeDrawingHeight={rectParams.height}
                 isHeightLocked={rectParams.isHeightLocked}
+                rectCornerFillet={rectParams.cornerFillet}
                 rectAnchorToCenter={rectParams.anchorToCenter}
                 rectCreateSurface={rectParams.createSurface}
                 activeDrawingLength={lineParams.length}
@@ -5982,6 +6009,7 @@ export default function App() {
               isWidthLocked={rectParams.isWidthLocked}
               activeDrawingHeight={rectParams.height}
               isHeightLocked={rectParams.isHeightLocked}
+              rectCornerFillet={rectParams.cornerFillet}
               rectAnchorToCenter={rectParams.anchorToCenter}
               rectCreateSurface={rectParams.createSurface}
               activeDrawingLength={lineParams.length}

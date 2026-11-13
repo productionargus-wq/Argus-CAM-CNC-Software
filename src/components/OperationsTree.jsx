@@ -90,11 +90,13 @@ export default function OperationsTree({
   onOkCircle,
   onCancelCircle,
   // Rectangle Props
-  rectParams = { width: 80, height: 50, isWidthLocked: false, isHeightLocked: false, anchorToCenter: false, createSurface: false, activePoint: 1 },
+  rectParams = { width: 80, height: 50, cornerFillet: 0, isWidthLocked: false, isHeightLocked: false, isFilletLocked: false, anchorToCenter: false, createSurface: false, activePoint: 1 },
   onChangeRectWidth,
   onChangeRectHeight,
+  onChangeRectCornerFillet,
   onToggleRectWidthLock,
   onToggleRectHeightLock,
+  onToggleRectFilletLock,
   onToggleRectAnchorToCenter,
   onToggleRectCreateSurface,
   onSelectRectPoint,
@@ -503,12 +505,16 @@ export default function OperationsTree({
           <RectanglePanel
             width={rectParams?.width ?? 80}
             height={rectParams?.height ?? 50}
+            cornerFillet={rectParams?.cornerFillet ?? 0}
             onChangeWidth={onChangeRectWidth}
             onChangeHeight={onChangeRectHeight}
+            onChangeCornerFillet={onChangeRectCornerFillet}
             isWidthLocked={rectParams?.isWidthLocked || false}
             isHeightLocked={rectParams?.isHeightLocked || false}
+            isFilletLocked={rectParams?.isFilletLocked || false}
             onToggleWidthLock={onToggleRectWidthLock}
             onToggleHeightLock={onToggleRectHeightLock}
+            onToggleFilletLock={onToggleRectFilletLock}
             anchorToCenter={rectParams?.anchorToCenter || false}
             onToggleAnchorToCenter={onToggleRectAnchorToCenter}
             createSurface={rectParams?.createSurface || false}

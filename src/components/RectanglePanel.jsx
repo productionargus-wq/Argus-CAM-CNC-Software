@@ -8,12 +8,16 @@ import SketchNumericInput from './SketchNumericInput';
 export default function RectanglePanel({
   width = 80,
   height = 50,
+  cornerFillet = 0,
   onChangeWidth,
   onChangeHeight,
+  onChangeCornerFillet,
   isWidthLocked = false,
   isHeightLocked = false,
+  isFilletLocked = false,
   onToggleWidthLock,
   onToggleHeightLock,
+  onToggleFilletLock,
   anchorToCenter = false,
   onToggleAnchorToCenter,
   createSurface = false,
@@ -357,9 +361,9 @@ export default function RectanglePanel({
                 />
               </div>
 
-              {/* Height Row */}
+              {/* Height (Y Depth) Row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                <span style={{ fontSize: '11px', color: '#475569', width: '52px' }}>Height:</span>
+                <span style={{ fontSize: '11px', color: '#475569', width: '58px' }} title="Height along Y-axis (Pocket Depth in Top Plane)">Height (Y):</span>
                 <SketchNumericInput
                   value={Math.abs(Number(height) || 0)}
                   min={0.01}
@@ -372,8 +376,56 @@ export default function RectanglePanel({
                   lockTitle={isHeightLocked ? 'Unlock Height' : 'Lock Height'}
                 />
               </div>
-              <div style={{ fontSize: '10px', color: '#64748b', lineHeight: '1.35' }}>
-                Click Corner 1 &amp; Corner 2 on canvas, or type Width &amp; Height and click canvas / OK.
+
+              {/* Corner Fillet Radius Row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                <span style={{ fontSize: '11px', color: '#0369a1', fontWeight: 600, width: '58px' }} title="Corner Fillet Radius for internal pocket corners">Fillet R:</span>
+                <SketchNumericInput
+                  value={Math.abs(Number(cornerFillet) || 0)}
+                  min={0}
+                  step={0.5}
+                  decimals={2}
+                  allowNegative={false}
+                  onChangeNumber={(num) => onChangeCornerFillet && onChangeCornerFillet(num)}
+                  isLocked={isFilletLocked}
+                  onToggleLock={onToggleFilletLock}
+                  lockTitle={isFilletLocked ? 'Unlock Fillet' : 'Lock Fillet'}
+                />
+              </div>
+
+              {/* Quick Fillet Preset Chips */}
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center', paddingLeft: '58px' }}>
+                {[
+                  { label: 'Sharp (0)', r: 0 },
+                  { label: 'R3', r: 3 },
+                  { label: 'R5', r: 5 },
+                  { label: 'R6', r: 6 }
+                ].map((chip) => {
+                  const isSel = Number(cornerFillet) === chip.r;
+                  return (
+                    <button
+                      key={chip.label}
+                      type="button"
+                      onClick={() => onChangeCornerFillet && onChangeCornerFillet(chip.r)}
+                      style={{
+                        padding: '1px 5px',
+                        fontSize: '9.5px',
+                        borderRadius: '2px',
+                        border: isSel ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                        background: isSel ? '#e0f2fe' : '#f8fafc',
+                        color: isSel ? '#0369a1' : '#475569',
+                        fontWeight: isSel ? 700 : 400,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ fontSize: '10px', color: '#64748b', lineHeight: '1.35', marginTop: '2px' }}>
+                <strong>Tip:</strong> Width = X length, Height = Y depth. Z cutting depth is set in the Toolpath operation.
               </div>
             </div>
           )}

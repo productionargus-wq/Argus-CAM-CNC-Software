@@ -142,6 +142,7 @@ export default function Viewport3D({
   isWidthLocked = false,
   activeDrawingHeight = null,
   isHeightLocked = false,
+  rectCornerFillet = 0,
   rectAnchorToCenter = false,
   rectCreateSurface = false,
   activeDrawingLength = null,
@@ -318,6 +319,7 @@ export default function Viewport3D({
   const activeDrawingHeightRef = useRef(activeDrawingHeight);
   const isHeightLockedRef = useRef(isHeightLocked);
   const rectAnchorToCenterRef = useRef(rectAnchorToCenter);
+  const rectCornerFilletRef = useRef(rectCornerFillet);
   const rectCreateSurfaceRef = useRef(rectCreateSurface);
   const activeDrawingLengthRef = useRef(activeDrawingLength);
   const isLengthLockedRef = useRef(isLengthLocked);
@@ -342,6 +344,7 @@ export default function Viewport3D({
   useEffect(() => { activeDrawingHeightRef.current = activeDrawingHeight; }, [activeDrawingHeight]);
   useEffect(() => { isHeightLockedRef.current = isHeightLocked; }, [isHeightLocked]);
   useEffect(() => { rectAnchorToCenterRef.current = rectAnchorToCenter; }, [rectAnchorToCenter]);
+  useEffect(() => { rectCornerFilletRef.current = rectCornerFillet; }, [rectCornerFillet]);
   useEffect(() => { rectCreateSurfaceRef.current = rectCreateSurface; }, [rectCreateSurface]);
   useEffect(() => { activeDrawingLengthRef.current = activeDrawingLength; }, [activeDrawingLength]);
   useEffect(() => { isLengthLockedRef.current = isLengthLocked; }, [isLengthLocked]);
@@ -970,7 +973,10 @@ export default function Viewport3D({
         const { width, height, cx, cz, dirX, dirZ } = computeRectPlacement(anchor, finalPt, rectOpts);
         if (width < 0.5 || height < 0.5) return false;
 
-        newEntity = createWireframeRect(width, height, anchor.y, 0, [cx, cz], { color: 0x38bdf8 });
+        const maxR = Math.max(0, Math.min(width, height) / 2 - 0.05);
+        const filletR = Math.max(0, Math.min(maxR, Number(rectCornerFilletRef.current) || 0));
+
+        newEntity = createWireframeRect(width, height, anchor.y, filletR, [cx, cz], { color: 0x38bdf8 });
         if (rectCreateSurfaceRef.current) {
           const planeGeo = new THREE.PlaneGeometry(width, height);
           planeGeo.rotateX(-Math.PI / 2);
