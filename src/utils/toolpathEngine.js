@@ -838,7 +838,8 @@ export function buildContourParamsFromOp(op = {}) {
     shallowFromSlope: Number(cp.shallowFromSlope ?? 0.0),
     shallowToSlope: Number(cp.shallowToSlope ?? 35.0),
     stepover: Number(cp.maxStepdown ?? op.stepdown ?? 0.5),
-    cuttingMethod: cp.openContourDirection || 'zigzag',
+    machiningAngle: Number(op.machiningAngle ?? cp.machiningAngle ?? 90.0),
+    cuttingMethod: op.cuttingMethod || cp.cuttingMethod || cp.openContourDirection || 'zigzag',
     contourSide: resolvedContainment,
     chain: op.chain || null,
     leadConfig: resolvedLeadConfig
@@ -1570,29 +1571,34 @@ export function checkToolpathCollisions(operations = [], tools = [], bounds = nu
 }
 
 /**
- * Generates 3D Surface Parallel Finishing Toolpath (Constant Scallop Raster across 3D CAD Surfaces)
- * Samples the true elevation of the 3D model using vertical raycasting to follow organic curvatures.
+ * Generates 3D Surface Parallel Finishing Toolpath (Mastercam Surface Finish Parallel)
+ * Performs parallel raster passes across 3D CAD Surfaces at any specified Machining Angle,
+ * with ball nose cutter normal contact compensation and strict drive mesh boundary testing.
  */
 export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model = null) {
   const effBounds = model ? computeDriveModelBounds(model, bounds) : resolveSafeBounds(bounds);
   const {
-    stepoverPct = 20,
-    rapidHeight = 15.0
+    rapidHeight = 15.0,
+    feedPlane = 2.5,
+    stockToLeaveZ = 0.0
   } = params;
 
   const toolRadius = (tool.diameter || 6) / 2;
-  const stepover = Math.max(0.8, (tool.diameter * stepoverPct) / 100);
+  const isBall = tool.type === 'ball' || (Number(tool.cornerRadius) > 0);
+  const stepover = Math.max(0.1, Number(params.stepover ?? params.maxStepdown) || ((tool.diameter || 6) * (params.stepoverPct || 20)) / 100);
+  const machiningAngleDeg = Number(params.machiningAngle ?? 90.0);
+  const cuttingMethod = String(params.cuttingMethod || params.openContourDirection || 'zigzag').toLowerCase();
   const topY = effBounds.max.y;
 
   const cuttingLines = [];
   const rapidLines = [];
 
-  const minX = effBounds.min.x - toolRadius;
-  const maxX = effBounds.max.x + toolRadius;
-  const minZ = effBounds.min.z - toolRadius;
-  const maxZ = effBounds.max.z + toolRadius;
+  const minX = effBounds.min.x;
+  const maxX = effBounds.max.x;
+  const minZ = effBounds.min.z;
+  const maxZ = effBounds.max.z;
 
-  // Prepare meshes for raycasting if model is present
+  // Prepare meshes for raycasting if CAD model is present
   const raycastMeshes = [];
   if (model) {
     model.traverse((child) => {
@@ -1606,70 +1612,127 @@ export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model
   const raycaster = new THREE.Raycaster();
   const rayDown = new THREE.Vector3(0, -1, 0);
 
-  let direction = 1;
+  // Center of the bounding area in the XZ plane
+  const cx = (minX + maxX) / 2;
+  const cz = (minZ + maxZ) / 2;
 
-  for (let z = minZ; z <= maxZ; z += stepover) {
-    const startX = direction === 1 ? minX : maxX;
-    const endX = direction === 1 ? maxX : minX;
-    const numPoints = Math.max(10, Math.round(Math.abs(maxX - minX) / 3));
+  // Rotation angle in radians
+  const alpha = (machiningAngleDeg * Math.PI) / 180.0;
+  const cosA = Math.cos(alpha);
+  const sinA = Math.sin(alpha);
 
-    const linePoints = [];
+  // Transform 4 bounding corners into the rotated coordinate system (u = cut direction, v = stepover direction)
+  const corners = [
+    { x: minX - cx, z: minZ - cz },
+    { x: maxX - cx, z: minZ - cz },
+    { x: minX - cx, z: maxZ - cz },
+    { x: maxX - cx, z: maxZ - cz }
+  ];
+
+  let minU = Infinity;
+  let maxU = -Infinity;
+  let minV = Infinity;
+  let maxV = -Infinity;
+
+  for (const c of corners) {
+    const u = c.x * cosA + c.z * sinA;
+    const v = -c.x * sinA + c.z * cosA;
+    if (u < minU) minU = u;
+    if (u > maxU) maxU = u;
+    if (v < minV) minV = v;
+    if (v > maxV) maxV = v;
+  }
+
+  let passDirection = 1;
+
+  for (let v = minV; v <= maxV + 0.001; v += stepover) {
+    const uStart = passDirection === 1 ? minU : maxU;
+    const uEnd = passDirection === 1 ? maxU : minU;
+    const numPoints = Math.max(14, Math.round(Math.abs(maxU - minU) / 1.5));
+
+    const contiguousSegments = [];
+    let currentSegment = [];
 
     for (let i = 0; i <= numPoints; i++) {
       const t = i / numPoints;
-      const x = startX + (endX - startX) * t;
+      const u = uStart + (uEnd - uStart) * t;
+      const x = cx + u * cosA - v * sinA;
+      const z = cz + u * sinA + v * cosA;
 
       let surfaceY = null;
+      let contactNormalY = 1.0;
 
       if (raycastMeshes.length > 0) {
-        const rayOrigin = new THREE.Vector3(x, topY + 25, z);
-        raycaster.set(rayOrigin, rayDown);
+        raycaster.set(new THREE.Vector3(x, topY + 50, z), rayDown);
         const hits = raycaster.intersectObjects(raycastMeshes, false);
         if (hits.length > 0) {
           surfaceY = hits[0].point.y;
+          if (hits[0].face) {
+            const norm = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld);
+            contactNormalY = Math.min(1, Math.max(0, Math.abs(norm.y)));
+          }
         }
       } else {
-        // Fallback smooth 3D curved surface
-        const normX = (x - (minX + maxX) / 2) / ((maxX - minX) / 2);
-        const normZ = (z - (minZ + maxZ) / 2) / ((maxZ - minZ) / 2);
-        surfaceY = topY - Math.abs(Math.sin(normX * 2)) * 10 - Math.abs(Math.cos(normZ * 2)) * 6;
+        // Fallback parametric arch geometry
+        const relX = x - cx;
+        const R = 80;
+        if (Math.abs(relX) <= (maxX - minX) / 2 && Math.abs(z - cz) <= (maxZ - minZ) / 2) {
+          const archY = Math.sqrt(Math.max(0, R * R - relX * relX)) - R;
+          surfaceY = topY + archY;
+          contactNormalY = Math.cos(Math.asin(Math.min(0.99, Math.abs(relX) / R)));
+        }
       }
 
       if (surfaceY != null) {
-        linePoints.push(new THREE.Vector3(x, surfaceY, z));
+        const tipY = surfaceY + (isBall ? toolRadius * (contactNormalY - 1) : 0) + (Number(stockToLeaveZ) || 0);
+        currentSegment.push(new THREE.Vector3(x, tipY, z));
+      } else {
+        if (currentSegment.length >= 2) {
+          contiguousSegments.push(currentSegment);
+        }
+        currentSegment = [];
       }
     }
 
-    if (linePoints.length >= 2) {
-      // Rapid approach to first point
-      const firstPt = linePoints[0];
+    if (currentSegment.length >= 2) {
+      contiguousSegments.push(currentSegment);
+    }
+
+    // Generate toolpath passes for each contiguous segment on the surface
+    for (const seg of contiguousSegments) {
+      const firstPt = seg[0];
+      const lastPt = seg[seg.length - 1];
+
+      // Safe rapid approach to feed plane
       rapidLines.push([
         new THREE.Vector3(firstPt.x, topY + rapidHeight, firstPt.z),
-        new THREE.Vector3(firstPt.x, firstPt.y + 1.5, firstPt.z)
+        new THREE.Vector3(firstPt.x, firstPt.y + feedPlane, firstPt.z)
       ]);
       cuttingLines.push([
-        new THREE.Vector3(firstPt.x, firstPt.y + 1.5, firstPt.z),
+        new THREE.Vector3(firstPt.x, firstPt.y + feedPlane, firstPt.z),
         firstPt
       ]);
 
-      // Cut along 3D surface profile
-      for (let p = 0; p < linePoints.length - 1; p++) {
-        cuttingLines.push([linePoints[p], linePoints[p + 1]]);
+      // Cut along 3D profile
+      for (let p = 0; p < seg.length - 1; p++) {
+        cuttingLines.push([seg[p], seg[p + 1]]);
       }
 
-      // Retract at end of pass
-      const lastPt = linePoints[linePoints.length - 1];
+      // Retract at end of cut
       cuttingLines.push([
         lastPt,
-        new THREE.Vector3(lastPt.x, lastPt.y + 1.5, lastPt.z)
+        new THREE.Vector3(lastPt.x, lastPt.y + feedPlane, lastPt.z)
       ]);
       rapidLines.push([
-        new THREE.Vector3(lastPt.x, lastPt.y + 1.5, lastPt.z),
+        new THREE.Vector3(lastPt.x, lastPt.y + feedPlane, lastPt.z),
         new THREE.Vector3(lastPt.x, topY + rapidHeight, lastPt.z)
       ]);
     }
 
-    direction *= -1; // alternate zigzag
+    // Toggle direction if zigzag; retain direction if one way
+    if (contiguousSegments.length > 0 && cuttingMethod !== 'one_way' && cuttingMethod !== 'oneway') {
+      passDirection *= -1;
+    }
   }
 
   return { cuttingLines, rapidLines };
@@ -2185,11 +2248,8 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
       rapidHeight: op.rapidHeight || 10.0
     }, effectiveModel);
   }
-  if (strategy === 'parallel' || strategy === 'surface') {
-    return generateSurfaceParallelToolpath(opBounds, assignedTool, {
-      stepoverPct: op.stepoverPct || 20,
-      rapidHeight: op.rapidHeight || 15.0
-    }, effectiveModel);
+  if (strategy === 'parallel' || strategy === 'surface' || op.strategyKey === 'surface_finish_parallel' || op.badgeClass === 'parallel') {
+    return generateSurfaceParallelToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
   }
   if (strategy === 'rest' || strategy === 'rest_milling') {
     return generateRestMillingToolpath(opBounds, assignedTool, {

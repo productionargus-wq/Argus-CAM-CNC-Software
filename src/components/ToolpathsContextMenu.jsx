@@ -127,6 +127,7 @@ export default function ToolpathsContextMenu({
   onOpenSurfaceFinishPocket,
   onOpenSurfaceFinishFlowline,
   onOpenSurfaceFinishShallow,
+  onOpenSurfaceFinishParallel,
   onExportStockSTL,
   onToggleLockOp,
   onToggleGhostOp,
@@ -300,7 +301,7 @@ export default function ToolpathsContextMenu({
               </div>
               {activeLevel3 === 'surface_finish' && (
                 <div className="mcam-ctx-sub" style={{ ...subStyle, minWidth: '170px' }}>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Parallel</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishParallel ? onOpenSurfaceFinishParallel() : onAddOperation?.('parallel'))}>Parallel</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Parallel steep</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('radial'))}>Radial</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('project'))}>Project</div>

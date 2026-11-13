@@ -1906,6 +1906,8 @@ export default function App() {
       op?.strategyKey === 'surface_finish_pocket' ||
       op?.strategyKey === 'surface_finish_shallow' ||
       op?.badgeClass === 'shallow' ||
+      op?.strategyKey === 'surface_finish_parallel' ||
+      op?.badgeClass === 'parallel' ||
       op?.usesCustomSurfaces
     ) {
       const mode =
@@ -1915,7 +1917,9 @@ export default function App() {
             ? 'pocket'
             : op.strategyKey === 'surface_finish_shallow' || op.badgeClass === 'shallow'
               ? 'shallow'
-              : 'contour';
+              : op.strategyKey === 'surface_finish_parallel' || op.badgeClass === 'parallel'
+                ? 'parallel'
+                : 'contour';
       if (mode === 'flowline') {
         setSurfaceSelectionDraft({
           mode: 'flowline',
@@ -2141,6 +2145,9 @@ export default function App() {
       return;
     } else if (s === 'shallow' || s === 'surface_finish_shallow') {
       openSurfaceFinishModal('shallow', null);
+      return;
+    } else if (s === 'parallel' || s === 'surface_finish_parallel' || s === '3d_parallel') {
+      openSurfaceFinishModal('parallel', null);
       return;
     } else if (s === 'swarf' || s === '5axis_swarf') {
       newOp = {
@@ -3147,7 +3154,9 @@ export default function App() {
           ? 'Surface Finish Pocket'
           : updatedOp.strategyKey === 'surface_finish_shallow'
             ? 'Surface Finish Shallow'
-            : 'Surface Finish Contour';
+            : updatedOp.strategyKey === 'surface_finish_parallel'
+              ? 'Surface Finish Parallel'
+              : 'Surface Finish Contour';
     const finalOp = {
       ...updatedOp,
       id: nextId,
@@ -3318,6 +3327,13 @@ export default function App() {
         break;
       case 'surface_finish_pocket':
         openSurfaceFinishModal('pocket', null);
+        break;
+      case 'surface_finish_shallow':
+        openSurfaceFinishModal('shallow', null);
+        break;
+      case 'surface_finish_parallel':
+      case 'parallel':
+        openSurfaceFinishModal('parallel', null);
         break;
       case 'verify_solid':
         setIsSolidVerifyModalOpen(true);
@@ -5452,6 +5468,7 @@ export default function App() {
         onOpenSurfaceFinishPocket={() => openSurfaceFinishModal('pocket', null)}
         onOpenSurfaceFinishFlowline={() => openSurfaceFinishFlowline(null)}
         onOpenSurfaceFinishShallow={() => openSurfaceFinishModal('shallow', null)}
+        onOpenSurfaceFinishParallel={() => openSurfaceFinishModal('parallel', null)}
         onCopyViewportImage={handleCopyViewportImage}
         onPasteOp={handlePasteOp}
         onCutOp={handleCutOp}
@@ -5697,6 +5714,7 @@ export default function App() {
           onOpenSurfaceFinishPocket={() => openSurfaceFinishModal('pocket', null)}
           onOpenSurfaceFinishFlowline={() => openSurfaceFinishFlowline(null)}
           onOpenSurfaceFinishShallow={() => openSurfaceFinishModal('shallow', null)}
+          onOpenSurfaceFinishParallel={() => openSurfaceFinishModal('parallel', null)}
           onEditOpGeometry={handleOpenFlowlineGeometryEdit}
           onExportStockSTL={handleExportStockSTL}
           activeDrawingTool={activeDrawingTool}

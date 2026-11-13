@@ -160,9 +160,9 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         id: '3d_parallel',
         label: 'Parallel',
         icon: 'Tp3dParallel',
-        action: 'tp_3d_parallel',
-        opType: 'waterline',
-        tooltip: '3D Surface Parallel Finishing'
+        action: 'tp_3d_finish_parallel',
+        opType: 'surface_finish_parallel',
+        tooltip: 'Surface Finish Parallel across 3D CAD Surfaces'
       },
       {
         id: '3d_finish_contour',

@@ -197,7 +197,7 @@ export function generateNCProgram({
 
     // Coordinate & Z-Linking helpers
     // Three.js Top (G17): +X = CNC +X, -Z = CNC +Y (cplaneGeometry vAxis), +Y = CNC +Z
-    const isWcsTop = stockConfig?.wcsZZero !== 'model_origin' || !model || !!op.chain || !!op.usesCustomSurfaces || !!(op.driveFaceIds?.length) || op.badgeClass === 'flowline';
+    const isWcsTop = stockConfig?.wcsZZero !== 'model_origin' || !model || !!op.chain || !!op.usesCustomSurfaces || !!(op.driveFaceIds?.length) || op.badgeClass === 'flowline' || op.badgeClass === 'shallow' || op.badgeClass === 'parallel' || op.strategyKey === 'surface_finish_parallel';
     const zOffset = isWcsTop ? effectiveBounds.max.y : 0;
     const fmtNum = (n) => (Math.abs(n) < 0.0005 ? 0 : n).toFixed(3);
     const toCncY = (threeZ) => -threeZ;

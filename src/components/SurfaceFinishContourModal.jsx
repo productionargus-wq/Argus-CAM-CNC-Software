@@ -131,6 +131,7 @@ function SurfaceFinishContourModalInner({
   const isPocket = strategyMode === 'pocket' || operation?.strategyKey === 'surface_finish_pocket';
   const isFlowline = strategyMode === 'flowline' || operation?.strategyKey === 'surface_finish_flowline' || operation?.badgeClass === 'flowline';
   const isShallow = strategyMode === 'shallow' || operation?.strategyKey === 'surface_finish_shallow' || operation?.badgeClass === 'shallow';
+  const isParallel = strategyMode === 'parallel' || operation?.strategyKey === 'surface_finish_parallel' || operation?.badgeClass === 'parallel';
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
   const detectedSurfaces = useMemo(() => {
@@ -188,10 +189,10 @@ function SurfaceFinishContourModalInner({
       createDefaultSurfaceFinishState({
         activeMachine,
         stockConfig,
-        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : 'contour',
+        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallel ? 'parallel' : 'contour',
         tool: initialTool
       }),
-    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, initialTool]
+    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, initialTool]
   );
 
   const [activeTab, setActiveTab] = useState('toolpath_params');
@@ -235,7 +236,15 @@ function SurfaceFinishContourModalInner({
           shallowToSlope: 35.0,
           maxStepdown: 0.5
         }
-      : {}),
+      : isParallel
+        ? {
+            machiningAngle: Number(operation?.machiningAngle ?? 90.0),
+            maxStepdown: Number(operation?.stepover ?? 0.5),
+            totalTolerance: 0.025,
+            openContourDirection: operation?.cuttingMethod || 'zigzag',
+            direction: 'climb'
+          }
+        : {}),
     ...(operation?.contourParams || {})
   }));
 
@@ -390,7 +399,9 @@ function SurfaceFinishContourModalInner({
         ? 'Surface Finish Pocket'
         : isShallow
           ? 'Surface Finish Shallow'
-          : 'Surface Finish Contour';
+          : isParallel
+            ? 'Surface Finish Parallel'
+            : 'Surface Finish Contour';
     const rapidHeight = surfaceParams.clearanceEnabled && surfaceParams.clearanceMode === 'abs'
       ? Number(surfaceParams.clearance)
       : (Number(surfaceParams.retract) || 25.0);
@@ -403,10 +414,13 @@ function SurfaceFinishContourModalInner({
     const updatedOp = {
       ...(operation || {}),
       name: operation?.name || opTitle,
-      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : 'surface_finish_contour',
-      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : 'surface_finish_contour',
-      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : 'contour',
-      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : 'SC',
+      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallel ? 'surface_finish_parallel' : 'surface_finish_contour',
+      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallel ? 'surface_finish_parallel' : 'surface_finish_contour',
+      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallel ? 'parallel' : 'contour',
+      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallel ? 'PA' : 'SC',
+      machiningAngle: Number(contourParams.machiningAngle ?? 90.0),
+      stepover: Number(contourParams.maxStepdown) || 0.5,
+      cuttingMethod: contourParams.openContourDirection || 'zigzag',
       toolId: activeTool?.id || toolParams.toolId || 1,
       toolName: toolParams.toolName,
       toolNumber: Number(toolParams.toolNumber) || 1,
@@ -510,7 +524,9 @@ function SurfaceFinishContourModalInner({
                   ? 'Surface Finish Pocket'
                   : isShallow
                     ? 'Surface Finish Shallow'
-                    : 'Surface Finish Contour'}
+                    : isParallel
+                      ? 'Surface Finish Parallel'
+                      : 'Surface Finish Contour'}
             </span>
             <span
               style={{
@@ -671,6 +687,54 @@ function SurfaceFinishContourModalInner({
           </div>
         )}
 
+        {/* Parallel Tutorial Quick Helper Banner */}
+        {isParallel && (
+          <div
+            style={{
+              background: '#fdf4ff',
+              borderBottom: '1px solid #f0abfc',
+              padding: '6px 12px',
+              fontSize: '11px',
+              color: '#86198f',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px'
+            }}
+          >
+            <div>
+              <strong>Surface Finish Parallel:</strong> 1. Select Ball Endmill &rarr; 2. Surface Parameters (Clearance 50mm Abs) &rarr; 3. Finish Parallel Parameters (Machining Angle 90°, Stepover 0.5mm) &rarr; Click <strong>Green Checkmark (OK)</strong>.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setContourParams((p) => ({
+                  ...p,
+                  machiningAngle: 90.0,
+                  maxStepdown: 0.5,
+                  totalTolerance: 0.025,
+                  openContourDirection: 'zigzag',
+                  direction: 'climb'
+                }));
+                onNotify?.('Loaded recommended Surface Finish Parallel parameters (90° angle, 0.5mm stepover, Zigzag).', 'success');
+              }}
+              style={{
+                background: '#c026d3',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '3px 8px',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⚡ Load Recommended Parallel Values
+            </button>
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', background: '#f0f0f0', padding: '5px 8px 0 8px', borderBottom: '1px solid #d1d5db' }}>
           {[
@@ -684,7 +748,9 @@ function SurfaceFinishContourModalInner({
                   ? 'Finish pocket parameters'
                   : isShallow
                     ? 'Finish shallow parameters'
-                    : 'Finish contour parameters'
+                    : isParallel
+                      ? 'Finish parallel parameters'
+                      : 'Finish contour parameters'
             }
           ].map((tab) => {
             const active = activeTab === tab.id;
@@ -1304,7 +1370,7 @@ function SurfaceFinishContourModalInner({
           )}
 
           {/* ==================== TAB 3A: FINISH CONTOUR PARAMETERS (IMAGE 5 VERBATIM) ==================== */}
-          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && (
+          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '246px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
                 {/* LEFT COLUMN */}
@@ -1567,6 +1633,180 @@ function SurfaceFinishContourModalInner({
                     <button type="button" onClick={() => setActiveSubDialog('cut_depths')} style={MC_BUTTON}>Cut depths...</button>
                     <button type="button" onClick={() => setActiveSubDialog('gap_settings')} style={MC_BUTTON}>Gap settings...</button>
                     <button type="button" onClick={() => setActiveSubDialog('advanced_settings')} style={MC_BUTTON}>Advanced settings...</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== TAB 3D: FINISH PARALLEL PARAMETERS (MASTERCAM VERBATIM) ==================== */}
+          {activeTab === 'finish_contour_params' && isParallel && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '270px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
+                {/* LEFT COLUMN: Tolerances, Stepover, Angle, Scallop */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', minWidth: 0 }}>
+                  {/* Total tolerance */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <button type="button" onClick={() => setActiveSubDialog('total_tolerance')} style={{ ...MC_BUTTON, width: '100%', borderColor: '#3b82f6' }}>
+                      Total tolerance...
+                    </button>
+                    <input
+                      type="number"
+                      step="0.005"
+                      value={contourParams.totalTolerance ?? 0.025}
+                      onChange={(e) => setContourParams((p) => ({ ...p, totalTolerance: Number(e.target.value) }))}
+                      style={CLASSIC_YELLOW}
+                    />
+                  </div>
+
+                  {/* Maximum stepover */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span style={{ fontWeight: 500 }}>Maximum stepover</span>
+                    <input
+                      type="number"
+                      step="0.05"
+                      value={contourParams.maxStepdown ?? 0.5}
+                      onChange={(e) => setContourParams((p) => ({ ...p, maxStepdown: Number(e.target.value) }))}
+                      style={CLASSIC_YELLOW}
+                    />
+                  </div>
+
+                  {/* Scallop Height (computed) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span style={{ color: '#64748b' }}>Scallop height</span>
+                    <div style={{ ...CLASSIC_YELLOW, background: '#f8fafc', color: '#0369a1', display: 'flex', alignItems: 'center', fontWeight: 600, padding: '0 6px' }}>
+                      {(() => {
+                        const r = Math.max(0.5, (Number(toolParams.toolDiameter) || 6) / 2);
+                        const s = Math.max(0.01, Number(contourParams.maxStepdown) || 0.5);
+                        const scallop = r - Math.sqrt(Math.max(0, r * r - (s / 2) * (s / 2)));
+                        return `${(scallop || 0.005).toFixed(4)} mm`;
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Machining Angle */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', marginTop: '4px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Machining Angle</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span>Cut Angle (deg)</span>
+                      <input
+                        type="number"
+                        step="5"
+                        value={contourParams.machiningAngle ?? 90.0}
+                        onChange={(e) => setContourParams((p) => ({ ...p, machiningAngle: Number(e.target.value) }))}
+                        style={CLASSIC_YELLOW}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+                      {[
+                        { label: '0° (X-axis)', angle: 0 },
+                        { label: '90° (Y-axis)', angle: 90 },
+                        { label: '45° (Diag)', angle: 45 }
+                      ].map((btn) => {
+                        const isSelected = Number(contourParams.machiningAngle) === btn.angle;
+                        return (
+                          <button
+                            key={btn.angle}
+                            type="button"
+                            onClick={() => setContourParams((p) => ({ ...p, machiningAngle: btn.angle }))}
+                            style={{
+                              ...MC_BUTTON,
+                              background: isSelected ? '#e0f2fe' : '#ffffff',
+                              borderColor: isSelected ? '#0284c7' : '#9ca3af',
+                              color: isSelected ? '#0369a1' : '#0f172a',
+                              fontWeight: isSelected ? 600 : 400,
+                              padding: '3px 2px',
+                              fontSize: '10.5px'
+                            }}
+                          >
+                            {btn.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  {/* Direction */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', marginTop: '2px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Machining Direction</legend>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      {['climb', 'conventional'].map((dir) => (
+                        <label key={dir} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', textTransform: 'capitalize' }}>
+                          <input
+                            type="radio"
+                            name="parallelDirection"
+                            checked={(contourParams.direction || 'climb') === dir}
+                            onChange={() => setContourParams((p) => ({ ...p, direction: dir }))}
+                          />
+                          {dir}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                </div>
+
+                {/* RIGHT COLUMN: Cutting Method & Visual Graphic */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 }}>
+                  {/* Cutting Method */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Cutting Method</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                      {[
+                        { id: 'zigzag', label: 'Zigzag (Bi-dir)', desc: 'Continuous forward & back' },
+                        { id: 'one_way', label: 'One Way', desc: 'Single direction + retract' },
+                        { id: 'spiral', label: 'Spiral', desc: 'Inward / outward raster' }
+                      ].map((m) => {
+                        const active = (contourParams.openContourDirection || 'zigzag') === m.id;
+                        return (
+                          <div
+                            key={m.id}
+                            onClick={() => setContourParams((p) => ({ ...p, openContourDirection: m.id }))}
+                            style={{
+                              border: active ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                              background: active ? '#f0f9ff' : '#ffffff',
+                              padding: '8px 6px',
+                              borderRadius: '2px',
+                              cursor: 'pointer',
+                              textAlign: 'center'
+                            }}
+                          >
+                            <div style={{ fontWeight: active ? 600 : 500, color: active ? '#0369a1' : '#1e293b', fontSize: '11px' }}>
+                              {m.label}
+                            </div>
+                            <div style={{ fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>{m.desc}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  {/* Mastercam Schematic Graphic */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '3px', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ fontSize: '10.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                      Parallel Raster Topology (Angle: {contourParams.machiningAngle ?? 90}°, Stepover: {contourParams.maxStepdown ?? 0.5}mm)
+                    </div>
+                    <svg width="280" height="90" viewBox="0 0 280 90">
+                      {/* 3D Arch Mesh Wireframe */}
+                      <path d="M 20 70 Q 140 10 260 70" fill="none" stroke="#94a3b8" strokeWidth="2" strokeDasharray="3,3" />
+                      <path d="M 20 85 Q 140 25 260 85" fill="none" stroke="#64748b" strokeWidth="2" />
+                      <line x1="20" y1="70" x2="20" y2="85" stroke="#64748b" strokeWidth="1.5" />
+                      <line x1="260" y1="70" x2="260" y2="85" stroke="#64748b" strokeWidth="1.5" />
+                      {/* Parallel Toolpath Raster Passes */}
+                      {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+                        const xOff = 30 + i * 35;
+                        const yArch = 75 - Math.sin(((xOff - 20) / 240) * Math.PI) * 55;
+                        return (
+                          <g key={i}>
+                            <line x1={xOff} y1={yArch - 12} x2={xOff} y2={yArch} stroke="#10b981" strokeWidth="2" />
+                            <circle cx={xOff} cy={yArch} r="3" fill="#059669" />
+                            {i < 6 && (contourParams.openContourDirection !== 'one_way') && (
+                              <path d={`M ${xOff} ${yArch - 12} Q ${xOff + 17.5} ${yArch - 18} ${xOff + 35} ${yArch - 12}`} fill="none" stroke="#3b82f6" strokeWidth="1" strokeDasharray="2,2" />
+                            )}
+                          </g>
+                        );
+                      })}
+                      <text x="140" y="85" textAnchor="middle" fontSize="9" fill="#0f172a" fontWeight="600">Drive Surface Normal Contact</text>
+                    </svg>
                   </div>
                 </div>
               </div>
