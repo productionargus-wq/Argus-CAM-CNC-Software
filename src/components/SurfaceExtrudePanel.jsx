@@ -359,13 +359,13 @@ export default function SurfaceExtrudePanel({
           {dimsExpanded && (
             <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={dimensionRowStyle}>
-                <span style={labelStyle}>Height:</span>
+                <span style={{ ...labelStyle, width: '102px' }} title="Extrusion Distance (Height along selected Axis)">Height (Distance):</span>
                 <SketchNumericInput
                   value={extrudeParams?.height ?? 20.0}
                   step={5}
                   decimals={3}
                   allowNegative={true}
-                  presets={[10, 20, 30, 50, -20, -30]}
+                  presets={[10, 20, 30, 50, 60, -20, -30, -60]}
                   isLocked={!!locks.height}
                   onToggleLock={() => onToggleLock?.('height')}
                   onRawTextChange={handleHeightRawTextChange}
