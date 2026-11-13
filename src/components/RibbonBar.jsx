@@ -101,6 +101,7 @@ export default function RibbonBar({
   onOpenExportCADModal,
   onProjectLoaded,
   onExportSTL,
+  onStartFlowlineWizard,
   workpieceColor = '#3b82f6',
   onChangeWorkpieceColor,
   onChangeRenderMode,
@@ -1768,6 +1769,10 @@ export default function RibbonBar({
               }
               if (action === 'tp_verify_post') {
                 if (onOpenPostModal) onOpenPostModal();
+                return;
+              }
+              if (action === 'tp_start_flowline_wizard') {
+                if (onStartFlowlineWizard) onStartFlowlineWizard();
                 return;
               }
             }}

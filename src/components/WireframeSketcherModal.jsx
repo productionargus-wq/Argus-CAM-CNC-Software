@@ -8,6 +8,7 @@ import {
   createWireframeLine,
   createWireframeCircle,
   createWireframeArc,
+  createWireframeArcEndpoints,
   createWireframeSpline,
   createWireframeLettering,
   createSilhouetteBoundaryWireframe,
@@ -78,6 +79,11 @@ export default function WireframeSketcherModal({
   const [circleRadius, setCircleRadius] = useState(Math.round(Math.min(defaultDim.x, defaultDim.z) / 2.5) || 25);
   const [circleIsDiameter, setCircleIsDiameter] = useState(false);
   const [isArcMode, setIsArcMode] = useState(false);
+  const [arcSubMode, setArcSubMode] = useState('circle'); // 'circle' | 'center_sweep' | 'endpoints'
+  const [arcP1, setArcP1] = useState({ x: -50, y: 0, z: -15 });
+  const [arcP2, setArcP2] = useState({ x: 50, y: 0, z: -15 });
+  const [arcRadius2Pt, setArcRadius2Pt] = useState(80);
+  const [arcIsConvex, setArcIsConvex] = useState(true);
   const [arcStartAngle, setArcStartAngle] = useState(0);
   const [arcSweepAngle, setArcSweepAngle] = useState(180);
   const [circlePlane, setCirclePlane] = useState('G17');
@@ -196,6 +202,19 @@ export default function WireframeSketcherModal({
   };
 
   const handleAddCircle = () => {
+    if (arcSubMode === 'endpoints') {
+      const arc = createWireframeArcEndpoints(
+        [Number(arcP1.x), Number(arcP1.y), Number(arcP1.z)],
+        [Number(arcP2.x), Number(arcP2.y), Number(arcP2.z)],
+        Number(arcRadius2Pt),
+        circlePlane === 'G18' ? 'G18_front' : circlePlane === 'G19' ? 'G19_right' : 'G17_top',
+        arcIsConvex,
+        { color: parseInt(circleColor.replace('#', '0x')) }
+      );
+      if (onAddEntity) onAddEntity(arc);
+      notify(`Arc Endpoints P1(X${arcP1.x}, Y${arcP1.y}, Z${arcP1.z}) to P2(X${arcP2.x}, Y${arcP2.y}, Z${arcP2.z}) R${arcRadius2Pt} added.`);
+      return;
+    }
     const r = circleIsDiameter ? Number(circleRadius) / 2 : Number(circleRadius);
     const sweep = isArcMode ? Number(arcSweepAngle) : 360;
     const start = isArcMode ? Number(arcStartAngle) : 0;
@@ -762,41 +781,219 @@ export default function WireframeSketcherModal({
                 </div>
 
                 {/* Circle mode toggles */}
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                   <button
-                    onClick={() => setIsArcMode(false)}
+                    onClick={() => {
+                      setArcSubMode('circle');
+                      setIsArcMode(false);
+                    }}
                     style={{
-                      flex: 1,
-                      padding: '8px',
-                      backgroundColor: !isArcMode ? '#1e293b' : '#ffffff',
-                      border: `1px solid ${!isArcMode ? '#38bdf8' : '#e2e8f0'}`,
+                      padding: '8px 4px',
+                      backgroundColor: arcSubMode === 'circle' ? '#1e293b' : '#ffffff',
+                      border: `1px solid ${arcSubMode === 'circle' ? '#38bdf8' : '#e2e8f0'}`,
                       borderRadius: '4px',
-                      color: !isArcMode ? '#38bdf8' : '#94a3b8',
+                      color: arcSubMode === 'circle' ? '#38bdf8' : '#94a3b8',
                       cursor: 'pointer',
                       fontWeight: 600,
-                      fontSize: '12px'
+                      fontSize: '11px',
+                      textAlign: 'center'
                     }}
                   >
                     Full Circle (360°)
                   </button>
                   <button
-                    onClick={() => setIsArcMode(true)}
+                    onClick={() => {
+                      setArcSubMode('center_sweep');
+                      setIsArcMode(true);
+                    }}
                     style={{
-                      flex: 1,
-                      padding: '8px',
-                      backgroundColor: isArcMode ? '#1e293b' : '#ffffff',
-                      border: `1px solid ${isArcMode ? '#38bdf8' : '#e2e8f0'}`,
+                      padding: '8px 4px',
+                      backgroundColor: arcSubMode === 'center_sweep' ? '#1e293b' : '#ffffff',
+                      border: `1px solid ${arcSubMode === 'center_sweep' ? '#38bdf8' : '#e2e8f0'}`,
                       borderRadius: '4px',
-                      color: isArcMode ? '#38bdf8' : '#94a3b8',
+                      color: arcSubMode === 'center_sweep' ? '#38bdf8' : '#94a3b8',
                       cursor: 'pointer',
                       fontWeight: 600,
-                      fontSize: '12px'
+                      fontSize: '11px',
+                      textAlign: 'center'
                     }}
                   >
-                    Partial Arc Segment
+                    Center + Sweep Arc
+                  </button>
+                  <button
+                    onClick={() => {
+                      setArcSubMode('endpoints');
+                      setIsArcMode(true);
+                      setCirclePlane('G18'); // Front plane default for 3D arch
+                    }}
+                    style={{
+                      padding: '8px 4px',
+                      backgroundColor: arcSubMode === 'endpoints' ? '#0369a1' : '#ffffff',
+                      border: `1px solid ${arcSubMode === 'endpoints' ? '#0284c7' : '#e2e8f0'}`,
+                      borderRadius: '4px',
+                      color: arcSubMode === 'endpoints' ? '#ffffff' : '#0369a1',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    Arc Endpoints (2 Pts + R)
                   </button>
                 </div>
 
+                {/* 2 Endpoints Mode Panel */}
+                {arcSubMode === 'endpoints' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '6px', border: '1px solid #bae6fd' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1' }}>
+                          Point 1 Coordinates (Start)
+                        </span>
+                        <button
+                          className="modal-preset-btn"
+                          onClick={() => {
+                            setArcP1({ x: -50, y: 0, z: -15 });
+                            setArcP2({ x: 50, y: 0, z: -15 });
+                            setArcRadius2Pt(80);
+                            setCirclePlane('G18');
+                          }}
+                        >
+                          ⚡ Load Flowline Tutorial Arch Preset
+                        </button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                        <div>
+                          <label style={{ fontSize: '10.5px', color: '#64748b' }}>Point 1: X (mm)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={arcP1.x}
+                            onChange={(e) => setArcP1({ ...arcP1, x: parseFloat(e.target.value) || 0 })}
+                            style={inputStyle}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10.5px', color: '#64748b' }}>Point 1: Y (mm)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={arcP1.y}
+                            onChange={(e) => setArcP1({ ...arcP1, y: parseFloat(e.target.value) || 0 })}
+                            style={inputStyle}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10.5px', color: '#64748b' }}>Point 1: Z (mm)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={arcP1.z}
+                            onChange={(e) => setArcP1({ ...arcP1, z: parseFloat(e.target.value) || 0 })}
+                            style={inputStyle}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '6px', border: '1px solid #bae6fd' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', display: 'block', marginBottom: '8px' }}>
+                        Point 2 Coordinates (End)
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                        <div>
+                          <label style={{ fontSize: '10.5px', color: '#64748b' }}>Point 2: X (mm)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={arcP2.x}
+                            onChange={(e) => setArcP2({ ...arcP2, x: parseFloat(e.target.value) || 0 })}
+                            style={inputStyle}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10.5px', color: '#64748b' }}>Point 2: Y (mm)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={arcP2.y}
+                            onChange={(e) => setArcP2({ ...arcP2, y: parseFloat(e.target.value) || 0 })}
+                            style={inputStyle}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10.5px', color: '#64748b' }}>Point 2: Z (mm)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={arcP2.z}
+                            onChange={(e) => setArcP2({ ...arcP2, z: parseFloat(e.target.value) || 0 })}
+                            style={inputStyle}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                        <label style={{ fontSize: '11px', color: '#0369a1', fontWeight: 700, display: 'block', marginBottom: '6px' }}>
+                          Arc Radius R (mm)
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="1"
+                          value={arcRadius2Pt}
+                          onChange={(e) => setArcRadius2Pt(parseFloat(e.target.value) || 80)}
+                          style={inputStyle}
+                        />
+                      </div>
+
+                      <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                        <label style={{ fontSize: '11px', color: '#475569', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                          Curvature Direction
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setArcIsConvex(true)}
+                            style={{
+                              flex: 1,
+                              padding: '6px',
+                              background: arcIsConvex ? '#0284c7' : '#ffffff',
+                              color: arcIsConvex ? '#ffffff' : '#334155',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                              fontWeight: 600
+                            }}
+                          >
+                            Convex (Arch Up)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setArcIsConvex(false)}
+                            style={{
+                              flex: 1,
+                              padding: '6px',
+                              background: !arcIsConvex ? '#0284c7' : '#ffffff',
+                              color: !arcIsConvex ? '#ffffff' : '#334155',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                              fontWeight: 600
+                            }}
+                          >
+                            Concave (Dip Down)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 {/* Center Coordinates */}
                 <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -910,10 +1107,12 @@ export default function WireframeSketcherModal({
                     </div>
                   </div>
                 )}
+                </>
+                )}
 
                 <button onClick={handleAddCircle} style={primaryBtnStyle}>
                   <Plus size={16} />
-                  <span>Insert {isArcMode ? 'Arc' : 'Circle'} into Level 10</span>
+                  <span>Insert {arcSubMode === 'endpoints' ? 'Arc (Endpoints R80)' : isArcMode ? 'Arc' : 'Circle'} into Level 10</span>
                 </button>
               </div>
             )}

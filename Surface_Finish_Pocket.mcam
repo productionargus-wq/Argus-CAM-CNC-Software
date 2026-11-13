@@ -1,0 +1,1225 @@
+{
+  "schemaVersion": "Argus-Mastercam-2026-v1.0",
+  "savedAt": "2026-11-11T15:47:37.306Z",
+  "filename": "Surface_Finish_Pocket.mcam",
+  "projectName": "Surface_Finish_Pocket.mcam",
+  "stockConfig": {
+    "shape": "box",
+    "axis": "X",
+    "units": "metric",
+    "allowanceTop": 0,
+    "allowanceSides": 5,
+    "material": "Alu 6061-T6",
+    "originPoint": "top-center",
+    "diameter": 108,
+    "innerDiameter": 30,
+    "length": 104,
+    "rawDimensions": {
+      "x": 110,
+      "y": 20,
+      "z": 110
+    },
+    "dimensions": {
+      "x": 100,
+      "y": 20,
+      "z": 100
+    },
+    "massKg": "0.65"
+  },
+  "tools": [
+    {
+      "id": 1,
+      "number": 1,
+      "name": "50mm Face Mill (Shell Mill)",
+      "type": "face",
+      "diameter": 50,
+      "cornerRad": 0,
+      "fluteLength": 25,
+      "overallLength": 75,
+      "flutes": 5,
+      "cuttingSpeedVc": 399,
+      "rpm": 3500,
+      "feedPerTooth": 0.09,
+      "feedRate": 1200,
+      "plungeRate": 350,
+      "coolant": "Flood"
+    },
+    {
+      "id": 2,
+      "number": 2,
+      "name": "12mm Flat Endmill (Carbide Rougher)",
+      "type": "flat",
+      "diameter": 12,
+      "cornerRad": 0,
+      "fluteLength": 28,
+      "overallLength": 75,
+      "flutes": 3,
+      "cuttingSpeedVc": 220,
+      "rpm": 5500,
+      "feedPerTooth": 0.08,
+      "feedRate": 1800,
+      "plungeRate": 450,
+      "coolant": "Flood"
+    },
+    {
+      "id": 3,
+      "number": 3,
+      "name": "10mm 4-Flute Flat Endmill (Finisher)",
+      "type": "flat",
+      "diameter": 10,
+      "cornerRad": 0,
+      "fluteLength": 30,
+      "overallLength": 75,
+      "flutes": 4,
+      "cuttingSpeedVc": 200,
+      "rpm": 6000,
+      "feedPerTooth": 0.06,
+      "feedRate": 1528,
+      "plungeRate": 450,
+      "coolant": "Flood"
+    },
+    {
+      "id": 4,
+      "number": 4,
+      "name": "8mm 3-Flute Roughing Endmill",
+      "type": "flat",
+      "diameter": 8,
+      "cornerRad": 0,
+      "fluteLength": 20,
+      "overallLength": 60,
+      "flutes": 3,
+      "cuttingSpeedVc": 180,
+      "rpm": 7162,
+      "feedPerTooth": 0.05,
+      "feedRate": 1074,
+      "plungeRate": 350,
+      "coolant": "Flood"
+    },
+    {
+      "id": 5,
+      "number": 5,
+      "name": "6mm 2-Flute Ball Nose",
+      "type": "ball",
+      "diameter": 6,
+      "cornerRad": 3,
+      "fluteLength": 18,
+      "overallLength": 60,
+      "flutes": 2,
+      "cuttingSpeedVc": 160,
+      "rpm": 8488,
+      "feedPerTooth": 0.04,
+      "feedRate": 679,
+      "plungeRate": 250,
+      "coolant": "Mist"
+    },
+    {
+      "id": 6,
+      "number": 6,
+      "name": "12mm 90° Spot / Chamfer Drill",
+      "type": "chamfer",
+      "diameter": 12,
+      "cornerRad": 0,
+      "fluteLength": 15,
+      "overallLength": 70,
+      "flutes": 2,
+      "cuttingSpeedVc": 140,
+      "rpm": 3500,
+      "feedPerTooth": 0.12,
+      "feedRate": 889,
+      "plungeRate": 250,
+      "coolant": "Flood"
+    },
+    {
+      "id": 7,
+      "number": 7,
+      "name": "5mm Carbide Twist Drill",
+      "type": "drill",
+      "diameter": 5,
+      "cornerRad": 0,
+      "fluteLength": 35,
+      "overallLength": 80,
+      "flutes": 2,
+      "cuttingSpeedVc": 80,
+      "rpm": 5093,
+      "feedPerTooth": 0.07,
+      "feedRate": 713,
+      "plungeRate": 713,
+      "coolant": "Through"
+    },
+    {
+      "id": 99,
+      "number": 99,
+      "name": "Renishaw OMP60 Optical Touch Probe",
+      "type": "probe",
+      "diameter": 6,
+      "cornerRad": 3,
+      "fluteLength": 50,
+      "overallLength": 120,
+      "flutes": 0,
+      "cuttingSpeedVc": 0,
+      "rpm": 0,
+      "feedPerTooth": 0,
+      "feedRate": 150,
+      "plungeRate": 150,
+      "coolant": "Off",
+      "isProbe": true
+    },
+    {
+      "id": "tool_1794396575446",
+      "number": 1,
+      "toolNumber": 1,
+      "lengthOffset": 1,
+      "diameterOffset": 1,
+      "headNumber": 0,
+      "name": "12 Flat Endmill",
+      "description": "",
+      "type": "flat",
+      "toolSubtype": "end_mill",
+      "diameter": 12,
+      "cornerRadius": 0,
+      "fluteLength": 25,
+      "overallLength": 75,
+      "shankDiameter": 12,
+      "flutes": 4,
+      "spindleSpeed": 3500,
+      "feedRate": 1200,
+      "plungeRate": 150,
+      "retractRate": 1200,
+      "cs": 131.9469,
+      "fpt": 0.0857,
+      "spindleDirection": "Clockwise",
+      "coolant": "Flood",
+      "material": "Carbide",
+      "manufacturerName": "Mastercam Imported",
+      "manufacturerCode": "",
+      "toolGrade": "Mastercam Default",
+      "roughTool": true,
+      "finishTool": true,
+      "roughXyStepPct": 0,
+      "roughZStepPct": 0,
+      "finishXyStepPct": 0,
+      "finishZStepPct": 0,
+      "holder": "BT30 / BBT30 ER32 Collet"
+    }
+  ],
+  "operations": [
+    {
+      "name": "Surface Finish Pocket",
+      "type": "surface_finish_pocket",
+      "strategyKey": "surface_finish_pocket",
+      "badgeClass": "pocket",
+      "badgeText": "SP",
+      "toolId": 2,
+      "toolName": "12mm Flat Endmill (Carbide Rougher)",
+      "toolNumber": 2,
+      "toolType": "flat",
+      "toolDiameter": 12,
+      "cornerRadius": 0,
+      "feedRate": 1800,
+      "spindleSpeed": 5500,
+      "plungeRate": 450,
+      "plungeFeedRate": 450,
+      "retractRate": 250,
+      "rapidHeight": 25,
+      "stepdown": 1,
+      "stockToLeaveXY": 0,
+      "stockToLeaveZ": 0,
+      "cuttingDirection": "climb",
+      "contourSide": "center",
+      "cutStyle": "constant overlap spiral",
+      "stepoverPct": 50,
+      "driveSurfaceIds": [
+        "ad36cfc9-5336-45e4-a357-070bb563b40c"
+      ],
+      "usesCustomSurfaces": true,
+      "bounds": {
+        "isBox3": true,
+        "min": {
+          "x": -50,
+          "y": 35,
+          "z": -50
+        },
+        "max": {
+          "x": 50,
+          "y": 55,
+          "z": 50
+        }
+      },
+      "comment": "",
+      "machineId": "robodrill",
+      "machineAxes": 3,
+      "machineParams": {
+        "toBatch": false,
+        "axisCombo": "3-Axis Vertical X-Y-Z (Fixed Spindle)",
+        "homePosEnabled": false,
+        "homePos": {
+          "x": 0,
+          "y": 0,
+          "z": 50
+        },
+        "rotaryAxisEnabled": false,
+        "rotaryAxisMode": "None (3-Axis Only)",
+        "rotaryDiameter": 100,
+        "wcsPlane": "Top",
+        "tplane": "Top",
+        "cplane": "Top",
+        "toolDisplayEnabled": true,
+        "toolDisplayMode": "Wireframe + Holder",
+        "refPointEnabled": false,
+        "refPointApproach": {
+          "x": 0,
+          "y": 0,
+          "z": 50
+        },
+        "refPointRetract": {
+          "x": 0,
+          "y": 0,
+          "z": 50
+        },
+        "cannedTextBefore": "",
+        "cannedTextAfter": "",
+        "miscReals": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "miscIntegers": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "surfaceParams": {
+        "clearanceEnabled": false,
+        "clearance": 50,
+        "clearanceMode": "abs",
+        "useClearanceStartEndOnly": true,
+        "retractEnabled": true,
+        "retract": 25,
+        "retractMode": "inc",
+        "feedPlane": 5,
+        "feedPlaneMode": "inc",
+        "topOfStockEnabled": false,
+        "topOfStock": 0,
+        "topOfStockMode": "abs",
+        "directionEnabled": false,
+        "cutDirectionMode": "Normal",
+        "tipComp": "tip",
+        "stockToLeaveDrive": 0,
+        "stockToLeaveCheck": 0,
+        "containmentMode": "center",
+        "additionalOffsetEnabled": false,
+        "additionalOffset": 0,
+        "driveSurfacesCount": 1
+      },
+      "contourParams": {
+        "totalTolerance": 0.025,
+        "filterToleranceRatio": 0.5,
+        "oneWayArcFilter": false,
+        "maxStepdown": 0.5,
+        "detectUndercuts": false,
+        "cornerRoundingRadius": 2,
+        "entryExitArcEnabled": false,
+        "arcRadius": 5,
+        "arcSweep": 90,
+        "lineLength": 0,
+        "allowOutsideBoundary": true,
+        "useApproxStartPoint": false,
+        "approxStartPoint": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "optimizeCutOrder": false,
+        "minimizeBurial": false,
+        "orderBottomToTop": false,
+        "direction": "climb",
+        "startLength": 0,
+        "openContourDirection": "one_way",
+        "transitionType": "broken",
+        "loopLength": 2,
+        "rampLength": 10,
+        "helixEnabled": false,
+        "helixRadius": 3,
+        "helixAngle": 3,
+        "shallowEnabled": false,
+        "shallowFromSlope": 0,
+        "shallowToSlope": 10,
+        "flatsEnabled": false,
+        "flatsExtendToStock": true,
+        "spiralEnabled": false,
+        "spiralLimit": 0,
+        "cutDepthsMode": "Incremental",
+        "minDepth": -9999,
+        "maxDepth": 9999,
+        "gapSettingsMode": "Follow surfaces",
+        "maxGapDistance": 10,
+        "advancedToolAxis": "Vertical (Z-Axis Only)",
+        "advancedCollisionCheck": true
+      },
+      "pocketParams": {
+        "totalTolerance": 0.025,
+        "maxStepdown": 1,
+        "stepover": 6,
+        "cuttingMethod": "Constant Overlap Spiral",
+        "machiningDirection": "climb",
+        "roughEntryHelix": true,
+        "finishOuterBoundary": true,
+        "finishFloorPasses": 1,
+        "minStepover": 0.5
+      },
+      "id": 2,
+      "visible": true,
+      "enabled": true,
+      "locked": false,
+      "ghosted": false
+    }
+  ],
+  "customGeometry": [
+    {
+      "name": "Wireframe_Circle_R50.0",
+      "uuid": "b96b3fbf-3a8a-4434-96f7-679a9e0f90fe",
+      "customId": "b96b3fbf-3a8a-4434-96f7-679a9e0f90fe",
+      "type": "circle",
+      "cadType": "circle",
+      "visible": true,
+      "isBlanked": false,
+      "radius": 50,
+      "diameter": 100,
+      "width": null,
+      "depth": null,
+      "height": null,
+      "filletRadius": 0,
+      "startAngleDeg": 0,
+      "endAngleDeg": 360,
+      "controlPoints": null,
+      "center": {
+        "x": 0,
+        "y": 35,
+        "z": 0
+      },
+      "p1": null,
+      "p2": null,
+      "points": [
+        {
+          "x": 50,
+          "y": 35,
+          "z": 0
+        },
+        {
+          "x": 49.75923633360985,
+          "y": 35,
+          "z": 4.90085701647803
+        },
+        {
+          "x": 49.039264020161525,
+          "y": 35,
+          "z": 9.754516100806413
+        },
+        {
+          "x": 47.84701678661044,
+          "y": 35,
+          "z": 14.514233862723117
+        },
+        {
+          "x": 46.19397662556434,
+          "y": 35,
+          "z": 19.134171618254488
+        },
+        {
+          "x": 44.09606321741775,
+          "y": 35,
+          "z": 23.56983684129988
+        },
+        {
+          "x": 41.57348061512726,
+          "y": 35,
+          "z": 27.778511650980107
+        },
+        {
+          "x": 38.65052266813685,
+          "y": 35,
+          "z": 31.719664208182273
+        },
+        {
+          "x": 35.35533905932738,
+          "y": 35,
+          "z": 35.35533905932737
+        },
+        {
+          "x": 31.719664208182273,
+          "y": 35,
+          "z": 38.65052266813685
+        },
+        {
+          "x": 27.778511650980114,
+          "y": 35,
+          "z": 41.57348061512726
+        },
+        {
+          "x": 23.56983684129989,
+          "y": 35,
+          "z": 44.09606321741775
+        },
+        {
+          "x": 19.13417161825449,
+          "y": 35,
+          "z": 46.19397662556434
+        },
+        {
+          "x": 14.514233862723117,
+          "y": 35,
+          "z": 47.847016786610446
+        },
+        {
+          "x": 9.754516100806416,
+          "y": 35,
+          "z": 49.039264020161525
+        },
+        {
+          "x": 4.900857016478039,
+          "y": 35,
+          "z": 49.75923633360984
+        },
+        {
+          "x": 3.061616997868383e-15,
+          "y": 35,
+          "z": 50
+        },
+        {
+          "x": -4.9008570164780325,
+          "y": 35,
+          "z": 49.75923633360985
+        },
+        {
+          "x": -9.75451610080641,
+          "y": 35,
+          "z": 49.039264020161525
+        },
+        {
+          "x": -14.514233862723108,
+          "y": 35,
+          "z": 47.847016786610446
+        },
+        {
+          "x": -19.134171618254488,
+          "y": 35,
+          "z": 46.19397662556434
+        },
+        {
+          "x": -23.569836841299885,
+          "y": 35,
+          "z": 44.09606321741775
+        },
+        {
+          "x": -27.778511650980096,
+          "y": 35,
+          "z": 41.57348061512727
+        },
+        {
+          "x": -31.71966420818227,
+          "y": 35,
+          "z": 38.65052266813686
+        },
+        {
+          "x": -35.35533905932737,
+          "y": 35,
+          "z": 35.35533905932738
+        },
+        {
+          "x": -38.65052266813685,
+          "y": 35,
+          "z": 31.719664208182273
+        },
+        {
+          "x": -41.573480615127266,
+          "y": 35,
+          "z": 27.778511650980107
+        },
+        {
+          "x": -44.09606321741775,
+          "y": 35,
+          "z": 23.569836841299892
+        },
+        {
+          "x": -46.19397662556434,
+          "y": 35,
+          "z": 19.134171618254495
+        },
+        {
+          "x": -47.84701678661044,
+          "y": 35,
+          "z": 14.514233862723119
+        },
+        {
+          "x": -49.039264020161525,
+          "y": 35,
+          "z": 9.75451610080643
+        },
+        {
+          "x": -49.75923633360984,
+          "y": 35,
+          "z": 4.900857016478041
+        },
+        {
+          "x": -50,
+          "y": 35,
+          "z": 6.123233995736766e-15
+        },
+        {
+          "x": -49.75923633360985,
+          "y": 35,
+          "z": -4.90085701647803
+        },
+        {
+          "x": -49.039264020161525,
+          "y": 35,
+          "z": -9.754516100806418
+        },
+        {
+          "x": -47.847016786610446,
+          "y": 35,
+          "z": -14.514233862723106
+        },
+        {
+          "x": -46.19397662556434,
+          "y": 35,
+          "z": -19.134171618254484
+        },
+        {
+          "x": -44.09606321741775,
+          "y": 35,
+          "z": -23.56983684129988
+        },
+        {
+          "x": -41.57348061512727,
+          "y": 35,
+          "z": -27.778511650980096
+        },
+        {
+          "x": -38.65052266813686,
+          "y": 35,
+          "z": -31.719664208182262
+        },
+        {
+          "x": -35.355339059327385,
+          "y": 35,
+          "z": -35.35533905932737
+        },
+        {
+          "x": -31.719664208182298,
+          "y": 35,
+          "z": -38.65052266813683
+        },
+        {
+          "x": -27.778511650980107,
+          "y": 35,
+          "z": -41.57348061512726
+        },
+        {
+          "x": -23.569836841299892,
+          "y": 35,
+          "z": -44.09606321741775
+        },
+        {
+          "x": -19.134171618254516,
+          "y": 35,
+          "z": -46.193976625564325
+        },
+        {
+          "x": -14.514233862723122,
+          "y": 35,
+          "z": -47.84701678661044
+        },
+        {
+          "x": -9.754516100806434,
+          "y": 35,
+          "z": -49.03926402016152
+        },
+        {
+          "x": -4.900857016478023,
+          "y": 35,
+          "z": -49.75923633360985
+        },
+        {
+          "x": -9.184850993605149e-15,
+          "y": 35,
+          "z": -50
+        },
+        {
+          "x": 4.900857016478004,
+          "y": 35,
+          "z": -49.75923633360985
+        },
+        {
+          "x": 9.754516100806415,
+          "y": 35,
+          "z": -49.039264020161525
+        },
+        {
+          "x": 14.514233862723103,
+          "y": 35,
+          "z": -47.847016786610446
+        },
+        {
+          "x": 19.1341716182545,
+          "y": 35,
+          "z": -46.19397662556433
+        },
+        {
+          "x": 23.569836841299878,
+          "y": 35,
+          "z": -44.09606321741775
+        },
+        {
+          "x": 27.778511650980093,
+          "y": 35,
+          "z": -41.57348061512727
+        },
+        {
+          "x": 31.71966420818228,
+          "y": 35,
+          "z": -38.650522668136844
+        },
+        {
+          "x": 35.35533905932737,
+          "y": 35,
+          "z": -35.355339059327385
+        },
+        {
+          "x": 38.65052266813683,
+          "y": 35,
+          "z": -31.719664208182298
+        },
+        {
+          "x": 41.57348061512726,
+          "y": 35,
+          "z": -27.778511650980107
+        },
+        {
+          "x": 44.09606321741774,
+          "y": 35,
+          "z": -23.569836841299896
+        },
+        {
+          "x": 46.193976625564325,
+          "y": 35,
+          "z": -19.13417161825452
+        },
+        {
+          "x": 47.84701678661044,
+          "y": 35,
+          "z": -14.514233862723124
+        },
+        {
+          "x": 49.03926402016152,
+          "y": 35,
+          "z": -9.754516100806436
+        },
+        {
+          "x": 49.75923633360985,
+          "y": 35,
+          "z": -4.900857016478025
+        },
+        {
+          "x": 50,
+          "y": 35,
+          "z": -1.2246467991473532e-14
+        }
+      ],
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "chains": null,
+      "extrudeParams": null,
+      "surfaceRole": null,
+      "color": 3718648,
+      "object3dJson": null
+    },
+    {
+      "name": "Surface_Extrude_H20",
+      "uuid": "ad36cfc9-5336-45e4-a357-070bb563b40c",
+      "customId": "ad36cfc9-5336-45e4-a357-070bb563b40c",
+      "type": "surface_extrusion",
+      "cadType": "surface_extrusion",
+      "visible": true,
+      "isBlanked": false,
+      "radius": null,
+      "diameter": null,
+      "width": null,
+      "depth": null,
+      "height": null,
+      "filletRadius": 0,
+      "startAngleDeg": 0,
+      "endAngleDeg": 360,
+      "controlPoints": null,
+      "center": null,
+      "p1": null,
+      "p2": null,
+      "points": null,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "chains": [
+        {
+          "id": "b96b3fbf-3a8a-4434-96f7-679a9e0f90fe",
+          "type": "circle_loop",
+          "name": "Wireframe_Circle_R50.0",
+          "isClosed": true,
+          "center": {
+            "x": 0,
+            "y": 35,
+            "z": 0
+          },
+          "radius": 50,
+          "points": [
+            {
+              "x": 50,
+              "y": 35,
+              "z": 0
+            },
+            {
+              "x": 49.75923633360985,
+              "y": 35,
+              "z": 4.90085701647803
+            },
+            {
+              "x": 49.039264020161525,
+              "y": 35,
+              "z": 9.754516100806413
+            },
+            {
+              "x": 47.84701678661044,
+              "y": 35,
+              "z": 14.514233862723117
+            },
+            {
+              "x": 46.19397662556434,
+              "y": 35,
+              "z": 19.134171618254488
+            },
+            {
+              "x": 44.09606321741775,
+              "y": 35,
+              "z": 23.56983684129988
+            },
+            {
+              "x": 41.57348061512726,
+              "y": 35,
+              "z": 27.778511650980107
+            },
+            {
+              "x": 38.65052266813685,
+              "y": 35,
+              "z": 31.719664208182273
+            },
+            {
+              "x": 35.35533905932738,
+              "y": 35,
+              "z": 35.35533905932737
+            },
+            {
+              "x": 31.719664208182273,
+              "y": 35,
+              "z": 38.65052266813685
+            },
+            {
+              "x": 27.778511650980114,
+              "y": 35,
+              "z": 41.57348061512726
+            },
+            {
+              "x": 23.56983684129989,
+              "y": 35,
+              "z": 44.09606321741775
+            },
+            {
+              "x": 19.13417161825449,
+              "y": 35,
+              "z": 46.19397662556434
+            },
+            {
+              "x": 14.514233862723117,
+              "y": 35,
+              "z": 47.847016786610446
+            },
+            {
+              "x": 9.754516100806416,
+              "y": 35,
+              "z": 49.039264020161525
+            },
+            {
+              "x": 4.900857016478039,
+              "y": 35,
+              "z": 49.75923633360984
+            },
+            {
+              "x": 3.061616997868383e-15,
+              "y": 35,
+              "z": 50
+            },
+            {
+              "x": -4.9008570164780325,
+              "y": 35,
+              "z": 49.75923633360985
+            },
+            {
+              "x": -9.75451610080641,
+              "y": 35,
+              "z": 49.039264020161525
+            },
+            {
+              "x": -14.514233862723108,
+              "y": 35,
+              "z": 47.847016786610446
+            },
+            {
+              "x": -19.134171618254488,
+              "y": 35,
+              "z": 46.19397662556434
+            },
+            {
+              "x": -23.569836841299885,
+              "y": 35,
+              "z": 44.09606321741775
+            },
+            {
+              "x": -27.778511650980096,
+              "y": 35,
+              "z": 41.57348061512727
+            },
+            {
+              "x": -31.71966420818227,
+              "y": 35,
+              "z": 38.65052266813686
+            },
+            {
+              "x": -35.35533905932737,
+              "y": 35,
+              "z": 35.35533905932738
+            },
+            {
+              "x": -38.65052266813685,
+              "y": 35,
+              "z": 31.719664208182273
+            },
+            {
+              "x": -41.573480615127266,
+              "y": 35,
+              "z": 27.778511650980107
+            },
+            {
+              "x": -44.09606321741775,
+              "y": 35,
+              "z": 23.569836841299892
+            },
+            {
+              "x": -46.19397662556434,
+              "y": 35,
+              "z": 19.134171618254495
+            },
+            {
+              "x": -47.84701678661044,
+              "y": 35,
+              "z": 14.514233862723119
+            },
+            {
+              "x": -49.039264020161525,
+              "y": 35,
+              "z": 9.75451610080643
+            },
+            {
+              "x": -49.75923633360984,
+              "y": 35,
+              "z": 4.900857016478041
+            },
+            {
+              "x": -50,
+              "y": 35,
+              "z": 6.123233995736766e-15
+            },
+            {
+              "x": -49.75923633360985,
+              "y": 35,
+              "z": -4.90085701647803
+            },
+            {
+              "x": -49.039264020161525,
+              "y": 35,
+              "z": -9.754516100806418
+            },
+            {
+              "x": -47.847016786610446,
+              "y": 35,
+              "z": -14.514233862723106
+            },
+            {
+              "x": -46.19397662556434,
+              "y": 35,
+              "z": -19.134171618254484
+            },
+            {
+              "x": -44.09606321741775,
+              "y": 35,
+              "z": -23.56983684129988
+            },
+            {
+              "x": -41.57348061512727,
+              "y": 35,
+              "z": -27.778511650980096
+            },
+            {
+              "x": -38.65052266813686,
+              "y": 35,
+              "z": -31.719664208182262
+            },
+            {
+              "x": -35.355339059327385,
+              "y": 35,
+              "z": -35.35533905932737
+            },
+            {
+              "x": -31.719664208182298,
+              "y": 35,
+              "z": -38.65052266813683
+            },
+            {
+              "x": -27.778511650980107,
+              "y": 35,
+              "z": -41.57348061512726
+            },
+            {
+              "x": -23.569836841299892,
+              "y": 35,
+              "z": -44.09606321741775
+            },
+            {
+              "x": -19.134171618254516,
+              "y": 35,
+              "z": -46.193976625564325
+            },
+            {
+              "x": -14.514233862723122,
+              "y": 35,
+              "z": -47.84701678661044
+            },
+            {
+              "x": -9.754516100806434,
+              "y": 35,
+              "z": -49.03926402016152
+            },
+            {
+              "x": -4.900857016478023,
+              "y": 35,
+              "z": -49.75923633360985
+            },
+            {
+              "x": -9.184850993605149e-15,
+              "y": 35,
+              "z": -50
+            },
+            {
+              "x": 4.900857016478004,
+              "y": 35,
+              "z": -49.75923633360985
+            },
+            {
+              "x": 9.754516100806415,
+              "y": 35,
+              "z": -49.039264020161525
+            },
+            {
+              "x": 14.514233862723103,
+              "y": 35,
+              "z": -47.847016786610446
+            },
+            {
+              "x": 19.1341716182545,
+              "y": 35,
+              "z": -46.19397662556433
+            },
+            {
+              "x": 23.569836841299878,
+              "y": 35,
+              "z": -44.09606321741775
+            },
+            {
+              "x": 27.778511650980093,
+              "y": 35,
+              "z": -41.57348061512727
+            },
+            {
+              "x": 31.71966420818228,
+              "y": 35,
+              "z": -38.650522668136844
+            },
+            {
+              "x": 35.35533905932737,
+              "y": 35,
+              "z": -35.355339059327385
+            },
+            {
+              "x": 38.65052266813683,
+              "y": 35,
+              "z": -31.719664208182298
+            },
+            {
+              "x": 41.57348061512726,
+              "y": 35,
+              "z": -27.778511650980107
+            },
+            {
+              "x": 44.09606321741774,
+              "y": 35,
+              "z": -23.569836841299896
+            },
+            {
+              "x": 46.193976625564325,
+              "y": 35,
+              "z": -19.13417161825452
+            },
+            {
+              "x": 47.84701678661044,
+              "y": 35,
+              "z": -14.514233862723124
+            },
+            {
+              "x": 49.03926402016152,
+              "y": 35,
+              "z": -9.754516100806436
+            },
+            {
+              "x": 49.75923633360985,
+              "y": 35,
+              "z": -4.900857016478025
+            },
+            {
+              "x": 50,
+              "y": 35,
+              "z": -1.2246467991473532e-14
+            }
+          ]
+        }
+      ],
+      "extrudeParams": {
+        "height": 20,
+        "scale": 1,
+        "rotationAngleDeg": 0,
+        "offsetDistance": 0,
+        "draftAngleDeg": 0,
+        "useAxis": false,
+        "axis": "z",
+        "axisVector": {
+          "x": 0,
+          "y": 0,
+          "z": 1
+        },
+        "direction": "defined",
+        "basePoint": {
+          "x": 0,
+          "y": 35,
+          "z": 0
+        },
+        "capEnds": true
+      },
+      "surfaceRole": "drive",
+      "color": 2282478,
+      "object3dJson": null
+    }
+  ],
+  "partMetrics": {
+    "center": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "dimensions": {
+      "x": 100,
+      "y": 25,
+      "z": 80
+    },
+    "box": {
+      "min": {
+        "x": -50,
+        "y": 0,
+        "z": -40
+      },
+      "max": {
+        "x": 50,
+        "y": 0,
+        "z": 40
+      }
+    },
+    "triangles": 0
+  },
+  "solidsList": [],
+  "activeMachine": {
+    "id": "robodrill",
+    "category": "mill",
+    "cardName": "Fanuc Robodrill",
+    "name": "Fanuc Robodrill D21",
+    "fileName": "GENERIC FANUC 3X MILL.MCAM-MMD",
+    "type": "High Speed 3-Axis",
+    "shortType": "High Speed 3-Axis",
+    "axesCount": 3,
+    "controller": "Fanuc 31i-B5",
+    "controllerDialect": "Fanuc 30i / 31i / 0i-MF",
+    "kinematicsPresetId": "robodrill",
+    "xTravel": 500,
+    "yTravel": 400,
+    "zTravel": 330,
+    "bMin": 0,
+    "bMax": 0,
+    "cRotaryContinuous": false,
+    "maxRpm": 24000,
+    "maxFeed": 54000,
+    "spindleTaper": "BT30 / BBT30",
+    "atcCapacity": 21,
+    "coolantTSC": false,
+    "tcpEnabled": false,
+    "arcFormat": "ijk",
+    "safeZ": 50,
+    "powerKw": 11,
+    "torqueNm": 35
+  },
+  "activeWcs": "G54",
+  "customGeometryNotes": []
+}

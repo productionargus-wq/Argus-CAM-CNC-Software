@@ -33,6 +33,7 @@ import DraftingCADModal from './components/DraftingCADModal';
 import TransformCADModal from './components/TransformCADModal';
 import MachineConfigModal from './components/MachineConfigModal';
 import MachineMenuManagementModal from './components/MachineMenuManagementModal';
+import FlowlineWizardBar from './components/FlowlineWizardBar';
 import {
   MACHINE_DEFINITIONS_CATALOG,
   DEFAULT_MACHINE_DIRECTORY,
@@ -561,6 +562,8 @@ export default function App() {
   const [lightingMode, setLightingMode] = useState('studio');
   const [isOperationsWizardOpen, setIsOperationsWizardOpen] = useState(false);
   const [operationsWizardTab, setOperationsWizardTab] = useState('create');
+  const [flowlineWizardActive, setFlowlineWizardActive] = useState(false);
+  const [flowlineWizardStep, setFlowlineWizardStep] = useState(1);
 
   const [solidsList, setSolidsList] = useState([
     { id: 1, name: 'Solid 1 - Finished Workpiece', material: '6061-T6 Aluminum', volumeCm3: 184.2, isPrimary: true, visible: true, active: true, color: '#38bdf8' },
@@ -1689,6 +1692,16 @@ export default function App() {
       if (e.key === 'Escape' && activeSurfaceToolRef.current === 'extrude') {
         e.preventDefault();
         handleCancelSurfaceExtrudeRef.current?.();
+        return;
+      }
+
+      if (e.key === 'F9' || e.code === 'F9') {
+        e.preventDefault();
+        setShowAxes((prev) => {
+          const next = !prev;
+          showToast(`Origin coordinate crosshairs (F9): ${next ? 'ON' : 'OFF'}`, 'info', 1600);
+          return next;
+        });
         return;
       }
 
@@ -2989,6 +3002,58 @@ export default function App() {
 
   const handleOpenFlowlineGeometryEdit = (op) => {
     openSurfaceFinishFlowline(op, { fromModal: false });
+  };
+
+  const handleFlowlineWizardStep = (stepId, stepNum = 1) => {
+    setFlowlineWizardActive(true);
+    if (stepNum) setFlowlineWizardStep(stepNum);
+
+    switch (stepId) {
+      case 'wizard_new_file':
+        setIsNewProjectModalOpen(true);
+        break;
+
+      case 'wizard_set_units':
+        setUnitSystem('metric');
+        showToast('Units set to Metric (mm - G21). Click status bar badge anytime to toggle.', 'success', 2500);
+        break;
+
+      case 'wizard_machine':
+        setActiveRibbonTab('Machine');
+        setActiveMachineId('mill_3x_default');
+        showToast('Active Machine: Haas VF-2 3-Axis VMC (Fanuc / Haas NGC G-code).', 'info', 2500);
+        break;
+
+      case 'wizard_wireframe':
+        setActiveRibbonTab('Wireframe');
+        setIsWireframeModalOpen(true);
+        setWireframeModalTool('circle');
+        showToast('In Circle / Arc, select "Arc Endpoints (2 Pts + R)" and click Insert into Level 10.', 'info', 3500);
+        break;
+
+      case 'wizard_extrude':
+        setActiveRibbonTab('Surfaces');
+        handleOpenSurfacesModal('surface_extrude');
+        showToast('Select arc wireframe on canvas, click Green Checkmark in Chaining, then set Height = 60mm.', 'info', 4000);
+        break;
+
+      case 'wizard_stock':
+        setActiveRibbonTab('Toolpaths');
+        setIsStockSetupModalOpen(true);
+        break;
+
+      case 'wizard_flowline':
+        setActiveRibbonTab('Toolpaths');
+        openSurfaceFinishFlowline(null);
+        break;
+
+      case 'wizard_post':
+        setIsGCodeViewerOpen(true);
+        break;
+
+      default:
+        break;
+    }
   };
 
   const handlePickSolidFacesForDraft = (faceIds = [], modeLabel = '', meta = {}) => {
@@ -5543,6 +5608,17 @@ export default function App() {
         activeWcs={activeWcs}
         workspaceViewMode={workspaceViewMode}
         onChangeViewMode={setWorkspaceViewMode}
+        onStartFlowlineWizard={() => handleFlowlineWizardStep('wizard_new_file', 1)}
+      />
+
+      {/* Flowline 3-Axis Guided Wizard Bar */}
+      <FlowlineWizardBar
+        isActive={flowlineWizardActive}
+        currentStep={flowlineWizardStep}
+        onStepClick={handleFlowlineWizardStep}
+        onClose={() => setFlowlineWizardActive(false)}
+        unitSystem={unitSystem}
+        activeMachineName={activeMachine?.name || '3-Axis Mill Default'}
       />
 
       {/* 3. Main CAD/CAM Workspace */}
@@ -5940,13 +6016,36 @@ export default function App() {
       {/* 5. Bottom Status Bar */}
       <StatusBar
         coords={coords}
-        activeWcs={currentModel ? activeWcs : 'Top'}
-        activeCPlane={currentModel ? activePlane : 'Top'}
+        activeWcs={activeWcs}
+        activeCPlane={activePlane}
         activeTPlane="Top"
         selectedCount={selectedEntityIds.length || (currentModel ? 1 : 0)}
         isSectionView={clippingPlane?.enabled}
         onToggleSectionView={() => setClippingPlane(cp => ({ ...cp, enabled: !cp?.enabled }))}
         unitSystem={unitSystem}
+        onToggleUnitSystem={() => {
+          setUnitSystem((prev) => {
+            const next = prev === 'metric' ? 'imperial' : 'metric';
+            showToast(`Active Units switched to: ${next.toUpperCase()}`, 'info', 1800);
+            return next;
+          });
+        }}
+        onSelectCPlane={(plane) => {
+          setActivePlane(plane);
+          showToast(`Cplane set to ${plane}`, 'info', 1600);
+        }}
+        onSelectWcs={(wcs) => {
+          setActiveWcs(wcs);
+          showToast(`Active WCS Datum: ${wcs}`, 'info', 1600);
+        }}
+        onToggleAxes={() => {
+          setShowAxes((prev) => {
+            const next = !prev;
+            showToast(`Origin crosshairs (F9): ${next ? 'ON' : 'OFF'}`, 'info', 1500);
+            return next;
+          });
+        }}
+        showAxes={showAxes}
         activeRadius={isSketchModeActive && (sketchTool === 'circle' || activeDrawingTool === 'circle' || sketchTool === 'arc_tangent' || activeDrawingTool === 'arc_tangent') ? (sketchTool === 'arc_tangent' ? arcParams.radius : circleParams.radius) : null}
         activeRectDimensions={isSketchModeActive && (sketchTool === 'rect' || activeDrawingTool === 'rect') ? { width: rectParams.width, height: rectParams.height } : null}
         activeLineDimensions={isSketchModeActive && (sketchTool === 'line' || activeDrawingTool === 'line') ? { length: lineParams.length, angle: lineParams.angle } : null}

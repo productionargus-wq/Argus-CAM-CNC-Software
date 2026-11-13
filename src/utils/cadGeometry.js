@@ -3121,6 +3121,75 @@ export function createWireframeArc(center = [0, 49, 0], radius = 25, startAngleD
 }
 
 /**
+ * Creates an arc defined by 2 endpoints and a radius (Mastercam Arc Endpoints)
+ */
+export function createWireframeArcEndpoints(
+  pt1 = [-50, 0, -15],
+  pt2 = [50, 0, -15],
+  radius = 80,
+  plane = 'G18_front',
+  isConvex = true,
+  options = {}
+) {
+  const p1 = new THREE.Vector3(Number(pt1[0]) || 0, Number(pt1[1]) || 0, Number(pt1[2]) || 0);
+  const p2 = new THREE.Vector3(Number(pt2[0]) || 0, Number(pt2[1]) || 0, Number(pt2[2]) || 0);
+
+  const chord = new THREE.Vector3().subVectors(p2, p1);
+  const d = chord.length();
+  const r = Math.max(d * 0.5001, Math.abs(Number(radius) || 80));
+
+  const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+  const u = chord.clone().normalize();
+
+  let planeNormal;
+  if (plane === 'G17_top') planeNormal = new THREE.Vector3(0, 1, 0);
+  else if (plane === 'G19_right') planeNormal = new THREE.Vector3(1, 0, 0);
+  else planeNormal = new THREE.Vector3(0, 0, 1);
+
+  let perp = new THREE.Vector3().crossVectors(planeNormal, u).normalize();
+  if (perp.lengthSq() < 0.1) {
+    perp = new THREE.Vector3(0, 1, 0);
+  }
+
+  const sagittaDist = Math.sqrt(Math.max(0, r * r - (d * 0.5) * (d * 0.5)));
+  const sign = isConvex ? 1 : -1;
+  const center = mid.clone().addScaledVector(perp, -sign * sagittaDist);
+
+  const v1 = new THREE.Vector3().subVectors(p1, center);
+  const v2 = new THREE.Vector3().subVectors(p2, center);
+
+  const segments = 48;
+  const points = [];
+  let axis = new THREE.Vector3().crossVectors(v1, v2).normalize();
+  if (axis.lengthSq() < 0.1) {
+    axis.copy(planeNormal);
+  }
+
+  const totalAngle = v1.angleTo(v2);
+  for (let i = 0; i <= segments; i++) {
+    const frac = i / segments;
+    const ang = frac * totalAngle;
+    const pt = v1.clone().applyAxisAngle(axis, ang).add(center);
+    points.push(pt);
+  }
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0x38bdf8;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const arc = new THREE.Line(geo, mat);
+  arc.name = options.name || `Wireframe_Arc_2Pt_R${r}`;
+  arc.userData = {
+    type: 'arc',
+    pt1: [p1.x, p1.y, p1.z],
+    pt2: [p2.x, p2.y, p2.z],
+    center: [center.x, center.y, center.z],
+    radius: r,
+    is2PointArc: true
+  };
+  return arc;
+}
+
+/**
  * Creates a smooth 3D Catmull-Rom spline curve through control points
  */
 export function createWireframeSpline(controlPoints = [[-30, 49, -20], [0, 49, 20], [30, 49, -15], [50, 49, 10]], options = {}) {

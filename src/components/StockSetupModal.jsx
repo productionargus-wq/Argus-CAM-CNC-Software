@@ -260,6 +260,50 @@ export default function StockSetupModal({
         {/* Modal Body */}
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
+          {/* Quick Flowline Preset Banner */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '4px',
+              padding: '6px 10px',
+              fontSize: '11px'
+            }}
+          >
+            <span style={{ color: '#1e40af', fontWeight: 600 }}>
+              Need tutorial stock for Flowline?
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveUnit('metric');
+                setShape('box');
+                setDimX(100);
+                setDimY(60);
+                setDimZ(25);
+                setAllowanceTop(0);
+                setAllowanceSides(0);
+                setMaterial('Alu 6061-T6');
+                setOriginPoint('top-center');
+              }}
+              style={{
+                background: '#0284c7',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '3px 8px',
+                fontSize: '10.5px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              ⚡ Quick Flowline Billet (100×60×25 Alu)
+            </button>
+          </div>
+
           {/* Top Bar: Shape Selection & Units Selector */}
           <div
             style={{

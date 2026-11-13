@@ -146,22 +146,23 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         tooltip: 'Project Toolpath Curves onto 3D Geometry'
       },
       {
+        id: '3d_finish_flowline',
+        label: 'Flowline',
+        icon: 'Tp3dFlowline',
+        action: 'tp_3d_finish_flowline',
+        opType: 'surface_finish_flowline',
+        hasBadge: true,
+        tooltip: 'Surface Finish Flowline across Selected Drive Faces & Surfaces'
+      }
+    ],
+    galleryMoreItems: [
+      {
         id: '3d_parallel',
         label: 'Parallel',
         icon: 'Tp3dParallel',
         action: 'tp_3d_parallel',
         opType: 'waterline',
         tooltip: '3D Surface Parallel Finishing'
-      }
-    ],
-    galleryMoreItems: [
-      {
-        id: '3d_finish_flowline',
-        label: 'Flowline',
-        icon: 'Tp3dFlowline',
-        action: 'tp_3d_finish_flowline',
-        opType: 'surface_finish_flowline',
-        tooltip: 'Surface Finish Flowline across Selected Drive Faces & Surfaces'
       },
       {
         id: '3d_finish_contour',
@@ -431,6 +432,15 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         icon: 'TpVerifyPost',
         action: 'tp_verify_post',
         tooltip: 'Post Process Selected Operations to CNC G-Code (G1)'
+      },
+      {
+        id: 'flowline_wizard_launch',
+        type: 'large',
+        label: 'Flowline\nWizard',
+        icon: 'Tp3dFlowline',
+        action: 'tp_start_flowline_wizard',
+        hasBadge: true,
+        tooltip: 'Launch guided step-by-step Flowline finishing wizard from scratch'
       }
     ]
   }

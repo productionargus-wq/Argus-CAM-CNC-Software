@@ -541,6 +541,76 @@ function SurfaceFinishContourModalInner({
           </button>
         </div>
 
+        {/* Flowline Tutorial Quick Helper Banner */}
+        {isFlowline && (
+          <div
+            style={{
+              background: '#eff6ff',
+              borderBottom: '1px solid #bfdbfe',
+              padding: '6px 12px',
+              fontSize: '11px',
+              color: '#1d4ed8',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px'
+            }}
+          >
+            <div>
+              <strong>Surface Finish Flowline:</strong> 1. Select Ball Endmill &rarr; 2. Set Surface Clearance (50mm Abs) &rarr; 3. Set Stepover (0.5mm Zigzag) &rarr; Click <strong>Green Checkmark (OK)</strong> &rarr; Click <strong>Post (G1)</strong>.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setToolParams((p) => ({
+                  ...p,
+                  toolName: '10mm Ball Endmill',
+                  toolDiameter: 10,
+                  cornerRadius: 5,
+                  spindleSpeed: 5000,
+                  feedRate: 1500,
+                  plungeRate: 500,
+                  retractRate: 5000
+                }));
+                setSurfaceParams((p) => ({
+                  ...p,
+                  clearance: 50,
+                  clearanceEnabled: true,
+                  clearanceMode: 'abs',
+                  retract: 10,
+                  retractEnabled: true,
+                  retractMode: 'inc',
+                  feedPlane: 2,
+                  feedPlaneMode: 'inc',
+                  topOfStock: 0,
+                  stockToLeaveDrive: 0
+                }));
+                setFlowlineParams((p) => ({
+                  ...p,
+                  stepoverMode: 'distance',
+                  stepoverDistance: 0.5,
+                  cuttingMethod: 'Zigzag',
+                  totalTolerance: 0.01
+                }));
+                onNotify?.('Loaded recommended tutorial values for 10mm Ball Endmill.', 'success');
+              }}
+              style={{
+                background: '#0284c7',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '2px',
+                padding: '3px 8px',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⚡ Load Recommended Tutorial Values
+            </button>
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', background: '#f0f0f0', padding: '5px 8px 0 8px', borderBottom: '1px solid #d1d5db' }}>
           {[
