@@ -612,6 +612,16 @@ export function createDefaultSurfaceFinishState({
       maxGapDistance: 10.0,
       advancedToolAxis: caps.multiAxisOptions[0],
       advancedCollisionCheck: true
+    },
+    pencilParams: {
+      totalTolerance: 0.025,
+      biTangencyRadius: 3.0,
+      numberOfPasses: 1,
+      stepover: 0.3,
+      cuttingMethod: 'Zigzag',
+      machiningDirection: 'climb',
+      traceFloorFillet: true,
+      traceVerticalCorners: true
     }
   };
 }

@@ -1999,77 +1999,159 @@ export function generateRestMillingToolpath(bounds, tool, params = {}, model = n
  * Traces along bi-tangent internal fillet valleys and corner intersection boundaries.
  */
 export function generatePencilTracingToolpath(bounds, tool, params = {}, model = null) {
-  bounds = resolveSafeBounds(bounds);
+  const effBounds = model ? computeDriveModelBounds(model, bounds) : resolveSafeBounds(bounds);
   const {
     totalDepth = 15.0,
     stepdown = 1.0,
     biTangencyRadius = 3.0,
-    rapidHeight = 15.0
+    numberOfPasses = 1,
+    stepover = 0.3,
+    cuttingMethod = 'zigzag',
+    traceFloorFillet = true,
+    traceVerticalCorners = true,
+    rapidHeight = 15.0,
+    feedPlane = 2.5,
+    stockToLeaveZ = 0.0
   } = params;
 
   const cuttingLines = [];
   const rapidLines = [];
 
   const toolRadius = (tool.diameter || 6) / 2;
-  const topY = bounds.max.y;
+  const topY = effBounds.max.y;
   const safeTotalDepth = Math.abs(Number(totalDepth)) || 15.0;
   const floorY = topY - safeTotalDepth;
 
-  // Inset perimeter bounds representing the pocket fillet seam
-  const filletInset = Math.max(toolRadius, biTangencyRadius);
-  const minX = bounds.min.x + filletInset;
-  const maxX = bounds.max.x - filletInset;
-  const minZ = bounds.min.z + filletInset;
-  const maxZ = bounds.max.z - filletInset;
+  // Base fillet inset representing the bi-tangent contact center from walls
+  const baseFilletInset = Math.max(toolRadius, biTangencyRadius);
+  const nPasses = Math.max(1, Math.min(10, Math.round(Number(numberOfPasses)) || 1));
+  const safeStepover = Math.max(0.05, Math.min(toolRadius * 0.8, Number(stepover) || 0.3));
+
+  // Determine offsets for passes (e.g. 1 pass: [0]; 3 passes: [-stepover, 0, +stepover])
+  const passOffsets = [];
+  if (nPasses === 1) {
+    passOffsets.push(0);
+  } else {
+    const half = Math.floor((nPasses - 1) / 2);
+    for (let p = -half; p <= Math.floor(nPasses / 2); p++) {
+      passOffsets.push(p * safeStepover);
+    }
+  }
 
   // 1. Bottom Floor Fillet Seam (Tracing around bottom perimeter where walls meet floor)
-  const filletPoints = [
-    new THREE.Vector3(minX, floorY + biTangencyRadius * 0.3, minZ),
-    new THREE.Vector3(maxX, floorY + biTangencyRadius * 0.3, minZ),
-    new THREE.Vector3(maxX, floorY + biTangencyRadius * 0.3, maxZ),
-    new THREE.Vector3(minX, floorY + biTangencyRadius * 0.3, maxZ),
-    new THREE.Vector3(minX, floorY + biTangencyRadius * 0.3, minZ)
-  ];
+  if (traceFloorFillet) {
+    passOffsets.forEach((pOffset, passIdx) => {
+      const inset = baseFilletInset + pOffset;
+      const minX = effBounds.min.x + inset;
+      const maxX = effBounds.max.x - inset;
+      const minZ = effBounds.min.z + inset;
+      const maxZ = effBounds.max.z - inset;
 
-  // Rapid approach to first point
-  rapidLines.push([
-    new THREE.Vector3(filletPoints[0].x, topY + rapidHeight, filletPoints[0].z),
-    new THREE.Vector3(filletPoints[0].x, filletPoints[0].y + 1.0, filletPoints[0].z)
-  ]);
-  cuttingLines.push([
-    new THREE.Vector3(filletPoints[0].x, filletPoints[0].y + 1.0, filletPoints[0].z),
-    filletPoints[0]
-  ]);
+      if (maxX <= minX || maxZ <= minZ) return;
 
-  for (let i = 0; i < filletPoints.length - 1; i++) {
-    cuttingLines.push([filletPoints[i], filletPoints[i + 1]]);
+      const zHeight = floorY + biTangencyRadius * 0.3 + Number(stockToLeaveZ);
+
+      // Rounded corner points with corner radius matching biTangencyRadius
+      const cornerR = Math.max(0.5, Math.min(biTangencyRadius, (maxX - minX) / 4, (maxZ - minZ) / 4));
+      const filletPoints = [];
+
+      const addCornerArc = (cx, cz, startAngle, endAngle) => {
+        const segments = 4;
+        for (let i = 0; i <= segments; i++) {
+          const theta = startAngle + (endAngle - startAngle) * (i / segments);
+          filletPoints.push(new THREE.Vector3(cx + cornerR * Math.cos(theta), zHeight, cz + cornerR * Math.sin(theta)));
+        }
+      };
+
+      // Top-right corner
+      filletPoints.push(new THREE.Vector3(minX + cornerR, zHeight, minZ));
+      filletPoints.push(new THREE.Vector3(maxX - cornerR, zHeight, minZ));
+      addCornerArc(maxX - cornerR, minZ + cornerR, -Math.PI / 2, 0);
+
+      // Bottom-right corner
+      filletPoints.push(new THREE.Vector3(maxX, zHeight, maxZ - cornerR));
+      addCornerArc(maxX - cornerR, maxZ - cornerR, 0, Math.PI / 2);
+
+      // Bottom-left corner
+      filletPoints.push(new THREE.Vector3(minX + cornerR, zHeight, maxZ));
+      addCornerArc(minX + cornerR, maxZ - cornerR, Math.PI / 2, Math.PI);
+
+      // Top-left corner
+      filletPoints.push(new THREE.Vector3(minX, zHeight, minZ + cornerR));
+      addCornerArc(minX + cornerR, minZ + cornerR, Math.PI, (3 * Math.PI) / 2);
+
+      // Close loop
+      filletPoints.push(new THREE.Vector3(minX + cornerR, zHeight, minZ));
+
+      if (filletPoints.length < 2) return;
+
+      if (cuttingMethod === 'zigzag' && passIdx % 2 === 1) {
+        filletPoints.reverse();
+      }
+
+      const p0 = filletPoints[0];
+      rapidLines.push([
+        new THREE.Vector3(p0.x, topY + rapidHeight, p0.z),
+        new THREE.Vector3(p0.x, zHeight + feedPlane, p0.z)
+      ]);
+      cuttingLines.push([
+        new THREE.Vector3(p0.x, zHeight + feedPlane, p0.z),
+        new THREE.Vector3(p0.x, zHeight, p0.z)
+      ]);
+
+      for (let i = 0; i < filletPoints.length - 1; i++) {
+        cuttingLines.push([filletPoints[i], filletPoints[i + 1]]);
+      }
+
+      const pLast = filletPoints[filletPoints.length - 1];
+      rapidLines.push([
+        new THREE.Vector3(pLast.x, zHeight, pLast.z),
+        new THREE.Vector3(pLast.x, topY + rapidHeight, pLast.z)
+      ]);
+    });
   }
 
   // 2. Vertical Internal Corner Fillet Seams (Corner vertical traces from floor to top)
-  const verticalCorners = [
-    { x: minX, z: minZ },
-    { x: maxX, z: minZ },
-    { x: maxX, z: maxZ },
-    { x: minX, z: maxZ }
-  ];
+  if (traceVerticalCorners) {
+    const minX = effBounds.min.x + baseFilletInset;
+    const maxX = effBounds.max.x - baseFilletInset;
+    const minZ = effBounds.min.z + baseFilletInset;
+    const maxZ = effBounds.max.z - baseFilletInset;
 
-  verticalCorners.forEach((corner) => {
-    // Upward pencil climb along the corner seam
-    const numSteps = Math.max(4, Math.ceil(totalDepth / stepdown));
-    for (let s = 0; s < numSteps; s++) {
-      const y1 = floorY + (s / numSteps) * totalDepth;
-      const y2 = floorY + ((s + 1) / numSteps) * totalDepth;
-      cuttingLines.push([
-        new THREE.Vector3(corner.x, y1, corner.z),
-        new THREE.Vector3(corner.x, y2, corner.z)
-      ]);
+    if (maxX > minX && maxZ > minZ) {
+      const verticalCorners = [
+        { x: minX, z: minZ },
+        { x: maxX, z: minZ },
+        { x: maxX, z: maxZ },
+        { x: minX, z: maxZ }
+      ];
+
+      verticalCorners.forEach((corner) => {
+        rapidLines.push([
+          new THREE.Vector3(corner.x, topY + rapidHeight, corner.z),
+          new THREE.Vector3(corner.x, floorY + feedPlane, corner.z)
+        ]);
+        cuttingLines.push([
+          new THREE.Vector3(corner.x, floorY + feedPlane, corner.z),
+          new THREE.Vector3(corner.x, floorY, corner.z)
+        ]);
+
+        const numSteps = Math.max(4, Math.ceil(safeTotalDepth / Math.max(0.2, Number(stepdown) || 1.0)));
+        for (let s = 0; s < numSteps; s++) {
+          const y1 = floorY + (s / numSteps) * safeTotalDepth;
+          const y2 = floorY + ((s + 1) / numSteps) * safeTotalDepth;
+          cuttingLines.push([
+            new THREE.Vector3(corner.x, y1, corner.z),
+            new THREE.Vector3(corner.x, y2, corner.z)
+          ]);
+        }
+        rapidLines.push([
+          new THREE.Vector3(corner.x, topY, corner.z),
+          new THREE.Vector3(corner.x, topY + rapidHeight, corner.z)
+        ]);
+      });
     }
-    // Rapid reposition to safe height between vertical seams
-    rapidLines.push([
-      new THREE.Vector3(corner.x, topY, corner.z),
-      new THREE.Vector3(corner.x, topY + rapidHeight, corner.z)
-    ]);
-  });
+  }
 
   return { cuttingLines, rapidLines };
 }
@@ -2260,12 +2342,19 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
       rapidHeight: op.rapidHeight || 15.0
     }, effectiveModel);
   }
-  if (strategy === 'pencil') {
+  if (strategy === 'pencil' || op.strategyKey === 'surface_finish_pencil' || op.badgeClass === 'pencil') {
     return generatePencilTracingToolpath(opBounds, assignedTool, {
-      totalDepth: op.totalDepth || 15.0,
+      totalDepth: op.totalDepth || op.depth || 15.0,
       stepdown: op.stepdown || 1.0,
-      biTangencyRadius: op.biTangencyRadius || 3.0,
-      rapidHeight: op.rapidHeight || 15.0
+      biTangencyRadius: op.pencilParams?.biTangencyRadius || op.biTangencyRadius || 3.0,
+      numberOfPasses: op.pencilParams?.numberOfPasses || op.numberOfPasses || 1,
+      stepover: op.pencilParams?.stepover || op.stepover || 0.3,
+      cuttingMethod: op.pencilParams?.cuttingMethod || op.cuttingMethod || 'zigzag',
+      traceFloorFillet: op.pencilParams?.traceFloorFillet ?? true,
+      traceVerticalCorners: op.pencilParams?.traceVerticalCorners ?? true,
+      rapidHeight: op.rapidHeight || op.surfaceParams?.clearance || 15.0,
+      feedPlane: op.surfaceParams?.feedPlane || 2.5,
+      stockToLeaveZ: op.surfaceParams?.stockToLeaveDrive || op.stockToLeaveZ || 0.0
     }, effectiveModel);
   }
   if (strategy === 'probe') {

@@ -132,6 +132,7 @@ function SurfaceFinishContourModalInner({
   const isFlowline = strategyMode === 'flowline' || operation?.strategyKey === 'surface_finish_flowline' || operation?.badgeClass === 'flowline';
   const isShallow = strategyMode === 'shallow' || operation?.strategyKey === 'surface_finish_shallow' || operation?.badgeClass === 'shallow';
   const isParallel = strategyMode === 'parallel' || operation?.strategyKey === 'surface_finish_parallel' || operation?.badgeClass === 'parallel';
+  const isPencil = strategyMode === 'pencil' || operation?.strategyKey === 'surface_finish_pencil' || operation?.badgeClass === 'pencil';
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
   const detectedSurfaces = useMemo(() => {
@@ -169,10 +170,10 @@ function SurfaceFinishContourModalInner({
         null
       );
     }
-    if (isFlowline) {
+    if (isFlowline || isShallow || isParallel || isPencil) {
       return (
+        tools.find((t) => ['ball'].includes(String(t.type || '').toLowerCase())) ||
         tools.find((t) => ['bull', 'ball'].includes(String(t.type || '').toLowerCase())) ||
-        tools.find((t) => ['flat', 'bull', 'ball'].includes(String(t.type || '').toLowerCase())) ||
         tools[0] ||
         null
       );
@@ -182,17 +183,17 @@ function SurfaceFinishContourModalInner({
       tools[0] ||
       null
     );
-  }, [operation, tools, isFlowline]);
+  }, [operation, tools, isFlowline, isShallow, isParallel, isPencil]);
 
   const initialDefaults = useMemo(
     () =>
       createDefaultSurfaceFinishState({
         activeMachine,
         stockConfig,
-        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallel ? 'parallel' : 'contour',
+        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallel ? 'parallel' : isPencil ? 'pencil' : 'contour',
         tool: initialTool
       }),
-    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, initialTool]
+    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isPencil, initialTool]
   );
 
   const [activeTab, setActiveTab] = useState('toolpath_params');
@@ -256,6 +257,20 @@ function SurfaceFinishContourModalInner({
   const [flowlineParams, setFlowlineParams] = useState(() => ({
     ...initialDefaults.flowlineParams,
     ...(operation?.flowlineParams || {})
+  }));
+
+  const [pencilParams, setPencilParams] = useState(() => ({
+    ...(initialDefaults.pencilParams || {
+      totalTolerance: 0.025,
+      biTangencyRadius: 3.0,
+      numberOfPasses: 1,
+      stepover: 0.3,
+      cuttingMethod: 'Zigzag',
+      machiningDirection: 'climb',
+      traceFloorFillet: true,
+      traceVerticalCorners: true
+    }),
+    ...(operation?.pencilParams || {})
   }));
 
   // Tool table UI state (view mode, sort order, right-click menu, active sub-dialog)
@@ -401,7 +416,9 @@ function SurfaceFinishContourModalInner({
           ? 'Surface Finish Shallow'
           : isParallel
             ? 'Surface Finish Parallel'
-            : 'Surface Finish Contour';
+            : isPencil
+              ? 'Surface Finish Pencil'
+              : 'Surface Finish Contour';
     const rapidHeight = surfaceParams.clearanceEnabled && surfaceParams.clearanceMode === 'abs'
       ? Number(surfaceParams.clearance)
       : (Number(surfaceParams.retract) || 25.0);
@@ -414,13 +431,13 @@ function SurfaceFinishContourModalInner({
     const updatedOp = {
       ...(operation || {}),
       name: operation?.name || opTitle,
-      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallel ? 'surface_finish_parallel' : 'surface_finish_contour',
-      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallel ? 'surface_finish_parallel' : 'surface_finish_contour',
-      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallel ? 'parallel' : 'contour',
-      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallel ? 'PA' : 'SC',
+      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : 'surface_finish_contour',
+      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : 'surface_finish_contour',
+      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallel ? 'parallel' : isPencil ? 'pencil' : 'contour',
+      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallel ? 'PA' : isPencil ? 'PC' : 'SC',
       machiningAngle: Number(contourParams.machiningAngle ?? 90.0),
-      stepover: Number(contourParams.maxStepdown) || 0.5,
-      cuttingMethod: contourParams.openContourDirection || 'zigzag',
+      stepover: Number(isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
+      cuttingMethod: isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
       toolId: activeTool?.id || toolParams.toolId || 1,
       toolName: toolParams.toolName,
       toolNumber: Number(toolParams.toolNumber) || 1,
@@ -433,15 +450,19 @@ function SurfaceFinishContourModalInner({
       plungeFeedRate: Number(toolParams.plungeRate) || 150,
       retractRate: Number(toolParams.retractRate) || 250,
       rapidHeight,
-      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : contourParams.maxStepdown) || 0.5,
+      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
       stockToLeaveXY: Number(surfaceParams.stockToLeaveDrive) || 0.0,
       stockToLeaveZ: Number(surfaceParams.stockToLeaveDrive) || 0.0,
-      cuttingDirection: isPocket ? pocketParams.machiningDirection : contourParams.direction,
+      cuttingDirection: isPocket ? pocketParams.machiningDirection : isPencil ? pencilParams.machiningDirection : contourParams.direction,
       contourSide: surfaceParams.containmentMode,
       cutStyle: isFlowline
         ? String(flowlineParams.cuttingMethod || 'Zigzag').toLowerCase()
-        : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
-      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
+        : isPencil
+          ? String(pencilParams.cuttingMethod || 'Zigzag').toLowerCase()
+          : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
+      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : isPencil ? pencilParams.stepover : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
+      biTangencyRadius: Number(pencilParams.biTangencyRadius) || 3.0,
+      numberOfPasses: Number(pencilParams.numberOfPasses) || 1,
       driveSurfaceIds: selectedSurfaceIds,
       driveFaceIds,
       checkFaceIds,
@@ -460,7 +481,8 @@ function SurfaceFinishContourModalInner({
       contourParams: { ...contourParams },
       pocketParams: { ...pocketParams },
       flowlineData: { ...flowlineData },
-      flowlineParams: { ...flowlineParams }
+      flowlineParams: { ...flowlineParams },
+      pencilParams: { ...pencilParams }
     };
 
     onSaveOperation?.(updatedOp);
@@ -735,6 +757,75 @@ function SurfaceFinishContourModalInner({
           </div>
         )}
 
+        {/* Pencil Tutorial Quick Helper Banner */}
+        {isPencil && (
+          <div
+            style={{
+              background: '#fef3c7',
+              borderBottom: '1px solid #fde68a',
+              padding: '6px 12px',
+              fontSize: '11px',
+              color: '#92400e',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px'
+            }}
+          >
+            <div>
+              <strong>Surface Finish Pencil:</strong> 1. Select Ball Endmill &rarr; 2. Surface Parameters (Clearance 25mm Abs) &rarr; 3. Finish Pencil Parameters (Bi-tangency R3.0, Passes) &rarr; Click <strong>Green Checkmark (OK)</strong>.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const ballTool = tools.find((t) => t.type === 'ball' || /ball/i.test(t.name)) || tools[0];
+                if (ballTool) {
+                  setSelectedToolId(ballTool.id);
+                  setToolParams((prev) => buildToolStateFromRecord(ballTool, caps, prev));
+                }
+                setSurfaceParams((p) => ({
+                  ...p,
+                  clearanceEnabled: true,
+                  clearance: 25.0,
+                  clearanceMode: 'abs',
+                  retractEnabled: true,
+                  retract: 2.5,
+                  retractMode: 'inc',
+                  feedPlane: 2.5,
+                  feedPlaneMode: 'inc',
+                  stockToLeaveDrive: 0.0,
+                  stockToLeaveCheck: 0.0
+                }));
+                setPencilParams((p) => ({
+                  ...p,
+                  totalTolerance: 0.025,
+                  biTangencyRadius: 3.0,
+                  numberOfPasses: 1,
+                  stepover: 0.3,
+                  cuttingMethod: 'Zigzag',
+                  machiningDirection: 'climb',
+                  traceFloorFillet: true,
+                  traceVerticalCorners: true
+                }));
+                onNotify?.('Loaded recommended Surface Finish Pencil parameters (T5 Ball Nose, R3.0 Bi-tangency).', 'success');
+              }}
+              style={{
+                background: '#d97706',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '3px 8px',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⚡ Load Recommended Pencil Values
+            </button>
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', background: '#f0f0f0', padding: '5px 8px 0 8px', borderBottom: '1px solid #d1d5db' }}>
           {[
@@ -750,7 +841,9 @@ function SurfaceFinishContourModalInner({
                     ? 'Finish shallow parameters'
                     : isParallel
                       ? 'Finish parallel parameters'
-                      : 'Finish contour parameters'
+                      : isPencil
+                        ? 'Finish pencil parameters'
+                        : 'Finish contour parameters'
             }
           ].map((tab) => {
             const active = activeTab === tab.id;
@@ -1370,7 +1463,7 @@ function SurfaceFinishContourModalInner({
           )}
 
           {/* ==================== TAB 3A: FINISH CONTOUR PARAMETERS (IMAGE 5 VERBATIM) ==================== */}
-          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && (
+          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && !isPencil && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '246px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
                 {/* LEFT COLUMN */}
@@ -1807,6 +1900,202 @@ function SurfaceFinishContourModalInner({
                       })}
                       <text x="140" y="85" textAnchor="middle" fontSize="9" fill="#0f172a" fontWeight="600">Drive Surface Normal Contact</text>
                     </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== TAB 3E: FINISH PENCIL PARAMETERS (MASTERCAM VERBATIM) ==================== */}
+          {activeTab === 'finish_contour_params' && isPencil && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '270px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
+                {/* LEFT COLUMN: Bi-tangency, Passes, Tolerances, Direction */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  {/* Total tolerance */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <button type="button" onClick={() => setActiveSubDialog('total_tolerance')} style={{ ...MC_BUTTON, width: '100%', borderColor: '#3b82f6' }}>
+                      Total tolerance...
+                    </button>
+                    <input
+                      type="number"
+                      step="0.005"
+                      value={pencilParams.totalTolerance ?? 0.025}
+                      onChange={(e) => setPencilParams((p) => ({ ...p, totalTolerance: Number(e.target.value) }))}
+                      style={CLASSIC_YELLOW}
+                    />
+                  </div>
+
+                  {/* Bi-tangency Corner Radius Limit */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span style={{ fontWeight: 500 }}>Bi-tangency radius</span>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      max="50"
+                      value={pencilParams.biTangencyRadius ?? 3.0}
+                      onChange={(e) => setPencilParams((p) => ({ ...p, biTangencyRadius: Number(e.target.value) }))}
+                      style={CLASSIC_YELLOW}
+                    />
+                  </div>
+
+                  {/* Number of Passes (Single pass vs Multiple passes) */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', marginTop: '2px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Pass Distribution</legend>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="pencilPassMode"
+                          checked={Number(pencilParams.numberOfPasses) <= 1}
+                          onChange={() => setPencilParams((p) => ({ ...p, numberOfPasses: 1 }))}
+                        />
+                        <span>Single pass (fillet centerline)</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="pencilPassMode"
+                          checked={Number(pencilParams.numberOfPasses) > 1}
+                          onChange={() => setPencilParams((p) => ({ ...p, numberOfPasses: 3 }))}
+                        />
+                        <span>Multiple passes (offset cleanup)</span>
+                      </label>
+                    </div>
+
+                    {Number(pencilParams.numberOfPasses) > 1 && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '110px minmax(0, 1fr)', alignItems: 'center', gap: '6px', marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #cbd5e1' }}>
+                        <span>Passes count:</span>
+                        <input
+                          type="number"
+                          min="2"
+                          max="9"
+                          step="1"
+                          value={pencilParams.numberOfPasses ?? 3}
+                          onChange={(e) => setPencilParams((p) => ({ ...p, numberOfPasses: Math.max(2, parseInt(e.target.value) || 3) }))}
+                          style={CLASSIC_YELLOW}
+                        />
+                        <span>Stepover (mm):</span>
+                        <input
+                          type="number"
+                          min="0.05"
+                          max="5"
+                          step="0.05"
+                          value={pencilParams.stepover ?? 0.3}
+                          onChange={(e) => setPencilParams((p) => ({ ...p, stepover: Number(e.target.value) }))}
+                          style={CLASSIC_YELLOW}
+                        />
+                      </div>
+                    )}
+                  </fieldset>
+
+                  {/* Machining Direction */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', marginTop: '2px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Machining Direction</legend>
+                    <div style={{ display: 'flex', gap: '14px' }}>
+                      {['climb', 'conventional'].map((dir) => (
+                        <label key={dir} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', textTransform: 'capitalize' }}>
+                          <input
+                            type="radio"
+                            name="pencilDirection"
+                            checked={(pencilParams.machiningDirection || 'climb') === dir}
+                            onChange={() => setPencilParams((p) => ({ ...p, machiningDirection: dir }))}
+                          />
+                          {dir}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  {/* Cleanout Features */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', marginTop: '2px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Intersection Cleanout</legend>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={pencilParams.traceFloorFillet !== false}
+                          onChange={(e) => setPencilParams((p) => ({ ...p, traceFloorFillet: e.target.checked }))}
+                        />
+                        <span>Floor perimeter fillet seam</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={pencilParams.traceVerticalCorners !== false}
+                          onChange={(e) => setPencilParams((p) => ({ ...p, traceVerticalCorners: e.target.checked }))}
+                        />
+                        <span>Vertical internal corner seams</span>
+                      </label>
+                    </div>
+                  </fieldset>
+                </div>
+
+                {/* RIGHT COLUMN: Cutting Method & Mastercam Vector Graphic */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 }}>
+                  {/* Cutting Method */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Cutting Method</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                      {[
+                        { id: 'Zigzag', label: 'Zigzag', desc: 'Forward and back continuous passes' },
+                        { id: 'One-way', label: 'One-way', desc: 'Climb cut only with rapid reposition' }
+                      ].map((item) => {
+                        const isSel = (pencilParams.cuttingMethod || 'Zigzag').toLowerCase() === item.id.toLowerCase();
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => setPencilParams((p) => ({ ...p, cuttingMethod: item.id }))}
+                            style={{
+                              border: isSel ? '1.5px solid #d97706' : '1px solid #cbd5e1',
+                              background: isSel ? '#fef3c7' : '#ffffff',
+                              padding: '6px 8px',
+                              cursor: 'pointer',
+                              borderRadius: '2px'
+                            }}
+                          >
+                            <div style={{ fontWeight: 600, color: isSel ? '#b45309' : '#0f172a' }}>{item.label}</div>
+                            <div style={{ fontSize: '10px', color: '#64748b' }}>{item.desc}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  {/* Mastercam Bi-Tangency Fillet Vector Illustration */}
+                  <div style={{ border: '1px solid #cbd5e1', background: '#ffffff', padding: '10px', borderRadius: '2px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '8px', alignSelf: 'flex-start' }}>
+                      Bi-Tangency Fillet Contact Locus
+                    </div>
+                    <svg width="280" height="130" viewBox="0 0 280 130" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                      {/* Internal corner surface: vertical wall + fillet + floor */}
+                      <path d="M 40 15 L 40 75 Q 40 105 70 105 L 240 105" fill="none" stroke="#64748b" strokeWidth="4" />
+                      <path d="M 38 15 L 38 75 Q 38 107 70 107 L 240 107" fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="3,3" />
+                      
+                      {/* Ball nose cutter touching both surfaces (Bi-tangent position) */}
+                      <circle cx="70" cy="75" r="30" fill="rgba(249, 115, 22, 0.15)" stroke="#ea580c" strokeWidth="2" />
+                      <line x1="70" y1="45" x2="70" y2="10" stroke="#ea580c" strokeWidth="2" strokeDasharray="3,2" />
+                      <line x1="60" y1="10" x2="80" y2="10" stroke="#ea580c" strokeWidth="2" />
+                      
+                      {/* Tangency contact points */}
+                      <circle cx="40" cy="75" r="3" fill="#dc2626" />
+                      <circle cx="70" cy="105" r="3" fill="#dc2626" />
+                      
+                      {/* Bi-tangent trajectory center point & line */}
+                      <circle cx="70" cy="75" r="3" fill="#0284c7" />
+                      <line x1="70" y1="75" x2="160" y2="75" stroke="#0284c7" strokeWidth="1.5" strokeDasharray="4,3" />
+                      
+                      {/* Labels */}
+                      <text x="45" y="65" fontSize="9" fill="#dc2626" fontWeight="600">Tangent 1</text>
+                      <text x="75" y="118" fontSize="9" fill="#dc2626" fontWeight="600">Tangent 2</text>
+                      <text x="78" y="70" fontSize="9" fill="#0284c7" fontWeight="600">Pencil Center Path</text>
+                      <text x="140" y="25" fontSize="10" fill="#0f172a" fontWeight="600">Ball Nose (T5 - R3.0)</text>
+                      <text x="150" y="42" fontSize="9" fill="#64748b">Bi-tangent cleanup seam</text>
+                    </svg>
+                    <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '6px', textAlign: 'center', lineHeight: '1.4' }}>
+                      Traces along internal intersections where ball cutter is simultaneously tangent to both surfaces.
+                    </div>
                   </div>
                 </div>
               </div>
