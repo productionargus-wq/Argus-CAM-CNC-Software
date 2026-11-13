@@ -283,7 +283,7 @@ export default function StockSetupModal({
         {/* Modal Body */}
         <div className="modal-body" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px', padding: '14px 16px' }}>
           
-          {/* Quick Flowline Preset Banner */}
+          {/* Quick 3D Billet Preset Banner */}
           <div
             style={{
               display: 'flex',
@@ -297,7 +297,7 @@ export default function StockSetupModal({
             }}
           >
             <span style={{ color: '#1e40af', fontWeight: 600 }}>
-              Need tutorial stock for Flowline?
+              Need stock billet for 3D Surface (Shallow / Parallel)?
             </span>
             <button
               type="button"
@@ -305,8 +305,8 @@ export default function StockSetupModal({
                 setActiveUnit('metric');
                 setShape('box');
                 setDimX(100);
-                setDimY(60);
-                setDimZ(25);
+                setDimY(25);
+                setDimZ(60);
                 setAllowanceTop(0);
                 setAllowanceSides(0);
                 setMaterial('Alu 6061-T6');
@@ -323,7 +323,7 @@ export default function StockSetupModal({
                 cursor: 'pointer'
               }}
             >
-              ⚡ Quick Flowline Billet (100×60×25 Alu)
+              ⚡ Quick 3D Billet (100×60×25 Alu)
             </button>
           </div>
 

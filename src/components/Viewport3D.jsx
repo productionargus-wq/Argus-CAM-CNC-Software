@@ -98,6 +98,7 @@ export default function Viewport3D({
   onCloseBackplot = null,
   onCoordinateUpdate,
   onMetricsCalculated,
+  partMetrics: externalPartMetrics = null,
   onModelImported,
   workpieceColor = '#60a5fa',
   renderMode = 'shaded',
@@ -243,7 +244,8 @@ export default function Viewport3D({
   }, [activeOpId, isBackplotActive]);
 
   const [isDragOver, setIsDragOver] = useState(false);
-  const [partMetrics, setPartMetrics] = useState(null);
+  const [internalPartMetrics, setInternalPartMetrics] = useState(null);
+  const partMetrics = externalPartMetrics || internalPartMetrics;
 
   // CAD Interactive In-Viewport Sketcher State & Refs
   const [activeSketchTool, setActiveSketchTool] = useState(sketchTool || 'line');
@@ -1780,13 +1782,43 @@ export default function Viewport3D({
     }
 
     if (!currentModel) {
+      // Check if customGeometry has surfaces or CAD entities to measure dynamically
+      const surfs = (customGeometry || []).filter((ent) => {
+        if (!ent || ent.visible === false) return false;
+        const ct = String(ent.userData?.cadType || ent.userData?.type || '').toLowerCase();
+        return ent.name?.startsWith('Surface_') || ent.name?.startsWith('CAD_Surface') || ct === 'surface_extrusion' || ct === 'solid';
+      });
+      const measureTargets = surfs.length > 0 ? surfs : (customGeometry || []).filter((e) => e && e.visible !== false);
+      if (measureTargets.length > 0) {
+        const box = new THREE.Box3();
+        measureTargets.forEach((s) => {
+          const clone = s.clone(true);
+          clone.updateMatrixWorld(true);
+          box.expandByObject(clone);
+        });
+        if (!box.isEmpty()) {
+          const dims = box.getSize(new THREE.Vector3());
+          const center = box.getCenter(new THREE.Vector3());
+          const metrics = {
+            box,
+            bounds: box,
+            center: { x: center.x, y: center.y, z: center.z },
+            dimensions: { x: dims.x, y: dims.y, z: dims.z },
+            triangles: 0
+          };
+          setInternalPartMetrics(metrics);
+          if (onMetricsCalculated) onMetricsCalculated(metrics);
+          return;
+        }
+      }
+
       const defaultMetrics = {
         center: { x: 0, y: 0, z: 0 },
         dimensions: { x: 100, y: 25, z: 80 },
         box: { min: { x: -50, y: 0, z: -40 }, max: { x: 50, y: 0, z: 40 } },
         triangles: 0
       };
-      setPartMetrics(defaultMetrics);
+      setInternalPartMetrics(defaultMetrics);
       if (onMetricsCalculated) onMetricsCalculated(defaultMetrics);
       return;
     }
@@ -1795,11 +1827,11 @@ export default function Viewport3D({
     holder.add(clone);
 
     const metrics = calculatePartMetrics(clone);
-    setPartMetrics(metrics);
+    setInternalPartMetrics(metrics);
     if (onMetricsCalculated) {
       onMetricsCalculated(metrics);
     }
-  }, [currentModel]);
+  }, [currentModel, customGeometry]);
 
   // 4. Update Part Transforms (Position, Rotation, Scale)
   useEffect(() => {
@@ -1816,7 +1848,7 @@ export default function Viewport3D({
 
       if (holder.children.length > 0) {
         const metrics = calculatePartMetrics(holder);
-        setPartMetrics(metrics);
+        setInternalPartMetrics(metrics);
         if (onMetricsCalculated) onMetricsCalculated(metrics);
       }
     }
@@ -2082,8 +2114,17 @@ export default function Viewport3D({
       ? partMetrics.box.getCenter(new THREE.Vector3())
       : new THREE.Vector3(partMetrics?.center?.x || 0, 0, partMetrics?.center?.z || 0);
 
+    const rawDims = stockConfig?.rawDimensions || stockConfig?.dimensions;
+    const userW = Number(rawDims?.x);
+    const userH = Number(rawDims?.y);
+    const userD = Number(rawDims?.z);
+
+    const partBottomY = (partMetrics?.box?.min?.y != null && Number.isFinite(partMetrics.box.min.y))
+      ? partMetrics.box.min.y
+      : 0;
+
     let stockGeo;
-    let posY = 49;
+    let posY = 49 + partBottomY;
 
     if (shape === 'cylinder' || shape === 'tube') {
       const dia = stockConfig.diameter || (Math.max(dim.y, dim.z) + allowSides * 2);
@@ -2101,11 +2142,11 @@ export default function Viewport3D({
         posY = 49 + len / 2;
       }
     } else {
-      const stockW = dim.x + allowSides * 2;
-      const stockH = dim.y + allowTop;
-      const stockD = dim.z + allowSides * 2;
+      const stockW = (Number.isFinite(userW) && userW > 0) ? userW : (dim.x + allowSides * 2);
+      const stockH = (Number.isFinite(userH) && userH > 0) ? userH : (dim.y + allowTop);
+      const stockD = (Number.isFinite(userD) && userD > 0) ? userD : (dim.z + allowSides * 2);
       stockGeo = new THREE.BoxGeometry(stockW, stockH, stockD);
-      posY = 49 + stockH / 2;
+      posY = 49 + partBottomY + stockH / 2;
     }
 
     const stockMat = new THREE.MeshStandardMaterial({

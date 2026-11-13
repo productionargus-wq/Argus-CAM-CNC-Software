@@ -5805,6 +5805,7 @@ export default function App() {
             <div style={{ flex: 1, height: '100%' }}>
               <Viewport3D
                 currentModel={currentModel}
+                partMetrics={partMetrics}
                 stockConfig={stockConfig}
                 fixtureConfig={fixtureConfig}
                 operations={operations}
@@ -5920,6 +5921,7 @@ export default function App() {
             />
             <Viewport3D
               currentModel={currentModel}
+              partMetrics={partMetrics}
               stockConfig={stockConfig}
               fixtureConfig={fixtureConfig}
               unitSystem={unitSystem}

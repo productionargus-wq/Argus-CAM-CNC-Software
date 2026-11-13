@@ -859,9 +859,22 @@ export default function WireframeSketcherModal({
                             setArcP2({ x: 50, y: 0, z: -15 });
                             setArcRadius2Pt(80);
                             setCirclePlane('G18');
+                            setIsArcMode(true);
+                            setArcSubMode('endpoints');
+                            const arc = createWireframeArcEndpoints(
+                              [-50, 0, -15],
+                              [50, 0, -15],
+                              80,
+                              'G18_front',
+                              true,
+                              { color: 0x38bdf8 }
+                            );
+                            if (onAddEntity) onAddEntity(arc);
+                            notify('⚡ 3D Tutorial Arch (100mm span, R80) created and inserted into Level 10!');
                           }}
+                          title="Click to insert the 3D tutorial arch (X-50 to X50, R80, Front Plane G18) into Level 10"
                         >
-                          ⚡ Load Flowline Tutorial Arch Preset
+                          ⚡ Insert 3D Tutorial Arch (100mm R80) into Level 10
                         </button>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
