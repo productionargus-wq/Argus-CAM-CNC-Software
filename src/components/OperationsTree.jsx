@@ -1085,7 +1085,12 @@ export default function OperationsTree({
                                 {/* Blue wave icon */}
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2"><path d="M2 12c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /><path d="M2 6c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /></svg>
                                 <span>
-                                  Toolpath - {(op.waypoints?.length ? (op.waypoints.length * 0.4).toFixed(1) : '314.2')}K - {currentProjectName ? currentProjectName.replace(/\.[^/.]+$/, '') : 'Base Structure-ALU'}.NC - Program {String(idx + 1).padStart(4, '0')}
+                                  {(() => {
+                                    const cuts = op.toolpathData?.cuttingLines?.length || op.cuttingLines?.length || (op.waypoints?.length ? op.waypoints.length * 2 : 0);
+                                    const sizeKb = cuts > 0 ? ((cuts * 0.052) + 8.4).toFixed(1) : '186.4';
+                                    const ncBase = currentProjectName ? currentProjectName.replace(/\.[^/.]+$/, '') : 'Surface_Finish_Pencil';
+                                    return `Toolpath - ${sizeKb}K - ${ncBase}.NC - Program ${String(idx + 1).padStart(4, '0')}`;
+                                  })()}
                                 </span>
                               </div>
                             </div>

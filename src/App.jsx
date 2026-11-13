@@ -227,7 +227,7 @@ export default function App() {
   });
   const [activeRibbonTab, setActiveRibbonTab] = useState('Toolpaths');
   const [currentModel, setCurrentModel] = useState(() => createMastercamBaseStructureALU());
-  const [currentProjectName, setCurrentProjectName] = useState('Base Structure-ALU.mcam');
+  const [currentProjectName, setCurrentProjectName] = useState('Surface_Finish_Pencil.mcam');
   const [unitSystem, setUnitSystem] = useState('metric');
   const [isFileBackstageOpen, setIsFileBackstageOpen] = useState(false);
   const [projectDescriptor, setProjectDescriptor] = useState('Mastercam 5-Axis Multi-Surface Machining Project for DMU 50 VMC');
@@ -3402,7 +3402,7 @@ export default function App() {
     setShowArcCenters(false);
     setShowEndpoints(false);
 
-    const projName = projectName || 'Mastercam_Part1.mcam';
+    const projName = projectName || 'Surface_Finish_Pencil.mcam';
     setCurrentProjectName(projName);
 
     const t = String(template || 'blank').toLowerCase().trim();
@@ -3521,6 +3521,14 @@ export default function App() {
       });
       showToast("Created New Project Canvas", "success");
     }
+  };
+
+  // Rename Project
+  const handleRenameProject = (newName) => {
+    if (!newName) return;
+    const finalName = newName.endsWith('.mcam') ? newName : `${newName}.mcam`;
+    setCurrentProjectName(finalName);
+    showToast(`Project renamed to ${finalName}`, 'success');
   };
 
   // Save Project as .mcam JSON file
@@ -5493,6 +5501,7 @@ export default function App() {
         )}
         canRedo={historyIndex < history.length - 1}
         onNotify={showToast}
+        onRenameProject={handleRenameProject}
       />
 
       {/* 2. Ribbon Bar with Dynamic Context-Aware Toolbars */}
