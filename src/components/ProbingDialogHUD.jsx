@@ -18,12 +18,18 @@ export default function ProbingDialogHUD({
   onClose,
   activeProbe = null,
   activeCycleId = 'bore_boss',
+  activeCycle = 'bore_boss',
   onSelectCycle,
+  onChangeCycle,
   onApplyProbingOperation,
+  onApplyOperation,
   targetFeature = null,
-  onClearTargetFeature
+  pickedFeature = null,
+  onClearTargetFeature,
+  onClearFeature
 }) {
-  const [selectedCycle, setSelectedCycle] = useState(activeCycleId);
+  const currentCycleId = activeCycleId || activeCycle || 'bore_boss';
+  const [selectedCycle, setSelectedCycle] = useState(currentCycleId);
   const [isRenishawPPlusActive, setIsRenishawPPlusActive] = useState(true);
   const [isLiveLinkActive, setIsLiveLinkActive] = useState(true);
 
@@ -32,13 +38,19 @@ export default function ProbingDialogHUD({
   const handleCycleClick = (id) => {
     setSelectedCycle(id);
     onSelectCycle?.(id);
+    onChangeCycle?.(id);
   };
 
   const handleApply = () => {
-    onApplyProbingOperation?.({
+    const applyFn = onApplyProbingOperation || onApplyOperation;
+    const resolvedFeature = targetFeature || pickedFeature;
+    const cyc = selectedCycle || currentCycleId;
+    applyFn?.({
       probe: activeProbe || { name: 'SampleProbe', diameter: 6, toolChangeId: 11 },
-      cycleId: selectedCycle,
-      targetFeature
+      cycle: cyc,
+      cycleId: cyc,
+      feature: resolvedFeature,
+      targetFeature: resolvedFeature
     });
   };
 

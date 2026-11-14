@@ -2377,16 +2377,38 @@ export default function App() {
 
     const cycleLabels = {
       point: 'Single Point Surface Touch',
+      single_point: 'Single Point Surface Touch',
       web_slot: 'Web / Slot Measurement',
       bore_boss: 'Bore / Boss Inspection',
       angled_surface: 'Angled Surface Alignment',
+      angled_plane: 'Angled Surface Alignment',
       corner: 'Corner 3-Point Intersection',
+      corner_wcs: 'Corner 3-Point Intersection',
       block_3d: '3D Block Origin Datuming'
     };
-    const cycleLabel = cycleLabels[probeData.cycle] || 'Touch Probe Routine';
-    const featDesc = probeData.feature
-      ? `[X:${Number(probeData.feature.x || 0).toFixed(1)} Y:${Number(probeData.feature.y || 0).toFixed(1)}]`
+    const cKey = probeData.cycleId || probeData.cycle || 'bore_boss';
+    const cycleLabel = cycleLabels[cKey] || 'Touch Probe Routine';
+    const resolvedFeature = probeData.targetFeature || probeData.feature;
+    const featDesc = resolvedFeature
+      ? `[X:${Number(resolvedFeature.x || 0).toFixed(1)} Y:${Number(resolvedFeature.y || 0).toFixed(1)}]`
       : '[Origin]';
+
+    const mapCycleToStrategy = {
+      bore_boss: 'bore_centering',
+      single_point: 'surface_z',
+      point: 'surface_z',
+      web_slot: 'web_x',
+      angled_plane: 'surface_z',
+      corner_wcs: 'corner_3point',
+      corner: 'corner_3point',
+      block_3d: 'corner_3point'
+    };
+    const mappedStrat = mapCycleToStrategy[cKey] || 'bore_centering';
+
+    const fx = resolvedFeature?.x || 0;
+    const fy = resolvedFeature?.y || 0;
+    const fz = resolvedFeature?.z || 0;
+    const approachZ = fz + 25.0;
 
     const newOp = {
       id: nextId,
@@ -2399,16 +2421,29 @@ export default function App() {
       badgeClass: 'probe',
       badgeText: 'PR',
       visible: true,
-      strategyKey: 'probing',
-      probeCycle: probeData.cycle,
-      probeGeometry: probeData.feature ? `Point ${featDesc}` : 'Datum Point',
-      cuttingLines: [],
+      strategyKey: mappedStrat,
+      probeCycle: cKey,
+      probeGeometry: resolvedFeature ? `Point ${featDesc}` : 'Datum Point',
+      probingParams: {
+        nominalDiameter: 40,
+        nominalWidth: 30,
+        clearanceZ: 15,
+        depthZ: fz > -5 ? fz - 5 : -5,
+        wcs: 'G54',
+        touchPoint: resolvedFeature
+      },
       waypoints: [
-        new THREE.Vector3(probeData.feature?.x || 0, (probeData.feature?.y || 0) + 15, (probeData.feature?.z || 0) + 20),
-        new THREE.Vector3(probeData.feature?.x || 0, probeData.feature?.y || 0, probeData.feature?.z || 0),
-        new THREE.Vector3(probeData.feature?.x || 0, (probeData.feature?.y || 0) + 15, (probeData.feature?.z || 0) + 20)
+        new THREE.Vector3(fx, fy + 20, approachZ),
+        new THREE.Vector3(fx, fy, approachZ),
+        new THREE.Vector3(fx, fy, fz),
+        new THREE.Vector3(fx, fy, approachZ)
       ],
-      rapidHeight: 25.0
+      cuttingLines: [
+        { start: new THREE.Vector3(fx, fy + 20, approachZ), end: new THREE.Vector3(fx, fy, approachZ), isRapid: true },
+        { start: new THREE.Vector3(fx, fy, approachZ), end: new THREE.Vector3(fx, fy, fz), isRapid: false },
+        { start: new THREE.Vector3(fx, fy, fz), end: new THREE.Vector3(fx, fy, approachZ), isRapid: true }
+      ],
+      rapidHeight: approachZ
     };
 
     setOperations((prev) => [...prev, newOp]);
@@ -6334,10 +6369,15 @@ export default function App() {
         isOpen={isProbingHUDOpen}
         onClose={() => setIsProbingHUDOpen(false)}
         activeProbe={activeProbe}
+        activeCycleId={activeProbingCycle}
         activeCycle={activeProbingCycle}
+        onSelectCycle={setActiveProbingCycle}
         onChangeCycle={setActiveProbingCycle}
+        targetFeature={probingPickedFeature}
         pickedFeature={probingPickedFeature}
+        onApplyProbingOperation={handleApplyMastercamProbe}
         onApplyOperation={handleApplyMastercamProbe}
+        onClearTargetFeature={() => setProbingPickedFeature(null)}
         onClearFeature={() => setProbingPickedFeature(null)}
       />
 
