@@ -1144,8 +1144,8 @@ export default function FileBackstageView({
                 <button
                   onClick={() => {
                     if (onOpenMastercamDialog) {
-                      onClose();
                       onOpenMastercamDialog();
+                      onClose();
                     } else {
                       openCadInputRef.current?.click();
                     }

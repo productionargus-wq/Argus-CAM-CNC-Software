@@ -197,20 +197,36 @@ export const ALL_SUPPORTED_EXTENSIONS_STRING = CAD_FILE_FORMATS
 
 /**
  * Generates options for native window.showOpenFilePicker()
- * Matches the vertical list of all 25 formats from Mastercam Image 2
+ * Matches the vertical list of all 25 formats from Mastercam Image 2.
+ * Sanitizes extensions to strictly alphanumeric + code points ([a-zA-Z0-9.+]+)
+ * to comply with the W3C File System Access API specification and prevent
+ * Chromium from falling back to a single merged "Customised Files" filter.
  */
 export function getNativePickerFileTypes() {
   return CAD_FILE_FORMATS
     .filter((fmt) => fmt.id !== 'all_files')
     .map((fmt) => {
       const mime = fmt.mime || 'application/octet-stream';
-      const extList = (fmt.extensions || [])
+      const cleanExts = (fmt.extensions || [])
         .filter((ext) => ext !== '*')
-        .map((ext) => (ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`));
+        .map((ext) => {
+          const raw = ext.startsWith('.') ? ext.slice(1) : ext;
+          // Chromium strictly validates against ^\.[a-zA-Z0-9+]+$
+          const sanitized = raw.replace(/[^a-zA-Z0-9+]/g, '').toLowerCase();
+          return sanitized ? `.${sanitized}` : null;
+        })
+        .filter(Boolean)
+        .filter((v, i, a) => a.indexOf(v) === i);
+
+      // Fallback if an entry had only non-alphanumeric chars
+      if (cleanExts.length === 0) {
+        cleanExts.push(`.${fmt.id.replace(/[^a-zA-Z0-9]/g, '') || 'bin'}`);
+      }
+
       return {
         description: fmt.label,
         accept: {
-          [mime]: extList
+          [mime]: cleanExts
         }
       };
     });
