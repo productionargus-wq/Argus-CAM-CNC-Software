@@ -12,6 +12,7 @@ import RectanglePanel from './RectanglePanel';
 import LineEndpointsPanel from './LineEndpointsPanel';
 import ArcTangentPanel from './ArcTangentPanel';
 import SurfaceExtrudePanel from './SurfaceExtrudePanel';
+import SolidExtrudePanel from './SolidExtrudePanel';
 import { formatMastercamToolType } from '../config/surfaceFinishSchema';
 
 export default function OperationsTree({
@@ -137,11 +138,17 @@ export default function OperationsTree({
   onReselectExtrudeBasePoint,
   onApplyExtrude,
   onOkExtrude,
-  onCancelExtrude
+  onCancelExtrude,
+  isSolidExtrudeActive = false,
+  solidExtrudeChains = [],
+  onReverseSolidExtrudeChain,
+  onCloseSolidExtrude,
+  onApplySolidExtrude,
+  onOpenChaining
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
   const currentTab = activeManagerTab || localTab;
-  const isWireframeTool = ['Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent', 'Surface Ex...'].includes(currentTab);
+  const isWireframeTool = ['Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent', 'Surface Ex...', 'Solid Extru...'].includes(currentTab);
 
   const handleTabClick = (tab) => {
     const mapped = tab === 'Recent Fu...' ? 'Recent Functions' : tab;
@@ -314,9 +321,12 @@ export default function OperationsTree({
     if (activeSurfaceTool === 'extrude' || currentTab === 'Surface Ex...') {
       list.push('Surface Ex...');
     }
+    if (isSolidExtrudeActive || currentTab === 'Solid Extru...') {
+      list.push('Solid Extru...');
+    }
     list.push('Recent Fu...');
     return list;
-  }, [activeDrawingTool, activeSurfaceTool, currentTab]);
+  }, [activeDrawingTool, activeSurfaceTool, isSolidExtrudeActive, currentTab]);
 
   const displayPlanes = planes && planes.length > 0 ? planes : [
     { id: 'plane_top', name: 'Top (G17)', code: 'G17', desc: 'Spindle along Z, XY Table', isStandard: true, wcsCode: 'G54' },
@@ -416,6 +426,7 @@ export default function OperationsTree({
           {currentTab === 'Solids' && 'Solids'}
           {currentTab === 'Planes' && 'Planes'}
           {currentTab === 'Levels' && 'Levels'}
+          {currentTab === 'Solid Extru...' && 'Solid Extrude'}
           {currentTab === 'Recent Functions' && 'Recent Functions'}
         </span>
 
@@ -586,6 +597,23 @@ export default function OperationsTree({
             onApply={onApplyExtrude}
             onOk={onOkExtrude}
             onCancel={onCancelExtrude}
+          />
+        </div>
+      ) : currentTab === 'Solid Extru...' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <SolidExtrudePanel
+            isOpen={true}
+            onClose={() => {
+              if (onCloseSolidExtrude) onCloseSolidExtrude();
+              handleTabClick('Solids');
+            }}
+            chains={solidExtrudeChains}
+            onReverseChain={onReverseSolidExtrudeChain}
+            onOpenChaining={onOpenChaining}
+            onApplyExtrude={onApplySolidExtrude}
+            solidsList={solids}
+            activeTargetSolidId={activeSolidId}
+            onSelectTargetSolid={onSelectSolid}
           />
         </div>
       ) : (

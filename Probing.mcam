@@ -1,0 +1,448 @@
+{
+  "schemaVersion": "Argus-Mastercam-2026-v1.0",
+  "savedAt": "2026-11-14T05:21:16.343Z",
+  "filename": "Surface_Finish_Pencil.mcam",
+  "projectName": "Surface_Finish_Pencil.mcam",
+  "stockConfig": {
+    "shape": "box",
+    "allowanceTop": 2,
+    "allowanceSides": 4,
+    "material": "Alu 6061-T6",
+    "originPoint": "top-center",
+    "massKg": "0.95",
+    "rawDimensions": {
+      "x": 88,
+      "y": 37,
+      "z": 78
+    }
+  },
+  "tools": [
+    {
+      "id": 1,
+      "number": 1,
+      "name": "50mm Face Mill (Shell Mill)",
+      "type": "face",
+      "diameter": 50,
+      "cornerRad": 0,
+      "fluteLength": 25,
+      "overallLength": 75,
+      "flutes": 5,
+      "cuttingSpeedVc": 399,
+      "rpm": 3500,
+      "feedPerTooth": 0.09,
+      "feedRate": 1200,
+      "plungeRate": 350,
+      "coolant": "Flood"
+    },
+    {
+      "id": 2,
+      "number": 2,
+      "name": "12mm Flat Endmill (Carbide Rougher)",
+      "type": "flat",
+      "diameter": 12,
+      "cornerRad": 0,
+      "fluteLength": 28,
+      "overallLength": 75,
+      "flutes": 3,
+      "cuttingSpeedVc": 220,
+      "rpm": 5500,
+      "feedPerTooth": 0.08,
+      "feedRate": 1800,
+      "plungeRate": 450,
+      "coolant": "Flood"
+    },
+    {
+      "id": 3,
+      "number": 3,
+      "name": "10mm 4-Flute Flat Endmill (Finisher)",
+      "type": "flat",
+      "diameter": 10,
+      "cornerRad": 0,
+      "fluteLength": 25,
+      "overallLength": 75,
+      "flutes": 4,
+      "cuttingSpeedVc": 200,
+      "rpm": 6000,
+      "feedPerTooth": 0.06,
+      "feedRate": 1528,
+      "plungeRate": 450,
+      "coolant": "Flood"
+    },
+    {
+      "id": 4,
+      "number": 4,
+      "name": "8mm 3-Flute Roughing Endmill",
+      "type": "flat",
+      "diameter": 8,
+      "cornerRad": 0,
+      "fluteLength": 22,
+      "overallLength": 70,
+      "flutes": 3,
+      "cuttingSpeedVc": 180,
+      "rpm": 7162,
+      "feedPerTooth": 0.05,
+      "feedRate": 1074,
+      "plungeRate": 350,
+      "coolant": "Flood"
+    },
+    {
+      "id": 5,
+      "number": 5,
+      "name": "6mm 2-Flute Ball Nose",
+      "type": "ball",
+      "diameter": 6,
+      "cornerRad": 3,
+      "fluteLength": 18,
+      "overallLength": 60,
+      "flutes": 2,
+      "cuttingSpeedVc": 160,
+      "rpm": 8488,
+      "feedPerTooth": 0.04,
+      "feedRate": 679,
+      "plungeRate": 250,
+      "coolant": "Mist"
+    },
+    {
+      "id": 6,
+      "number": 6,
+      "name": "12mm 90° Spot / Chamfer Drill",
+      "type": "chamfer",
+      "diameter": 12,
+      "cornerRad": 0,
+      "fluteLength": 15,
+      "overallLength": 70,
+      "flutes": 2,
+      "cuttingSpeedVc": 140,
+      "rpm": 3500,
+      "feedPerTooth": 0.12,
+      "feedRate": 889,
+      "plungeRate": 250,
+      "coolant": "Flood"
+    },
+    {
+      "id": 7,
+      "number": 7,
+      "name": "5mm Carbide Twist Drill",
+      "type": "drill",
+      "diameter": 5,
+      "cornerRad": 0,
+      "fluteLength": 35,
+      "overallLength": 80,
+      "flutes": 2,
+      "cuttingSpeedVc": 80,
+      "rpm": 5093,
+      "feedPerTooth": 0.07,
+      "feedRate": 713,
+      "plungeRate": 713,
+      "coolant": "Through"
+    },
+    {
+      "id": 8,
+      "number": 8,
+      "name": "12 Bull-Nosed Endmill",
+      "type": "bull",
+      "diameter": 12,
+      "cornerRad": 0.6,
+      "cornerRadius": 0.6,
+      "fluteLength": 25,
+      "overallLength": 75,
+      "flutes": 4,
+      "cuttingSpeedVc": 403,
+      "rpm": 10695,
+      "feedPerTooth": 0.07,
+      "feedRate": 3000,
+      "plungeRate": 450,
+      "retractRate": 3000,
+      "coolant": "Flood"
+    },
+    {
+      "id": 99,
+      "number": 99,
+      "name": "Renishaw OMP60 Optical Touch Probe",
+      "type": "probe",
+      "diameter": 6,
+      "cornerRad": 3,
+      "fluteLength": 50,
+      "overallLength": 120,
+      "flutes": 0,
+      "cuttingSpeedVc": 0,
+      "rpm": 0,
+      "feedPerTooth": 0,
+      "feedRate": 150,
+      "plungeRate": 150,
+      "coolant": "Off",
+      "isProbe": true
+    }
+  ],
+  "operations": [
+    {
+      "id": 1,
+      "name": "Face Milling (Top Z: 0.00)",
+      "toolId": 1,
+      "toolName": "T1 - 10mm Face Mill",
+      "badgeClass": "face",
+      "badgeText": "FM",
+      "visible": true,
+      "stepoverPct": 65,
+      "stepdown": 1,
+      "totalDepth": 2,
+      "stockToLeaveXY": 0,
+      "stockToLeaveZ": 0,
+      "rapidHeight": 15
+    },
+    {
+      "id": 2,
+      "name": "2D Dynamic Adaptive Pocket",
+      "toolId": 2,
+      "toolName": "T2 - 8mm Endmill",
+      "badgeClass": "pocket",
+      "badgeText": "PK",
+      "visible": true,
+      "stepoverPct": 50,
+      "stepdown": 5,
+      "totalDepth": 15,
+      "stockToLeaveXY": 0.2,
+      "stockToLeaveZ": 0,
+      "rapidHeight": 15
+    },
+    {
+      "id": 3,
+      "name": "3D Waterline Surface Finishing",
+      "toolId": 3,
+      "toolName": "T3 - 6mm Ballnose",
+      "badgeClass": "contour",
+      "badgeText": "WL",
+      "visible": true,
+      "stepoverPct": 15,
+      "stepdown": 2.5,
+      "totalDepth": 30,
+      "stockToLeaveXY": 0,
+      "stockToLeaveZ": 0,
+      "rapidHeight": 15
+    },
+    {
+      "id": 4,
+      "name": "5-Axis Simultaneous Swarf Contour",
+      "toolId": 4,
+      "toolName": "T4 - 6mm Bullnose R1",
+      "badgeClass": "swarf",
+      "badgeText": "5X",
+      "visible": true,
+      "stepoverPct": 40,
+      "stepdown": 4,
+      "totalDepth": 20,
+      "stockToLeaveXY": 0,
+      "stockToLeaveZ": 0,
+      "rapidHeight": 20
+    },
+    {
+      "id": 5,
+      "name": "Drilling Cycle (G83 Deep Hole)",
+      "toolId": 5,
+      "toolName": "T5 - 5mm Drill",
+      "badgeClass": "drill",
+      "badgeText": "DR",
+      "visible": false,
+      "stepoverPct": 0,
+      "stepdown": 5,
+      "totalDepth": 25,
+      "stockToLeaveXY": 0,
+      "stockToLeaveZ": 0,
+      "rapidHeight": 10
+    },
+    {
+      "id": 6,
+      "name": "Bore / Boss Inspection [Origin]",
+      "toolId": 99,
+      "toolNumber": 99,
+      "toolName": "Renishaw OMP60 Optical Touch Probe",
+      "toolDiameter": 6,
+      "toolType": "probe",
+      "badgeClass": "probe",
+      "badgeText": "PR",
+      "visible": true,
+      "strategyKey": "bore_centering",
+      "probeCycle": "bore_boss",
+      "probeGeometry": "Datum Point",
+      "probingParams": {
+        "nominalDiameter": 40,
+        "nominalWidth": 30,
+        "clearanceZ": 15,
+        "depthZ": -5,
+        "wcs": "G54",
+        "touchPoint": null
+      },
+      "waypoints": [
+        {
+          "x": 0,
+          "y": 20,
+          "z": 25
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 25
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 25
+        }
+      ],
+      "cuttingLines": [
+        {
+          "start": {
+            "x": 0,
+            "y": 20,
+            "z": 25
+          },
+          "end": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "isRapid": true
+        },
+        {
+          "start": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "end": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "isRapid": false
+        },
+        {
+          "start": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "end": {
+            "x": 0,
+            "y": 0,
+            "z": 25
+          },
+          "isRapid": true
+        }
+      ],
+      "rapidHeight": 25
+    }
+  ],
+  "customGeometry": [],
+  "partMetrics": {
+    "dimensions": {
+      "x": 172.75,
+      "y": 117.5,
+      "z": 71.5
+    },
+    "box": {
+      "isBox3": true,
+      "min": {
+        "x": -80,
+        "y": 33.5,
+        "z": -35.5
+      },
+      "max": {
+        "x": 92.75,
+        "y": 151,
+        "z": 36
+      }
+    },
+    "bounds": {
+      "isBox3": true,
+      "min": {
+        "x": -80,
+        "y": 33.5,
+        "z": -35.5
+      },
+      "max": {
+        "x": 92.75,
+        "y": 151,
+        "z": 36
+      }
+    },
+    "center": {
+      "x": 6.38,
+      "y": 92.25,
+      "z": 0.25
+    },
+    "triangles": 790,
+    "surfaceAreaMm2": 69787,
+    "volumeCm3": 1044.9,
+    "massAluKg": "2.82",
+    "massSteelKg": "8.20"
+  },
+  "solidsList": [
+    {
+      "id": 1,
+      "name": "Solid 1 - Finished Workpiece",
+      "material": "6061-T6 Aluminum",
+      "volumeCm3": 184.2,
+      "isPrimary": true,
+      "visible": true,
+      "active": true,
+      "color": "#38bdf8"
+    },
+    {
+      "id": 2,
+      "name": "Solid 2 - Raw Stock Billet",
+      "material": "Alu Billet (Allowance)",
+      "volumeCm3": 245,
+      "isPrimary": false,
+      "visible": true,
+      "active": false,
+      "color": "#f59e0b"
+    },
+    {
+      "id": 3,
+      "name": "Solid 3 - ZeroClamp Fixture Vise",
+      "material": "Hardened Tool Steel",
+      "volumeCm3": 520,
+      "isPrimary": false,
+      "visible": true,
+      "active": false,
+      "color": "#94a3b8"
+    }
+  ],
+  "activeMachine": {
+    "id": "mill_3x_default",
+    "category": "mill",
+    "cardName": "Default Mill (3X VMC)",
+    "name": "MILL 3 - AXIS VMC MM",
+    "fileName": "MILL 3 - AXIS VMC MM.mcam-mmd",
+    "type": "3-Axis Vertical VMC",
+    "shortType": "3-Axis VMC",
+    "axesCount": 3,
+    "controller": "Fanuc 31i (Mill 3X)",
+    "controllerDialect": "Fanuc 30i / 31i / 0i-MF",
+    "kinematicsPresetId": "haas_vf2",
+    "xTravel": 762,
+    "yTravel": 406,
+    "zTravel": 508,
+    "bMin": 0,
+    "bMax": 0,
+    "cRotaryContinuous": false,
+    "maxRpm": 12000,
+    "maxFeed": 24000,
+    "spindleTaper": "CAT 40",
+    "atcCapacity": 24,
+    "coolantTSC": false,
+    "tcpEnabled": false,
+    "arcFormat": "ijk",
+    "safeZ": 50,
+    "powerKw": 14.9,
+    "torqueNm": 75
+  },
+  "activeWcs": "G54",
+  "customGeometryNotes": []
+}

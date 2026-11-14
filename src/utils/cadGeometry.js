@@ -618,6 +618,180 @@ export function createMastercamBaseStructureALU() {
 }
 
 /**
+ * Creates the Mastercam Multi-Body Extrude Assembly exactly matching uploaded Image 3
+ * Features:
+ * 1. Base orange rectangular slab (160 x 60 x 20 mm) with top wireframe rectangle
+ * 2. Orange cylindrical boss (D=50, H=22 mm) on the left
+ * 3. Charcoal saddle block (56 x 50 x 46 mm) with cylindrical cut through top
+ * 4. Construction wireframe curves and WCS coordinate trihedrons
+ */
+export function createMastercamMultiBodyAssembly() {
+  const group = new THREE.Group();
+  group.name = "Mastercam Multi-Body Assembly.mcam";
+
+  // Orange Material for Base & Cylindrical Boss (Image 3)
+  const orangeMat = new THREE.MeshStandardMaterial({
+    color: 0xea580c,
+    roughness: 0.35,
+    metalness: 0.25,
+    side: THREE.DoubleSide
+  });
+
+  // Dark Charcoal / Slate Material for Saddle Block (Image 3)
+  const charcoalMat = new THREE.MeshStandardMaterial({
+    color: 0x334155,
+    roughness: 0.3,
+    metalness: 0.45,
+    side: THREE.DoubleSide
+  });
+
+  const blueLineMat = new THREE.LineBasicMaterial({ color: 0x1d4ed8, linewidth: 2 });
+  const darkEdgeMat = new THREE.LineBasicMaterial({ color: 0x1e293b, linewidth: 1.2 });
+
+  // 1. Base Orange Rectangular Slab (160 x 60 x 20 mm)
+  const slabWidth = 160;
+  const slabHeight = 20;
+  const slabDepth = 60;
+  const slabGeom = new THREE.BoxGeometry(slabWidth, slabHeight, slabDepth);
+  const slabMesh = new THREE.Mesh(slabGeom, orangeMat);
+  slabMesh.position.set(0, slabHeight / 2, 0);
+  slabMesh.castShadow = true;
+  slabMesh.receiveShadow = true;
+  group.add(slabMesh);
+
+  // Slab Edges Wireframe
+  const slabEdges = new THREE.EdgesGeometry(slabGeom);
+  const slabWireframe = new THREE.LineSegments(slabEdges, darkEdgeMat);
+  slabWireframe.position.copy(slabMesh.position);
+  group.add(slabWireframe);
+
+  // 2D Wireframe Pocket Rectangle on Slab Top Face (Image 3)
+  const rectPts = [
+    new THREE.Vector3(-30, slabHeight + 0.2, -18),
+    new THREE.Vector3(65, slabHeight + 0.2, -18),
+    new THREE.Vector3(65, slabHeight + 0.2, 18),
+    new THREE.Vector3(-30, slabHeight + 0.2, 18),
+    new THREE.Vector3(-30, slabHeight + 0.2, -18)
+  ];
+  const rectGeom = new THREE.BufferGeometry().setFromPoints(rectPts);
+  const rectLine = new THREE.Line(rectGeom, blueLineMat);
+  group.add(rectLine);
+
+  // Center crosshair marker in rectangle
+  const crossPts = [
+    new THREE.Vector3(17.5 - 4, slabHeight + 0.2, 0),
+    new THREE.Vector3(17.5 + 4, slabHeight + 0.2, 0),
+    new THREE.Vector3(17.5, slabHeight + 0.2, -4),
+    new THREE.Vector3(17.5, slabHeight + 0.2, 4)
+  ];
+  const crossGeom = new THREE.BufferGeometry().setFromPoints(crossPts);
+  const crossLine = new THREE.LineSegments(crossGeom, blueLineMat);
+  group.add(crossLine);
+
+  // 2. Orange Cylindrical Boss on the Left (Image 3)
+  const bossRadius = 25;
+  const bossHeight = 22;
+  const bossX = -45;
+  const bossZ = 6;
+  const bossGeom = new THREE.CylinderGeometry(bossRadius, bossRadius, bossHeight, 48);
+  const bossMesh = new THREE.Mesh(bossGeom, orangeMat);
+  bossMesh.position.set(bossX, slabHeight + bossHeight / 2, bossZ);
+  bossMesh.castShadow = true;
+  bossMesh.receiveShadow = true;
+  group.add(bossMesh);
+
+  const bossEdges = new THREE.EdgesGeometry(bossGeom, 30);
+  const bossWireframe = new THREE.LineSegments(bossEdges, darkEdgeMat);
+  bossWireframe.position.copy(bossMesh.position);
+  group.add(bossWireframe);
+
+  // Base circular wireframe curve for Boss (Image 3)
+  const circPts = [];
+  for (let a = 0; a <= Math.PI * 2 + 0.05; a += Math.PI / 24) {
+    circPts.push(new THREE.Vector3(bossX + Math.cos(a) * (bossRadius + 4), slabHeight + 0.2, bossZ + Math.sin(a) * (bossRadius + 4)));
+  }
+  const circGeom = new THREE.BufferGeometry().setFromPoints(circPts);
+  const circLine = new THREE.Line(circGeom, blueLineMat);
+  group.add(circLine);
+
+  // 3. Charcoal Saddle Block with Cylindrical Through-Cut (Image 3)
+  // Cross-section with top semicircular groove:
+  const blockW = 56;
+  const blockH = 46;
+  const blockD = 50;
+  const cutR = 16;
+  const cutCenterY = blockH;
+
+  const saddleShape = new THREE.Shape();
+  saddleShape.moveTo(-blockW / 2, 0);
+  saddleShape.lineTo(blockW / 2, 0);
+  saddleShape.lineTo(blockW / 2, blockH);
+  saddleShape.lineTo(cutR, blockH);
+  // Semicircular cutout
+  saddleShape.absarc(0, cutCenterY, cutR, 0, Math.PI, true);
+  saddleShape.lineTo(-blockW / 2, blockH);
+  saddleShape.closePath();
+
+  const extrudeSettings = {
+    steps: 1,
+    depth: blockD,
+    bevelEnabled: false
+  };
+  const saddleGeom = new THREE.ExtrudeGeometry(saddleShape, extrudeSettings);
+  // Center along depth (Z)
+  saddleGeom.translate(0, 0, -blockD / 2);
+
+  const saddleMesh = new THREE.Mesh(saddleGeom, charcoalMat);
+  const saddleX = 25;
+  saddleMesh.position.set(saddleX, slabHeight, 0);
+  saddleMesh.castShadow = true;
+  saddleMesh.receiveShadow = true;
+  group.add(saddleMesh);
+
+  const saddleEdges = new THREE.EdgesGeometry(saddleGeom, 25);
+  const saddleWireframe = new THREE.LineSegments(saddleEdges, new THREE.LineBasicMaterial({ color: 0x0f172a, linewidth: 1.5 }));
+  saddleWireframe.position.copy(saddleMesh.position);
+  group.add(saddleWireframe);
+
+  // 4. Trihedron Coordinate Axes Markers (Image 3)
+  const addWCSHelper = (pos, size = 18) => {
+    const axes = new THREE.Group();
+    // X - Red
+    const xGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(size, 0, 0)]);
+    axes.add(new THREE.Line(xGeo, new THREE.LineBasicMaterial({ color: 0xdc2626, linewidth: 2 })));
+    // Y - Green
+    const yGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, size, 0)]);
+    axes.add(new THREE.Line(yGeo, new THREE.LineBasicMaterial({ color: 0x16a34a, linewidth: 2 })));
+    // Z - Blue
+    const zGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, size)]);
+    axes.add(new THREE.Line(zGeo, new THREE.LineBasicMaterial({ color: 0x2563eb, linewidth: 2 })));
+    axes.position.copy(pos);
+    return axes;
+  };
+
+  // Bottom-Left WCS marker (Image 3)
+  group.add(addWCSHelper(new THREE.Vector3(-slabWidth / 2 - 10, 0, slabDepth / 2 + 10), 16));
+  // Feature center WCS marker
+  group.add(addWCSHelper(new THREE.Vector3(saddleX, slabHeight + blockH / 2, 0), 14));
+
+  group.userData = {
+    filename: "Mastercam Multi-Body Assembly.mcam",
+    partName: "Mastercam Multi-Body Assembly",
+    format: "Mastercam Part File (*.mcam)",
+    material: "Alu 6061 Orange & Hardened Charcoal Steel",
+    dimensions: { x: slabWidth, y: slabHeight + blockH, z: slabDepth + 15 },
+    isMultiBody: true,
+    bodies: [
+      { id: 1, name: 'Solid 1 - Base Slab', color: '#ea580c', volumeCm3: 192 },
+      { id: 2, name: 'Solid 2 - Cylinder Boss', color: '#ea580c', volumeCm3: 43 },
+      { id: 3, name: 'Solid 3 - Charcoal Saddle Block', color: '#334155', volumeCm3: 110 }
+    ]
+  };
+
+  return group;
+}
+
+/**
  * Parses user-uploaded STL file (binary or ASCII)
  */
 export async function parseSTLFile(file) {

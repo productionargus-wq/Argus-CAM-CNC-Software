@@ -115,7 +115,7 @@ export default function ChainingPalette({
   onAddAllClosedChains,
   onConfirm,
   onCancel,
-  promptText = 'Select Chain of Lines and Arcs or one closed spline'
+  promptText = 'Select chain(s) to extrude'
 }) {
   if (!isOpen) return null;
 

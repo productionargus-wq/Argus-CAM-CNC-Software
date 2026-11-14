@@ -80,6 +80,8 @@ import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import SelectAllDialog from './components/SelectAllDialog';
 import SelectProbeModal from './components/SelectProbeModal';
 import ProbingDialogHUD from './components/ProbingDialogHUD';
+import MastercamOpenDialog from './components/MastercamOpenDialog';
+import SolidExtrudePanel from './components/SolidExtrudePanel';
 import StatusBar from './components/StatusBar';
 import ViewsheetBar from './components/ViewsheetBar';
 import {
@@ -87,6 +89,7 @@ import {
   createAerospaceBracket,
   createMoldCoreGeometry,
   createMastercamBaseStructureALU,
+  createMastercamMultiBodyAssembly,
   createMastercam2019TutorialPart,
   createMastercam2019TutorialWireframe,
   createTitan1MPart,
@@ -337,6 +340,9 @@ export default function App() {
   const [isSaveAsModalOpen, setIsSaveAsModalOpen] = useState(false);
   const [isRecentProjectsModalOpen, setIsRecentProjectsModalOpen] = useState(false);
   const [isExportCADModalOpen, setIsExportCADModalOpen] = useState(false);
+  const [isMastercamOpenDialogOpen, setIsMastercamOpenDialogOpen] = useState(false);
+  const [isSolidExtrudeActive, setIsSolidExtrudeActive] = useState(false);
+  const [solidExtrudeChains, setSolidExtrudeChains] = useState([]);
   const [isProbingModalOpen, setIsProbingModalOpen] = useState(false);
   const [isSelectAllOpen, setIsSelectAllOpen] = useState(false);
   const [isSelectProbeOpen, setIsSelectProbeOpen] = useState(false);
@@ -2509,6 +2515,29 @@ export default function App() {
     }
 
     setCadSource({ type: 'sample', sampleType: type });
+
+    if (type === 'mastercam_multibody' || type === 'multibody_assembly' || type === 'multibody' || type === 'extrude_assembly') {
+      const mbPart = createMastercamMultiBodyAssembly();
+      setCurrentModel(mbPart);
+      setCurrentProjectName('Mastercam Multi-Body Assembly.mcam');
+      setActiveMachineId('haas_vf2');
+      setActiveWcs('G54');
+      setActiveRibbonTab('Solids');
+      setStockConfig({
+        shape: 'box',
+        material: 'Alu 6061 Orange & Hardened Steel',
+        originPoint: 'top-left',
+        rawDimensions: { x: 170, y: 75, z: 80 }
+      });
+      setSolidsList([
+        { id: 1, name: 'Solid 1 - Base Slab (Orange)', material: '6061-T6 Aluminum', volumeCm3: 192.0, isPrimary: true, visible: true, active: true, color: '#ea580c' },
+        { id: 2, name: 'Solid 2 - Cylinder Boss (Orange)', material: '6061-T6 Aluminum', volumeCm3: 43.0, isPrimary: false, visible: true, active: false, color: '#ea580c' },
+        { id: 3, name: 'Solid 3 - Charcoal Saddle Block', material: 'Hardened Tool Steel', volumeCm3: 110.0, isPrimary: false, visible: true, active: false, color: '#334155' }
+      ]);
+      showToast('Loaded Mastercam Multi-Body Assembly (Image 3)', 'success');
+      handleResetTransform();
+      return;
+    }
 
     if (type === 'base_structure_alu' || type === 'base_structure') {
         setCurrentModel(createMastercamBaseStructureALU());
@@ -5385,6 +5414,17 @@ export default function App() {
   };
 
   const handleConfirmChaining = () => {
+    if (isSolidExtrudeActive) {
+      const curChains = selectedExtrudeChains.length > 0
+        ? selectedExtrudeChains
+        : extractClosedChainsFromCAD(customGeometryRef.current || []);
+      setSolidExtrudeChains(curChains);
+      setIsChainingPaletteOpen(false);
+      setActiveManagerTab('Solid Extru...');
+      showToast(`Selected ${curChains.length} chain(s) for Solid Extrude.`, 'info');
+      return;
+    }
+
     if (selectedExtrudeChains.length === 0) {
       const detected = extractClosedChainsFromCAD(customGeometryRef.current || []);
       if (detected.length === 1) {
@@ -5482,8 +5522,75 @@ export default function App() {
 
   // Solid Primitives & Modeling Handlers
   const handleOpenSolidsModal = (tool = 'box') => {
+    if (tool === 'extrude' || tool === 'solid_extrude') {
+      setIsSolidExtrudeActive(true);
+      setActiveManagerTab('Solid Extru...');
+      setIsChainingPaletteOpen(true);
+      showToast('Mastercam Solid Extrude: Select 2D wireframe chain to extrude', 'info');
+      return;
+    }
     setSolidsModalTool(tool);
     setIsSolidsModalOpen(true);
+  };
+
+  const handleApplySolidExtrude = (config) => {
+    const targetChain = config.chains?.[0] || selectedExtrudeChains?.[0] || solidExtrudeChains?.[0];
+    const dist = Number(config.distance) || 50.0;
+    const isBoth = Boolean(config.bothDirections);
+
+    let pts = targetChain?.points;
+    if (!pts || pts.length < 3) {
+      pts = [
+        new THREE.Vector3(-30, 0, -20),
+        new THREE.Vector3(30, 0, -20),
+        new THREE.Vector3(30, 0, 20),
+        new THREE.Vector3(-30, 0, 20),
+        new THREE.Vector3(-30, 0, -20)
+      ];
+    }
+
+    const shape = new THREE.Shape();
+    shape.moveTo(pts[0].x, pts[0].z || pts[0].y || 0);
+    for (let i = 1; i < pts.length; i++) {
+      shape.lineTo(pts[i].x, pts[i].z || pts[i].y || 0);
+    }
+    shape.closePath();
+
+    const extrudeSettings = {
+      steps: 1,
+      depth: dist,
+      bevelEnabled: false
+    };
+    const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geom.rotateX(Math.PI / 2);
+    if (isBoth) {
+      geom.translate(0, -dist / 2, 0);
+    }
+
+    const color = config.type === 'cut' ? 0xdc2626 : config.type === 'boss' ? 0xf59e0b : 0xea580c;
+    const mat = new THREE.MeshStandardMaterial({
+      color,
+      roughness: 0.35,
+      metalness: 0.25,
+      side: THREE.DoubleSide
+    });
+    const solidMesh = new THREE.Mesh(geom, mat);
+    solidMesh.castShadow = true;
+    solidMesh.receiveShadow = true;
+
+    const edgeLines = new THREE.LineSegments(
+      new THREE.EdgesGeometry(geom),
+      new THREE.LineBasicMaterial({ color: 0x0f172a, linewidth: 1.5 })
+    );
+    solidMesh.add(edgeLines);
+
+    const solidGroup = new THREE.Group();
+    solidGroup.name = config.name || 'Extrude Solid';
+    solidGroup.add(solidMesh);
+
+    handleAddSolidBody(solidGroup, config.name || 'Extrude Solid');
+    setIsChainingPaletteOpen(false);
+    showToast(`Mastercam Solids: Extrusion operation "${config.name || 'Extrude'}" completed (${config.type.toUpperCase()})`, 'success');
   };
 
   const handleSetPrimarySolid = (modelGroup, filename) => {
@@ -5619,6 +5726,7 @@ export default function App() {
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onSaveProject={handleSaveProject}
+        onOpenFile={() => setIsMastercamOpenDialogOpen(true)}
         onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
         onOpenHelpGuide={() => setIsHelpGuideOpen(true)}
         onUndo={handleUndo}
@@ -5964,6 +6072,11 @@ export default function App() {
           onApplyExtrude={() => handleCommitSurfaceExtrude(true)}
           onOkExtrude={() => handleCommitSurfaceExtrude(false)}
           onCancelExtrude={handleCancelSurfaceExtrude}
+          isSolidExtrudeActive={isSolidExtrudeActive}
+          solidExtrudeChains={selectedExtrudeChains.length > 0 ? selectedExtrudeChains : solidExtrudeChains}
+          onReverseSolidExtrudeChain={handleReverseExtrudeChain}
+          onCloseSolidExtrude={() => setIsSolidExtrudeActive(false)}
+          onApplySolidExtrude={handleApplySolidExtrude}
         />
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
@@ -6315,6 +6428,7 @@ export default function App() {
         onLoadProject={handleProjectLoaded}
         onModelImported={handleModelImported}
         onSaveAs={handleSaveAs}
+        onOpenMastercamDialog={() => setIsMastercamOpenDialogOpen(true)}
         onNotify={showToast}
       />
 
@@ -6338,6 +6452,23 @@ export default function App() {
         onLoadProject={handleProjectLoaded}
         onRestoreAutoSave={handleRestoreAutoSave}
         onSelectSampleModel={handleSelectSampleModel}
+      />
+
+      {/* Mastercam Images 1 & 2 Open File Dialog with Vertical Categorized Extensions */}
+      <MastercamOpenDialog
+        isOpen={isMastercamOpenDialogOpen}
+        onClose={() => setIsMastercamOpenDialogOpen(false)}
+        onFileSelected={(file) => {
+          if (file.rawProject) {
+            handleProjectLoaded(file.rawProject);
+          } else if (file.name.includes('Multi-Body') || file.name.includes('Assembly')) {
+            handleSelectSampleModel('mastercam_multibody');
+          } else {
+            showToast(`Opening ${file.name}...`, 'info');
+          }
+        }}
+        onLoadProject={handleProjectLoaded}
+        onModelImported={handleModelImported}
       />
 
       <ExportCADModal

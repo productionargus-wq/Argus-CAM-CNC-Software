@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, RotateCcw, RotateCw, Printer, HelpCircle, Minus, Square, X, Cpu, Sun, Moon } from 'lucide-react';
+import { Save, FolderOpen, RotateCcw, RotateCw, Printer, HelpCircle, Minus, Square, X, Cpu, Sun, Moon } from 'lucide-react';
 
 export default function TitleBar({
   currentProject = "Part1.mcam",
@@ -7,6 +7,7 @@ export default function TitleBar({
   theme = 'light',
   onToggleTheme,
   onSaveProject,
+  onOpenFile,
   onOpenSetupSheet,
   onOpenHelpGuide,
   onUndo,
@@ -80,6 +81,9 @@ export default function TitleBar({
         </div>
 
         <div className="titlebar-quick-actions">
+          <button className="quick-btn" onClick={onOpenFile} title="Open Mastercam or CAD File (Ctrl+O)">
+            <FolderOpen size={13} />
+          </button>
           <button className="quick-btn" onClick={onSaveProject} title="Save Project (.mcam JSON Package)">
             <Save size={13} />
           </button>

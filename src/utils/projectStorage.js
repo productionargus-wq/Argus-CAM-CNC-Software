@@ -399,6 +399,15 @@ export function getRecentProjects() {
     if (!raw) {
       return [
         {
+          filename: 'Mastercam_MultiBody_Assembly.mcam',
+          projectName: 'Mastercam Multi-Body Extrude Assembly (Base Slab, Boss & Charcoal Saddle Block - Image 3)',
+          savedAt: new Date().toISOString(),
+          machine: 'Haas VF-2 (3X VMC)',
+          opsCount: 6,
+          toolsCount: 4,
+          sampleType: 'mastercam_multibody'
+        },
+        {
           filename: 'TITAN-1M_Mastercam_Benchmark.mcam',
           projectName: 'TITAN-1M Aerospace Benchmark Milling (Facing, Dynamic Mill, Contour, Pocket, Chamfer, Drill, Tap)',
           savedAt: new Date().toISOString(),
