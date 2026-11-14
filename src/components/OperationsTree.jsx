@@ -16,6 +16,7 @@ import SolidExtrudePanel from './SolidExtrudePanel';
 import RotatePanel from './RotatePanel';
 import TranslatePanel from './TranslatePanel';
 import OffsetChainsPanel from './OffsetChainsPanel';
+import DraftingPanel from './DraftingPanel';
 import { formatMastercamToolType } from '../config/surfaceFinishSchema';
 
 export default function OperationsTree({
@@ -161,13 +162,18 @@ export default function OperationsTree({
   onReselectTranslateVector,
   onApplyOffsetChains,
   onCancelOffsetChains,
-  onChangeOffsetPreview
+  onChangeOffsetPreview,
+  isDraftingActive = false,
+  activeDraftingMode = 'horizontal',
+  onApplyDrafting,
+  onCancelDrafting,
+  onChangeDraftingMode
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
   const currentTab = activeManagerTab || localTab;
   const isWireframeTool = [
     'Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent',
-    'Surface Ex...', 'Solid Extru...', 'Rotate', 'Translate', 'Offset Cha...'
+    'Surface Ex...', 'Solid Extru...', 'Rotate', 'Translate', 'Offset Cha...', 'Drafting'
   ].includes(currentTab);
 
   const handleTabClick = (tab) => {
@@ -353,9 +359,12 @@ export default function OperationsTree({
     if (activeTransformTool === 'offset_chains' || currentTab === 'Offset Cha...') {
       list.push('Offset Cha...');
     }
+    if (isDraftingActive || currentTab === 'Drafting') {
+      list.push('Drafting');
+    }
     list.push('Recent Fu...');
     return list;
-  }, [activeDrawingTool, activeSurfaceTool, isSolidExtrudeActive, activeTransformTool, currentTab]);
+  }, [activeDrawingTool, activeSurfaceTool, isSolidExtrudeActive, activeTransformTool, isDraftingActive, currentTab]);
 
   const displayPlanes = planes && planes.length > 0 ? planes : [
     { id: 'plane_top', name: 'Top (G17)', code: 'G17', desc: 'Spindle along Z, XY Table', isStandard: true, wcsCode: 'G54' },
@@ -459,6 +468,7 @@ export default function OperationsTree({
           {currentTab === 'Rotate' && 'Rotate'}
           {currentTab === 'Translate' && 'Translate'}
           {currentTab === 'Offset Cha...' && 'Offset Chains'}
+          {currentTab === 'Drafting' && 'Drafting'}
           {currentTab === 'Recent Functions' && 'Recent Functions'}
         </span>
 
@@ -694,6 +704,21 @@ export default function OperationsTree({
             onChangePreview={onChangeOffsetPreview}
             onOpenChaining={onOpenChaining}
             onReselectChains={onOpenChaining}
+          />
+        </div>
+      ) : currentTab === 'Drafting' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <DraftingPanel
+            activeMode={activeDraftingMode}
+            onApply={(params) => {
+              if (onApplyDrafting) onApplyDrafting(params);
+              if (!params.stayOpen) handleTabClick('Toolpaths');
+            }}
+            onCancel={() => {
+              if (onCancelDrafting) onCancelDrafting();
+              handleTabClick('Toolpaths');
+            }}
+            onChangeDimensionMode={onChangeDraftingMode}
           />
         </div>
       ) : (

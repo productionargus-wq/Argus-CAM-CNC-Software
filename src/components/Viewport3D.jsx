@@ -82,6 +82,47 @@ function disposeGroupMeshes(group) {
   }
 }
 
+/**
+ * Creates high-resolution Mastercam drafting dimension text badge sprite
+ */
+function createDimensionBadgeSprite(text, { color = '#1e3a8a', bg = '#ffffff', border = '#3b82f6', fontSize = 26, scale = 11 } = {}) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 96;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = bg;
+  ctx.strokeStyle = border;
+  ctx.lineWidth = 3;
+
+  const x = 12, y = 14, w = 232, h = 68, r = 10;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = color;
+  ctx.font = `bold ${fontSize}px "Segoe UI", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, y + h / 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(scale, scale * (96 / 256), 1);
+  return sprite;
+}
+
 export default function Viewport3D({
   currentModel,
   stockConfig,
@@ -196,7 +237,11 @@ export default function Viewport3D({
   probingSession = null,
   onProbeFeaturePicked = null,
   activeTransformTool = null,
-  transformPreviewState = null
+  transformPreviewState = null,
+  isDraftingActive = false,
+  isAnalyzeDynamicActive = false,
+  onAnalyzeDynamicUpdate = null,
+  analyzeDynamicScale = 1.0
 }) {
   const isLight = theme !== 'dark';
   const mountRef = useRef(null);
@@ -278,6 +323,7 @@ export default function Viewport3D({
   const [faceCursorScreen, setFaceCursorScreen] = useState(null);
   const [selectedSolidFaceIds, setSelectedSolidFaceIds] = useState([]);
   const [faceSelectionModeNote, setFaceSelectionModeNote] = useState('');
+  const [analyzeDynamicCursorScreen, setAnalyzeDynamicCursorScreen] = useState(null);
 
   const sketchGhostGroupRef = useRef(null);
   const snapIndicatorGroupRef = useRef(null);
@@ -287,6 +333,10 @@ export default function Viewport3D({
   const transformManipulatorGroupRef = useRef(null);
   const flowlinePreviewGroupRef = useRef(null);
   const surfacePreviewGroupRef = useRef(null);
+  const analyzeDynamicGroupRef = useRef(null);
+  const isAnalyzeDynamicActiveRef = useRef(isAnalyzeDynamicActive);
+  const analyzeDynamicScaleRef = useRef(analyzeDynamicScale);
+  const onAnalyzeDynamicUpdateRef = useRef(onAnalyzeDynamicUpdate);
   const surfaceSelectionSessionRef = useRef(surfaceSelectionSession);
   const hoveredFaceIdRef = useRef(null);
   const selectedSolidFaceIdsRef = useRef([]);
@@ -387,6 +437,9 @@ export default function Viewport3D({
   const onProbeFeaturePickedRef = useRef(onProbeFeaturePicked);
   useEffect(() => { probingSessionRef.current = probingSession; }, [probingSession]);
   useEffect(() => { onProbeFeaturePickedRef.current = onProbeFeaturePicked; }, [onProbeFeaturePicked]);
+  useEffect(() => { isAnalyzeDynamicActiveRef.current = isAnalyzeDynamicActive; }, [isAnalyzeDynamicActive]);
+  useEffect(() => { analyzeDynamicScaleRef.current = analyzeDynamicScale; }, [analyzeDynamicScale]);
+  useEffect(() => { onAnalyzeDynamicUpdateRef.current = onAnalyzeDynamicUpdate; }, [onAnalyzeDynamicUpdate]);
   useEffect(() => {
     // Switching away from polygon/vector clears transient rubber-band overlays cleanly
     polygonPointsRef.current = [];
@@ -709,6 +762,13 @@ export default function Viewport3D({
     dimensionGroup.position.set(0, 49, 0);
     scene.add(dimensionGroup);
     dimensionGroupRef.current = dimensionGroup;
+
+    // Analyze Dynamic Interactive Vector Group (Image 4)
+    const analyzeDynamicGroup = new THREE.Group();
+    analyzeDynamicGroup.name = "Analyze_Dynamic_Group";
+    analyzeDynamicGroup.position.set(0, 49, 0);
+    scene.add(analyzeDynamicGroup);
+    analyzeDynamicGroupRef.current = analyzeDynamicGroup;
 
     // Arc Center Points & Endpoints Indicators Group
     const arcCentersGroup = new THREE.Group();
@@ -1320,6 +1380,111 @@ export default function Viewport3D({
         camera.position.x -= deltaX * 0.4;
         camera.position.y += deltaY * 0.4;
         return;
+      }
+
+      // Mastercam Analyze Dynamic Interactive Cursor Tracking (Image 4)
+      if (isAnalyzeDynamicActiveRef.current && e.target === dom) {
+        const rect = dom.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+
+        let hitPoint = null;
+        let surfaceNormal = new THREE.Vector3(0, 1, 0);
+
+        const hits = raycaster.intersectObjects(scene.children, true);
+        const validHit = hits.find(h => {
+          let p = h.object;
+          while (p) {
+            if (p.name === 'Analyze_Dynamic_Group' || p.name === 'Transform_Manipulator_Group') return false;
+            p = p.parent;
+          }
+          return h.object.type === 'Mesh' || h.object.type === 'Line' || h.object.type === 'LineSegments';
+        });
+
+        if (validHit) {
+          hitPoint = validHit.point.clone().sub(new THREE.Vector3(0, 49, 0));
+          if (validHit.face && validHit.face.normal) {
+            surfaceNormal = validHit.face.normal.clone().normalize();
+          }
+        } else {
+          const topY = partMetrics?.box?.max?.y ?? 20;
+          const worldY = 49 + topY;
+          sketchPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, worldY, 0));
+          const target = new THREE.Vector3();
+          if (raycaster.ray.intersectPlane(sketchPlane, target)) {
+            hitPoint = target.clone().sub(new THREE.Vector3(0, 49, 0));
+          }
+        }
+
+        if (hitPoint && analyzeDynamicGroupRef.current) {
+          const group = analyzeDynamicGroupRef.current;
+          group.clear();
+
+          const scale = analyzeDynamicScaleRef.current || 1.0;
+          const arrowLen = 28 * scale;
+
+          // 1. Crosshair + at target evaluation point (Image 4)
+          const chSize = 3 * scale;
+          const chMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2, depthTest: false });
+          const chGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(hitPoint.x - chSize, hitPoint.y + 0.2, hitPoint.z),
+            new THREE.Vector3(hitPoint.x + chSize, hitPoint.y + 0.2, hitPoint.z),
+            new THREE.Vector3(hitPoint.x, hitPoint.y + 0.2, hitPoint.z - chSize),
+            new THREE.Vector3(hitPoint.x, hitPoint.y + 0.2, hitPoint.z + chSize),
+          ]);
+          group.add(new THREE.LineSegments(chGeo, chMat));
+
+          // 2. Green normal vector arrow pointing upwards/along normal (Image 4)
+          const arrowMat = new THREE.LineBasicMaterial({ color: 0x16a34a, linewidth: 3, depthTest: false });
+          const arrowEnd = new THREE.Vector3(hitPoint.x, hitPoint.y + arrowLen, hitPoint.z);
+          const arrowGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(hitPoint.x, hitPoint.y + 0.2, hitPoint.z),
+            arrowEnd
+          ]);
+          group.add(new THREE.Line(arrowGeo, arrowMat));
+
+          // Green arrowhead cone
+          const coneMat = new THREE.MeshBasicMaterial({ color: 0x16a34a, depthTest: false });
+          const coneGeo = new THREE.ConeGeometry(2.4 * scale, 6 * scale, 16);
+          const cone = new THREE.Mesh(coneGeo, coneMat);
+          cone.position.copy(arrowEnd);
+          group.add(cone);
+
+          // 3. Yellow dashed line extending beyond the arrow (Image 4)
+          const dashEnd = new THREE.Vector3(hitPoint.x, hitPoint.y + arrowLen + 32 * scale, hitPoint.z);
+          const dashMat = new THREE.LineDashedMaterial({
+            color: 0xca8a04,
+            dashSize: 3,
+            gapSize: 2,
+            linewidth: 2,
+            depthTest: false
+          });
+          const dashGeo = new THREE.BufferGeometry().setFromPoints([arrowEnd, dashEnd]);
+          const dashLine = new THREE.Line(dashGeo, dashMat);
+          dashLine.computeLineDistances();
+          group.add(dashLine);
+
+          setAnalyzeDynamicCursorScreen({ x: e.clientX, y: e.clientY });
+
+          if (onAnalyzeDynamicUpdateRef.current) {
+            const angleVal = ((Math.atan2(hitPoint.z, hitPoint.x) * 180 / Math.PI + 360) % 360);
+            onAnalyzeDynamicUpdateRef.current({
+              point: { x: parseFloat(hitPoint.x.toFixed(3)), y: parseFloat(hitPoint.y.toFixed(3)), z: parseFloat(hitPoint.z.toFixed(3)) },
+              tangent: { x: 0.0, y: -1.0, z: 0.0 },
+              angle: parseFloat(angleVal.toFixed(1)),
+              radius: 'Flat (infinite)',
+              diameter: 'Flat (infinite)',
+              colorIndex: 1,
+              colorR: 0,
+              colorG: 0,
+              colorB: 128
+            });
+          }
+        }
+      } else if (!isAnalyzeDynamicActiveRef.current && analyzeDynamicGroupRef.current?.children?.length > 0) {
+        analyzeDynamicGroupRef.current.clear();
+        setAnalyzeDynamicCursorScreen(null);
       }
 
       // Live hover highlight in Solid Face Select or general Select Mode
@@ -2340,7 +2505,7 @@ export default function Viewport3D({
     stockWireframeRef.current = wireframe;
   }, [stockConfig, partMetrics, layerVisibility.stock]);
 
-  // 9. Build 3D Drafting Dimension Lines
+  // 9. Build 3D Drafting Dimension Lines & Angle Indicators (Images 1 & 2)
   useEffect(() => {
     if (!dimensionGroupRef.current || !partMetrics) return;
     const group = dimensionGroupRef.current;
@@ -2379,7 +2544,133 @@ export default function Viewport3D({
     const yGeo = new THREE.BufferGeometry().setFromPoints(yPoints);
     const yLine = new THREE.Line(yGeo, new THREE.LineBasicMaterial({ color: 0x10b981, linewidth: 2 }));
     group.add(yLine);
-  }, [partMetrics]);
+
+    // Mastercam In-Canvas Drafting Dimensions (Image 1 & Image 2)
+    // Rendered on top of the workpiece when Drafting is active or Dimensions level is visible
+    const topY = (max.y || 20) + 0.35;
+    const blueCadMat = new THREE.LineBasicMaterial({ color: 0x1d4ed8, linewidth: 2, depthTest: false });
+
+    // 1. Linear Dimension: 96.16 mm across the top plate
+    const p1 = new THREE.Vector3(-30, topY, 26);
+    const p2 = new THREE.Vector3(66.16, topY, 26);
+    
+    // Dimension line
+    const dimLineGeo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+    group.add(new THREE.Line(dimLineGeo, blueCadMat));
+
+    // Witness / extension lines
+    const wit1 = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-30, topY, 16),
+      new THREE.Vector3(-30, topY, 30)
+    ]);
+    group.add(new THREE.Line(wit1, blueCadMat));
+
+    const wit2 = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(66.16, topY, 16),
+      new THREE.Vector3(66.16, topY, 30)
+    ]);
+    group.add(new THREE.Line(wit2, blueCadMat));
+
+    // Arrowheads for 96.16 mm (pointing inwards)
+    const arrLen = 3.5;
+    const arr1Geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(p1.x + arrLen, topY, p1.z - 1.5),
+      p1,
+      new THREE.Vector3(p1.x + arrLen, topY, p1.z + 1.5)
+    ]);
+    group.add(new THREE.Line(arr1Geo, blueCadMat));
+
+    const arr2Geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(p2.x - arrLen, topY, p2.z - 1.5),
+      p2,
+      new THREE.Vector3(p2.x - arrLen, topY, p2.z + 1.5)
+    ]);
+    group.add(new THREE.Line(arr2Geo, blueCadMat));
+
+    // Text badge: 96.16 mm
+    const linearBadge = createDimensionBadgeSprite('96.16 mm', {
+      color: '#1d4ed8',
+      bg: 'rgba(255, 255, 255, 0.95)',
+      border: '#60a5fa',
+      fontSize: 26,
+      scale: 14
+    });
+    linearBadge.position.set((p1.x + p2.x) / 2, topY + 2, p1.z + 3);
+    group.add(linearBadge);
+
+    // 2. Angular Dimension: 90.0° curved arc sector (Image 2)
+    const arcCenter = new THREE.Vector3(-30, topY, -18);
+    const arcRadius = 26;
+    const arcPoints = [];
+    const numArcPts = 24;
+    for (let i = 0; i <= numArcPts; i++) {
+      const theta = (i / numArcPts) * (Math.PI / 2);
+      arcPoints.push(new THREE.Vector3(
+        arcCenter.x + Math.cos(theta) * arcRadius,
+        topY,
+        arcCenter.z + Math.sin(theta) * arcRadius
+      ));
+    }
+    const arcGeo = new THREE.BufferGeometry().setFromPoints(arcPoints);
+    group.add(new THREE.Line(arcGeo, blueCadMat));
+
+    // Radial witness lines connecting origin to arc ends
+    const rad1 = new THREE.BufferGeometry().setFromPoints([
+      arcCenter,
+      new THREE.Vector3(arcCenter.x + arcRadius + 6, topY, arcCenter.z)
+    ]);
+    group.add(new THREE.Line(rad1, blueCadMat));
+
+    const rad2 = new THREE.BufferGeometry().setFromPoints([
+      arcCenter,
+      new THREE.Vector3(arcCenter.x, topY, arcCenter.z + arcRadius + 6)
+    ]);
+    group.add(new THREE.Line(rad2, blueCadMat));
+
+    // Arrowheads for 90.0° arc
+    const arcArr1End = arcPoints[0];
+    const arcArr1 = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(arcArr1End.x - 2, topY, arcArr1End.z + 3),
+      arcArr1End,
+      new THREE.Vector3(arcArr1End.x + 2, topY, arcArr1End.z + 3)
+    ]);
+    group.add(new THREE.Line(arcArr1, blueCadMat));
+
+    const arcArr2End = arcPoints[arcPoints.length - 1];
+    const arcArr2 = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(arcArr2End.x + 3, topY, arcArr2End.z - 2),
+      arcArr2End,
+      new THREE.Vector3(arcArr2End.x + 3, topY, arcArr2End.z + 2)
+    ]);
+    group.add(new THREE.Line(arcArr2, blueCadMat));
+
+    // Text badge: 90.0°
+    const midAngle = Math.PI / 4;
+    const angularBadge = createDimensionBadgeSprite('90.0°', {
+      color: '#1d4ed8',
+      bg: 'rgba(255, 255, 255, 0.95)',
+      border: '#60a5fa',
+      fontSize: 26,
+      scale: 12
+    });
+    angularBadge.position.set(
+      arcCenter.x + Math.cos(midAngle) * (arcRadius + 5),
+      topY + 2,
+      arcCenter.z + Math.sin(midAngle) * (arcRadius + 5)
+    );
+    group.add(angularBadge);
+
+    // 3. Center Datum Crosshair (+)
+    const crossCenter = new THREE.Vector3(17.5, topY, 0);
+    const crossSize = 4.5;
+    const crossGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(crossCenter.x - crossSize, topY, crossCenter.z),
+      new THREE.Vector3(crossCenter.x + crossSize, topY, crossCenter.z),
+      new THREE.Vector3(crossCenter.x, topY, crossCenter.z - crossSize),
+      new THREE.Vector3(crossCenter.x, topY, crossCenter.z + crossSize)
+    ]);
+    group.add(new THREE.LineSegments(crossGeo, blueCadMat));
+  }, [partMetrics, isDraftingActive, layerVisibility.dimensions]);
 
   // 10. Dynamically Generate and Render Real Toolpaths from CAM Operations
   useEffect(() => {
@@ -3593,6 +3884,83 @@ export default function Viewport3D({
             </span>
             <span>Clear Selection</span>
           </button>
+        </div>
+      )}
+
+      {/* 1. Mastercam Floating Drafting Prompt (Image 1) */}
+      {isDraftingActive && (
+        <div
+          data-testid="drafting-viewport-prompt"
+          style={{
+            position: 'absolute',
+            top: '12px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(255, 255, 255, 0.96)',
+            border: '1px solid #cbd5e1',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.14)',
+            padding: '3px 14px',
+            borderRadius: '2px',
+            fontSize: '11.5px',
+            fontWeight: 500,
+            color: '#0f172a',
+            pointerEvents: 'none',
+            zIndex: 40,
+            whiteSpace: 'nowrap'
+          }}
+        >
+          Modify current dimension or begin creating a new dimension
+        </div>
+      )}
+
+      {/* 2. Mastercam Solid Extrude Selection Prompt (Image 3) */}
+      {isChainingActive && (
+        <div
+          data-testid="solid-extrude-viewport-prompt"
+          style={{
+            position: 'absolute',
+            top: '12px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(255, 255, 255, 0.96)',
+            border: '1px solid #cbd5e1',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.14)',
+            padding: '3px 14px',
+            borderRadius: '2px',
+            fontSize: '11.5px',
+            fontWeight: 500,
+            color: '#0f172a',
+            pointerEvents: 'none',
+            zIndex: 40,
+            whiteSpace: 'nowrap'
+          }}
+        >
+          Use dialog to select chains to extrude
+        </div>
+      )}
+
+      {/* 3. Mastercam Analyze Dynamic Interactive Cursor Tooltip (Image 4) */}
+      {isAnalyzeDynamicActive && analyzeDynamicCursorScreen && (
+        <div
+          data-testid="analyze-dynamic-cursor-tooltip"
+          style={{
+            position: 'fixed',
+            left: analyzeDynamicCursorScreen.x + 18,
+            top: analyzeDynamicCursorScreen.y - 24,
+            background: 'rgba(255, 255, 255, 0.96)',
+            border: '1px solid #94a3b8',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.16)',
+            padding: '2px 8px',
+            borderRadius: '2px',
+            fontSize: '11px',
+            fontWeight: 500,
+            color: '#0f172a',
+            pointerEvents: 'none',
+            zIndex: 9999,
+            whiteSpace: 'nowrap'
+          }}
+        >
+          Position arrow and click to accept
         </div>
       )}
 

@@ -82,6 +82,7 @@ import SelectProbeModal from './components/SelectProbeModal';
 import ProbingDialogHUD from './components/ProbingDialogHUD';
 import MastercamOpenDialog from './components/MastercamOpenDialog';
 import SolidExtrudePanel from './components/SolidExtrudePanel';
+import AnalyzeDynamicDialog from './components/AnalyzeDynamicDialog';
 import StatusBar from './components/StatusBar';
 import ViewsheetBar from './components/ViewsheetBar';
 import {
@@ -571,6 +572,11 @@ export default function App() {
   const [transformModalTab, setTransformModalTab] = useState('translate');
   const [activeTransformTool, setActiveTransformTool] = useState(null); // 'rotate' | 'translate' | 'offset_chains'
   const [transformPreviewState, setTransformPreviewState] = useState(null);
+  const [isDraftingActive, setIsDraftingActive] = useState(false);
+  const [activeDraftingMode, setActiveDraftingMode] = useState('horizontal');
+  const [isAnalyzeDynamicActive, setIsAnalyzeDynamicActive] = useState(false);
+  const [analyzeDynamicData, setAnalyzeDynamicData] = useState(null);
+  const [analyzeDynamicScale, setAnalyzeDynamicScale] = useState(1.0);
   const [isMachineConfigModalOpen, setIsMachineConfigModalOpen] = useState(false);
   const [isATPModalOpen, setIsATPModalOpen] = useState(false);
   const [atpModalTab, setAtpModalTab] = useState('wizard');
@@ -5671,10 +5677,28 @@ export default function App() {
     setIsMeshModalOpen(true);
   };
 
-  // 3D Drafting & Annotations Handler (Level 100)
+  // 3D Drafting & Annotations Handler (Mastercam Docked Manager Architecture - Image 1 & 2)
   const handleOpenDraftingModal = (tab = 'linear') => {
-    setDraftingModalTab(tab);
-    setIsDraftingModalOpen(true);
+    const rawMode = String(tab || 'horizontal').toLowerCase();
+    const mode = rawMode === 'angular' ? 'angular' : rawMode === 'vertical' ? 'vertical' : rawMode === 'parallel' ? 'parallel' : 'horizontal';
+    setActiveDraftingMode(mode);
+    setIsDraftingActive(true);
+    setActiveManagerTab('Drafting');
+    setLevelsList((prev) => prev.map((lvl) => lvl.number === 100 ? { ...lvl, visible: true } : lvl));
+    showToast(`Mastercam Drafting: ${mode.toUpperCase()} dimensioning active on Level 100`, 'info');
+  };
+
+  const handleApplyDrafting = (draftingData) => {
+    showToast(`Drafting Dimension (${(draftingData?.method || 'horizontal').toUpperCase()}) created on Level 100`, 'success');
+    if (!draftingData?.stayOpen) {
+      setIsDraftingActive(false);
+      setActiveManagerTab('Toolpaths');
+    }
+  };
+
+  const handleCancelDrafting = () => {
+    setIsDraftingActive(false);
+    setActiveManagerTab('Toolpaths');
   };
 
   const handleClearDraftingDimensions = () => {
@@ -5901,7 +5925,10 @@ export default function App() {
         onToggleEndpoints={() => setShowEndpoints((prev) => !prev)}
         onToggleBlank={() => handleBlankSelectedEntities()}
         onOpenToolpathAnalyzer={() => showToast('Toolpath Analyzer: Inspecting G-Code vector feeds & dynamics', 'info')}
-        onOpenDynamicAnalyzer={() => showToast('Dynamic Analyzer: Live cursor coordinates & radius measuring active', 'info')}
+        onOpenDynamicAnalyzer={() => {
+          setIsAnalyzeDynamicActive((prev) => !prev);
+          showToast('Mastercam Analyze Dynamic: Live cursor coordinates, normal vector & curvature active', 'info');
+        }}
         onOpenAngleAnalyzer={() => setIsDistanceCaliperOpen(true)}
         onOpenChainAnalyzer={() => showToast('Chain Analyzer: All 2D wireframe boundary loops validated (0 open leaks)', 'success')}
         onOpenCheckSolid={() => showToast('Solid Integrity Check: Watertight Manifold B-Rep verified', 'success')}
@@ -6222,6 +6249,11 @@ export default function App() {
             setActiveManagerTab('Toolpaths');
           }}
           onChangeOffsetPreview={(p) => setTransformPreviewState(p)}
+          isDraftingActive={isDraftingActive}
+          activeDraftingMode={activeDraftingMode}
+          onApplyDrafting={handleApplyDrafting}
+          onCancelDrafting={handleCancelDrafting}
+          onChangeDraftingMode={(m) => setActiveDraftingMode(m)}
         />
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
@@ -6347,6 +6379,10 @@ export default function App() {
                 onProbeFeaturePicked={handleProbeFeaturePicked}
                 activeTransformTool={activeTransformTool}
                 transformPreviewState={transformPreviewState}
+                isDraftingActive={isDraftingActive}
+                isAnalyzeDynamicActive={isAnalyzeDynamicActive}
+                onAnalyzeDynamicUpdate={setAnalyzeDynamicData}
+                analyzeDynamicScale={analyzeDynamicScale}
               />
             </div>
           </div>
@@ -6491,6 +6527,10 @@ export default function App() {
               onProbeFeaturePicked={handleProbeFeaturePicked}
               activeTransformTool={activeTransformTool}
               transformPreviewState={transformPreviewState}
+              isDraftingActive={isDraftingActive}
+              isAnalyzeDynamicActive={isAnalyzeDynamicActive}
+              onAnalyzeDynamicUpdate={setAnalyzeDynamicData}
+              analyzeDynamicScale={analyzeDynamicScale}
             />
           </div>
         )}
@@ -7205,6 +7245,23 @@ export default function App() {
         customGeometry={customGeometry}
         activeMachine={activeMachine}
         currentProjectName={currentProjectName}
+      />
+
+      {/* Mastercam Analyze Dynamic Floating Tool Palette (Image 4) */}
+      <AnalyzeDynamicDialog
+        isOpen={isAnalyzeDynamicActive}
+        onClose={() => setIsAnalyzeDynamicActive(false)}
+        data={analyzeDynamicData}
+        arrowScale={analyzeDynamicScale}
+        onChangeArrowScale={setAnalyzeDynamicScale}
+        onReverseVector={() => {
+          setAnalyzeDynamicData((prev) => prev ? {
+            ...prev,
+            tangent: { x: -(prev.tangent?.x ?? 0), y: -(prev.tangent?.y ?? -1), z: -(prev.tangent?.z ?? 0) },
+            angle: ((prev.angle ?? 270) + 180) % 360
+          } : null);
+          showToast('Reversed dynamic evaluation vector direction', 'info');
+        }}
       />
 
       {/* 12. Entity Analyzer CAD Inspector Modal */}
