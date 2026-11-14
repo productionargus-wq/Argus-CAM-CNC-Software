@@ -195,6 +195,79 @@ export const ALL_SUPPORTED_EXTENSIONS_STRING = CAD_FILE_FORMATS
   .filter((value, index, self) => self.indexOf(value) === index)
   .join(',');
 
+/**
+ * Generates options for native window.showOpenFilePicker()
+ * Matches the vertical list of all 25 formats from Mastercam Image 2
+ */
+export function getNativePickerFileTypes() {
+  return CAD_FILE_FORMATS
+    .filter((fmt) => fmt.id !== 'all_files')
+    .map((fmt) => {
+      const mime = fmt.mime || 'application/octet-stream';
+      const extList = (fmt.extensions || [])
+        .filter((ext) => ext !== '*')
+        .map((ext) => (ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`));
+      return {
+        description: fmt.label,
+        accept: {
+          [mime]: extList
+        }
+      };
+    });
+}
+
+/**
+ * Invokes the native Windows / macOS file picker with all 25 Mastercam format categories
+ */
+export async function openNativeMastercamFileDialog() {
+  if (typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function') {
+    try {
+      const pickerTypes = getNativePickerFileTypes();
+      const handles = await window.showOpenFilePicker({
+        multiple: false,
+        excludeAcceptAllOption: false,
+        types: pickerTypes
+      });
+      if (handles && handles.length > 0) {
+        return await handles[0].getFile();
+      }
+      return null;
+    } catch (err) {
+      if (err.name === 'AbortError') return null;
+      console.warn('showOpenFilePicker encountered error, falling back:', err);
+    }
+  }
+
+  // Fallback for environments where showOpenFilePicker is unavailable
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = ALL_SUPPORTED_EXTENSIONS_STRING;
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.onchange = (e) => {
+      const file = e.target.files?.[0] || null;
+      if (document.body.contains(input)) document.body.removeChild(input);
+      resolve(file);
+    };
+
+    const onFocus = () => {
+      setTimeout(() => {
+        if (!input.files || input.files.length === 0) {
+          if (document.body.contains(input)) {
+            document.body.removeChild(input);
+          }
+          resolve(null);
+        }
+      }, 500);
+    };
+    window.addEventListener('focus', onFocus, { once: true });
+
+    input.click();
+  });
+}
+
 // ============================================================================
 // 1. AUTOCAD DXF / DWG PARSER
 // ============================================================================

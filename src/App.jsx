@@ -80,7 +80,6 @@ import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
 import SelectAllDialog from './components/SelectAllDialog';
 import SelectProbeModal from './components/SelectProbeModal';
 import ProbingDialogHUD from './components/ProbingDialogHUD';
-import MastercamOpenDialog from './components/MastercamOpenDialog';
 import SolidExtrudePanel from './components/SolidExtrudePanel';
 import AnalyzeDynamicDialog from './components/AnalyzeDynamicDialog';
 import StatusBar from './components/StatusBar';
@@ -132,7 +131,7 @@ import {
   clearWorkspaceSession,
   deserializeHistoryFromPersistence
 } from './utils/workspacePersistence';
-import { parseAnyCADFile } from './utils/universalCadParser';
+import { parseAnyCADFile, openNativeMastercamFileDialog } from './utils/universalCadParser';
 import { extractClosedChainsFromCAD, buildChainFromEntity, computeRectPlacement, computeLineEnd, isSelectableWireframeEntity } from './utils/cadDrawingEngine';
 import { getCustomEntityId, transformCustomEntityClone } from './utils/cadSelectionEngine';
 import CNCDesignBoard from './components/CNCDesignBoard';
@@ -341,7 +340,6 @@ export default function App() {
   const [isSaveAsModalOpen, setIsSaveAsModalOpen] = useState(false);
   const [isRecentProjectsModalOpen, setIsRecentProjectsModalOpen] = useState(false);
   const [isExportCADModalOpen, setIsExportCADModalOpen] = useState(false);
-  const [isMastercamOpenDialogOpen, setIsMastercamOpenDialogOpen] = useState(false);
   const [isSolidExtrudeActive, setIsSolidExtrudeActive] = useState(false);
   const [solidExtrudeChains, setSolidExtrudeChains] = useState([]);
   const [isProbingModalOpen, setIsProbingModalOpen] = useState(false);
@@ -1682,12 +1680,14 @@ export default function App() {
 
   const handleUndoRef = useRef(handleUndo);
   const handleRedoRef = useRef(handleRedo);
+  const handleOpenViaNativeDialogRef = useRef(null);
   useEffect(() => {
     handleUndoRef.current = handleUndo;
     handleRedoRef.current = handleRedo;
+    handleOpenViaNativeDialogRef.current = handleOpenViaNativeDialog;
   });
 
-  // Keyboard shortcut listener for Ctrl+Z and Ctrl+Y
+  // Keyboard shortcut listener for Ctrl+Z, Ctrl+Y, Ctrl+N, Ctrl+O
   useEffect(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
@@ -1711,6 +1711,12 @@ export default function App() {
 
         e.preventDefault();
         handleRedoRef.current();
+        return;
+      }
+
+      if (isCtrlOrMeta && (lowerKey === 'o' || e.code === 'KeyO')) {
+        e.preventDefault();
+        handleOpenViaNativeDialogRef.current?.();
         return;
       }
 
@@ -3820,6 +3826,59 @@ export default function App() {
     handleProjectLoaded(snapshot);
   };
 
+  // Native Windows/macOS Open Dialog with Vertical Categorized Formats (Image 2)
+  const handleOpenViaNativeDialog = async () => {
+    try {
+      const file = await openNativeMastercamFileDialog();
+      if (!file) return;
+
+      const lowerName = file.name.toLowerCase();
+
+      // 1. Mastercam .mcam or .json project package
+      if (lowerName.endsWith('.mcam') || lowerName.endsWith('.json')) {
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          if (parsed && (parsed.projectName || parsed.operations || parsed.tools || parsed.customGeometry)) {
+            handleProjectLoaded(parsed);
+            return;
+          }
+        } catch {
+          // Fall through to project parser
+        }
+        try {
+          const projectData = await parseProjectMCAM(file);
+          if (projectData) {
+            handleProjectLoaded(projectData);
+            return;
+          }
+        } catch (err) {
+          console.warn('Error reading MCAM file with parseProjectMCAM:', err);
+        }
+      }
+
+      // 2. NC Program / G-Code
+      if (lowerName.match(/\.(nc|gcode|tap|mpf|h|txt)$/i)) {
+        if (handleImportNCProgram) {
+          handleImportNCProgram(file);
+          return;
+        }
+      }
+
+      // 3. CAD 3D Model / B-Rep (STEP, IGES, Parasolid, DXF, DWG, STL, OBJ, Rhino, SOLIDWORKS, etc.)
+      const parsedResult = await parseAnyCADFile(file);
+      if (parsedResult?.group) {
+        handleModelImported(parsedResult.group, file.name, file);
+        showToast(`Successfully opened ${file.name}`, 'success');
+      } else {
+        showToast(`Opened file ${file.name}`, 'info');
+      }
+    } catch (err) {
+      console.error('Error opening file via native dialog:', err);
+      showToast(`Error opening file: ${err.message}`, 'error');
+    }
+  };
+
   // Export 3D STL file
   const handleExportSTL = async () => {
     if (currentModel) {
@@ -5869,7 +5928,7 @@ export default function App() {
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onSaveProject={handleSaveProject}
-        onOpenFile={() => setIsMastercamOpenDialogOpen(true)}
+        onOpenFile={handleOpenViaNativeDialog}
         onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
         onOpenHelpGuide={() => setIsHelpGuideOpen(true)}
         onUndo={handleUndo}
@@ -6618,7 +6677,7 @@ export default function App() {
         onLoadProject={handleProjectLoaded}
         onModelImported={handleModelImported}
         onSaveAs={handleSaveAs}
-        onOpenMastercamDialog={() => setIsMastercamOpenDialogOpen(true)}
+        onOpenMastercamDialog={handleOpenViaNativeDialog}
         onNotify={showToast}
       />
 
@@ -6642,23 +6701,6 @@ export default function App() {
         onLoadProject={handleProjectLoaded}
         onRestoreAutoSave={handleRestoreAutoSave}
         onSelectSampleModel={handleSelectSampleModel}
-      />
-
-      {/* Mastercam Images 1 & 2 Open File Dialog with Vertical Categorized Extensions */}
-      <MastercamOpenDialog
-        isOpen={isMastercamOpenDialogOpen}
-        onClose={() => setIsMastercamOpenDialogOpen(false)}
-        onFileSelected={(file) => {
-          if (file.rawProject) {
-            handleProjectLoaded(file.rawProject);
-          } else if (file.name.includes('Multi-Body') || file.name.includes('Assembly')) {
-            handleSelectSampleModel('mastercam_multibody');
-          } else {
-            showToast(`Opening ${file.name}...`, 'info');
-          }
-        }}
-        onLoadProject={handleProjectLoaded}
-        onModelImported={handleModelImported}
       />
 
       <ExportCADModal
