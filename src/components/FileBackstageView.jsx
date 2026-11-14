@@ -21,6 +21,7 @@ import {
   parseAnyCADFile,
   ALL_SUPPORTED_EXTENSIONS_STRING
 } from '../utils/universalCadParser';
+import PrintSheetViewport from './PrintSheetViewport';
 
 export default function FileBackstageView({
   isOpen,
@@ -87,6 +88,12 @@ export default function FileBackstageView({
 
   // AutoSave state
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+
+  // Mastercam Print Backstage Settings State (Image 1 replica)
+  const [printCopies, setPrintCopies] = useState(1);
+  const [printPrinter, setPrintPrinter] = useState('Microsoft Print to PDF');
+  const [printOrientation, setPrintOrientation] = useState('portrait'); // 'portrait' | 'landscape'
+  const [printPaperSize, setPrintPaperSize] = useState('letter'); // 'letter' | 'a4' | 'tabloid' | 'legal'
 
   // New Project Form State
   const [newTemplate, setNewTemplate] = useState('blank');
@@ -588,10 +595,11 @@ export default function FileBackstageView({
         <div
           style={{
             flex: 1,
-            background: '#ffffff',
-            overflowY: 'auto',
-            padding: '36px 48px',
-            position: 'relative'
+            background: activeTab === 'Print' ? '#cbd5e1' : '#ffffff',
+            overflowY: activeTab === 'Print' ? 'hidden' : 'auto',
+            padding: activeTab === 'Print' ? '0' : '36px 48px',
+            position: 'relative',
+            display: activeTab === 'Print' ? 'flex' : 'block'
           }}
         >
           {/* ==================== 1. INFO TAB (MATCHING SCREENSHOT) ==================== */}
@@ -1684,89 +1692,273 @@ export default function FileBackstageView({
             </div>
           )}
 
-          {/* ==================== 11. PRINT TAB ==================== */}
+          {/* ==================== 11. PRINT TAB (EXACT MASTERCAM IMAGE 1 REPLICA) ==================== */}
           {activeTab === 'Print' && (
-            <div style={{ maxWidth: '900px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
+              
+              {/* MIDDLE COLUMN: PRINT CONTROLS & SETTINGS (Image 1 replica) */}
+              <div
+                style={{
+                  width: '320px',
+                  background: '#ffffff',
+                  borderRight: '1px solid #cbd5e1',
+                  padding: '24px 32px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '20px',
+                  overflowY: 'auto'
+                }}
+              >
                 <h1 style={{ fontSize: '32px', fontWeight: 400, color: '#1e293b', margin: 0 }}>
-                  Shop Floor Traveler & Setup Sheet
+                  Print
                 </h1>
-                <button
-                  onClick={() => window.print()}
-                  style={{
-                    padding: '10px 20px',
-                    background: '#0f5a9e',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontWeight: 600,
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  <Printer size={16} /> Print Setup Sheet (Ctrl+P)
-                </button>
-              </div>
 
-              {/* Printable Setup Sheet View */}
-              <div style={{ border: '2px solid #334155', padding: '28px', background: '#ffffff', borderRadius: '2px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #0f5a9e', paddingBottom: '14px', marginBottom: '20px' }}>
-                  <div>
-                    <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', color: '#0f5a9e', fontWeight: 700 }}>
-                      MASTERCAM CNC ROUTING TRAVELER
-                    </h2>
-                    <span style={{ fontSize: '13px', color: '#64748b' }}>Project: {currentProjectName}</span>
-                  </div>
-                  <div style={{ textAlign: 'right', fontSize: '12px', color: '#475569' }}>
-                    <div><strong>Machine:</strong> {activeMachine?.name || 'No Machine Selected'}</div>
-                    <div><strong>WCS Origin:</strong> {activeWcs}</div>
-                    <div><strong>Date:</strong> {new Date().toLocaleDateString()}</div>
+                {/* Print Button + Copies Stepper */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <button
+                    onClick={() => window.print()}
+                    style={{
+                      width: '72px',
+                      height: '72px',
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '2px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                      transition: 'all 0.12s ease'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#e2e8f0'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; }}
+                    title="Print Document (Ctrl+P)"
+                  >
+                    <Printer size={26} color="#334155" />
+                    <span style={{ fontSize: '11px', marginTop: '4px', color: '#1e293b', fontWeight: 500 }}>Print</span>
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '12px', color: '#475569' }}>Copies:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={printCopies}
+                      onChange={(e) => setPrintCopies(Math.max(1, parseInt(e.target.value) || 1))}
+                      style={{
+                        width: '56px',
+                        padding: '4px 6px',
+                        fontSize: '12px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '2px',
+                        textAlign: 'center'
+                      }}
+                    />
                   </div>
                 </div>
 
-                {/* Tooling Schedule Table */}
-                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b', margin: '0 0 10px 0' }}>
-                  Cutting Tool Schedule
-                </h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '24px' }}>
-                  <thead>
-                    <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1', textAlign: 'left' }}>
-                      <th style={{ padding: '8px' }}>Tool #</th>
-                      <th style={{ padding: '8px' }}>Description</th>
-                      <th style={{ padding: '8px' }}>Diameter</th>
-                      <th style={{ padding: '8px' }}>Flutes</th>
-                      <th style={{ padding: '8px' }}>Spindle RPM</th>
-                      <th style={{ padding: '8px' }}>Feedrate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(tools || []).map((t, idx) => (
-                      <tr key={t.id || idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '8px', fontWeight: 600 }}>T{t.number || idx + 1}</td>
-                        <td style={{ padding: '8px' }}>{t.name || 'Endmill'}</td>
-                        <td style={{ padding: '8px' }}>Ø{t.diameter || 12} mm</td>
-                        <td style={{ padding: '8px' }}>{t.flutes || 4}</td>
-                        <td style={{ padding: '8px' }}>{t.spindleSpeed || 4500} RPM</td>
-                        <td style={{ padding: '8px' }}>{t.feedRate || 1200} mm/min</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Operations List */}
-                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b', margin: '0 0 10px 0' }}>
-                  Machining Operations Routing
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {(operations || []).map((op, idx) => (
-                    <div key={op.id || idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: '12px' }}>
-                      <span style={{ fontWeight: 600 }}>{idx + 1}. {op.name} ({op.type})</span>
-                      <span style={{ color: '#64748b' }}>WCS: {op.wcs || 'G54'} • Tool: T{op.toolNumber || 1}</span>
+                {/* Section: Printer */}
+                <div>
+                  <h3 style={{ fontSize: '12px', fontWeight: 600, color: '#475569', margin: '0 0 6px 0', textTransform: 'none' }}>
+                    Printer
+                  </h3>
+                  <div style={{ position: 'relative' }}>
+                    <div
+                      style={{
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '2px',
+                        padding: '8px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        background: '#f8fafc',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ position: 'relative' }}>
+                          <Printer size={22} color="#0f5a9e" />
+                          <div style={{ position: 'absolute', bottom: -2, right: -2, width: '10px', height: '10px', borderRadius: '50%', background: '#16a34a', border: '1.5px solid #ffffff' }} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#1e293b' }}>{printPrinter}</span>
+                          <span style={{ fontSize: '11px', color: '#16a34a' }}>Ready</span>
+                        </div>
+                      </div>
+                      <ChevronDown size={14} color="#64748b" />
                     </div>
-                  ))}
+                  </div>
+                  <a
+                    href="#printer-props"
+                    onClick={(e) => { e.preventDefault(); onNotify?.('Printer status: Microsoft Print to PDF is online and ready.', 'info'); }}
+                    style={{ fontSize: '11.5px', color: '#0f5a9e', textDecoration: 'none', display: 'inline-block', marginTop: '6px' }}
+                  >
+                    Printer Properties
+                  </a>
+                </div>
+
+                {/* Section: Settings */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h3 style={{ fontSize: '12px', fontWeight: 600, color: '#475569', margin: '0 0 2px 0' }}>
+                    Settings
+                  </h3>
+
+                  {/* Orientation Dropdown */}
+                  <div>
+                    <div
+                      onClick={() => setPrintOrientation(printOrientation === 'portrait' ? 'landscape' : 'portrait')}
+                      style={{
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '2px',
+                        padding: '8px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        background: '#ffffff',
+                        cursor: 'pointer'
+                      }}
+                      title="Click to toggle Portrait / Landscape Orientation"
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <FileText size={18} color="#64748b" />
+                        <span style={{ fontSize: '12px', color: '#1e293b' }}>
+                          {printOrientation === 'portrait' ? 'Portrait Orientation' : 'Landscape Orientation'}
+                        </span>
+                      </div>
+                      <ChevronDown size={14} color="#64748b" />
+                    </div>
+                  </div>
+
+                  {/* Paper Size Dropdown */}
+                  <div>
+                    <select
+                      value={printPaperSize}
+                      onChange={(e) => setPrintPaperSize(e.target.value)}
+                      style={{
+                        width: '100%',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '2px',
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        color: '#1e293b',
+                        background: '#ffffff',
+                        cursor: 'pointer',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="letter">Letter  21.59 cm x 27.94 cm (8.5 x 11 in)</option>
+                      <option value="a4">A4  21.00 cm x 29.70 cm</option>
+                      <option value="tabloid">Tabloid / A3  27.94 cm x 43.18 cm</option>
+                      <option value="legal">Legal  21.59 cm x 35.56 cm</option>
+                    </select>
+                  </div>
+
+                  <a
+                    href="#page-setup"
+                    onClick={(e) => { e.preventDefault(); onNotify?.('Page Setup: Margins 15mm, Scale: Fit to Printable Sheet Area', 'info'); }}
+                    style={{ fontSize: '11.5px', color: '#0f5a9e', textDecoration: 'none', display: 'inline-block', marginTop: '2px' }}
+                  >
+                    Page Setup
+                  </a>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: DYNAMIC PRINT SHEET PREVIEW (Image 1 replica) */}
+              <div
+                style={{
+                  flex: 1,
+                  background: '#cbd5e1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '24px',
+                  overflow: 'auto',
+                  position: 'relative'
+                }}
+              >
+                {/* Paper Sheet */}
+                <div
+                  id="mastercam-print-sheet"
+                  style={{
+                    width: printOrientation === 'portrait' ? '540px' : '720px',
+                    height: printOrientation === 'portrait' ? '700px' : '540px',
+                    background: '#ffffff',
+                    boxShadow: '0 6px 24px rgba(0, 0, 0, 0.22)',
+                    position: 'relative',
+                    borderRadius: '1px',
+                    overflow: 'hidden',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                >
+                  {/* Inner Dotted Printable Margin Boundary (Matching Image 1) */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: '20px',
+                      border: '1px dashed #94a3b8',
+                      pointerEvents: 'none',
+                      zIndex: 20
+                    }}
+                  />
+
+                  {/* Header / Drawing Title Block Info */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '24px',
+                      left: '28px',
+                      right: '28px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '11px',
+                      color: '#64748b',
+                      pointerEvents: 'none',
+                      zIndex: 20,
+                      fontFamily: "'Segoe UI', Tahoma, sans-serif"
+                    }}
+                  >
+                    <span><strong>Project:</strong> {currentProjectName || 'Mastercam_Part'}</span>
+                    <span><strong>Scale:</strong> FIT TO PAGE</span>
+                    <span><strong>Date:</strong> {new Date().toLocaleDateString()}</span>
+                  </div>
+
+                  {/* Dynamic CAD 3D Viewport on the Sheet */}
+                  <div style={{ flex: 1, width: '100%', height: '100%', position: 'relative' }}>
+                    <PrintSheetViewport
+                      currentModel={currentModel}
+                      solidsList={solidsList}
+                      customGeometry={customGeometry}
+                      partMetrics={partMetrics}
+                      orientation={printOrientation}
+                      paperSize={printPaperSize}
+                    />
+                  </div>
+
+                  {/* Bottom Footer block */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '24px',
+                      left: '28px',
+                      right: '28px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '10.5px',
+                      color: '#64748b',
+                      pointerEvents: 'none',
+                      zIndex: 20
+                    }}
+                  >
+                    <span><strong>Machine:</strong> {activeMachine?.name || '4-AXIS VMC'}</span>
+                    <span><strong>WCS:</strong> {activeWcs || 'Top (G54)'}</span>
+                    <span><strong>Format:</strong> {printPaperSize.toUpperCase()} ({printOrientation})</span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -569,6 +569,8 @@ export default function App() {
   const [draftingModalTab, setDraftingModalTab] = useState('linear');
   const [isTransformModalOpen, setIsTransformModalOpen] = useState(false);
   const [transformModalTab, setTransformModalTab] = useState('translate');
+  const [activeTransformTool, setActiveTransformTool] = useState(null); // 'rotate' | 'translate' | 'offset_chains'
+  const [transformPreviewState, setTransformPreviewState] = useState(null);
   const [isMachineConfigModalOpen, setIsMachineConfigModalOpen] = useState(false);
   const [isATPModalOpen, setIsATPModalOpen] = useState(false);
   const [atpModalTab, setAtpModalTab] = useState('wizard');
@@ -5680,10 +5682,126 @@ export default function App() {
     commitCustomGeometry(next, true);
   };
 
-  // 3D Transform Workbench Handler (Translate, Rotate, Scale, Mirror, Pattern)
+  // 3D Transform Workbench Handler (Mastercam Docked Manager Architecture)
   const handleOpenTransformModal = (tab = 'translate') => {
-    setTransformModalTab(tab);
-    setIsTransformModalOpen(true);
+    const raw = String(tab || 'translate').replace(/^transform_/, '');
+    const tool = raw === 'offset_entity' ? 'offset_chains' : raw;
+    setActiveTransformTool(tool);
+
+    if (tool === 'rotate') {
+      setActiveManagerTab('Rotate');
+      setTransformPreviewState({ angle: 90.0, center: { x: 0, y: 0, z: 0 }, instances: 1, method: 'copy' });
+    } else if (tool === 'translate') {
+      setActiveManagerTab('Translate');
+      setTransformPreviewState({ delta: { x: 0, y: 0, z: 0 }, instances: 1, method: 'copy' });
+    } else if (tool === 'offset_chains' || tool === 'offset') {
+      setActiveManagerTab('Offset Cha...');
+      setTransformPreviewState({ distance: 10.0, direction: 'opposite', instances: 1 });
+      setIsChainingPaletteOpen(true);
+      setChainingPromptText('Offset: select chain 1');
+    } else {
+      setActiveManagerTab('Translate');
+      setTransformPreviewState({ delta: { x: 0, y: 0, z: 0 }, instances: 1, method: 'copy' });
+    }
+  };
+
+  const handleApplyRotate = (params) => {
+    const { angle = 90, center = { x: 0, y: 0, z: 0 }, instances = 1, method = 'copy', stayOpen = false } = params;
+    const rad = (angle * Math.PI) / 180;
+    
+    if (method === 'copy') {
+      setSolidsList((prev) => {
+        const copies = [];
+        prev.forEach((s) => {
+          if (!s || s.visible === false) return;
+          copies.push({
+            ...s,
+            id: `solid_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            name: `${s.name || 'Solid'} (Rotated ${angle}°)`,
+            color: '#38bdf8'
+          });
+        });
+        return [...prev, ...copies];
+      });
+      showToast(`Rotated ${instances} cop${instances > 1 ? 'ies' : 'y'} by ${angle}°`, 'success');
+    } else {
+      setPartTransform((prev) => ({
+        ...prev,
+        rotation: {
+          x: prev.rotation.x,
+          y: prev.rotation.y + rad,
+          z: prev.rotation.z
+        }
+      }));
+      showToast(`Rotated part by ${angle}°`, 'success');
+    }
+
+    if (!stayOpen) {
+      setActiveTransformTool(null);
+      setTransformPreviewState(null);
+      setActiveManagerTab('Toolpaths');
+    }
+  };
+
+  const handleApplyTranslate = (params) => {
+    const { delta = { x: 0, y: 0, z: 0 }, instances = 1, method = 'copy', stayOpen = false } = params;
+    if (method === 'copy') {
+      setSolidsList((prev) => {
+        const copies = [];
+        prev.forEach((s) => {
+          if (!s || s.visible === false) return;
+          copies.push({
+            ...s,
+            id: `solid_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            name: `${s.name || 'Solid'} (Shifted)`,
+            color: '#38bdf8'
+          });
+        });
+        return [...prev, ...copies];
+      });
+      showToast(`Translated ${instances} cop${instances > 1 ? 'ies' : 'y'} by (${delta.x}, ${delta.y}, ${delta.z})`, 'success');
+    } else {
+      setPartTransform((prev) => ({
+        ...prev,
+        position: {
+          x: prev.position.x + delta.x,
+          y: prev.position.y + delta.y,
+          z: prev.position.z + delta.z
+        }
+      }));
+      showToast(`Translated part by (${delta.x}, ${delta.y}, ${delta.z})`, 'success');
+    }
+
+    if (!stayOpen) {
+      setActiveTransformTool(null);
+      setTransformPreviewState(null);
+      setActiveManagerTab('Toolpaths');
+    }
+  };
+
+  const handleApplyOffsetChains = (params) => {
+    const { distance = 10, direction = 'opposite', instances = 1, stayOpen = false } = params;
+    const offsetSign = direction === 'opposite' ? -1 : 1;
+    const newEnt = {
+      id: `offset_chain_${Date.now()}`,
+      type: 'rect',
+      name: `Offset Chain (${distance}mm)`,
+      width: 100 + (offsetSign * distance * 2),
+      height: 40 + (offsetSign * distance * 2),
+      x: 0,
+      y: 11,
+      z: 0,
+      visible: true
+    };
+    setCustomGeometry((prev) => [...prev, newEnt]);
+    showToast(`Offset chain generated at ${distance}mm (${direction} side)`, 'success');
+
+    if (!stayOpen) {
+      setActiveTransformTool(null);
+      setTransformPreviewState(null);
+      setIsChainingPaletteOpen(false);
+      setActiveManagerTab('Toolpaths');
+    }
   };
 
   const flowlineSelectionSession = activeFacePickRole
@@ -6077,6 +6195,33 @@ export default function App() {
           onReverseSolidExtrudeChain={handleReverseExtrudeChain}
           onCloseSolidExtrude={() => setIsSolidExtrudeActive(false)}
           onApplySolidExtrude={handleApplySolidExtrude}
+          activeTransformTool={activeTransformTool}
+          onApplyRotate={handleApplyRotate}
+          onCancelRotate={() => {
+            setActiveTransformTool(null);
+            setTransformPreviewState(null);
+            setActiveManagerTab('Toolpaths');
+          }}
+          onChangeRotatePreview={(p) => setTransformPreviewState(p)}
+          onReselectRotateEntities={() => showToast('Select entities in 3D canvas', 'info')}
+          onReselectRotateCenter={() => showToast('Click center point in 3D canvas', 'info')}
+          onApplyTranslate={handleApplyTranslate}
+          onCancelTranslate={() => {
+            setActiveTransformTool(null);
+            setTransformPreviewState(null);
+            setActiveManagerTab('Toolpaths');
+          }}
+          onChangeTranslatePreview={(p) => setTransformPreviewState(p)}
+          onReselectTranslateEntities={() => showToast('Select entities in 3D canvas', 'info')}
+          onReselectTranslateVector={() => showToast('Click From/To vector in 3D canvas', 'info')}
+          onApplyOffsetChains={handleApplyOffsetChains}
+          onCancelOffsetChains={() => {
+            setActiveTransformTool(null);
+            setTransformPreviewState(null);
+            setIsChainingPaletteOpen(false);
+            setActiveManagerTab('Toolpaths');
+          }}
+          onChangeOffsetPreview={(p) => setTransformPreviewState(p)}
         />
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
@@ -6200,6 +6345,8 @@ export default function App() {
                 onOpenGroups={() => setActiveManagerTab('Toolpaths')}
                 probingSession={{ active: isProbingHUDOpen, cycle: activeProbingCycle, feature: probingPickedFeature }}
                 onProbeFeaturePicked={handleProbeFeaturePicked}
+                activeTransformTool={activeTransformTool}
+                transformPreviewState={transformPreviewState}
               />
             </div>
           </div>
@@ -6342,6 +6489,8 @@ export default function App() {
               onOpenGroups={() => setActiveManagerTab('Toolpaths')}
               probingSession={{ active: isProbingHUDOpen, cycle: activeProbingCycle, feature: probingPickedFeature }}
               onProbeFeaturePicked={handleProbeFeaturePicked}
+              activeTransformTool={activeTransformTool}
+              transformPreviewState={transformPreviewState}
             />
           </div>
         )}

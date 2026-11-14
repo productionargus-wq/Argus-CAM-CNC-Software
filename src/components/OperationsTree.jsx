@@ -13,6 +13,9 @@ import LineEndpointsPanel from './LineEndpointsPanel';
 import ArcTangentPanel from './ArcTangentPanel';
 import SurfaceExtrudePanel from './SurfaceExtrudePanel';
 import SolidExtrudePanel from './SolidExtrudePanel';
+import RotatePanel from './RotatePanel';
+import TranslatePanel from './TranslatePanel';
+import OffsetChainsPanel from './OffsetChainsPanel';
 import { formatMastercamToolType } from '../config/surfaceFinishSchema';
 
 export default function OperationsTree({
@@ -144,11 +147,28 @@ export default function OperationsTree({
   onReverseSolidExtrudeChain,
   onCloseSolidExtrude,
   onApplySolidExtrude,
-  onOpenChaining
+  onOpenChaining,
+  activeTransformTool = null,
+  onApplyRotate,
+  onCancelRotate,
+  onChangeRotatePreview,
+  onReselectRotateEntities,
+  onReselectRotateCenter,
+  onApplyTranslate,
+  onCancelTranslate,
+  onChangeTranslatePreview,
+  onReselectTranslateEntities,
+  onReselectTranslateVector,
+  onApplyOffsetChains,
+  onCancelOffsetChains,
+  onChangeOffsetPreview
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
   const currentTab = activeManagerTab || localTab;
-  const isWireframeTool = ['Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent', 'Surface Ex...', 'Solid Extru...'].includes(currentTab);
+  const isWireframeTool = [
+    'Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent',
+    'Surface Ex...', 'Solid Extru...', 'Rotate', 'Translate', 'Offset Cha...'
+  ].includes(currentTab);
 
   const handleTabClick = (tab) => {
     const mapped = tab === 'Recent Fu...' ? 'Recent Functions' : tab;
@@ -324,9 +344,18 @@ export default function OperationsTree({
     if (isSolidExtrudeActive || currentTab === 'Solid Extru...') {
       list.push('Solid Extru...');
     }
+    if (activeTransformTool === 'rotate' || currentTab === 'Rotate') {
+      list.push('Rotate');
+    }
+    if (activeTransformTool === 'translate' || currentTab === 'Translate') {
+      list.push('Translate');
+    }
+    if (activeTransformTool === 'offset_chains' || currentTab === 'Offset Cha...') {
+      list.push('Offset Cha...');
+    }
     list.push('Recent Fu...');
     return list;
-  }, [activeDrawingTool, activeSurfaceTool, isSolidExtrudeActive, currentTab]);
+  }, [activeDrawingTool, activeSurfaceTool, isSolidExtrudeActive, activeTransformTool, currentTab]);
 
   const displayPlanes = planes && planes.length > 0 ? planes : [
     { id: 'plane_top', name: 'Top (G17)', code: 'G17', desc: 'Spindle along Z, XY Table', isStandard: true, wcsCode: 'G54' },
@@ -427,6 +456,9 @@ export default function OperationsTree({
           {currentTab === 'Planes' && 'Planes'}
           {currentTab === 'Levels' && 'Levels'}
           {currentTab === 'Solid Extru...' && 'Solid Extrude'}
+          {currentTab === 'Rotate' && 'Rotate'}
+          {currentTab === 'Translate' && 'Translate'}
+          {currentTab === 'Offset Cha...' && 'Offset Chains'}
           {currentTab === 'Recent Functions' && 'Recent Functions'}
         </span>
 
@@ -614,6 +646,54 @@ export default function OperationsTree({
             solidsList={solids}
             activeTargetSolidId={activeSolidId}
             onSelectTargetSolid={onSelectSolid}
+          />
+        </div>
+      ) : currentTab === 'Rotate' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <RotatePanel
+            onApply={(params) => {
+              if (onApplyRotate) onApplyRotate(params);
+              if (!params.stayOpen) handleTabClick('Toolpaths');
+            }}
+            onCancel={() => {
+              if (onCancelRotate) onCancelRotate();
+              handleTabClick('Toolpaths');
+            }}
+            onChangePreview={onChangeRotatePreview}
+            onReselectEntities={onReselectRotateEntities}
+            onReselectCenterPoint={onReselectRotateCenter}
+          />
+        </div>
+      ) : currentTab === 'Translate' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <TranslatePanel
+            onApply={(params) => {
+              if (onApplyTranslate) onApplyTranslate(params);
+              if (!params.stayOpen) handleTabClick('Toolpaths');
+            }}
+            onCancel={() => {
+              if (onCancelTranslate) onCancelTranslate();
+              handleTabClick('Toolpaths');
+            }}
+            onChangePreview={onChangeTranslatePreview}
+            onReselectEntities={onReselectTranslateEntities}
+            onReselectVector={onReselectTranslateVector}
+          />
+        </div>
+      ) : currentTab === 'Offset Cha...' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <OffsetChainsPanel
+            onApply={(params) => {
+              if (onApplyOffsetChains) onApplyOffsetChains(params);
+              if (!params.stayOpen) handleTabClick('Toolpaths');
+            }}
+            onCancel={() => {
+              if (onCancelOffsetChains) onCancelOffsetChains();
+              handleTabClick('Toolpaths');
+            }}
+            onChangePreview={onChangeOffsetPreview}
+            onOpenChaining={onOpenChaining}
+            onReselectChains={onOpenChaining}
           />
         </div>
       ) : (

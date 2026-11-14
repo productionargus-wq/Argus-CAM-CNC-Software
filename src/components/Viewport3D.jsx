@@ -194,7 +194,9 @@ export default function Viewport3D({
   onSwitchToPlanes = null,
   onOpenGroups = null,
   probingSession = null,
-  onProbeFeaturePicked = null
+  onProbeFeaturePicked = null,
+  activeTransformTool = null,
+  transformPreviewState = null
 }) {
   const isLight = theme !== 'dark';
   const mountRef = useRef(null);
@@ -282,6 +284,7 @@ export default function Viewport3D({
   const chainHighlightGroupRef = useRef(null);
   const selectionHighlightGroupRef = useRef(null);
   const faceHighlightGroupRef = useRef(null);
+  const transformManipulatorGroupRef = useRef(null);
   const flowlinePreviewGroupRef = useRef(null);
   const surfacePreviewGroupRef = useRef(null);
   const surfaceSelectionSessionRef = useRef(surfaceSelectionSession);
@@ -693,6 +696,13 @@ export default function Viewport3D({
     surfacePreviewGroup.position.set(0, 49, 0);
     scene.add(surfacePreviewGroup);
     surfacePreviewGroupRef.current = surfacePreviewGroup;
+
+    // Transform Manipulators Group (Rotate Goniometer, Translate Arrows, Offset)
+    const transformManipulatorGroup = new THREE.Group();
+    transformManipulatorGroup.name = "Transform_Manipulator_Group";
+    transformManipulatorGroup.position.set(0, 49, 0);
+    scene.add(transformManipulatorGroup);
+    transformManipulatorGroupRef.current = transformManipulatorGroup;
 
     // Drafting Dimension Callouts Group
     const dimensionGroup = new THREE.Group();
@@ -2060,6 +2070,134 @@ export default function Viewport3D({
       }
     }
   }, [showArcCenters, showEndpoints, customGeometry]);
+
+  // 6b. Dynamic Mastercam Transform Manipulator Gizmos (Images 2, 3, 4, 5)
+  useEffect(() => {
+    if (!transformManipulatorGroupRef.current) return;
+    const group = transformManipulatorGroupRef.current;
+    group.clear();
+
+    if (!activeTransformTool) return;
+
+    if (activeTransformTool === 'rotate') {
+      const rotAngle = ((transformPreviewState?.angle ?? 90.0) * Math.PI) / 180;
+      const center = transformPreviewState?.center || { x: 0, y: 0, z: 0 };
+      
+      const goniometer = new THREE.Group();
+      goniometer.position.set(center.x, center.y + 12, center.z);
+
+      // Center sphere (gray)
+      const sphereMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.3 });
+      const sphere = new THREE.Mesh(new THREE.SphereGeometry(3.5, 16, 16), sphereMat);
+      goniometer.add(sphere);
+
+      // Blue rotation ring
+      const ringGeo = new THREE.TorusGeometry(36, 1.2, 16, 64);
+      ringGeo.rotateX(Math.PI / 2);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
+      goniometer.add(new THREE.Mesh(ringGeo, ringMat));
+
+      // Vertical direction arrow (blue)
+      const arrowMat = new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 3 });
+      const arrowLine = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 42, 0)]),
+        arrowMat
+      );
+      goniometer.add(arrowLine);
+
+      const arrowCone = new THREE.Mesh(
+        new THREE.ConeGeometry(3, 8, 16),
+        new THREE.MeshBasicMaterial({ color: 0x0284c7 })
+      );
+      arrowCone.position.set(0, 42, 0);
+      goniometer.add(arrowCone);
+
+      // Translucent sweep angle sector (e.g. 90 deg red arc from Image 2)
+      if (Math.abs(rotAngle) > 0.001) {
+        const sectorGeo = new THREE.RingGeometry(0.1, 36, 32, 1, 0, rotAngle);
+        sectorGeo.rotateX(-Math.PI / 2);
+        const sectorMat = new THREE.MeshBasicMaterial({
+          color: 0xef4444,
+          transparent: true,
+          opacity: 0.35,
+          side: THREE.DoubleSide
+        });
+        goniometer.add(new THREE.Mesh(sectorGeo, sectorMat));
+      }
+
+      group.add(goniometer);
+    } else if (activeTransformTool === 'translate') {
+      const delta = transformPreviewState?.delta || { x: 0, y: 0, z: 0 };
+      const gizmo = new THREE.Group();
+
+      // XYZ Arrows matching Mastercam
+      // X Arrow (Red)
+      const xLine = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 10, 0), new THREE.Vector3(50, 10, 0)]),
+        new THREE.LineBasicMaterial({ color: 0xdc2626, linewidth: 3 })
+      );
+      const xCone = new THREE.Mesh(new THREE.ConeGeometry(3, 8, 16), new THREE.MeshBasicMaterial({ color: 0xdc2626 }));
+      xCone.position.set(50, 10, 0);
+      xCone.rotateZ(-Math.PI / 2);
+      gizmo.add(xLine, xCone);
+
+      // Y Arrow (Green)
+      const yLine = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 10, 0), new THREE.Vector3(0, 60, 0)]),
+        new THREE.LineBasicMaterial({ color: 0x16a34a, linewidth: 3 })
+      );
+      const yCone = new THREE.Mesh(new THREE.ConeGeometry(3, 8, 16), new THREE.MeshBasicMaterial({ color: 0x16a34a }));
+      yCone.position.set(0, 60, 0);
+      gizmo.add(yLine, yCone);
+
+      // Z Arrow (Blue)
+      const zLine = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 10, 0), new THREE.Vector3(0, 10, 50)]),
+        new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 3 })
+      );
+      const zCone = new THREE.Mesh(new THREE.ConeGeometry(3, 8, 16), new THREE.MeshBasicMaterial({ color: 0x0284c7 }));
+      zCone.position.set(0, 10, 50);
+      zCone.rotateX(Math.PI / 2);
+      gizmo.add(zLine, zCone);
+
+      // Dashed vector connecting origin to translated target
+      if (Math.abs(delta.x) > 0.1 || Math.abs(delta.y) > 0.1 || Math.abs(delta.z) > 0.1) {
+        const dashedPts = [
+          new THREE.Vector3(0, 10, 0),
+          new THREE.Vector3(delta.x, 10 + delta.y, delta.z)
+        ];
+        const dashedGeo = new THREE.BufferGeometry().setFromPoints(dashedPts);
+        const dashedMat = new THREE.LineDashedMaterial({ color: 0x94a3b8, dashSize: 4, gapSize: 3 });
+        const dashedLine = new THREE.Line(dashedGeo, dashedMat);
+        dashedLine.computeLineDistances();
+        gizmo.add(dashedLine);
+      }
+
+      group.add(gizmo);
+    } else if (activeTransformTool === 'offset_chains') {
+      const dist = transformPreviewState?.distance || 10.0;
+      const dir = transformPreviewState?.direction || 'opposite';
+      const offsetSign = dir === 'opposite' ? -1 : 1;
+      
+      // Render offset contour highlight
+      const offsetGroup = new THREE.Group();
+      const rectW = 100 + (offsetSign * dist * 2);
+      const rectH = 40 + (offsetSign * dist * 2);
+      const pts = [
+        new THREE.Vector3(-rectW / 2, 11, -rectH / 2),
+        new THREE.Vector3(rectW / 2, 11, -rectH / 2),
+        new THREE.Vector3(rectW / 2, 11, rectH / 2),
+        new THREE.Vector3(-rectW / 2, 11, rectH / 2),
+        new THREE.Vector3(-rectW / 2, 11, -rectH / 2)
+      ];
+      const offsetLineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+      const offsetMat = new THREE.LineDashedMaterial({ color: 0xeab308, dashSize: 4, gapSize: 3, linewidth: 2 });
+      const offsetLines = new THREE.Line(offsetLineGeo, offsetMat);
+      offsetLines.computeLineDistances();
+      offsetGroup.add(offsetLines);
+      group.add(offsetGroup);
+    }
+  }, [activeTransformTool, transformPreviewState]);
 
   // 7. Layer Visibility Updates (Part Solid, Wireframe, Fixture, Bed, WCS, Stock, Rapids)
   useEffect(() => {
