@@ -188,7 +188,13 @@ export default function Viewport3D({
   onReselectPrevious = null,
   onFastPointSubmit = null,
   surfaceSelectionSession = null,
-  flowlinePreview = null
+  flowlinePreview = null,
+  onOpenSelectAllModal = null,
+  onSwitchToLevels = null,
+  onSwitchToPlanes = null,
+  onOpenGroups = null,
+  probingSession = null,
+  onProbeFeaturePicked = null
 }) {
   const isLight = theme !== 'dark';
   const mountRef = useRef(null);
@@ -374,6 +380,10 @@ export default function Viewport3D({
   useEffect(() => { solidFaceCatalogRef.current = solidFaceCatalog; }, [solidFaceCatalog]);
   useEffect(() => { selectedSolidFaceIdsRef.current = selectedSolidFaceIds; }, [selectedSolidFaceIds]);
   useEffect(() => { hoveredFaceIdRef.current = hoveredFaceId; }, [hoveredFaceId]);
+  const probingSessionRef = useRef(probingSession);
+  const onProbeFeaturePickedRef = useRef(onProbeFeaturePicked);
+  useEffect(() => { probingSessionRef.current = probingSession; }, [probingSession]);
+  useEffect(() => { onProbeFeaturePickedRef.current = onProbeFeaturePicked; }, [onProbeFeaturePicked]);
   useEffect(() => {
     // Switching away from polygon/vector clears transient rubber-band overlays cleanly
     polygonPointsRef.current = [];
@@ -1060,6 +1070,19 @@ export default function Viewport3D({
       if (e.button === 1) {
         isDragging = true;
         return;
+      }
+
+      if (e.button === 0 && probingSessionRef.current?.active) {
+        const resolved = resolveSnappedPoint(e);
+        if (resolved && onProbeFeaturePickedRef.current) {
+          onProbeFeaturePickedRef.current({
+            x: resolved.finalPt.x,
+            y: resolved.finalPt.y,
+            z: resolved.finalPt.z,
+            point: resolved.finalPt
+          });
+          return;
+        }
       }
 
       if (e.button === 0 && !isBasePointPickActiveRef.current && isSelectionArmed()) {
@@ -3452,7 +3475,7 @@ export default function Viewport3D({
         />
       )}
 
-      {/* Docked Vertical QuickMask Bar (Right Edge of Viewport) */}
+      {/* Docked Vertical QuickMask Bar (Right Edge of Viewport matching Image 2) */}
       {!isBackplotActive && (
         <QuickMaskBar
           activeMask={selectionMask}
@@ -3468,7 +3491,26 @@ export default function Viewport3D({
             return v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
           })()}
           scaleUnit={unitSystem === 'imperial' ? 'in' : 'mm'}
-          onDeselectAll={() => { onChangeSelectionMask?.('all'); onChangeSelectedEntities?.([]); }}
+          onAddEntity={() => {
+            if (onToggleSketchMode) onToggleSketchMode(true);
+            if (onChangeSketchTool) onChangeSketchTool('line');
+          }}
+          onAttributes={onOpenSelectAllModal}
+          onDeleteEntity={() => {
+            if (onDeleteSelectedEntities && selectedEntityIds?.length > 0) {
+              onDeleteSelectedEntities(selectedEntityIds);
+            }
+          }}
+          onDeselectAll={() => {
+            onChangeSelectionMask?.('all');
+            onChangeSelectedEntities?.([]);
+            setSelectedSolidFaceIds([]);
+          }}
+          onZoomExtents={() => applyCameraPreset('fit')}
+          onOpenColorMask={onOpenSelectAllModal}
+          onSwitchToLevels={onSwitchToLevels}
+          onSwitchToPlanes={onSwitchToPlanes}
+          onOpenGroups={onOpenGroups}
         />
       )}
 

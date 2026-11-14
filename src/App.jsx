@@ -77,6 +77,9 @@ import MastercamToolpathParametersModal from './components/MastercamToolpathPara
 import MastercamChainingModal from './components/MastercamChainingModal';
 import ChainingPalette from './components/ChainingPalette';
 import { DEFAULT_FIXTURE_CONFIG } from './utils/fixtureEngine';
+import SelectAllDialog from './components/SelectAllDialog';
+import SelectProbeModal from './components/SelectProbeModal';
+import ProbingDialogHUD from './components/ProbingDialogHUD';
 import StatusBar from './components/StatusBar';
 import ViewsheetBar from './components/ViewsheetBar';
 import {
@@ -335,6 +338,12 @@ export default function App() {
   const [isRecentProjectsModalOpen, setIsRecentProjectsModalOpen] = useState(false);
   const [isExportCADModalOpen, setIsExportCADModalOpen] = useState(false);
   const [isProbingModalOpen, setIsProbingModalOpen] = useState(false);
+  const [isSelectAllOpen, setIsSelectAllOpen] = useState(false);
+  const [isSelectProbeOpen, setIsSelectProbeOpen] = useState(false);
+  const [isProbingHUDOpen, setIsProbingHUDOpen] = useState(false);
+  const [activeProbe, setActiveProbe] = useState(null);
+  const [activeProbingCycle, setActiveProbingCycle] = useState('bore_boss');
+  const [probingPickedFeature, setProbingPickedFeature] = useState(null);
   const [isAFRModalOpen, setIsAFRModalOpen] = useState(false);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
@@ -2331,6 +2340,100 @@ export default function App() {
     setOperations((prev) => [...prev, newOp]);
     setActiveOpId(newOp.id);
     setIsProbingModalOpen(false);
+  };
+
+  const handleSelectProbeConfirm = (selectedProbe) => {
+    setActiveProbe(selectedProbe);
+    setIsSelectProbeOpen(false);
+    setIsProbingHUDOpen(true);
+    showToast(`Loaded ${selectedProbe.name}. Click feature in 3D viewport or choose cycle in Probing Dialog.`, 'info');
+  };
+
+  const handleApplyMastercamProbe = (probeData) => {
+    const nextId = operations.length > 0 ? Math.max(...operations.map((o) => o.id)) + 1 : 1;
+    const probe = activeProbe || { name: 'Renishaw OMP40-2', diameter: 6, toolChangeId: 11 };
+
+    let pTool = tools.find((t) => t.type === 'probe' || t.id === probe.toolChangeId);
+    if (!pTool) {
+      pTool = {
+        id: probe.toolChangeId || 11,
+        number: probe.toolChangeId || 11,
+        name: probe.name || 'Renishaw OMP40-2 Touch Probe',
+        type: 'probe',
+        diameter: probe.diameter || 6.0,
+        cornerRad: (probe.diameter || 6.0) / 2,
+        fluteLength: 50,
+        overallLength: 100,
+        flutes: 0,
+        cuttingSpeedVc: 0,
+        rpm: 0,
+        feedRate: 150,
+        plungeRate: 150,
+        coolant: 'Off',
+        isProbe: true
+      };
+      setTools((prev) => [...prev, pTool]);
+    }
+
+    const cycleLabels = {
+      point: 'Single Point Surface Touch',
+      web_slot: 'Web / Slot Measurement',
+      bore_boss: 'Bore / Boss Inspection',
+      angled_surface: 'Angled Surface Alignment',
+      corner: 'Corner 3-Point Intersection',
+      block_3d: '3D Block Origin Datuming'
+    };
+    const cycleLabel = cycleLabels[probeData.cycle] || 'Touch Probe Routine';
+    const featDesc = probeData.feature
+      ? `[X:${Number(probeData.feature.x || 0).toFixed(1)} Y:${Number(probeData.feature.y || 0).toFixed(1)}]`
+      : '[Origin]';
+
+    const newOp = {
+      id: nextId,
+      name: `${cycleLabel} ${featDesc}`,
+      toolId: pTool.id,
+      toolNumber: pTool.number,
+      toolName: pTool.name,
+      toolDiameter: pTool.diameter,
+      toolType: 'probe',
+      badgeClass: 'probe',
+      badgeText: 'PR',
+      visible: true,
+      strategyKey: 'probing',
+      probeCycle: probeData.cycle,
+      probeGeometry: probeData.feature ? `Point ${featDesc}` : 'Datum Point',
+      cuttingLines: [],
+      waypoints: [
+        new THREE.Vector3(probeData.feature?.x || 0, (probeData.feature?.y || 0) + 15, (probeData.feature?.z || 0) + 20),
+        new THREE.Vector3(probeData.feature?.x || 0, probeData.feature?.y || 0, probeData.feature?.z || 0),
+        new THREE.Vector3(probeData.feature?.x || 0, (probeData.feature?.y || 0) + 15, (probeData.feature?.z || 0) + 20)
+      ],
+      rapidHeight: 25.0
+    };
+
+    setOperations((prev) => [...prev, newOp]);
+    setActiveOpId(nextId);
+    showToast(`Mastercam Productivity+: Touch Probe operation #${nextId} created in Toolpath Group-1`, 'success');
+  };
+
+  const handleProbeFeaturePicked = (feature) => {
+    setProbingPickedFeature(feature);
+    showToast(`Probe Target Picked: X=${feature.x?.toFixed(2)}, Y=${feature.y?.toFixed(2)}, Z=${feature.z?.toFixed(2)}`, 'info');
+  };
+
+  const handleSelectAllApply = (maskFilter) => {
+    if (maskFilter.category === 'color') {
+      const colors = maskFilter.selectedColors || [];
+      if (colors.length === 0) {
+        setSelectionMask('all');
+      } else {
+        setSelectionMask(`color:${colors[0]}`);
+      }
+    } else {
+      setSelectionMask(maskFilter.category || 'all');
+    }
+    setIsSelectAllOpen(false);
+    showToast(`Selection Mask applied: ${maskFilter.category} (${maskFilter.selectedColors?.length || 0} colors)`, 'info');
   };
 
   const handleApplyAFROperations = (newOps) => {
@@ -5545,7 +5648,7 @@ export default function App() {
         onOpenStatistics={() => setIsStatisticsModalOpen(true)}
         onOpenAddInsManager={() => setIsAddInsModalOpen(true)}
         onOpenCommandFinder={() => setIsCommandFinderOpen(true)}
-        onOpenAttributesModal={() => showToast('Attributes Manager: Line font, mask and layer mapping active', 'info')}
+        onOpenAttributesModal={() => setIsSelectAllOpen(true)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onOpenPostModal={() => setIsPostModalOpen(true)}
@@ -5604,7 +5707,7 @@ export default function App() {
         onOpenSaveAsModal={() => setIsSaveAsModalOpen(true)}
         onOpenRecentProjectsModal={() => setIsRecentProjectsModalOpen(true)}
         onOpenExportCADModal={() => setIsExportCADModalOpen(true)}
-        onOpenProbingStudio={() => setIsProbingModalOpen(true)}
+        onOpenProbingStudio={() => setIsSelectProbeOpen(true)}
         onOpenAFRModal={() => setIsAFRModalOpen(true)}
         onOpenAdaptiveModal={() => setIsAdaptiveModalOpen(true)}
         onOpenLeadInOutModal={() => setIsLeadInOutModalOpen(true)}
@@ -5755,7 +5858,7 @@ export default function App() {
           onOpenLatheStudio={() => setIsLatheStudioOpen(true)}
           onOpenTransformModal={handleOpenTransformModal}
           onOpenNestingStudio={() => setIsNestingStudioOpen(true)}
-          onOpenProbingStudio={() => setIsProbingModalOpen(true)}
+          onOpenProbingStudio={() => setIsSelectProbeOpen(true)}
           onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
           onOpenSurfaceFinishContour={() => openSurfaceFinishModal('contour', null)}
           onOpenSurfaceFinishPocket={() => openSurfaceFinishModal('pocket', null)}
@@ -5943,6 +6046,12 @@ export default function App() {
                 onFastPointSubmit={handleFastPointSubmit}
                 surfaceSelectionSession={flowlineSelectionSession}
                 flowlinePreview={flowlineViewportPreview}
+                onOpenSelectAllModal={() => setIsSelectAllOpen(true)}
+                onSwitchToLevels={() => setActiveManagerTab('Levels')}
+                onSwitchToPlanes={() => setActiveManagerTab('Planes')}
+                onOpenGroups={() => setActiveManagerTab('Toolpaths')}
+                probingSession={{ active: isProbingHUDOpen, cycle: activeProbingCycle, feature: probingPickedFeature }}
+                onProbeFeaturePicked={handleProbeFeaturePicked}
               />
             </div>
           </div>
@@ -6079,6 +6188,12 @@ export default function App() {
               onFastPointSubmit={handleFastPointSubmit}
               surfaceSelectionSession={flowlineSelectionSession}
               flowlinePreview={flowlineViewportPreview}
+              onOpenSelectAllModal={() => setIsSelectAllOpen(true)}
+              onSwitchToLevels={() => setActiveManagerTab('Levels')}
+              onSwitchToPlanes={() => setActiveManagerTab('Planes')}
+              onOpenGroups={() => setActiveManagerTab('Toolpaths')}
+              probingSession={{ active: isProbingHUDOpen, cycle: activeProbingCycle, feature: probingPickedFeature }}
+              onProbeFeaturePicked={handleProbeFeaturePicked}
             />
           </div>
         )}
@@ -6195,6 +6310,35 @@ export default function App() {
         onClose={() => setIsExportCADModalOpen(false)}
         currentModel={currentModel}
         currentProjectName={currentProjectName}
+      />
+
+      {/* Mastercam Image 4 "Select All" / Mask selection dialog */}
+      <SelectAllDialog
+        isOpen={isSelectAllOpen}
+        onClose={() => setIsSelectAllOpen(false)}
+        customGeometry={customGeometry}
+        onApplyFilter={handleSelectAllApply}
+        activeMask={selectionMask}
+      />
+
+      {/* Mastercam Image 6 "Select probe" modal */}
+      <SelectProbeModal
+        isOpen={isSelectProbeOpen}
+        onClose={() => setIsSelectProbeOpen(false)}
+        onConfirmProbe={handleSelectProbeConfirm}
+        currentProbe={activeProbe}
+      />
+
+      {/* Mastercam Image 7 Floating "Probing Dialog" HUD Palette */}
+      <ProbingDialogHUD
+        isOpen={isProbingHUDOpen}
+        onClose={() => setIsProbingHUDOpen(false)}
+        activeProbe={activeProbe}
+        activeCycle={activeProbingCycle}
+        onChangeCycle={setActiveProbingCycle}
+        pickedFeature={probingPickedFeature}
+        onApplyOperation={handleApplyMastercamProbe}
+        onClearFeature={() => setProbingPickedFeature(null)}
       />
 
       {/* Renishaw Inspection Plus & Haas WIPS Touch Probing Studio */}

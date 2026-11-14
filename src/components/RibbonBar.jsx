@@ -21,6 +21,7 @@ import TransformRibbonGroup from './ribbon/TransformRibbonGroup';
 import MachineRibbonGroup from './ribbon/MachineRibbonGroup';
 import ViewRibbonGroup from './ribbon/ViewRibbonGroup';
 import ToolpathsRibbonGroup from './ribbon/ToolpathsRibbonGroup';
+import HomeAttributesColorDropdown from './ribbon/HomeAttributesColorDropdown';
 
 export default function RibbonBar({
   activeTab,
@@ -205,6 +206,8 @@ export default function RibbonBar({
   const [showPointStyleMenu, setShowPointStyleMenu] = useState(false);
   const [lineStyleText, setLineStyleText] = useState('───');
   const [showLineStyleMenu, setShowLineStyleMenu] = useState(false);
+  const [lineWidth, setLineWidth] = useState('1px');
+  const [showLineWidthMenu, setShowLineWidthMenu] = useState(false);
 
   const tabs = [
     'File', 'Home', 'Wireframe', 'Surfaces', 'Solids',
@@ -591,10 +594,10 @@ export default function RibbonBar({
               <span className="ribbon-group-title">Clipboard</span>
             </div>
 
-            {/* 2. Attributes */}
+            {/* 2. Attributes (Matching Mastercam Image 3) */}
             <div className="ribbon-group" style={{ position: 'relative' }}>
               <div className="ribbon-group-items" style={{ flexDirection: 'column', gap: '4px', height: '64px', justifyContent: 'center' }}>
-                {/* Row 1: Point Style, Line Style, Color Picker, 3D/2D toggle */}
+                {/* Row 1: Point Style, Line Style, Line Width, 3D/2D toggle */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   {/* Point Style Dropdown */}
                   <div style={{ position: 'relative' }}>
@@ -622,13 +625,13 @@ export default function RibbonBar({
                     )}
                   </div>
 
-                  {/* Line Style & Thickness Dropdown */}
+                  {/* Line Style Dropdown */}
                   <div style={{ position: 'relative' }}>
                     <button
                       onClick={() => setShowLineStyleMenu((prev) => !prev)}
                       className="ribbon-combo-select"
                       style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 5px', height: '22px' }}
-                      title="Line Style & Weight (Solid, Hidden, Center, Phantom)"
+                      title="Line Style (Solid, Hidden, Center, Phantom)"
                     >
                       <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#334155', fontWeight: 700 }}>{lineStyleText}</span>
                       <ChevronDown size={11} color="#64748b" />
@@ -653,14 +656,37 @@ export default function RibbonBar({
                     )}
                   </div>
 
-                  {/* Color Picker Swatch Box */}
-                  <input
-                    type="color"
-                    value={workpieceColor || '#3b82f6'}
-                    onChange={(e) => onChangeWorkpieceColor(e.target.value)}
-                    title="Active Entity & Workpiece Color"
-                    style={{ width: '22px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '3px', padding: 0, cursor: 'pointer', background: 'none' }}
-                  />
+                  {/* Line Width Dropdown (Matching Image 3) */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setShowLineWidthMenu((prev) => !prev)}
+                      className="ribbon-combo-select"
+                      style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 5px', height: '22px' }}
+                      title="Line Width (Thin, Medium, Thick)"
+                    >
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#334155' }}>
+                        {lineWidth === '1px' ? '― 1' : lineWidth === '2px' ? '━ 2' : '█ 3'}
+                      </span>
+                      <ChevronDown size={11} color="#64748b" />
+                    </button>
+                    {showLineWidthMenu && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 1000, background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '90px' }}>
+                        {[
+                          { label: '― Thin (1px)', val: '1px' },
+                          { label: '━ Medium (2px)', val: '2px' },
+                          { label: '█ Thick (3px)', val: '3px' }
+                        ].map((w) => (
+                          <button
+                            key={w.val}
+                            onClick={() => { setLineWidth(w.val); setShowLineWidthMenu(false); }}
+                            style={{ background: lineWidth === w.val ? '#e0f2fe' : 'none', border: 'none', padding: '3px 8px', textAlign: 'left', fontSize: '11px', cursor: 'pointer', borderRadius: '3px' }}
+                          >
+                            {w.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {/* 3D / 2D Toggle Button */}
                   <button
@@ -682,28 +708,37 @@ export default function RibbonBar({
                   </button>
                 </div>
 
-                {/* Row 2: Quick Palette Swatches */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                  {['#3b82f6', '#94a3b8', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444'].map((col) => (
-                    <button
-                      key={col}
-                      onClick={() => onChangeWorkpieceColor(col)}
-                      style={{
-                        width: '18px',
-                        height: '14px',
-                        backgroundColor: col,
-                        border: workpieceColor === col ? '1.5px solid #000' : '1px solid rgba(0,0,0,0.2)',
-                        borderRadius: '2px',
-                        cursor: 'pointer'
-                      }}
-                    />
-                  ))}
+                {/* Row 2: Mastercam Default/Standard Color Dropdown (Image 3) & Swatches */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  {/* Mastercam Colors Dropdown Palette */}
+                  <HomeAttributesColorDropdown
+                    activeColor={workpieceColor || '#3b82f6'}
+                    onChangeColor={onChangeWorkpieceColor}
+                  />
+
+                  {/* Quick Palette Swatches */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    {['#3b82f6', '#94a3b8', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444'].map((col) => (
+                      <button
+                        key={col}
+                        onClick={() => onChangeWorkpieceColor(col)}
+                        style={{
+                          width: '18px',
+                          height: '14px',
+                          backgroundColor: col,
+                          border: workpieceColor === col ? '1.5px solid #000' : '1px solid rgba(0,0,0,0.2)',
+                          borderRadius: '2px',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
               <button
                 className="ribbon-dialog-launcher"
                 onClick={onOpenAttributesModal}
-                title="Open Attributes Manager (Color, Level, Line Style, Mask)"
+                title="Open Attributes / Select All Mask Dialog (Image 4)"
               >
                 <CornerDownRight size={10} />
               </button>

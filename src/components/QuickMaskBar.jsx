@@ -100,14 +100,15 @@ function IconExtents() {
   );
 }
 
-function IconPaintbrush() {
+function IconProbeStylus() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      {/* brush handle */}
-      <path d="M13 2.5L15.5 5L7.5 13L5 15.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      {/* brush tip */}
-      <ellipse cx="4.5" cy="14.5" rx="2" ry="1.4" transform="rotate(-45 4.5 14.5)"
-        stroke="currentColor" strokeWidth="1.2" fill="none"/>
+      {/* probe ball tip */}
+      <circle cx="5" cy="13.5" r="1.8" fill="none" stroke="currentColor" strokeWidth="1.4"/>
+      {/* stem line */}
+      <line x1="6.3" y1="12.2" x2="12.5" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      {/* angled upper tip */}
+      <line x1="12.5" y1="6" x2="15" y2="3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
     </svg>
   );
 }
@@ -188,26 +189,32 @@ function IconGroups() {
   );
 }
 
-/* ─── Scale Badge at Bottom ─────────────────────────────────────────── */
-function ScaleBadge({ value = '24.9', unit = 'm' }) {
+/* ─── Scale Badge at Bottom (Image 2 Replica) ────────────────────────── */
+function ScaleBadge({ value = '16.9' }) {
   return (
     <div style={{
       marginTop: '4px',
-      padding: '2px 5px',
+      padding: '2px 3px',
       background: '#f8fafc',
       border: '1px solid #cbd5e1',
       borderRadius: '3px',
       fontSize: '9px',
       fontWeight: 700,
-      color: '#1e293b',
+      color: '#0f172a',
       letterSpacing: '-0.3px',
       textAlign: 'center',
-      lineHeight: 1.3,
+      lineHeight: 1.2,
       userSelect: 'none',
       whiteSpace: 'nowrap',
-      fontFamily: 'Consolas, monospace'
+      fontFamily: 'Consolas, monospace',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '2px',
+      justifyContent: 'center',
+      width: '32px'
     }}>
-      {value}-{unit}
+      <span>{value}-</span>
+      <span style={{ display: 'inline-block', width: '6px', height: '5px', background: '#0f172a', borderRadius: '1px' }} />
     </div>
   );
 }
@@ -321,9 +328,14 @@ export default function QuickMaskBar({
   onDeleteEntity,
   onDeselectAll,
   onAttributes,
+  onZoomExtents,
+  onOpenColorMask,
+  onSwitchToLevels,
+  onSwitchToPlanes,
+  onOpenGroups,
   theme = 'light',
-  scaleValue = '24.9',
-  scaleUnit = 'm'
+  scaleValue = '16.9',
+  scaleUnit = 'mm'
 }) {
   const handleMask = (id) => {
     if (onSelectMask) onSelectMask(id === activeMask && id !== 'all' ? 'all' : id);
@@ -343,7 +355,7 @@ export default function QuickMaskBar({
         flexDirection: 'column',
         alignItems: 'center',
         gap: '1px',
-        background: 'rgba(236, 241, 247, 0.92)',
+        background: 'rgba(236, 241, 247, 0.95)',
         border: '1px solid #b8c9d9',
         borderRadius: '5px',
         padding: '5px 3px',
@@ -354,19 +366,19 @@ export default function QuickMaskBar({
       }}
     >
       {/* ── Group 1: Entity Management ── */}
-      <IconBtn id="add" title="Add Entity" onClick={onAddEntity}>
+      <IconBtn id="add" title="Add / Create Entity" onClick={onAddEntity}>
         <IconAdd/>
       </IconBtn>
 
-      <IconBtn id="attributes" title="Entity Attributes / Settings" onClick={onAttributes}>
+      <IconBtn id="attributes" title="Entity Attributes / Select All (Image 4)" onClick={onAttributes}>
         <IconGear/>
       </IconBtn>
 
-      <IconBtn id="delete" title="Delete Entities" onClick={onDeleteEntity}>
+      <IconBtn id="delete" title="Delete Selected Entities (Delete)" onClick={onDeleteEntity}>
         <IconDelete/>
       </IconBtn>
 
-      <IconBtn id="deselect" title="Deselect All / No" onClick={onDeselectAll}>
+      <IconBtn id="deselect" title="Deselect All / Clear" onClick={onDeselectAll}>
         <IconNo/>
       </IconBtn>
 
@@ -402,20 +414,23 @@ export default function QuickMaskBar({
 
       <IconBtn
         id="extents"
-        title="Fit / Select by dimension extents"
+        title="Zoom Extents / Dimension Extents"
         active={activeMask === 'extents'}
-        onClick={handleMask}
+        onClick={() => {
+          handleMask('extents');
+          if (onZoomExtents) onZoomExtents();
+        }}
       >
         <IconExtents/>
       </IconBtn>
 
       <IconBtn
-        id="color"
-        title="Select / filter entities by color (Attributes)"
-        active={activeMask === 'color'}
+        id="points"
+        title="Quick Mask: Point / Stylus Probe Entities"
+        active={activeMask === 'points'}
         onClick={handleMask}
       >
-        <IconPaintbrush/>
+        <IconProbeStylus/>
       </IconBtn>
 
       <Divider/>
@@ -441,9 +456,12 @@ export default function QuickMaskBar({
 
       <IconBtn
         id="levels"
-        title="Manage Levels (entity layers)"
+        title="Manage Levels (Entity Layers)"
         active={activeMask === 'levels'}
-        onClick={handleMask}
+        onClick={() => {
+          handleMask('levels');
+          if (onSwitchToLevels) onSwitchToLevels();
+        }}
       >
         <IconLevels/>
       </IconBtn>
@@ -452,7 +470,10 @@ export default function QuickMaskBar({
         id="planes"
         title="Manage Construction Planes (CPlanes)"
         active={activeMask === 'planes'}
-        onClick={handleMask}
+        onClick={() => {
+          handleMask('planes');
+          if (onSwitchToPlanes) onSwitchToPlanes();
+        }}
       >
         <IconPlanes/>
       </IconBtn>
@@ -461,12 +482,15 @@ export default function QuickMaskBar({
         id="groups"
         title="Manage Groups / Assemblies"
         active={activeMask === 'groups'}
-        onClick={handleMask}
+        onClick={() => {
+          handleMask('groups');
+          if (onOpenGroups) onOpenGroups();
+        }}
       >
         <IconGroups/>
       </IconBtn>
 
-      {/* ── Scale Badge ── */}
+      {/* ── Scale Badge (Matching Image 2) ── */}
       <ScaleBadge value={scaleValue} unit={scaleUnit}/>
     </div>
   );

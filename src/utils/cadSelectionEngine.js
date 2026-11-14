@@ -70,6 +70,20 @@ export function matchesTopologyFilter(entity, solidFilter = 'all') {
 }
 
 /**
+ * Resolves the primary hex color of a custom CAD entity.
+ */
+export function getCustomEntityColor(entity) {
+  if (!entity) return '#3b82f6';
+  if (entity.userData?.color) return entity.userData.color;
+  if (entity.userData?.originalColor) return entity.userData.originalColor;
+  if (entity.material?.color?.getHexString) return `#${entity.material.color.getHexString()}`;
+  if (Array.isArray(entity.material) && entity.material[0]?.color?.getHexString) {
+    return `#${entity.material[0].color.getHexString()}`;
+  }
+  return '#3b82f6';
+}
+
+/**
  * Checks whether an entity passes the active Quick Mask filter.
  */
 export function matchesSelectionMask(entity, mask = 'all') {
@@ -79,9 +93,18 @@ export function matchesSelectionMask(entity, mask = 'all') {
   if (mask === 'wireframe') return ['line', 'circle', 'rect', 'arc', 'spline'].includes(cat);
   if (mask === 'points') return cat === 'point';
   if (mask === 'arcs') return cat === 'circle' || cat === 'arc';
+  if (mask === 'circles') return cat === 'circle';
+  if (mask === 'splines') return cat === 'spline';
+  if (mask === 'lines') return cat === 'line' || cat === 'rect';
   if (mask === 'surfaces') return cat === 'surface';
-  if (mask === 'solids') return cat === 'solid';
+  if (mask === 'solids') return cat === 'solid' || cat === 'surface';
   if (mask === 'drafting') return cat === 'drafting';
+  if (mask === 'extents') return cat === 'drafting' || ['line', 'circle', 'rect', 'arc', 'spline'].includes(cat);
+  if (typeof mask === 'string' && mask.startsWith('color:')) {
+    const targetColor = mask.replace('color:', '').trim().toLowerCase();
+    const entCol = getCustomEntityColor(entity).toLowerCase();
+    return entCol === targetColor;
+  }
   return true;
 }
 

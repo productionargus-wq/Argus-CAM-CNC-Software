@@ -184,6 +184,12 @@ export default function OperationsTree({
 
   // Red Insertion Arrow Position (index in operations array)
   const [insertIndex, setInsertIndex] = useState(operations.length);
+  const [expandedGeoms, setExpandedGeoms] = useState({});
+
+  const toggleGeomExpand = (opId, e) => {
+    e?.stopPropagation();
+    setExpandedGeoms((prev) => ({ ...prev, [opId]: !prev[opId] }));
+  };
 
   // Mouse-Resizable Sidebar Width State
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -843,93 +849,149 @@ export default function OperationsTree({
           lineHeight: '18px'
         }}
       >
-        {/* ==================== A. TOOLPATHS TREE VIEW ==================== */}
+        {/* ==================== A. TOOLPATHS TREE VIEW (EXACT IMAGE 1 REPLICA) ==================== */}
         {currentTab === 'Toolpaths' && (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {/* Root: Machine Group-1 */}
+          <div style={{ display: 'flex', flexDirection: 'column', fontFamily: "'Segoe UI', Tahoma, sans-serif" }}>
+            {/* Root Node: Machine Group-1 */}
+            <div
+              onClick={() => {
+                if (activeOpId === 'all') {
+                  onSelectOp?.(operations[0]?.id || null);
+                } else {
+                  onSelectOp?.('all');
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2px',
+                fontWeight: 600,
+                color: '#0f172a',
+                cursor: 'pointer',
+                background: activeOpId === 'all' ? '#dbeafe' : 'transparent',
+                border: activeOpId === 'all' ? '1px dotted #1e293b' : '1px solid transparent',
+                borderRadius: '1px',
+                padding: '1px 3px',
+                userSelect: 'none'
+              }}
+              title="Click to select all operations in Machine Group-1"
+            >
+              {/* Crisp 9x9 Square Expand/Collapse Box */}
               <div
-                onClick={() => {
-                  if (activeOpId === 'all') {
-                    onSelectOp?.(operations[0]?.id || null);
-                  } else {
-                    onSelectOp?.('all');
-                  }
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                  fontWeight: 600,
-                  color: '#0f172a',
-                  cursor: 'pointer',
-                  background: activeOpId === 'all' ? '#dbeafe' : 'transparent',
-                  border: activeOpId === 'all' ? '1px solid #93c5fd' : '1px solid transparent',
-                  borderRadius: '2px',
-                  padding: '1px 3px',
-                  userSelect: 'none'
-                }}
-                title="Click to select all operations in Machine Group-1"
-              >
-              <span
                 onClick={(e) => {
                   e.stopPropagation();
                   setMachineGroupExpanded(!machineGroupExpanded);
                 }}
-                style={{ cursor: 'pointer', fontFamily: 'monospace', fontSize: '10px', color: '#64748b', width: '12px', textAlign: 'center' }}
+                style={{
+                  width: '9px',
+                  height: '9px',
+                  minWidth: '9px',
+                  minHeight: '9px',
+                  border: '1px solid #71717a',
+                  backgroundColor: '#ffffff',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  marginRight: '4px',
+                  position: 'relative',
+                  flexShrink: 0
+                }}
               >
-                {machineGroupExpanded ? '[-]' : '[+]'}
-              </span>
-              {/* Blue 4-box cube icon */}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#0284c7"><rect x="2" y="2" width="9" height="9" /><rect x="13" y="2" width="9" height="9" /><rect x="2" y="13" width="9" height="9" /><rect x="13" y="13" width="9" height="9" /></svg>
+                <div style={{ width: '5px', height: '1px', backgroundColor: '#000000' }} />
+                {!machineGroupExpanded && (
+                  <div style={{ position: 'absolute', width: '1px', height: '5px', backgroundColor: '#000000' }} />
+                )}
+              </div>
+
+              {/* Blue 4-box cube grid icon (Image 1) */}
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="#0284c7" style={{ marginRight: '4px', flexShrink: 0 }}>
+                <rect x="1" y="1" width="6" height="6" rx="0.5" />
+                <rect x="9" y="1" width="6" height="6" rx="0.5" />
+                <rect x="1" y="9" width="6" height="6" rx="0.5" />
+                <rect x="9" y="9" width="6" height="6" rx="0.5" />
+              </svg>
               <span>Machine Group-1</span>
             </div>
 
+            {/* Dotted Guideline Children Container */}
             {machineGroupExpanded && (
-              <div style={{ paddingLeft: '14px', borderLeft: '1px dotted #cbd5e1', marginLeft: '6px' }}>
-                {/* 1. Properties - 4 - AXIS VMC */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
-                  <span
+              <div style={{ paddingLeft: '14px', borderLeft: '1px dotted #94a3b8', marginLeft: '4px', marginTop: '2px' }}>
+                {/* 1. Branch: Properties - 4 - AXIS VMC */}
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
+                  {/* Horizontal dotted connector branch */}
+                  <div style={{ position: 'absolute', left: '-14px', top: '10px', width: '12px', height: '0px', borderTop: '1px dotted #94a3b8' }} />
+
+                  {/* 9x9 Square Expand/Collapse Box */}
+                  <div
                     onClick={() => setPropertiesExpanded(!propertiesExpanded)}
-                    style={{ cursor: 'pointer', fontFamily: 'monospace', fontSize: '10px', color: '#64748b', width: '12px', textAlign: 'center' }}
+                    style={{
+                      width: '9px',
+                      height: '9px',
+                      minWidth: '9px',
+                      minHeight: '9px',
+                      border: '1px solid #71717a',
+                      backgroundColor: '#ffffff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      marginRight: '4px',
+                      position: 'relative',
+                      flexShrink: 0
+                    }}
                   >
-                    {propertiesExpanded ? '[-]' : '[+]'}
+                    <div style={{ width: '5px', height: '1px', backgroundColor: '#000000' }} />
+                    {!propertiesExpanded && (
+                      <div style={{ position: 'absolute', width: '1px', height: '5px', backgroundColor: '#000000' }} />
+                    )}
+                  </div>
+
+                  {/* 3-Bar Histogram Properties Icon (Image 1: Blue, Navy, Magenta) */}
+                  <svg width="14" height="14" viewBox="0 0 16 16" style={{ marginRight: '4px', flexShrink: 0 }}>
+                    <rect x="2" y="8" width="3" height="7" fill="#0284c7" />
+                    <rect x="6.5" y="4" width="3" height="11" fill="#1e3a8a" />
+                    <rect x="11" y="1" width="3" height="14" fill="#c026d3" />
+                  </svg>
+                  <span style={{ color: '#334155' }}>
+                    Properties - {activeMachine?.name || '4 - AXIS VMC'}
                   </span>
-                  {/* Bar chart icon */}
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="#0284c7"><rect x="3" y="12" width="4" height="8" /><rect x="10" y="8" width="4" height="12" /><rect x="17" y="4" width="4" height="16" /></svg>
-                  <span style={{ color: '#334155' }}>Properties - {activeMachine?.name || 'No Machine Selected'}</span>
                 </div>
 
                 {/* Sub-properties when expanded */}
                 {propertiesExpanded && (
-                  <div style={{ paddingLeft: '14px', borderLeft: '1px dotted #cbd5e1', marginLeft: '6px' }}>
+                  <div style={{ paddingLeft: '14px', borderLeft: '1px dotted #94a3b8', marginLeft: '4px', marginTop: '2px' }}>
                     <div
                       onClick={onOpenMachineConfig}
-                      style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#475569' }}
+                      style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#475569', padding: '1px 0' }}
                       title="Machine configuration files"
                     >
-                      <span>📁</span>
+                      <div style={{ position: 'absolute', left: '-14px', top: '9px', width: '12px', borderTop: '1px dotted #94a3b8' }} />
+                      <span style={{ fontSize: '11px' }}>📁</span>
                       <span>Files - {activeMachine?.controller || 'Mill.mcam-control'}</span>
                     </div>
                     <div
                       onClick={onOpenFeedsSpeeds}
-                      style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#475569' }}
+                      style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#475569', padding: '1px 0' }}
                       title="Tool settings & feed rate rules"
                     >
-                      <span>⚙️</span>
+                      <div style={{ position: 'absolute', left: '-14px', top: '9px', width: '12px', borderTop: '1px dotted #94a3b8' }} />
+                      <span style={{ fontSize: '11px' }}>⚙️</span>
                       <span>Tool settings - Default feeds &amp; speeds</span>
                     </div>
                     <div
                       onClick={onOpenStockModal}
-                      style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#0284c7', fontWeight: 600 }}
+                      style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#0284c7', fontWeight: 600, padding: '1px 0' }}
                       title="Stock setup bounding box"
                     >
-                      <span>📦</span>
+                      <div style={{ position: 'absolute', left: '-14px', top: '9px', width: '12px', borderTop: '1px dotted #94a3b8' }} />
+                      <span style={{ fontSize: '11px' }}>📦</span>
                       <span>Stock setup - [{stockConfig?.rawDimensions?.x || stockConfig?.dimensions?.x || 120} × {stockConfig?.rawDimensions?.y || stockConfig?.dimensions?.y || 80} × {stockConfig?.rawDimensions?.z || stockConfig?.dimensions?.z || 25} mm]</span>
                     </div>
                   </div>
                 )}
 
-                {/* 2. Toolpath Group-1 */}
+                {/* 2. Branch: Toolpath Group-1 */}
                 <div
                   onClick={() => {
                     if (activeOpId === 'all') {
@@ -939,31 +1001,58 @@ export default function OperationsTree({
                     }
                   }}
                   style={{
+                    position: 'relative',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '3px',
+                    gap: '2px',
                     marginTop: '4px',
                     cursor: 'pointer',
                     background: activeOpId === 'all' ? '#dbeafe' : 'transparent',
-                    border: activeOpId === 'all' ? '1px solid #93c5fd' : '1px solid transparent',
-                    borderRadius: '2px',
-                    padding: '2px 4px',
-                    userSelect: 'none',
-                    transition: 'background-color 0.15s'
+                    border: activeOpId === 'all' ? '1px dotted #1e293b' : '1px solid transparent',
+                    borderRadius: '1px',
+                    padding: '1px 3px',
+                    userSelect: 'none'
                   }}
                   title="Click to select all operations in Toolpath Group-1"
                 >
-                  <span
+                  {/* Horizontal dotted connector branch */}
+                  <div style={{ position: 'absolute', left: '-14px', top: '10px', width: '12px', height: '0px', borderTop: '1px dotted #94a3b8' }} />
+
+                  {/* 9x9 Square Expand/Collapse Box */}
+                  <div
                     onClick={(e) => {
                       e.stopPropagation();
                       setToolpathGroupExpanded(!toolpathGroupExpanded);
                     }}
-                    style={{ cursor: 'pointer', fontFamily: 'monospace', fontSize: '10px', color: '#64748b', width: '12px', textAlign: 'center' }}
+                    style={{
+                      width: '9px',
+                      height: '9px',
+                      minWidth: '9px',
+                      minHeight: '9px',
+                      border: '1px solid #71717a',
+                      backgroundColor: '#ffffff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      marginRight: '4px',
+                      position: 'relative',
+                      flexShrink: 0
+                    }}
                   >
-                    {toolpathGroupExpanded ? '[-]' : '[+]'}
-                  </span>
-                  {/* Cyan circles cluster icon */}
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="#06b6d4"><circle cx="7" cy="7" r="4" /><circle cx="17" cy="7" r="4" /><circle cx="7" cy="17" r="4" /><circle cx="17" cy="17" r="4" /></svg>
+                    <div style={{ width: '5px', height: '1px', backgroundColor: '#000000' }} />
+                    {!toolpathGroupExpanded && (
+                      <div style={{ position: 'absolute', width: '1px', height: '5px', backgroundColor: '#000000' }} />
+                    )}
+                  </div>
+
+                  {/* Cyan circles cluster icon (Image 1) */}
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="#06b6d4" style={{ marginRight: '4px', flexShrink: 0 }}>
+                    <circle cx="4" cy="4" r="3" />
+                    <circle cx="12" cy="4" r="3" />
+                    <circle cx="4" cy="12" r="3" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
                   <span style={{ fontWeight: 600, color: '#0f172a' }}>Toolpath Group-1</span>
                   {activeOpId === 'all' && (
                     <span style={{ marginLeft: 'auto', fontSize: '9px', fontWeight: 700, color: '#1e40af', background: '#bfdbfe', padding: '1px 5px', borderRadius: '3px', letterSpacing: '0.2px' }}>
@@ -974,150 +1063,292 @@ export default function OperationsTree({
 
                 {/* Operations List */}
                 {toolpathGroupExpanded && (
-                  <div style={{ paddingLeft: '14px', borderLeft: '1px dotted #cbd5e1', marginLeft: '6px' }}>
+                  <div style={{ position: 'relative', paddingLeft: '16px', marginLeft: '6px' }}>
+                    {/* Continuous vertical dotted guideline down the operations */}
+                    <div style={{ position: 'absolute', left: '0px', top: '0px', bottom: insertIndex >= operations.length ? '10px' : '0px', width: '1px', borderLeft: '1px dotted #94a3b8' }} />
+
                     {operations.length === 0 ? (
                       <div style={{ padding: '6px 4px', color: '#94a3b8', fontStyle: 'italic', fontSize: '10.5px' }}>
                         (No operations created yet)
                       </div>
                     ) : (
                       operations.map((op, idx) => {
-                      const isSelected = activeOpId === op.id || activeOpId === 'all';
-                      const isExpanded = expandedOps[op.id] !== false;
+                        const isSelected = activeOpId === op.id || activeOpId === 'all';
+                        const isExpanded = expandedOps[op.id] !== false;
+                        const isGeomExpanded = !!expandedGeoms[op.id];
 
-                      return (
-                        <div key={op.id} style={{ marginTop: '3px' }}>
-                          {/* Operation Title Row */}
-                          <div
-                            onClick={() => onSelectOp(op.id)}
-                            onDoubleClick={() => onEditOp(op)}
-                            onContextMenu={(e) => handleContextMenu(e, op)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                              background: isSelected ? '#dbeafe' : 'transparent',
-                              borderRadius: '2px',
-                              padding: '1px 3px',
-                              cursor: 'pointer',
-                              border: isSelected ? '1px solid #93c5fd' : '1px solid transparent'
-                            }}
-                          >
-                            <span
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleOpExpand(op.id);
+                        return (
+                          <div key={op.id} style={{ position: 'relative', marginTop: '3px' }}>
+                            {/* Horizontal dotted connector branch from main guideline */}
+                            <div style={{ position: 'absolute', left: '-16px', top: '10px', width: '14px', borderTop: '1px dotted #94a3b8' }} />
+
+                            {/* Operation Title Row */}
+                            <div
+                              onClick={() => onSelectOp(op.id)}
+                              onDoubleClick={() => onEditOp(op)}
+                              onContextMenu={(e) => handleContextMenu(e, op)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                background: isSelected ? '#dbeafe' : 'transparent',
+                                border: isSelected ? '1px dotted #1e293b' : '1px solid transparent',
+                                borderRadius: '1px',
+                                padding: '1px 3px',
+                                cursor: 'pointer',
+                                userSelect: 'none',
+                                whiteSpace: 'nowrap'
                               }}
-                              style={{ cursor: 'pointer', fontFamily: 'monospace', fontSize: '10px', color: '#64748b', width: '12px', textAlign: 'center' }}
+                              title="Click to select, double-click to edit parameters"
                             >
-                              {isExpanded ? '[-]' : '[+]'}
-                            </span>
+                              {/* 9x9 Square Expand/Collapse Box */}
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleOpExpand(op.id);
+                                }}
+                                style={{
+                                  width: '9px',
+                                  height: '9px',
+                                  minWidth: '9px',
+                                  minHeight: '9px',
+                                  border: '1px solid #71717a',
+                                  backgroundColor: '#ffffff',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  marginRight: '2px',
+                                  position: 'relative',
+                                  flexShrink: 0
+                                }}
+                              >
+                                <div style={{ width: '5px', height: '1px', backgroundColor: '#000000' }} />
+                                {!isExpanded && (
+                                  <div style={{ position: 'absolute', width: '1px', height: '5px', backgroundColor: '#000000' }} />
+                                )}
+                              </div>
 
-                            {/* Checkmark when operation is selected */}
-                            {isSelected && (
-                              <span style={{ color: '#16a34a', fontWeight: 900, fontSize: '11px', marginRight: '1px', lineHeight: 1 }} title="Selected for backplot, verification and posting">✓</span>
+                              {/* Checkmark when operation is selected */}
+                              {isSelected && (
+                                <span style={{ color: '#16a34a', fontWeight: 900, fontSize: '11px', marginRight: '1px', lineHeight: 1 }} title="Selected for backplot, verification and posting">✓</span>
+                              )}
+
+                              {/* Mastercam Folder Icon with Green/Yellow tab (Image 1) */}
+                              <svg width="14" height="14" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                                <path d="M2 5a2 2 0 0 1 2-2h4.5l2 2H20a2 2 0 0 1 2 2v2H2V5z" fill="#ca8a04" />
+                                <rect x="2" y="9" width="20" height="12" rx="1" fill="#facc15" stroke="#ca8a04" strokeWidth="1" />
+                                <path d="M4 11h16" stroke="#15803d" strokeWidth="2" strokeLinecap="round" />
+                              </svg>
+
+                              <span style={{ color: isSelected ? '#0f172a' : '#1e293b', fontWeight: isSelected ? 600 : 500, fontSize: '11px' }}>
+                                {idx + 1} - {op.name || 'Surface Rough Pocket'} - [WCS: Top] - [Tplane: Top]
+                              </span>
+
+                              {op.locked && <span title="Locked" style={{ fontSize: '10px' }}>🔒</span>}
+                              {op.ghosted && <span title="Ghosted" style={{ fontSize: '10px' }}>👻</span>}
+                            </div>
+
+                            {/* Sub-Branch Items */}
+                            {isExpanded && (
+                              <div style={{ position: 'relative', paddingLeft: '16px', marginLeft: '4px', fontSize: '11px' }}>
+                                {/* Vertical sub-guideline */}
+                                <div style={{ position: 'absolute', left: '0px', top: '0px', bottom: '8px', width: '1px', borderLeft: '1px dotted #94a3b8' }} />
+
+                                {/* 1. Parameters */}
+                                <div
+                                  onClick={() => onEditOp(op)}
+                                  style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '5px', color: '#1e293b', cursor: 'pointer', padding: '1px 0' }}
+                                  title="Double-click to edit cutting parameters, feeds, speeds & stepover"
+                                >
+                                  <div style={{ position: 'absolute', left: '-16px', top: '9px', width: '14px', borderTop: '1px dotted #94a3b8' }} />
+                                  {/* Gray parameters folder icon */}
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="#cbd5e1" stroke="#475569" strokeWidth="1.2" style={{ flexShrink: 0 }}>
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                                  </svg>
+                                  <span>Parameters</span>
+                                </div>
+
+                                {/* 2. Tool definition */}
+                                <div
+                                  onClick={onOpenToolManager}
+                                  style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '5px', color: '#0f172a', cursor: 'pointer', padding: '1px 0' }}
+                                  title="Click to open Tool Manager / Tool Assembly Studio"
+                                >
+                                  <div style={{ position: 'absolute', left: '-16px', top: '9px', width: '14px', borderTop: '1px dotted #94a3b8' }} />
+                                  {/* Mastercam dual-tone blue/metallic tool silhouette (Image 1) */}
+                                  <svg width="12" height="12" viewBox="0 0 14 16" style={{ flexShrink: 0 }}>
+                                    {/* Shank */}
+                                    <rect x="5" y="0" width="4" height="6" fill="#1e3a8a" />
+                                    {/* Cutter body & flutes */}
+                                    <polygon points="3,6 11,6 10,15 4,15" fill="#2563eb" stroke="#1e40af" strokeWidth="0.8" />
+                                    <line x1="7" y1="6" x2="7" y2="15" stroke="#ffffff" strokeWidth="0.8" />
+                                  </svg>
+                                  <span>
+                                    #{op.toolNumber || op.toolId || (idx + 1)} - M{Number(op.toolDiameter || op.toolDia || op.tool?.diameter || 51).toFixed(2)} {formatMastercamToolType(op.toolType || op.tool?.type || 'ENDMILL 1 FLAT')} - {op.toolName || op.tool?.name || `${Number(op.toolDiameter || 51).toFixed(0)} FLAT ENDMILL`}
+                                  </span>
+                                </div>
+
+                                {/* 3. Geometry */}
+                                <div style={{ position: 'relative' }}>
+                                  <div
+                                    onClick={() => {
+                                      if ((op.strategyKey === 'surface_finish_flowline' || op.badgeClass === 'flowline') && onEditOpGeometry) {
+                                        onEditOpGeometry(op);
+                                      } else {
+                                        onOpenWireframeModal?.();
+                                      }
+                                    }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#0f172a', cursor: 'pointer', padding: '1px 0' }}
+                                    title="Click to view or re-select chained geometry and drive faces"
+                                  >
+                                    <div style={{ position: 'absolute', left: '-16px', top: '9px', width: '14px', borderTop: '1px dotted #94a3b8' }} />
+
+                                    {/* 9x9 Square Expand/Collapse Box for Geometry */}
+                                    <div
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleGeomExpand(op.id);
+                                      }}
+                                      style={{
+                                        width: '9px',
+                                        height: '9px',
+                                        minWidth: '9px',
+                                        minHeight: '9px',
+                                        border: '1px solid #71717a',
+                                        backgroundColor: '#ffffff',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        position: 'relative',
+                                        flexShrink: 0
+                                      }}
+                                    >
+                                      <div style={{ width: '5px', height: '1px', backgroundColor: '#000000' }} />
+                                      {!isGeomExpanded && (
+                                        <div style={{ position: 'absolute', width: '1px', height: '5px', backgroundColor: '#000000' }} />
+                                      )}
+                                    </div>
+
+                                    {/* Mastercam [S] Cyan badge (Image 1) */}
+                                    <div
+                                      style={{
+                                        width: '12px',
+                                        height: '12px',
+                                        backgroundColor: '#06b6d4',
+                                        color: '#ffffff',
+                                        borderRadius: '1px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '8.5px',
+                                        fontWeight: 900,
+                                        fontFamily: 'sans-serif',
+                                        lineHeight: 1,
+                                        flexShrink: 0
+                                      }}
+                                    >
+                                      S
+                                    </div>
+
+                                    <span>
+                                      Geometry - {op.driveFaceIds?.length
+                                        ? `(${op.driveFaceIds.length} Drive Surface${op.driveFaceIds.length > 1 ? 's' : ''})`
+                                        : op.driveSurfaceIds?.length
+                                          ? `(${op.driveSurfaceIds.length} Drive Surface${op.driveSurfaceIds.length > 1 ? 's' : ''})`
+                                          : op.toolType === 'probe' || op.strategyKey === 'probing'
+                                            ? `(${op.probeGeometry || '1 Feature Point'})`
+                                            : ''}
+                                    </span>
+                                  </div>
+
+                                  {/* Expanded Geometry sub-items */}
+                                  {isGeomExpanded && (
+                                    <div style={{ position: 'relative', paddingLeft: '18px', marginLeft: '4px', fontSize: '10px', color: '#475569' }}>
+                                      <div style={{ position: 'absolute', left: '0px', top: '0px', bottom: '6px', width: '1px', borderLeft: '1px dotted #94a3b8' }} />
+                                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', padding: '1px 0' }}>
+                                        <div style={{ position: 'absolute', left: '-18px', top: '8px', width: '16px', borderTop: '1px dotted #94a3b8' }} />
+                                        <span>(1) Drive Surfaces</span>
+                                      </div>
+                                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', padding: '1px 0' }}>
+                                        <div style={{ position: 'absolute', left: '-18px', top: '8px', width: '16px', borderTop: '1px dotted #94a3b8' }} />
+                                        <span>(0) Check Surfaces</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* 4. Toolpath info */}
+                                <div
+                                  onClick={() => onToggleOp(op.id)}
+                                  style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '5px', color: op.visible ? '#0f172a' : '#94a3b8', cursor: 'pointer', padding: '1px 0' }}
+                                  title="Toggle toolpath visibility / G-code NC stats"
+                                >
+                                  <div style={{ position: 'absolute', left: '-16px', top: '9px', width: '14px', borderTop: '1px dotted #94a3b8' }} />
+                                  {/* Mastercam 3-wave toolpath icon (Image 1) */}
+                                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                                    <path d="M1 4 C 3 1, 5 1, 7 4 C 9 7, 11 7, 13 4 C 9 7, 11 7, 13 4 C 14 2.5, 15 2.5, 15.5 3" stroke="#0f172a" strokeWidth="1.8" strokeLinecap="round" />
+                                    <path d="M1 8 C 3 5, 5 5, 7 8 C 9 11, 11 11, 13 8 C 14 6.5, 15 6.5, 15.5 7" stroke="#0f172a" strokeWidth="1.8" strokeLinecap="round" />
+                                    <path d="M1 12 C 3 9, 5 9, 7 12 C 9 15, 11 15, 13 12 C 14 10.5, 15 10.5, 15.5 11" stroke="#0f172a" strokeWidth="1.8" strokeLinecap="round" />
+                                  </svg>
+                                  <span>
+                                    {(() => {
+                                      const cuts = op.toolpathData?.cuttingLines?.length || op.cuttingLines?.length || (op.waypoints?.length ? op.waypoints.length * 2 : 0);
+                                      const sizeKb = cuts > 0 ? ((cuts * 0.052) + 8.4).toFixed(1) : '314.2';
+                                      const ncBase = currentProjectName ? currentProjectName.replace(/\.[^/.]+$/, '') : 'Base Structure-ALU';
+                                      return `Toolpath - ${sizeKb}K - ${ncBase}.NC - Program ${String(idx + 1).padStart(4, '0')}`;
+                                    })()}
+                                  </span>
+                                </div>
+                              </div>
                             )}
 
-                            {/* Folder Icon with Green/Yellow tab */}
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="#facc15" stroke="#ca8a04" strokeWidth="1"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><path d="M2 10h20" stroke="#16a34a" strokeWidth="2" /></svg>
-
-                            <span style={{ color: isSelected ? '#1e3a8a' : '#1e293b', fontWeight: isSelected ? 700 : 500 }}>
-                              {idx + 1} - {op.name} - [WCS: Top] - [Tplane: Top]
-                            </span>
-
-                            {op.locked && <span title="Locked">🔒</span>}
-                            {op.ghosted && <span title="Ghosted">👻</span>}
+                            {/* Red Insertion Arrow between operations */}
+                            {insertIndex === idx + 1 && (
+                              <div
+                                onClick={() => setInsertIndex(idx + 1)}
+                                style={{ position: 'relative', display: 'flex', alignItems: 'center', height: '14px', cursor: 'pointer' }}
+                                title="Active toolpath insertion point"
+                              >
+                                <div style={{ position: 'absolute', left: '-16px', top: '7px', width: '12px', borderTop: '1px dotted #94a3b8' }} />
+                                <div style={{
+                                  position: 'absolute',
+                                  left: '-4px',
+                                  top: '2px',
+                                  width: 0,
+                                  height: 0,
+                                  borderTop: '5px solid transparent',
+                                  borderBottom: '5px solid transparent',
+                                  borderLeft: '9px solid #dc2626'
+                                }} />
+                              </div>
+                            )}
                           </div>
+                        );
+                      })
+                    )}
 
-                          {/* Sub-Branch Items */}
-                          {isExpanded && (
-                            <div style={{ paddingLeft: '16px', borderLeft: '1px dotted #cbd5e1', marginLeft: '6px', fontSize: '10.5px' }}>
-                              {/* 1. Parameters */}
-                              <div
-                                onClick={() => onEditOp(op)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#334155', cursor: 'pointer', padding: '1px 0' }}
-                                title="Double-click to edit cutting parameters, feeds, speeds & stepover"
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="#94a3b8" stroke="#475569" strokeWidth="1"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
-                                <span>Parameters</span>
-                              </div>
-
-                              {/* 2. Tool definition */}
-                              <div
-                                onClick={onOpenToolManager}
-                                style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#0f172a', cursor: 'pointer', padding: '1px 0' }}
-                                title="Click to open Tool Manager / Tool Assembly Studio"
-                              >
-                                {/* Tool Silhouette */}
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="#1e3a8a"><path d="M10 2h4v8h-4z" /><path d="M7 10h10v12H7z" /></svg>
-                                <span>
-                                  #{op.toolNumber || op.toolId || (idx + 1)} - M{Number(op.toolDiameter || op.toolDia || op.tool?.diameter || 10).toFixed(2)} {formatMastercamToolType(op.toolType || op.tool?.type)} - {op.toolName || op.tool?.name || '10 FLAT ENDMILL'}
-                                </span>
-                              </div>
-
-                              {/* 3. Geometry */}
-                              <div
-                                onClick={() => {
-                                  if ((op.strategyKey === 'surface_finish_flowline' || op.badgeClass === 'flowline') && onEditOpGeometry) {
-                                    onEditOpGeometry(op);
-                                  } else {
-                                    onOpenWireframeModal?.();
-                                  }
-                                }}
-                                style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#0f172a', cursor: 'pointer', padding: '1px 0' }}
-                                title="Click to view or re-select chained geometry and drive faces"
-                              >
-                                <span style={{ fontFamily: 'monospace', fontSize: '9px', color: '#06b6d4', fontWeight: 800 }}>[S]</span>
-                                <span>
-                                  Geometry - ({op.driveFaceIds?.length
-                                    ? `${op.driveFaceIds.length} Drive Face(s)`
-                                    : op.driveSurfaceIds?.length
-                                      ? `${op.driveSurfaceIds.length} Drive Surface(s)`
-                                      : '1 Chain / Drive Surface'})
-                                </span>
-                              </div>
-
-                              {/* 4. Toolpath info */}
-                              <div
-                                onClick={() => onToggleOp(op.id)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '5px', color: op.visible ? '#0284c7' : '#94a3b8', cursor: 'pointer', padding: '1px 0' }}
-                                title="Toggle toolpath visibility / G-code NC stats"
-                              >
-                                {/* Blue wave icon */}
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2"><path d="M2 12c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /><path d="M2 6c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /></svg>
-                                <span>
-                                  {(() => {
-                                    const cuts = op.toolpathData?.cuttingLines?.length || op.cuttingLines?.length || (op.waypoints?.length ? op.waypoints.length * 2 : 0);
-                                    const sizeKb = cuts > 0 ? ((cuts * 0.052) + 8.4).toFixed(1) : '186.4';
-                                    const ncBase = currentProjectName ? currentProjectName.replace(/\.[^/.]+$/, '') : 'Surface_Finish_Pencil';
-                                    return `Toolpath - ${sizeKb}K - ${ncBase}.NC - Program ${String(idx + 1).padStart(4, '0')}`;
-                                  })()}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Red Insertion Arrow between/after operations */}
-                          {insertIndex === idx + 1 && (
-                            <div
-                              onClick={() => setInsertIndex(idx + 1)}
-                              style={{ display: 'flex', alignItems: 'center', gap: '2px', marginLeft: '12px', cursor: 'pointer', padding: '2px 0' }}
-                              title="Active toolpath insertion point"
-                            >
-                              <span style={{ color: '#ef4444', fontSize: '13px', fontWeight: 900, lineHeight: 1 }}>▶</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }))}
-
-                    {/* Red Insertion Arrow at the end if none selected */}
+                    {/* Red Insertion Arrow at the end if insertIndex is at or beyond the list */}
                     {insertIndex >= operations.length && (
                       <div
                         onClick={() => setInsertIndex(operations.length)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '2px', marginLeft: '12px', marginTop: '4px', cursor: 'pointer' }}
+                        style={{ position: 'relative', display: 'flex', alignItems: 'center', height: '16px', marginTop: '2px', cursor: 'pointer' }}
                         title="Active toolpath insertion point"
                       >
-                        <span style={{ color: '#ef4444', fontSize: '13px', fontWeight: 900, lineHeight: 1 }}>▶</span>
+                        {/* Horizontal connector from vertical guideline */}
+                        <div style={{ position: 'absolute', left: '-16px', top: '8px', width: '12px', borderTop: '1px dotted #94a3b8' }} />
+                        {/* Red Triangle Arrow pointing right (Image 1) */}
+                        <div style={{
+                          position: 'absolute',
+                          left: '-4px',
+                          top: '3px',
+                          width: 0,
+                          height: 0,
+                          borderTop: '5px solid transparent',
+                          borderBottom: '5px solid transparent',
+                          borderLeft: '9px solid #dc2626'
+                        }} />
                       </div>
                     )}
                   </div>
