@@ -5684,7 +5684,8 @@ export default function App() {
     setActiveDraftingMode(mode);
     setIsDraftingActive(true);
     setActiveManagerTab('Drafting');
-    setLevelsList((prev) => prev.map((lvl) => lvl.number === 100 ? { ...lvl, visible: true } : lvl));
+    setLevels((prev) => prev.map((lvl) => lvl.number === 100 ? { ...lvl, visible: true } : lvl));
+    setLayerVisibility((prev) => ({ ...prev, dimensions: true }));
     showToast(`Mastercam Drafting: ${mode.toUpperCase()} dimensioning active on Level 100`, 'info');
   };
 
