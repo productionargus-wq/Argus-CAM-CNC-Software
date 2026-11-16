@@ -51,6 +51,7 @@ const MC_BTN = {
 export default function ToolpathSurfaceSelectionModal({
   isOpen,
   mode = 'flowline',
+  strategyLabel = '',
   driveCount = 0,
   cadFileCount = 0,
   checkCount = 0,
@@ -58,6 +59,7 @@ export default function ToolpathSurfaceSelectionModal({
   activePickRole = null,
   onStartPick,
   onClearRole,
+  onSelectAllDriveFaces,
   onImportCadFile,
   onShowRole,
   onOpenFlowlineData,
@@ -70,6 +72,19 @@ export default function ToolpathSurfaceSelectionModal({
   if (!isOpen) return null;
 
   const isFlowline = mode === 'flowline';
+  const strategyTitles = {
+    flowline: 'Flowline',
+    contour: 'Contour',
+    pocket: 'Pocket',
+    shallow: 'Shallow',
+    parallel: 'Parallel',
+    parallel_steep: 'Parallel Steep',
+    pencil: 'Pencil',
+    radial: 'Radial',
+    project: 'Project',
+    leftover: 'Leftover'
+  };
+  const activeTitle = strategyLabel || strategyTitles[mode] || 'Surface Finish';
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -110,7 +125,7 @@ export default function ToolpathSurfaceSelectionModal({
         }}
       >
         <span style={{ fontSize: '12px', color: '#111827', fontWeight: 500 }}>
-          Toolpath/surface selection
+          Toolpath/surface selection - [{activeTitle}]
         </span>
         <button
           type="button"
@@ -204,7 +219,21 @@ export default function ToolpathSurfaceSelectionModal({
               >
                 Show...
               </button>
-              <span />
+              <button
+                type="button"
+                onClick={() => onSelectAllDriveFaces?.()}
+                title="Select all visible model surfaces as Drive"
+                style={{
+                  ...MC_BTN,
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: '#047857',
+                  background: '#ecfdf5',
+                  borderColor: '#a7f3d0'
+                }}
+              >
+                All
+              </button>
             </div>
           </div>
         </fieldset>

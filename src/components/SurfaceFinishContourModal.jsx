@@ -129,6 +129,7 @@ function SurfaceFinishContourModalInner({
   activeMachine = null,
   stockConfig = null,
   lastDefinedTool = null,
+  surfaceSelection = null,
   flowlineSelection = null,
   onOpenSurfaceSelection = null,
   onSaveOperation,
@@ -145,6 +146,7 @@ function SurfaceFinishContourModalInner({
   const isRadial = strategyMode === 'radial' || operation?.strategyKey === 'surface_finish_radial' || operation?.badgeClass === 'radial';
   const isProject = strategyMode === 'project' || operation?.strategyKey === 'surface_finish_project' || operation?.badgeClass === 'project';
   const isLeftover = strategyMode === 'leftover' || strategyMode === 'rest_milling' || operation?.strategyKey === 'surface_finish_leftover' || operation?.badgeClass === 'leftover';
+  const effectiveSelection = surfaceSelection || flowlineSelection || null;
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
   const detectedSurfaces = useMemo(() => {
@@ -548,7 +550,7 @@ function SurfaceFinishContourModalInner({
 
   const handleApply = () => {
     const activeSurfaces = detectedSurfaces.filter((s) => selectedSurfaceIds.includes(s.id));
-    let combinedBox = flowlineSelection?.driveBounds ? flowlineSelection.driveBounds.clone() : null;
+    let combinedBox = effectiveSelection?.driveBounds ? effectiveSelection.driveBounds.clone() : null;
     if (!combinedBox && activeSurfaces.length > 0) {
       combinedBox = new THREE.Box3();
       activeSurfaces.forEach((s) => {
@@ -579,10 +581,10 @@ function SurfaceFinishContourModalInner({
       ? Number(surfaceParams.clearance)
       : (Number(surfaceParams.retract) || 25.0);
 
-    const driveFaceIds = flowlineSelection?.driveFaceIds || operation?.driveFaceIds || [];
-    const checkFaceIds = flowlineSelection?.checkFaceIds || operation?.checkFaceIds || [];
-    const containmentIds = flowlineSelection?.containmentIds || operation?.containmentIds || [];
-    const flowlineData = flowlineSelection?.flowlineData || operation?.flowlineData || initialDefaults.flowlineData;
+    const driveFaceIds = effectiveSelection?.driveFaceIds || operation?.driveFaceIds || [];
+    const checkFaceIds = effectiveSelection?.checkFaceIds || operation?.checkFaceIds || [];
+    const containmentIds = effectiveSelection?.containmentIds || operation?.containmentIds || [];
+    const flowlineData = effectiveSelection?.flowlineData || operation?.flowlineData || initialDefaults.flowlineData;
 
     const updatedOp = {
       ...(operation || {}),
@@ -1846,7 +1848,7 @@ function SurfaceFinishContourModalInner({
                   <button
                     type="button"
                     onClick={() => {
-                      if (isFlowline && onOpenSurfaceSelection) {
+                      if (onOpenSurfaceSelection) {
                         onOpenSurfaceSelection();
                       } else {
                         setActiveSubDialog('select_surfaces');
@@ -1869,7 +1871,7 @@ function SurfaceFinishContourModalInner({
                     style={CLASSIC_YELLOW}
                   />
                   <span style={{ textAlign: 'right' }}>
-                    ({isFlowline ? (flowlineSelection?.driveFaceIds?.length ?? operation?.driveFaceIds?.length ?? selectedSurfaceIds.length) : selectedSurfaceIds.length})
+                    ({effectiveSelection?.driveFaceIds?.length ?? operation?.driveFaceIds?.length ?? selectedSurfaceIds.length})
                   </span>
                 </div>
 
@@ -1883,7 +1885,7 @@ function SurfaceFinishContourModalInner({
                     style={CLASSIC_YELLOW}
                   />
                   <span style={{ textAlign: 'right' }}>
-                    ({isFlowline ? (flowlineSelection?.checkFaceIds?.length ?? operation?.checkFaceIds?.length ?? 0) : 0})
+                    ({effectiveSelection?.checkFaceIds?.length ?? operation?.checkFaceIds?.length ?? 0})
                   </span>
                 </div>
 
@@ -1892,7 +1894,7 @@ function SurfaceFinishContourModalInner({
                   <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px' }}>Tool containment</legend>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '11px' }}>
                     <span>Compensate to:</span>
-                    <span>({isFlowline ? (flowlineSelection?.containmentIds?.length ?? operation?.containmentIds?.length ?? 0) : 0})</span>
+                    <span>({effectiveSelection?.containmentIds?.length ?? operation?.containmentIds?.length ?? 0})</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     {[

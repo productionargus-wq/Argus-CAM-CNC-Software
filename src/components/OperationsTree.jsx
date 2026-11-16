@@ -19,6 +19,16 @@ import OffsetChainsPanel from './OffsetChainsPanel';
 import DraftingPanel from './DraftingPanel';
 import { formatMastercamToolType } from '../config/surfaceFinishSchema';
 
+export const isSurfaceFinishOp = (op) => {
+  if (!op) return false;
+  const k = (op.strategyKey || op.type || op.badgeClass || '').toLowerCase();
+  return (
+    k.includes('surface_finish') ||
+    ['flowline', 'contour', 'pocket', 'shallow', 'parallel', 'parallel_steep', 'pencil', 'radial', 'project', 'leftover'].includes(op.badgeClass) ||
+    ['surface_finish_flowline', 'surface_finish_contour', 'surface_finish_pocket', 'surface_finish_shallow', 'surface_finish_parallel', 'surface_finish_parallel_steep', 'surface_finish_pencil', 'surface_finish_radial', 'surface_finish_project', 'surface_finish_leftover'].includes(op.strategyKey)
+  );
+};
+
 export default function OperationsTree({
   operations = [],
   onToggleOp,
@@ -1330,7 +1340,7 @@ export default function OperationsTree({
                                 <div style={{ position: 'relative' }}>
                                   <div
                                     onClick={() => {
-                                      if ((op.strategyKey === 'surface_finish_flowline' || op.badgeClass === 'flowline') && onEditOpGeometry) {
+                                      if (isSurfaceFinishOp(op) && onEditOpGeometry) {
                                         onEditOpGeometry(op);
                                       } else {
                                         onOpenWireframeModal?.();
@@ -1391,12 +1401,14 @@ export default function OperationsTree({
 
                                     <span>
                                       Geometry - {op.driveFaceIds?.length
-                                        ? `(${op.driveFaceIds.length} Drive Surface${op.driveFaceIds.length > 1 ? 's' : ''})`
+                                        ? `(${op.driveFaceIds.length} Drive Surface${op.driveFaceIds.length > 1 ? 's' : ''}${op.checkFaceIds?.length ? `, ${op.checkFaceIds.length} Check` : ''})`
                                         : op.driveSurfaceIds?.length
-                                          ? `(${op.driveSurfaceIds.length} Drive Surface${op.driveSurfaceIds.length > 1 ? 's' : ''})`
-                                          : op.toolType === 'probe' || op.strategyKey === 'probing'
-                                            ? `(${op.probeGeometry || '1 Feature Point'})`
-                                            : ''}
+                                          ? `(${op.driveSurfaceIds.length} Drive Surface${op.driveSurfaceIds.length > 1 ? 's' : ''}${op.checkFaceIds?.length ? `, ${op.checkFaceIds.length} Check` : ''})`
+                                          : isSurfaceFinishOp(op)
+                                            ? '(All Drive Surfaces)'
+                                            : op.toolType === 'probe' || op.strategyKey === 'probing'
+                                              ? `(${op.probeGeometry || '1 Feature Point'})`
+                                              : ''}
                                     </span>
                                   </div>
 
@@ -1404,13 +1416,21 @@ export default function OperationsTree({
                                   {isGeomExpanded && (
                                     <div style={{ position: 'relative', paddingLeft: '18px', marginLeft: '4px', fontSize: '10px', color: '#475569' }}>
                                       <div style={{ position: 'absolute', left: '0px', top: '0px', bottom: '6px', width: '1px', borderLeft: '1px dotted #94a3b8' }} />
-                                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', padding: '1px 0' }}>
+                                      <div
+                                        onClick={() => isSurfaceFinishOp(op) && onEditOpGeometry?.(op)}
+                                        style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', padding: '1px 0', cursor: isSurfaceFinishOp(op) ? 'pointer' : 'default' }}
+                                        title={isSurfaceFinishOp(op) ? 'Click to edit Drive surfaces in 3D Viewport' : ''}
+                                      >
                                         <div style={{ position: 'absolute', left: '-18px', top: '8px', width: '16px', borderTop: '1px dotted #94a3b8' }} />
-                                        <span>(1) Drive Surfaces</span>
+                                        <span>({op.driveFaceIds?.length || op.driveSurfaceIds?.length || (isSurfaceFinishOp(op) ? 1 : 0)}) Drive Surfaces</span>
                                       </div>
-                                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', padding: '1px 0' }}>
+                                      <div
+                                        onClick={() => isSurfaceFinishOp(op) && onEditOpGeometry?.(op)}
+                                        style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', padding: '1px 0', cursor: isSurfaceFinishOp(op) ? 'pointer' : 'default' }}
+                                        title={isSurfaceFinishOp(op) ? 'Click to edit Check surfaces in 3D Viewport' : ''}
+                                      >
                                         <div style={{ position: 'absolute', left: '-18px', top: '8px', width: '16px', borderTop: '1px dotted #94a3b8' }} />
-                                        <span>(0) Check Surfaces</span>
+                                        <span>({op.checkFaceIds?.length || 0}) Check Surfaces</span>
                                       </div>
                                     </div>
                                   )}

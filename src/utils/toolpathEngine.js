@@ -287,6 +287,9 @@ export function computeDriveModelBounds(driveModel, fallbackBounds = null) {
  */
 export function resolveOperationDriveBounds(effectiveModel, op = null, fallbackBounds = null) {
   const opBounds = op?.bounds ? resolveSafeBounds(op.bounds) : null;
+  if (opBounds && Array.isArray(op?.driveFaceIds) && op.driveFaceIds.length > 0) {
+    return opBounds;
+  }
   const baseBounds = opBounds || resolveSafeBounds(fallbackBounds);
   if (effectiveModel) {
     return computeDriveModelBounds(effectiveModel, baseBounds);
