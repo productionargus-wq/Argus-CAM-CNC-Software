@@ -856,6 +856,8 @@ export async function parseAnyCADFile(file, _options = {}) {
 
   // Ensure model has bounding box and metadata
   if (modelGroup) {
+    // Ensure both object reference styles work: parsedResult.group or parsedResult directly as THREE.Group
+    modelGroup.group = modelGroup;
     modelGroup.userData.filename = filename;
     modelGroup.userData.originalExtension = ext;
     const box = new THREE.Box3().setFromObject(modelGroup);

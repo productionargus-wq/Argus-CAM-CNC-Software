@@ -430,11 +430,25 @@ export async function parseSTEPText(stepText) {
         const loopEnt = entityMap.get(parseInt(loopMatch[1], 10));
         if (!loopEnt) continue;
 
-        const oeRefs = [...loopEnt.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
         let pts = [];
-        for (const oeId of oeRefs) {
-          const oeEnt = entityMap.get(oeId);
-          if (oeEnt) pts = pts.concat(discretizeEdge(oeEnt, entityMap, scale));
+        if (loopEnt.type === 'POLY_LOOP') {
+          const ptRefs = [...loopEnt.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
+          for (const ptId of ptRefs) {
+            const pt = resolvePoint(ptId, entityMap, scale);
+            if (pt) pts.push(pt);
+          }
+        } else {
+          const oeRefs = [...loopEnt.rawParams.matchAll(/#(\d+)/g)].map(m => parseInt(m[1], 10));
+          for (const oeId of oeRefs) {
+            const oeEnt = entityMap.get(oeId);
+            if (!oeEnt) continue;
+            if (oeEnt.type === 'CARTESIAN_POINT') {
+              const pt = resolvePoint(oeId, entityMap, scale);
+              if (pt) pts.push(pt);
+            } else {
+              pts = pts.concat(discretizeEdge(oeEnt, entityMap, scale));
+            }
+          }
         }
         if (pts.length >= 3) {
           const clean = [];

@@ -118,6 +118,7 @@ function SurfaceFinishContourModalInner({
   strategyMode = 'contour',
   tools = [],
   customGeometry = [],
+  currentModel = null,
   activeMachine = null,
   stockConfig = null,
   lastDefinedTool = null,
@@ -138,9 +139,22 @@ function SurfaceFinishContourModalInner({
 
   const detectedSurfaces = useMemo(() => {
     const surfaceItems = (customGeometry || []).filter((item) => isDriveSurfaceEntity(item));
-    const sourceItems = surfaceItems.length > 0
+    let sourceItems = surfaceItems.length > 0
       ? surfaceItems
       : (customGeometry || []).filter((item) => item && item.visible !== false && !item.isLine && !item.isLineSegments);
+
+    // If no customGeometry surfaces, discover meshes from imported CAD model (STEP, STL, etc.)
+    if (sourceItems.length === 0 && currentModel) {
+      const modelMeshes = [];
+      currentModel.traverse((child) => {
+        if (child.isMesh && child.geometry && child.visible !== false) {
+          modelMeshes.push(child);
+        }
+      });
+      if (modelMeshes.length > 0) {
+        sourceItems = modelMeshes;
+      }
+    }
 
     return sourceItems.map((item, idx) => {
       let box = item.boundingBox || null;
@@ -151,6 +165,8 @@ function SurfaceFinishContourModalInner({
         const localClone = item.clone(true);
         localClone.updateMatrixWorld(true);
         box = new THREE.Box3().setFromObject(localClone);
+      } else if (!box && item.isMesh) {
+        box = new THREE.Box3().setFromObject(item);
       }
       const validBox = box && !box.isEmpty() ? box : null;
       return {
@@ -160,7 +176,7 @@ function SurfaceFinishContourModalInner({
         box: validBox
       };
     });
-  }, [customGeometry]);
+  }, [customGeometry, currentModel]);
 
   const initialTool = useMemo(() => {
     if (operation?.toolId) {

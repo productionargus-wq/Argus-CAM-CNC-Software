@@ -3863,8 +3863,9 @@ export default function App() {
 
       // 3. CAD 3D Model / B-Rep (STEP, IGES, Parasolid, DXF, DWG, STL, OBJ, Rhino, SOLIDWORKS, etc.)
       const parsedResult = await parseAnyCADFile(file);
-      if (parsedResult?.group) {
-        handleModelImported(parsedResult.group, file.name, file);
+      const group = parsedResult?.group || (parsedResult?.isObject3D ? parsedResult : null);
+      if (group) {
+        handleModelImported(group, file.name, file);
         showToast(`Successfully opened ${file.name}`, 'success');
       } else {
         showToast(`Opened file ${file.name}`, 'info');
@@ -7407,6 +7408,7 @@ export default function App() {
         strategyMode={surfaceFinishStrategyMode}
         tools={tools}
         customGeometry={customGeometry}
+        currentModel={currentModel}
         activeMachine={activeMachine}
         stockConfig={stockConfig}
         lastDefinedTool={lastDefinedToolState}

@@ -317,6 +317,7 @@ export default function FileBackstageView({
   const handleOpenCADFile = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      e.target.value = '';
       try {
         if (file.name.toLowerCase().endsWith('.mcam')) {
           const projectData = await parseProjectMCAM(file);
@@ -343,6 +344,7 @@ export default function FileBackstageView({
   const handleMergeCADFile = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      e.target.value = '';
       try {
         const modelGroup = await parseAnyCADFile(file);
         // Offset merged model

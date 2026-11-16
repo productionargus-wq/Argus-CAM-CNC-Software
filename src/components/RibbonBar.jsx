@@ -218,6 +218,7 @@ export default function RibbonBar({
   const handleCADFileChange = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      e.target.value = '';
       try {
         const modelGroup = await parseAnyCADFile(file);
         if (onModelImported) {
@@ -233,6 +234,7 @@ export default function RibbonBar({
   const handleMCAMFileChange = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      e.target.value = '';
       try {
         const projectData = await parseProjectMCAM(file);
         if (onProjectLoaded) {

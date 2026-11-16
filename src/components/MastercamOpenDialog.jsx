@@ -120,15 +120,17 @@ export default function MastercamOpenDialog({
         if (onLoadProject) onLoadProject(parsed);
       } else {
         const parsedResult = await parseAnyCADFile(file);
-        if (parsedResult?.group && onModelImported) {
-          onModelImported(parsedResult.group, file.name);
+        const group = parsedResult?.group || (parsedResult?.isObject3D ? parsedResult : null);
+        if (group && onModelImported) {
+          onModelImported(group, file.name);
         }
       }
     } catch (err) {
       console.warn("Direct file open error, attempting universal parser:", err);
       const parsedResult = await parseAnyCADFile(file);
-      if (parsedResult?.group && onModelImported) {
-        onModelImported(parsedResult.group, file.name);
+      const group = parsedResult?.group || (parsedResult?.isObject3D ? parsedResult : null);
+      if (group && onModelImported) {
+        onModelImported(group, file.name);
       }
     }
     onClose();
