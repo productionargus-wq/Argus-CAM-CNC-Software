@@ -892,6 +892,21 @@ export function buildContourParamsFromOp(op = {}) {
       cuttingMethod: op.cuttingMethod || 'Zigzag',
       machiningDirection: op.cuttingDirection || 'climb',
       maxGapDistance: Number(op.maxGapDistance ?? 10.0)
+    },
+    scallopParams: op.scallopParams || {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      stepoverMode: 'stepover',
+      stepover: Number(op.stepdown ?? op.stepover ?? 0.5),
+      scallopHeight: Number(op.scallopHeight ?? 0.005),
+      stepDirection: op.stepDirection || 'outside_to_inside',
+      cuttingMethod: op.cuttingMethod || 'Zigzag',
+      machiningDirection: op.cuttingDirection || 'climb',
+      maxGapDistance: Number(op.maxGapDistance ?? 10.0),
+      transitionType: 'broken',
+      spiralBlend: false,
+      tipComp: 'tip'
     }
   };
 }
@@ -3055,6 +3070,248 @@ export function generateSurfaceLeftoverToolpath(bounds, tool, params = {}, model
 }
 
 /**
+ * Generates Mastercam 3D Surface Finish Scallop (Constant / Equal Scallop) Toolpath
+ * Computes constant 3D cusp height across steep walls, gentle slopes, and horizontal floors.
+ */
+export function generateSurfaceScallopToolpath(bounds, tool, params = {}, model = null) {
+  const effBounds = model ? computeDriveModelBounds(model, bounds) : resolveSafeBounds(bounds);
+  const sc = params.scallopParams || {};
+  const {
+    rapidHeight = 15.0,
+    feedPlane = 2.5,
+    stockToLeaveZ = 0.0,
+    totalDepth = 25.0
+  } = params;
+
+  const cuttingLines = [];
+  const rapidLines = [];
+
+  const topY = effBounds.max.y;
+  const safeTotalDepth = Math.abs(Number(totalDepth)) || 25.0;
+
+  // Active cutter geometry
+  const toolDia = Math.max(0.5, Number(tool.diameter ?? tool.toolDiameter) || 6.0);
+  const toolRadius = toolDia / 2;
+  const toolCornerRadius = tool.type === 'ball' ? toolRadius : (Number(tool.cornerRadius) || 0.0);
+  const isBall = tool.type === 'ball' || toolCornerRadius > 0;
+  const R = isBall ? (tool.type === 'ball' ? toolRadius : Math.max(toolCornerRadius, 0.5)) : toolRadius;
+
+  // Stepover & Scallop Height calculation
+  const stepoverMode = sc.stepoverMode || 'stepover';
+  let targetScallop = Math.max(0.0001, Number(sc.scallopHeight) || 0.005);
+  let targetStepover = Math.max(0.01, Number(sc.stepover) || (toolDia * 0.15));
+
+  if (stepoverMode === 'scallop_height') {
+    // ae = 2 * sqrt(2*R*h - h^2)
+    const hClamped = Math.min(targetScallop, R * 0.99);
+    targetStepover = 2 * Math.sqrt(Math.max(0, 2 * R * hClamped - hClamped * hClamped));
+    targetStepover = Math.max(0.01, Math.min(toolDia * 0.95, targetStepover));
+  } else {
+    // h = R - sqrt(R^2 - (s/2)^2)
+    const halfStep = Math.min(targetStepover / 2, R * 0.9999);
+    targetScallop = R - Math.sqrt(Math.max(0, R * R - halfStep * halfStep));
+  }
+
+  const stepDirection = sc.stepDirection || 'outside_to_inside'; // 'outside_to_inside' | 'inside_to_outside'
+  const cuttingMethod = String(sc.cuttingMethod || 'Zigzag').toLowerCase(); // 'zigzag' | 'one_way' | 'oneway' | 'spiral'
+  const isSpiral = cuttingMethod.includes('spiral');
+  const isOneWay = cuttingMethod.includes('one') || cuttingMethod.includes('way');
+  const maxGapDistance = Math.max(1.0, Number(sc.maxGapDistance ?? 10.0));
+
+  // Raycasting setup
+  const raycastMeshes = [];
+  if (model) {
+    model.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        child.updateMatrixWorld(true);
+        raycastMeshes.push(child);
+      }
+    });
+  }
+
+  const raycaster = new THREE.Raycaster();
+  const rayDown = new THREE.Vector3(0, -1, 0);
+
+  // Surface point sampler with 3D contact normal compensation
+  const samplePoint = (x, z) => {
+    let surfaceY = null;
+    let contactNormal = new THREE.Vector3(0, 1, 0);
+
+    if (raycastMeshes.length > 0) {
+      raycaster.set(new THREE.Vector3(x, topY + 50, z), rayDown);
+      const hits = raycaster.intersectObjects(raycastMeshes, false);
+      if (hits.length > 0) {
+        surfaceY = hits[0].point.y;
+        if (hits[0].face) {
+          contactNormal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
+        }
+      }
+    }
+
+    if (surfaceY == null) {
+      // Procedural fallback: smooth domed/pocket cavity
+      const cx = (effBounds.min.x + effBounds.max.x) / 2;
+      const cz = (effBounds.min.z + effBounds.max.z) / 2;
+      const rx = Math.max(1, (effBounds.max.x - effBounds.min.x) / 2);
+      const rz = Math.max(1, (effBounds.max.z - effBounds.min.z) / 2);
+      const dx = (x - cx) / rx;
+      const dz = (z - cz) / rz;
+      const rDist2 = Math.min(1.0, dx * dx + dz * dz);
+      surfaceY = topY - Math.sqrt(rDist2) * safeTotalDepth * 0.6;
+      contactNormal.set(dx * 0.5, 1.0, dz * 0.5).normalize();
+    }
+
+    let compY = surfaceY + stockToLeaveZ;
+    let compX = x;
+    let compZ = z;
+
+    if (isBall) {
+      const ny = Math.max(0.05, Math.min(1.0, Math.abs(contactNormal.y)));
+      // Cusp normal compensation: tip elevation adjusted for slope
+      compY += toolRadius * (1.0 - ny);
+      // Small horizontal contact offset in steep regions
+      if (ny < 0.95) {
+        const horizScale = toolRadius * (1.0 - ny) * 0.35;
+        compX -= contactNormal.x * horizScale;
+        compZ -= contactNormal.z * horizScale;
+      }
+    }
+
+    return new THREE.Vector3(compX, compY, compZ);
+  };
+
+  // 3D Drive Bounds
+  const margin = Math.max(0.1, toolRadius * 0.1);
+  const minX = effBounds.min.x + toolRadius + margin;
+  const maxX = effBounds.max.x - toolRadius - margin;
+  const minZ = effBounds.min.z + toolRadius + margin;
+  const maxZ = effBounds.max.z - toolRadius - margin;
+
+  const width = Math.max(0.1, maxX - minX);
+  const length = Math.max(0.1, maxZ - minZ);
+  const centerX = (minX + maxX) / 2;
+  const centerZ = (minZ + maxZ) / 2;
+  const semiX = width / 2;
+  const semiZ = length / 2;
+
+  const minRadius = Math.min(semiX, semiZ);
+  const numRings = Math.max(2, Math.floor(minRadius / targetStepover));
+
+  if (isSpiral) {
+    // Continuous 3D Archimedean Spiral across surface
+    const totalRevs = numRings;
+    const totalSteps = totalRevs * 64;
+    const spiralPoints = [];
+
+    for (let i = 0; i <= totalSteps; i++) {
+      const frac = i / totalSteps;
+      const rScale = stepDirection === 'inside_to_outside' ? frac : (1.0 - frac);
+      const angle = (i / 64) * Math.PI * 2;
+      const px = centerX + Math.cos(angle) * (semiX * rScale);
+      const pz = centerZ + Math.sin(angle) * (semiZ * rScale);
+      spiralPoints.push(samplePoint(px, pz));
+    }
+
+    if (spiralPoints.length > 1) {
+      const pStart = spiralPoints[0];
+      const pEnd = spiralPoints[spiralPoints.length - 1];
+
+      // Entry
+      rapidLines.push([
+        new THREE.Vector3(pStart.x, topY + rapidHeight, pStart.z),
+        new THREE.Vector3(pStart.x, pStart.y + feedPlane, pStart.z)
+      ]);
+      cuttingLines.push([
+        new THREE.Vector3(pStart.x, pStart.y + feedPlane, pStart.z),
+        pStart
+      ]);
+
+      // Spiral stroke
+      for (let i = 0; i < spiralPoints.length - 1; i++) {
+        cuttingLines.push([spiralPoints[i], spiralPoints[i + 1]]);
+      }
+
+      // Exit
+      rapidLines.push([
+        pEnd,
+        new THREE.Vector3(pEnd.x, topY + rapidHeight, pEnd.z)
+      ]);
+    }
+  } else {
+    // Concentric Offset Rings (Zigzag or One-Way)
+    const ringIndices = [];
+    for (let r = 0; r < numRings; r++) {
+      ringIndices.push(r);
+    }
+    if (stepDirection === 'inside_to_outside') {
+      ringIndices.reverse();
+    }
+
+    let lastRingEnd = null;
+
+    ringIndices.forEach((ringIdx, seqIdx) => {
+      const rScale = Math.max(0.02, 1.0 - (ringIdx / Math.max(1, numRings)));
+      const segments = Math.max(32, Math.min(128, Math.round(64 * rScale)));
+      const ringPts = [];
+      const reverse = !isOneWay && (seqIdx % 2 === 1);
+
+      for (let s = 0; s <= segments; s++) {
+        const u = reverse ? (1 - s / segments) : (s / segments);
+        const theta = u * Math.PI * 2;
+        const px = centerX + Math.cos(theta) * (semiX * rScale);
+        const pz = centerZ + Math.sin(theta) * (semiZ * rScale);
+        ringPts.push(samplePoint(px, pz));
+      }
+
+      const pFirst = ringPts[0];
+      const pLast = ringPts[ringPts.length - 1];
+
+      if (!lastRingEnd || isOneWay || lastRingEnd.distanceTo(pFirst) > maxGapDistance) {
+        if (lastRingEnd) {
+          rapidLines.push([
+            lastRingEnd,
+            new THREE.Vector3(lastRingEnd.x, topY + rapidHeight, lastRingEnd.z)
+          ]);
+        }
+        rapidLines.push([
+          new THREE.Vector3(pFirst.x, topY + rapidHeight, pFirst.z),
+          new THREE.Vector3(pFirst.x, pFirst.y + feedPlane, pFirst.z)
+        ]);
+        cuttingLines.push([
+          new THREE.Vector3(pFirst.x, pFirst.y + feedPlane, pFirst.z),
+          pFirst
+        ]);
+      } else {
+        // Direct on-surface stepover transition
+        cuttingLines.push([lastRingEnd, pFirst]);
+      }
+
+      // Cut around ring
+      for (let i = 0; i < ringPts.length - 1; i++) {
+        cuttingLines.push([ringPts[i], ringPts[i + 1]]);
+      }
+
+      lastRingEnd = pLast;
+    });
+
+    if (lastRingEnd) {
+      rapidLines.push([
+        lastRingEnd,
+        new THREE.Vector3(lastRingEnd.x, topY + rapidHeight, lastRingEnd.z)
+      ]);
+    }
+  }
+
+  return {
+    cuttingLines,
+    rapidLines,
+    scallopHeight: targetScallop,
+    stepover: targetStepover,
+    passCount: numRings
+  };
+}
+
+/**
  * Generates 2D/3D Rest Machining & Corner Cleanout Toolpath
  * Cleans unmachined material left by a previous larger roughing tool in internal corners and fillets.
  * Performs targeted corner picking with inward stepping passes and peripheral sweep arcs.
@@ -3539,6 +3796,9 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
   }
   if (strategy === 'leftover' || strategy === 'surface_finish_leftover' || op.strategyKey === 'surface_finish_leftover' || op.badgeClass === 'leftover') {
     return generateSurfaceLeftoverToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
+  }
+  if (strategy === 'scallop' || strategy === 'equal_scallop' || op.strategyKey === 'surface_finish_scallop' || op.badgeClass === 'scallop') {
+    return generateSurfaceScallopToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
   }
   if (strategy === 'probe') {
     const pCenter = op.center || {

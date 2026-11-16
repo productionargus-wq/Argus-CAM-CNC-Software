@@ -209,6 +209,17 @@ export default function CAMOperationsWizardModal({
       badgeClass: 'leftover'
     },
     {
+      id: 'surface_finish_scallop',
+      name: '3D Surface Finish Scallop',
+      badge: 'SC',
+      color: '#0284c7',
+      desc: 'Mastercam constant scallop finishing maintaining uniform 3D cusp height across steep & shallow surfaces',
+      defaultStepover: 15,
+      defaultStepdown: 0.5,
+      defaultDepth: 25.0,
+      badgeClass: 'scallop'
+    },
+    {
       id: 'rest_milling',
       name: 'Rest Machining (Corner Pick)',
       badge: 'RM',

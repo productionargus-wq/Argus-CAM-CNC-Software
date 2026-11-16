@@ -12,7 +12,9 @@ import {
   buildPresetApplication,
   createDefaultSurfaceFinishState,
   saveOperationDefaults,
-  loadOperationDefaults
+  loadOperationDefaults,
+  calculateScallopHeightFromStepover,
+  calculateStepoverFromScallopHeight
 } from '../config/surfaceFinishSchema';
 import {
   SurfaceHeightsSchematicSvg,
@@ -146,6 +148,7 @@ function SurfaceFinishContourModalInner({
   const isRadial = strategyMode === 'radial' || operation?.strategyKey === 'surface_finish_radial' || operation?.badgeClass === 'radial';
   const isProject = strategyMode === 'project' || operation?.strategyKey === 'surface_finish_project' || operation?.badgeClass === 'project';
   const isLeftover = strategyMode === 'leftover' || strategyMode === 'rest_milling' || operation?.strategyKey === 'surface_finish_leftover' || operation?.badgeClass === 'leftover';
+  const isScallop = strategyMode === 'scallop' || strategyMode === 'equal_scallop' || operation?.strategyKey === 'surface_finish_scallop' || operation?.badgeClass === 'scallop';
   const effectiveSelection = surfaceSelection || flowlineSelection || null;
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
@@ -391,6 +394,25 @@ function SurfaceFinishContourModalInner({
     ...(operation?.leftoverParams || {})
   }));
 
+  const [scallopParams, setScallopParams] = useState(() => ({
+    ...(initialDefaults.scallopParams || {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      stepoverMode: 'stepover',
+      stepover: 0.5,
+      scallopHeight: 0.005,
+      stepDirection: 'outside_to_inside',
+      cuttingMethod: 'Zigzag',
+      machiningDirection: 'climb',
+      maxGapDistance: 10.0,
+      transitionType: 'broken',
+      spiralBlend: false,
+      tipComp: 'tip'
+    }),
+    ...(operation?.scallopParams || {})
+  }));
+
   // Auto-compute center point and outer radius from detected surfaces if autoCenter is active
   useEffect(() => {
     if (isRadial && (!operation?.radialParams?.centerPoint || radialParams.autoCenter)) {
@@ -576,7 +598,9 @@ function SurfaceFinishContourModalInner({
                     ? 'Surface Finish Project'
                     : isLeftover
                       ? 'Surface Finish Leftover'
-                      : 'Surface Finish Contour';
+                      : isScallop
+                        ? 'Surface Finish Scallop'
+                        : 'Surface Finish Contour';
     const rapidHeight = surfaceParams.clearanceEnabled && surfaceParams.clearanceMode === 'abs'
       ? Number(surfaceParams.clearance)
       : (Number(surfaceParams.retract) || 25.0);
@@ -589,15 +613,15 @@ function SurfaceFinishContourModalInner({
     const updatedOp = {
       ...(operation || {}),
       name: operation?.name || opTitle,
-      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : isLeftover ? 'surface_finish_leftover' : 'surface_finish_contour',
-      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : isLeftover ? 'surface_finish_leftover' : 'surface_finish_contour',
-      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : isLeftover ? 'leftover' : 'contour',
-      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallelSteep ? 'PS' : isParallel ? 'PA' : isPencil ? 'PC' : isRadial ? 'RD' : isProject ? 'PJ' : isLeftover ? 'LO' : 'SC',
+      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : isLeftover ? 'surface_finish_leftover' : isScallop ? 'surface_finish_scallop' : 'surface_finish_contour',
+      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : isLeftover ? 'surface_finish_leftover' : isScallop ? 'surface_finish_scallop' : 'surface_finish_contour',
+      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : isLeftover ? 'leftover' : isScallop ? 'scallop' : 'contour',
+      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallelSteep ? 'PS' : isParallel ? 'PA' : isPencil ? 'PC' : isRadial ? 'RD' : isProject ? 'PJ' : isLeftover ? 'LO' : isScallop ? 'SC' : 'CT',
       machiningAngle: Number(contourParams.machiningAngle ?? 90.0),
       steepFromSlope: Number(contourParams.steepFromSlope ?? 35.0),
       steepToSlope: Number(contourParams.steepToSlope ?? 90.0),
-      stepover: Number(isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? projectParams.stepover : isLeftover ? leftoverParams.stepover : isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
-      cuttingMethod: isRadial ? (radialParams.cuttingMethod || 'zigzag').toLowerCase() : isProject ? (projectParams.cuttingMethod || 'zigzag').toLowerCase() : isLeftover ? (leftoverParams.cuttingMethod || 'zigzag').toLowerCase() : isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
+      stepover: Number(isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? projectParams.stepover : isLeftover ? leftoverParams.stepover : isScallop ? scallopParams.stepover : isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
+      cuttingMethod: isRadial ? (radialParams.cuttingMethod || 'zigzag').toLowerCase() : isProject ? (projectParams.cuttingMethod || 'zigzag').toLowerCase() : isLeftover ? (leftoverParams.cuttingMethod || 'zigzag').toLowerCase() : isScallop ? (scallopParams.cuttingMethod || 'zigzag').toLowerCase() : isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
       toolId: activeTool?.id || toolParams.toolId || 1,
       toolName: toolParams.toolName,
       toolNumber: Number(toolParams.toolNumber) || 1,
@@ -610,10 +634,10 @@ function SurfaceFinishContourModalInner({
       plungeFeedRate: Number(toolParams.plungeRate) || 150,
       retractRate: Number(toolParams.retractRate) || 250,
       rapidHeight,
-      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : isPencil ? pencilParams.stepover : isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? (projectParams.depthOfCut || projectParams.stepdown || 0.2) : isLeftover ? leftoverParams.stepover : contourParams.maxStepdown) || 0.5,
+      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : isPencil ? pencilParams.stepover : isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? (projectParams.depthOfCut || projectParams.stepdown || 0.2) : isLeftover ? leftoverParams.stepover : isScallop ? scallopParams.stepover : contourParams.maxStepdown) || 0.5,
       stockToLeaveXY: Number(surfaceParams.stockToLeaveDrive) || 0.0,
       stockToLeaveZ: Number(surfaceParams.stockToLeaveDrive) || 0.0,
-      cuttingDirection: isPocket ? pocketParams.machiningDirection : isPencil ? pencilParams.machiningDirection : isProject ? projectParams.machiningDirection : isLeftover ? leftoverParams.machiningDirection : contourParams.direction,
+      cuttingDirection: isPocket ? pocketParams.machiningDirection : isPencil ? pencilParams.machiningDirection : isProject ? projectParams.machiningDirection : isLeftover ? leftoverParams.machiningDirection : isScallop ? scallopParams.machiningDirection : contourParams.direction,
       contourSide: surfaceParams.containmentMode,
       cutStyle: isFlowline
         ? String(flowlineParams.cuttingMethod || 'Zigzag').toLowerCase()
@@ -625,10 +649,13 @@ function SurfaceFinishContourModalInner({
               ? String(projectParams.cuttingMethod || 'Zigzag').toLowerCase()
               : isLeftover
                 ? String(leftoverParams.cuttingMethod || 'Zigzag').toLowerCase()
-                : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
-      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : isPencil ? pencilParams.stepover : isRadial ? radialParams.maxStepover : isProject ? projectParams.stepover : isLeftover ? leftoverParams.stepover : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
+                : isScallop
+                  ? String(scallopParams.cuttingMethod || 'Zigzag').toLowerCase()
+                  : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
+      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : isPencil ? pencilParams.stepover : isRadial ? radialParams.maxStepover : isProject ? projectParams.stepover : isLeftover ? leftoverParams.stepover : isScallop ? scallopParams.stepover : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
       biTangencyRadius: Number(pencilParams.biTangencyRadius) || 3.0,
       numberOfPasses: Number(isLeftover ? leftoverParams.numberOfPasses : pencilParams.numberOfPasses) || 1,
+      scallopParams: isScallop ? scallopParams : undefined,
       driveSurfaceIds: selectedSurfaceIds,
       driveFaceIds,
       checkFaceIds,
@@ -1317,7 +1344,9 @@ function SurfaceFinishContourModalInner({
                               ? 'Finish project parameters'
                               : isLeftover
                                 ? 'Finish leftover parameters'
-                                : 'Finish contour parameters'
+                                : isScallop
+                                  ? 'Finish scallop parameters'
+                                  : 'Finish contour parameters'
             }
           ].map((tab) => {
             const active = activeTab === tab.id;
@@ -1937,7 +1966,7 @@ function SurfaceFinishContourModalInner({
           )}
 
           {/* ==================== TAB 3A: FINISH CONTOUR PARAMETERS (IMAGE 5 VERBATIM) ==================== */}
-          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && !isParallelSteep && !isPencil && !isRadial && !isProject && !isLeftover && (
+          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && !isParallelSteep && !isPencil && !isRadial && !isProject && !isLeftover && !isScallop && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '246px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
                 {/* LEFT COLUMN */}
@@ -4036,6 +4065,397 @@ function SurfaceFinishContourModalInner({
                       </text>
                       <text x="140" y="99" textAnchor="middle" fontSize="9" fill="#0f172a">
                         Mode: {leftoverParams.machiningMethod === 'along' ? 'Along Valleys' : 'Across Ribs'} • Overlap: {leftoverParams.overlap ?? 1.0}mm
+                      </text>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== TAB 3K: FINISH SCALLOP PARAMETERS (MASTERCAM VERBATIM) ==================== */}
+          {activeTab === 'finish_contour_params' && isScallop && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
+              {/* Quick Preset Banner */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: '#f0f9ff',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '2px',
+                  padding: '6px 10px',
+                  fontSize: '11px',
+                  color: '#0369a1'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                  <Sparkles size={14} color="#0284c7" />
+                  <span>3D Surface Finish Scallop ({caps.machineName})</span>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const h = 0.002;
+                      const s = calculateStepoverFromScallopHeight({ toolDiameter: toolParams.toolDiameter, scallopHeight: h, cornerRadius: toolParams.cornerRadius, toolType: toolParams.toolType });
+                      setScallopParams((p) => ({ ...p, stepoverMode: 'scallop_height', scallopHeight: h, stepover: s, cuttingMethod: 'Spiral' }));
+                    }}
+                    style={{ ...MC_BUTTON, fontSize: '10px', padding: '2px 7px', background: '#e0f2fe', borderColor: '#7dd3fc', color: '#0369a1' }}
+                    title="Target 0.002mm cusp height (~0.5µm Ra) in continuous Spiral mode for mirror mold finishing"
+                  >
+                    ⚡ High Polish Mold (2µm)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const h = 0.005;
+                      const s = calculateStepoverFromScallopHeight({ toolDiameter: toolParams.toolDiameter, scallopHeight: h, cornerRadius: toolParams.cornerRadius, toolType: toolParams.toolType });
+                      setScallopParams((p) => ({ ...p, stepoverMode: 'stepover', scallopHeight: h, stepover: s, cuttingMethod: 'Zigzag' }));
+                    }}
+                    style={{ ...MC_BUTTON, fontSize: '10px', padding: '2px 7px', background: '#ffffff', borderColor: '#bae6fd', color: '#0369a1' }}
+                    title="Target 0.005mm cusp height (~1.2µm Ra) in Zigzag mode for general production finishing"
+                  >
+                    ⚡ General Finish (5µm)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const h = 0.015;
+                      const s = calculateStepoverFromScallopHeight({ toolDiameter: toolParams.toolDiameter, scallopHeight: h, cornerRadius: toolParams.cornerRadius, toolType: toolParams.toolType });
+                      setScallopParams((p) => ({ ...p, stepoverMode: 'stepover', scallopHeight: h, stepover: s, cuttingMethod: 'Zigzag' }));
+                    }}
+                    style={{ ...MC_BUTTON, fontSize: '10px', padding: '2px 7px', background: '#ffffff', borderColor: '#bae6fd', color: '#0369a1' }}
+                    title="Target 0.015mm cusp height (~3.8µm Ra) for rapid prototype or semi-finishing"
+                  >
+                    ⚡ Semi-Finish (15µm)
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '290px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
+                {/* LEFT COLUMN: Tolerances, Stepover Mode, Stepover vs Scallop Height, Gap Settings */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  {/* Total Tolerance */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSubDialog('total_tolerance')}
+                      style={{ ...MC_BUTTON, width: '100%', borderColor: '#0284c7', color: '#0369a1' }}
+                    >
+                      Total tolerance...
+                    </button>
+                    <input
+                      type="number"
+                      step="0.005"
+                      value={scallopParams.totalTolerance ?? 0.025}
+                      onChange={(e) => setScallopParams((p) => ({ ...p, totalTolerance: Number(e.target.value) }))}
+                      style={CLASSIC_YELLOW}
+                    />
+                  </div>
+
+                  {/* Stepover & Scallop Height Coupling */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px', fontWeight: 600 }}>
+                      Stepover & Cusp Height
+                    </legend>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                      {/* Stepover Distance */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', alignItems: 'center', gap: '6px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          <input
+                            type="radio"
+                            name="scallop_stepover_mode"
+                            checked={scallopParams.stepoverMode === 'stepover'}
+                            onChange={() => setScallopParams((p) => ({ ...p, stepoverMode: 'stepover' }))}
+                          />
+                          <span>Stepover (mm)</span>
+                        </label>
+                        <input
+                          type="number"
+                          step="0.05"
+                          value={scallopParams.stepover}
+                          onChange={(e) => {
+                            const s = Math.max(0.001, Number(e.target.value) || 0.1);
+                            const h = calculateScallopHeightFromStepover({
+                              toolDiameter: toolParams.toolDiameter,
+                              stepover: s,
+                              cornerRadius: toolParams.cornerRadius,
+                              toolType: toolParams.toolType
+                            });
+                            setScallopParams((p) => ({ ...p, stepover: s, scallopHeight: h }));
+                          }}
+                          style={scallopParams.stepoverMode === 'stepover' ? CLASSIC_YELLOW : WHITE_INPUT}
+                        />
+                      </div>
+
+                      {/* Scallop Height */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', alignItems: 'center', gap: '6px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          <input
+                            type="radio"
+                            name="scallop_stepover_mode"
+                            checked={scallopParams.stepoverMode === 'scallop_height'}
+                            onChange={() => setScallopParams((p) => ({ ...p, stepoverMode: 'scallop_height' }))}
+                          />
+                          <span>Scallop height (mm)</span>
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          value={scallopParams.scallopHeight}
+                          onChange={(e) => {
+                            const h = Math.max(0.0001, Number(e.target.value) || 0.001);
+                            const s = calculateStepoverFromScallopHeight({
+                              toolDiameter: toolParams.toolDiameter,
+                              scallopHeight: h,
+                              cornerRadius: toolParams.cornerRadius,
+                              toolType: toolParams.toolType
+                            });
+                            setScallopParams((p) => ({ ...p, scallopHeight: h, stepover: s }));
+                          }}
+                          style={scallopParams.stepoverMode === 'scallop_height' ? CLASSIC_YELLOW : WHITE_INPUT}
+                        />
+                      </div>
+
+                      {/* Live Surface Roughness & Cusp Readout */}
+                      <div
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          padding: '4px 6px',
+                          fontSize: '10px',
+                          color: '#475569',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginTop: '2px'
+                        }}
+                      >
+                        <span>Cusp: <b>{(scallopParams.scallopHeight * 1000).toFixed(1)} µm</b></span>
+                        <span>Estimated Ra: <b>{(scallopParams.scallopHeight * 1000 / 4).toFixed(2)} µm</b></span>
+                      </div>
+                    </div>
+                  </fieldset>
+
+                  {/* Filtering & Tolerances */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px' }}>Filter & Tolerances</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <span>Filter ratio</span>
+                      <input
+                        type="number"
+                        step="0.05"
+                        value={scallopParams.filterToleranceRatio ?? 0.5}
+                        onChange={(e) => setScallopParams((p) => ({ ...p, filterToleranceRatio: Number(e.target.value) }))}
+                        style={CLASSIC_YELLOW}
+                      />
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '11px', color: '#334155' }}>
+                      <input
+                        type="checkbox"
+                        checked={scallopParams.oneWayArcFilter ?? false}
+                        onChange={(e) => setScallopParams((p) => ({ ...p, oneWayArcFilter: e.target.checked }))}
+                      />
+                      <span>One way arc filter</span>
+                    </label>
+                  </fieldset>
+
+                  {/* Gap Settings */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px' }}>Gap settings</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '6px' }}>
+                      <span>Max gap distance</span>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={scallopParams.maxGapDistance ?? 10.0}
+                        onChange={(e) => setScallopParams((p) => ({ ...p, maxGapDistance: Number(e.target.value) }))}
+                        style={CLASSIC_YELLOW}
+                      />
+                    </div>
+                  </fieldset>
+                </div>
+
+                {/* RIGHT COLUMN: Step Direction, Cutting Method, Direction, Transitions & Mastercam Diagram */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  {/* Step Direction */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px', fontWeight: 600 }}>
+                      Step direction
+                    </legend>
+                    <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="scallop_step_dir"
+                          checked={scallopParams.stepDirection === 'outside_to_inside'}
+                          onChange={() => setScallopParams((p) => ({ ...p, stepDirection: 'outside_to_inside' }))}
+                        />
+                        <span>Outside to inside</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="scallop_step_dir"
+                          checked={scallopParams.stepDirection === 'inside_to_outside'}
+                          onChange={() => setScallopParams((p) => ({ ...p, stepDirection: 'inside_to_outside' }))}
+                        />
+                        <span>Inside to outside</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  {/* Cutting Method */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px', fontWeight: 600 }}>
+                      Cutting method
+                    </legend>
+                    <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="scallop_cut_method"
+                          checked={scallopParams.cuttingMethod === 'Zigzag'}
+                          onChange={() => setScallopParams((p) => ({ ...p, cuttingMethod: 'Zigzag' }))}
+                        />
+                        <span>Zigzag</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="scallop_cut_method"
+                          checked={scallopParams.cuttingMethod === 'One way'}
+                          onChange={() => setScallopParams((p) => ({ ...p, cuttingMethod: 'One way' }))}
+                        />
+                        <span>One way</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="scallop_cut_method"
+                          checked={scallopParams.cuttingMethod === 'Spiral'}
+                          onChange={() => setScallopParams((p) => ({ ...p, cuttingMethod: 'Spiral' }))}
+                        />
+                        <span>Spiral (Smooth 3D)</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  {/* Machining Direction & Transitions */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', minWidth: 0, boxSizing: 'border-box' }}>
+                      <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px' }}>Direction</legend>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="scallop_dir"
+                            checked={scallopParams.machiningDirection === 'climb'}
+                            onChange={() => setScallopParams((p) => ({ ...p, machiningDirection: 'climb' }))}
+                          />
+                          <span>Climb</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="scallop_dir"
+                            checked={scallopParams.machiningDirection === 'conventional'}
+                            onChange={() => setScallopParams((p) => ({ ...p, machiningDirection: 'conventional' }))}
+                          />
+                          <span>Conv.</span>
+                        </label>
+                      </div>
+                    </fieldset>
+
+                    <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', minWidth: 0, boxSizing: 'border-box' }}>
+                      <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px' }}>Transitions</legend>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="scallop_trans"
+                            checked={scallopParams.transitionType === 'broken'}
+                            onChange={() => setScallopParams((p) => ({ ...p, transitionType: 'broken' }))}
+                          />
+                          <span>Direct</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="scallop_trans"
+                            checked={scallopParams.transitionType === 'smooth'}
+                            onChange={() => setScallopParams((p) => ({ ...p, transitionType: 'smooth' }))}
+                          />
+                          <span>Smooth arc</span>
+                        </label>
+                      </div>
+                    </fieldset>
+                  </div>
+
+                  {/* Mastercam Constant Scallop SVG Diagram */}
+                  <div
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '2px',
+                      padding: '8px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: '140px'
+                    }}
+                  >
+                    <svg width="270" height="110" viewBox="0 0 270 110">
+                      {/* 3D Curved Surface Profile */}
+                      <path
+                        d="M 15 85 Q 80 85 135 60 Q 190 35 255 35"
+                        fill="none"
+                        stroke="#64748b"
+                        strokeWidth="2.5"
+                      />
+                      {/* Slope reference label */}
+                      <text x="180" y="24" fontSize="8.5" fill="#475569">
+                        Equal 3D Cusp on Variable Slope
+                      </text>
+
+                      {/* Tool Pass 1 (Ball-nose cutter outline) */}
+                      <path
+                        d="M 55 52 L 55 68 A 16 16 0 0 0 87 68 L 87 52"
+                        fill="rgba(2, 132, 199, 0.12)"
+                        stroke="#0284c7"
+                        strokeWidth="1.5"
+                      />
+                      {/* Tool Pass 2 */}
+                      <path
+                        d="M 83 45 L 83 61 A 16 16 0 0 0 115 61 L 115 45"
+                        fill="rgba(2, 132, 199, 0.12)"
+                        stroke="#0284c7"
+                        strokeWidth="1.5"
+                      />
+                      {/* Tool Pass 3 */}
+                      <path
+                        d="M 112 36 L 112 52 A 16 16 0 0 0 144 52 L 144 36"
+                        fill="rgba(2, 132, 199, 0.12)"
+                        stroke="#0284c7"
+                        strokeWidth="1.5"
+                      />
+
+                      {/* Constant Scallop Cusp Highlight */}
+                      <path
+                        d="M 71 84 Q 85 81 85 76 Q 85 81 99 76"
+                        fill="rgba(245, 158, 11, 0.45)"
+                        stroke="#f59e0b"
+                        strokeWidth="1.2"
+                      />
+
+                      {/* Dimension labels */}
+                      <text x="85" y="93" textAnchor="middle" fontSize="9" fill="#0369a1" fontWeight="600">
+                        h = {scallopParams.scallopHeight}mm
+                      </text>
+                      <text x="135" y="105" textAnchor="middle" fontSize="8.5" fill="#334155">
+                        Stepover: {scallopParams.stepover}mm • {scallopParams.stepDirection === 'outside_to_inside' ? 'Outside -> In' : 'Inside -> Out'} ({scallopParams.cuttingMethod})
                       </text>
                     </svg>
                   </div>

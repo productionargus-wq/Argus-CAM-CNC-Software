@@ -44,6 +44,7 @@ const ALL_MASTERCAM_COMMANDS = [
   { id: 'surface_finish_radial', name: 'Surface Finish Radial', category: 'Toolpaths > 3D', shortcut: '', desc: '3D surface finish radial toolpath radiating from or toward a center point' },
   { id: 'surface_finish_project', name: 'Surface Finish Project', category: 'Toolpaths > 3D', shortcut: '', desc: '3D surface finish project curves, crosshatch patterns, or toolpaths onto drive surfaces' },
   { id: 'surface_finish_leftover', name: 'Surface Finish Leftover', category: 'Toolpaths > 3D', shortcut: '', desc: '3D surface finish rest milling targeting material left behind by previous larger roughing tools' },
+  { id: 'surface_finish_scallop', name: 'Surface Finish Scallop', category: 'Toolpaths > 3D', shortcut: '', desc: '3D surface finish constant scallop toolpath maintaining uniform 3D cusp height across all slope angles' },
   { id: 'contour_2d', name: '2D Contour', category: 'Toolpaths > 2D', shortcut: '', desc: 'Profile milling along open or closed 2D chains' },
   { id: 'pocket_2d', name: '2D Pocket', category: 'Toolpaths > 2D', shortcut: '', desc: 'Zigzag, spiral, or true spiral pocket milling' },
   { id: 'drill_cycle', name: 'Hole Drilling', category: 'Toolpaths > 2D', shortcut: '', desc: 'Canned drilling, pecking (G83), and tapping cycles' },

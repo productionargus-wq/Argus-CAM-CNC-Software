@@ -24,8 +24,8 @@ export const isSurfaceFinishOp = (op) => {
   const k = (op.strategyKey || op.type || op.badgeClass || '').toLowerCase();
   return (
     k.includes('surface_finish') ||
-    ['flowline', 'contour', 'pocket', 'shallow', 'parallel', 'parallel_steep', 'pencil', 'radial', 'project', 'leftover'].includes(op.badgeClass) ||
-    ['surface_finish_flowline', 'surface_finish_contour', 'surface_finish_pocket', 'surface_finish_shallow', 'surface_finish_parallel', 'surface_finish_parallel_steep', 'surface_finish_pencil', 'surface_finish_radial', 'surface_finish_project', 'surface_finish_leftover'].includes(op.strategyKey)
+    ['flowline', 'contour', 'pocket', 'shallow', 'parallel', 'parallel_steep', 'pencil', 'radial', 'project', 'leftover', 'scallop'].includes(op.badgeClass) ||
+    ['surface_finish_flowline', 'surface_finish_contour', 'surface_finish_pocket', 'surface_finish_shallow', 'surface_finish_parallel', 'surface_finish_parallel_steep', 'surface_finish_pencil', 'surface_finish_radial', 'surface_finish_project', 'surface_finish_leftover', 'surface_finish_scallop'].includes(op.strategyKey)
   );
 };
 
@@ -97,6 +97,7 @@ export default function OperationsTree({
   onOpenSurfaceFinishRadial,
   onOpenSurfaceFinishProject,
   onOpenSurfaceFinishLeftover,
+  onOpenSurfaceFinishScallop,
   onEditOpGeometry,
   onExportStockSTL,
   activeDrawingTool = null,
@@ -1847,6 +1848,7 @@ export default function OperationsTree({
           onOpenSurfaceFinishRadial={onOpenSurfaceFinishRadial}
           onOpenSurfaceFinishProject={onOpenSurfaceFinishProject}
           onOpenSurfaceFinishLeftover={onOpenSurfaceFinishLeftover}
+          onOpenSurfaceFinishScallop={onOpenSurfaceFinishScallop}
           onExportStockSTL={onExportStockSTL}
           onToggleLockOp={onToggleLockOp}
           onToggleGhostOp={onToggleGhostOp}

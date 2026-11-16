@@ -1949,6 +1949,8 @@ export default function App() {
       op?.badgeClass === 'project' ||
       op?.strategyKey === 'surface_finish_leftover' ||
       op?.badgeClass === 'leftover' ||
+      op?.strategyKey === 'surface_finish_scallop' ||
+      op?.badgeClass === 'scallop' ||
       op?.usesCustomSurfaces
     ) {
       const mode =
@@ -1970,7 +1972,9 @@ export default function App() {
                         ? 'project'
                         : op.strategyKey === 'surface_finish_leftover' || op.badgeClass === 'leftover'
                           ? 'leftover'
-                          : 'contour';
+                          : op.strategyKey === 'surface_finish_scallop' || op.badgeClass === 'scallop'
+                            ? 'scallop'
+                            : 'contour';
       setSurfaceSelectionDraft({
         mode,
         editingOp: op,
@@ -2212,6 +2216,9 @@ export default function App() {
       return;
     } else if (s === 'leftover' || s === 'surface_finish_leftover' || s === '3d_leftover' || s === '3d_finish_leftover') {
       openSurfaceFinishSelection('leftover', null);
+      return;
+    } else if (s === 'scallop' || s === 'surface_finish_scallop' || s === '3d_scallop' || s === 'equal_scallop' || s === '3d_equal_scallop') {
+      openSurfaceFinishSelection('scallop', null);
       return;
     } else if (s === 'swarf' || s === '5axis_swarf') {
       newOp = {
@@ -3250,7 +3257,9 @@ export default function App() {
                       ? 'project'
                       : op?.strategyKey === 'surface_finish_leftover' || op?.badgeClass === 'leftover'
                         ? 'leftover'
-                        : 'contour';
+                        : op?.strategyKey === 'surface_finish_scallop' || op?.badgeClass === 'scallop'
+                          ? 'scallop'
+                          : 'contour';
     openSurfaceFinishSelection(mode, op, { fromModal: false });
   };
 
@@ -3449,6 +3458,8 @@ export default function App() {
                   ? 'Surface Finish Project'
                   : updatedOp.strategyKey === 'surface_finish_leftover'
                     ? 'Surface Finish Leftover'
+                  : updatedOp.strategyKey === 'surface_finish_scallop'
+                    ? 'Surface Finish Scallop'
                     : 'Surface Finish Contour';
     const finalOp = {
       ...updatedOp,
@@ -3647,6 +3658,12 @@ export default function App() {
       case 'surface_finish_leftover':
       case 'leftover':
         openSurfaceFinishSelection('leftover', null);
+        break;
+      case 'surface_finish_scallop':
+      case 'scallop':
+      case 'equal_scallop':
+      case 'tp_3d_equal_scallop':
+        openSurfaceFinishSelection('scallop', null);
         break;
       case 'verify_solid':
         setIsSolidVerifyModalOpen(true);
@@ -6086,6 +6103,7 @@ export default function App() {
         onOpenSurfaceFinishRadial={() => openSurfaceFinishSelection('radial', null)}
         onOpenSurfaceFinishProject={() => openSurfaceFinishSelection('project', null)}
         onOpenSurfaceFinishLeftover={() => openSurfaceFinishSelection('leftover', null)}
+        onOpenSurfaceFinishScallop={() => openSurfaceFinishSelection('scallop', null)}
         onCopyViewportImage={handleCopyViewportImage}
         onPasteOp={handlePasteOp}
         onCutOp={handleCutOp}
@@ -6340,6 +6358,7 @@ export default function App() {
           onOpenSurfaceFinishRadial={() => openSurfaceFinishSelection('radial', null)}
           onOpenSurfaceFinishProject={() => openSurfaceFinishSelection('project', null)}
           onOpenSurfaceFinishLeftover={() => openSurfaceFinishSelection('leftover', null)}
+          onOpenSurfaceFinishScallop={() => openSurfaceFinishSelection('scallop', null)}
           onEditOpGeometry={handleOpenFlowlineGeometryEdit}
           onExportStockSTL={handleExportStockSTL}
           activeDrawingTool={activeDrawingTool}

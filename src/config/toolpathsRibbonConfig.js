@@ -201,8 +201,8 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         label: 'Equal Scallop',
         icon: 'Tp3dEqualScallop',
         action: 'tp_3d_equal_scallop',
-        opType: 'waterline',
-        tooltip: 'Constant Scallop Height Finishing'
+        opType: 'surface_finish_scallop',
+        tooltip: 'Surface Finish Scallop - Constant Scallop Height Finishing across Steep and Shallow Surfaces'
       },
       {
         id: '3d_waterline',

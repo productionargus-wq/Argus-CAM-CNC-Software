@@ -454,6 +454,44 @@ export function computeFlowlineStepoverFromScallop({
 }
 
 /**
+ * Calculates theoretical scallop height (cusp height in mm) for a cutter diameter and stepover distance.
+ */
+export function calculateScallopHeightFromStepover({
+  toolDiameter = 10.0,
+  stepover = 0.5,
+  cornerRadius = 0,
+  toolType = 'ball'
+} = {}) {
+  const diam = Math.max(0.5, Number(toolDiameter) || 10.0);
+  const s = Math.max(0.001, Number(stepover) || 0.5);
+  const t = String(toolType || '').toLowerCase();
+  const cRad = Math.max(0, Number(cornerRadius) || 0);
+  const R = t.includes('ball') ? diam * 0.5 : cRad > 0.05 ? cRad : diam * 0.5;
+  const halfStep = Math.min(s * 0.5, R * 0.9999);
+  const h = R - Math.sqrt(Math.max(0, R * R - halfStep * halfStep));
+  return Number(Math.max(0.0001, h).toFixed(5));
+}
+
+/**
+ * Calculates required stepover distance (mm) from target scallop height (mm) and cutter diameter.
+ */
+export function calculateStepoverFromScallopHeight({
+  toolDiameter = 10.0,
+  scallopHeight = 0.005,
+  cornerRadius = 0,
+  toolType = 'ball'
+} = {}) {
+  const diam = Math.max(0.5, Number(toolDiameter) || 10.0);
+  const h = Math.max(0.0001, Number(scallopHeight) || 0.005);
+  const t = String(toolType || '').toLowerCase();
+  const cRad = Math.max(0, Number(cornerRadius) || 0);
+  const R = t.includes('ball') ? diam * 0.5 : cRad > 0.05 ? cRad : diam * 0.5;
+  const hClamped = Math.min(h, R * 0.99);
+  const s = 2 * Math.sqrt(Math.max(0, 2 * R * hClamped - hClamped * hClamped));
+  return Number(Math.max(0.01, Math.min(diam * 0.95, s)).toFixed(4));
+}
+
+/**
  * Generates baseline Surface Finish operation state anchored to the active machine & optional stock top.
  */
 export function createDefaultSurfaceFinishState({
@@ -707,6 +745,21 @@ export function createDefaultSurfaceFinishState({
       shallowCutoffAngle: 35.0,
       steepCutoffAngle: 90.0,
       transitionType: 'broken',
+      tipComp: 'tip'
+    },
+    scallopParams: {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      stepoverMode: 'stepover', // 'stepover' | 'scallop_height'
+      stepover: Number((diameter * 0.15).toFixed(2)) || 0.5,
+      scallopHeight: 0.005, // 5 microns standard mold finish
+      stepDirection: 'outside_to_inside', // 'outside_to_inside' | 'inside_to_outside'
+      cuttingMethod: 'Zigzag', // 'Zigzag' | 'One way' | 'Spiral'
+      machiningDirection: 'climb', // 'climb' | 'conventional'
+      maxGapDistance: 10.0,
+      transitionType: 'broken',
+      spiralBlend: false,
       tipComp: 'tip'
     }
   };
