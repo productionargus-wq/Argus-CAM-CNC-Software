@@ -128,6 +128,7 @@ export default function ToolpathsContextMenu({
   onOpenSurfaceFinishFlowline,
   onOpenSurfaceFinishShallow,
   onOpenSurfaceFinishParallel,
+  onOpenSurfaceFinishParallelSteep,
   onOpenSurfaceFinishPencil,
   onExportStockSTL,
   onToggleLockOp,
@@ -303,7 +304,7 @@ export default function ToolpathsContextMenu({
               {activeLevel3 === 'surface_finish' && (
                 <div className="mcam-ctx-sub" style={{ ...subStyle, minWidth: '170px' }}>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishParallel ? onOpenSurfaceFinishParallel() : onAddOperation?.('parallel'))}>Parallel</div>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Parallel steep</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishParallelSteep ? onOpenSurfaceFinishParallelSteep() : onAddOperation?.('parallel_steep'))}>Parallel steep</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('radial'))}>Radial</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('project'))}>Project</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishFlowline ? onOpenSurfaceFinishFlowline() : onAddOperation?.('flowline'))}>Flowline</div>

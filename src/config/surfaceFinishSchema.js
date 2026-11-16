@@ -365,6 +365,22 @@ export const CUT_PARAMETER_PRESETS = [
     coolantMode: 'Flood',
     vcFactor: 0.75,
     fzFactor: 0.85
+  },
+  {
+    id: 'finish_steep_parallel',
+    label: 'Hardened Die Steel Parallel Steep Finishing (35°–90° ISO H)',
+    materialKey: 'STEEL_1045',
+    totalTolerance: 0.02,
+    maxStepdown: 0.4,
+    cornerRoundingRadius: 2.0,
+    transitionType: 'broken',
+    loopLength: 2.0,
+    rampLength: 10.0,
+    direction: 'climb',
+    openContourDirection: 'zigzag',
+    coolantMode: 'Flood',
+    vcFactor: 0.9,
+    fzFactor: 0.9
   }
 ];
 
@@ -555,9 +571,13 @@ export function createDefaultSurfaceFinishState({
       helixEnabled: false,
       helixRadius: 3.0,
       helixAngle: 3.0,
-      shallowEnabled: false,
+      shallowEnabled: strategyMode === 'shallow',
       shallowFromSlope: 0.0,
-      shallowToSlope: 10.0,
+      shallowToSlope: 35.0,
+      steepEnabled: strategyMode === 'parallel_steep',
+      steepFromSlope: 35.0,
+      steepToSlope: 90.0,
+      machiningAngle: 90.0,
       flatsEnabled: false,
       flatsExtendToStock: true,
       spiralEnabled: false,

@@ -837,6 +837,9 @@ export function buildContourParamsFromOp(op = {}) {
     shallowEnabled: cp.shallowEnabled ?? (op.strategyKey === 'surface_finish_shallow' || op.badgeClass === 'shallow'),
     shallowFromSlope: Number(cp.shallowFromSlope ?? 0.0),
     shallowToSlope: Number(cp.shallowToSlope ?? 35.0),
+    steepEnabled: cp.steepEnabled ?? (op.strategyKey === 'surface_finish_parallel_steep' || op.badgeClass === 'parallel_steep'),
+    steepFromSlope: Number(op.steepFromSlope ?? cp.steepFromSlope ?? 35.0),
+    steepToSlope: Number(op.steepToSlope ?? cp.steepToSlope ?? 90.0),
     stepover: Number(cp.maxStepdown ?? op.stepdown ?? 0.5),
     machiningAngle: Number(op.machiningAngle ?? cp.machiningAngle ?? 90.0),
     cuttingMethod: op.cuttingMethod || cp.cuttingMethod || cp.openContourDirection || 'zigzag',
@@ -1739,6 +1742,187 @@ export function generateSurfaceParallelToolpath(bounds, tool, params = {}, model
 }
 
 /**
+ * Generates 3D Surface Finish Parallel Steep Toolpath (Mastercam Surface Finish Parallel Steep).
+ * Performs parallel raster passes restricted strictly to steep slopes & walls defined by
+ * [steepFromSlope, steepToSlope] (default 35°–90°), with 3D cutter contact normal compensation,
+ * dynamic rotated slicing at user-specified Machining Angle, and safe rapid transitions.
+ */
+export function generateSurfaceParallelSteepToolpath(bounds, tool, params = {}, model = null) {
+  const effBounds = model ? computeDriveModelBounds(model, bounds) : resolveSafeBounds(bounds);
+  const {
+    rapidHeight = 15.0,
+    feedPlane = 2.5,
+    stockToLeaveZ = 0.0,
+    steepFromSlope = 35.0,
+    steepToSlope = 90.0
+  } = params;
+
+  const toolRadius = (tool.diameter || 6) / 2;
+  const isBall = tool.type === 'ball' || (Number(tool.cornerRadius) > 0);
+  const stepover = Math.max(0.1, Number(params.stepover ?? params.maxStepdown) || ((tool.diameter || 6) * (params.stepoverPct || 20)) / 100);
+  const machiningAngleDeg = Number(params.machiningAngle ?? 90.0);
+  const cuttingMethod = String(params.cuttingMethod || params.openContourDirection || 'zigzag').toLowerCase();
+  const topY = effBounds.max.y;
+
+  const cuttingLines = [];
+  const rapidLines = [];
+
+  const minX = effBounds.min.x;
+  const maxX = effBounds.max.x;
+  const minZ = effBounds.min.z;
+  const maxZ = effBounds.max.z;
+
+  const fromSlope = Math.max(0, Number(steepFromSlope) || 35.0);
+  const toSlope = Math.min(90, Math.max(fromSlope + 0.1, Number(steepToSlope) || 90.0));
+
+  // Prepare meshes for raycasting if CAD model is present
+  const raycastMeshes = [];
+  if (model) {
+    model.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        child.updateMatrixWorld(true);
+        raycastMeshes.push(child);
+      }
+    });
+  }
+
+  const raycaster = new THREE.Raycaster();
+  const rayDown = new THREE.Vector3(0, -1, 0);
+
+  // Center of the bounding area in the XZ plane
+  const cx = (minX + maxX) / 2;
+  const cz = (minZ + maxZ) / 2;
+
+  // Slicing angle in radians
+  const alpha = (machiningAngleDeg * Math.PI) / 180.0;
+  const cosA = Math.cos(alpha);
+  const sinA = Math.sin(alpha);
+
+  // Transform 4 bounding corners into rotated coordinate system (u = cut direction, v = stepover direction)
+  const corners = [
+    { x: minX - cx, z: minZ - cz },
+    { x: maxX - cx, z: minZ - cz },
+    { x: minX - cx, z: maxZ - cz },
+    { x: maxX - cx, z: maxZ - cz }
+  ];
+
+  let minU = Infinity;
+  let maxU = -Infinity;
+  let minV = Infinity;
+  let maxV = -Infinity;
+
+  for (const c of corners) {
+    const u = c.x * cosA + c.z * sinA;
+    const v = -c.x * sinA + c.z * cosA;
+    if (u < minU) minU = u;
+    if (u > maxU) maxU = u;
+    if (v < minV) minV = v;
+    if (v > maxV) maxV = v;
+  }
+
+  let passDirection = 1;
+
+  for (let v = minV; v <= maxV + 0.001; v += stepover) {
+    const uStart = passDirection === 1 ? minU : maxU;
+    const uEnd = passDirection === 1 ? maxU : minU;
+    const numPoints = Math.max(16, Math.round(Math.abs(maxU - minU) / 1.5));
+
+    const contiguousSegments = [];
+    let currentSegment = [];
+
+    for (let i = 0; i <= numPoints; i++) {
+      const t = i / numPoints;
+      const u = uStart + (uEnd - uStart) * t;
+      const x = cx + u * cosA - v * sinA;
+      const z = cz + u * sinA + v * cosA;
+
+      let surfaceY = null;
+      let contactNormalY = 1.0;
+      let slopeDeg = 0;
+
+      if (raycastMeshes.length > 0) {
+        raycaster.set(new THREE.Vector3(x, topY + 50, z), rayDown);
+        const hits = raycaster.intersectObjects(raycastMeshes, false);
+        if (hits.length > 0) {
+          surfaceY = hits[0].point.y;
+          if (hits[0].face) {
+            const norm = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld);
+            contactNormalY = Math.min(1, Math.max(0, Math.abs(norm.y)));
+            slopeDeg = (Math.acos(contactNormalY) * 180) / Math.PI;
+          }
+        }
+      } else {
+        // Fallback parametric profile with steep sidewalls
+        const relX = x - cx;
+        const R = 60;
+        if (Math.abs(relX) <= (maxX - minX) / 2 && Math.abs(z - cz) <= (maxZ - minZ) / 2) {
+          const sinTheta = Math.min(0.999, Math.abs(relX) / R);
+          slopeDeg = (Math.asin(sinTheta) * 180) / Math.PI;
+          const archY = Math.sqrt(Math.max(0, R * R - relX * relX)) - R;
+          surfaceY = topY + archY;
+          contactNormalY = Math.cos(Math.asin(sinTheta));
+        }
+      }
+
+      // Filter: Contact point MUST be on a steep slope within [fromSlope, toSlope]
+      const isSteepContact = surfaceY != null && slopeDeg >= fromSlope && slopeDeg <= toSlope;
+
+      if (isSteepContact) {
+        const tipY = surfaceY + (isBall ? toolRadius * (contactNormalY - 1) : 0) + (Number(stockToLeaveZ) || 0);
+        currentSegment.push(new THREE.Vector3(x, tipY, z));
+      } else {
+        if (currentSegment.length >= 2) {
+          contiguousSegments.push(currentSegment);
+        }
+        currentSegment = [];
+      }
+    }
+
+    if (currentSegment.length >= 2) {
+      contiguousSegments.push(currentSegment);
+    }
+
+    // Generate toolpath passes for each contiguous steep segment
+    for (const seg of contiguousSegments) {
+      const firstPt = seg[0];
+      const lastPt = seg[seg.length - 1];
+
+      // Safe rapid approach to feed plane
+      rapidLines.push([
+        new THREE.Vector3(firstPt.x, topY + rapidHeight, firstPt.z),
+        new THREE.Vector3(firstPt.x, firstPt.y + feedPlane, firstPt.z)
+      ]);
+      cuttingLines.push([
+        new THREE.Vector3(firstPt.x, firstPt.y + feedPlane, firstPt.z),
+        firstPt
+      ]);
+
+      // Cut along steep profile
+      for (let p = 0; p < seg.length - 1; p++) {
+        cuttingLines.push([seg[p], seg[p + 1]]);
+      }
+
+      // Retract at end of cut
+      cuttingLines.push([
+        lastPt,
+        new THREE.Vector3(lastPt.x, lastPt.y + feedPlane, lastPt.z)
+      ]);
+      rapidLines.push([
+        new THREE.Vector3(lastPt.x, lastPt.y + feedPlane, lastPt.z),
+        new THREE.Vector3(lastPt.x, topY + rapidHeight, lastPt.z)
+      ]);
+    }
+
+    // Toggle direction if zigzag; retain direction if one way
+    if (contiguousSegments.length > 0 && cuttingMethod !== 'one_way' && cuttingMethod !== 'oneway') {
+      passDirection *= -1;
+    }
+  }
+
+  return { cuttingLines, rapidLines };
+}
+
+/**
  * Generates 3D Surface Finish Shallow Toolpath.
  * Selectively machines flat and gentle sloped regions defined by [shallowFromSlope, shallowToSlope]
  * with constant stepover and ball nose 3D cutter contact normal compensation.
@@ -2329,6 +2513,9 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
       totalDepth: op.totalDepth || 12.19,
       rapidHeight: op.rapidHeight || 10.0
     }, effectiveModel);
+  }
+  if (strategy === 'parallel_steep' || strategy === 'steep' || op.strategyKey === 'surface_finish_parallel_steep' || op.badgeClass === 'parallel_steep') {
+    return generateSurfaceParallelSteepToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
   }
   if (strategy === 'parallel' || strategy === 'surface' || op.strategyKey === 'surface_finish_parallel' || op.badgeClass === 'parallel') {
     return generateSurfaceParallelToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);

@@ -165,6 +165,17 @@ export default function CAMOperationsWizardModal({
       badgeClass: 'parallel'
     },
     {
+      id: 'parallel_steep',
+      name: '3D Parallel Steep Finishing',
+      badge: 'PS',
+      color: '#be185d',
+      desc: 'Parallel raster machining restricted to steep surface walls and slopes (35°–90°)',
+      defaultStepover: 15,
+      defaultStepdown: 0.5,
+      defaultDepth: 25.0,
+      badgeClass: 'parallel_steep'
+    },
+    {
       id: 'rest_milling',
       name: 'Rest Machining (Corner Pick)',
       badge: 'RM',

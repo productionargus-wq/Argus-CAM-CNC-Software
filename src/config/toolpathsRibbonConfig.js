@@ -189,6 +189,14 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         tooltip: 'Surface Finish Shallow across Flat and Gentle Slopes (0° - 45°)'
       },
       {
+        id: '3d_finish_parallel_steep',
+        label: 'Parallel Steep',
+        icon: 'Tp3dParallel',
+        action: 'tp_3d_finish_parallel_steep',
+        opType: 'surface_finish_parallel_steep',
+        tooltip: 'Surface Finish Parallel Steep across Steep Surface Walls & Slopes (35° - 90°)'
+      },
+      {
         id: '3d_equal_scallop',
         label: 'Equal Scallop',
         icon: 'Tp3dEqualScallop',

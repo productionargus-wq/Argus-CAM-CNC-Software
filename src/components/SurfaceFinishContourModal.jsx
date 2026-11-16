@@ -132,6 +132,7 @@ function SurfaceFinishContourModalInner({
   const isFlowline = strategyMode === 'flowline' || operation?.strategyKey === 'surface_finish_flowline' || operation?.badgeClass === 'flowline';
   const isShallow = strategyMode === 'shallow' || operation?.strategyKey === 'surface_finish_shallow' || operation?.badgeClass === 'shallow';
   const isParallel = strategyMode === 'parallel' || operation?.strategyKey === 'surface_finish_parallel' || operation?.badgeClass === 'parallel';
+  const isParallelSteep = strategyMode === 'parallel_steep' || strategyMode === 'steep' || operation?.strategyKey === 'surface_finish_parallel_steep' || operation?.badgeClass === 'parallel_steep';
   const isPencil = strategyMode === 'pencil' || operation?.strategyKey === 'surface_finish_pencil' || operation?.badgeClass === 'pencil';
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
@@ -170,7 +171,7 @@ function SurfaceFinishContourModalInner({
         null
       );
     }
-    if (isFlowline || isShallow || isParallel || isPencil) {
+    if (isFlowline || isShallow || isParallel || isParallelSteep || isPencil) {
       return (
         tools.find((t) => ['ball'].includes(String(t.type || '').toLowerCase())) ||
         tools.find((t) => ['bull', 'ball'].includes(String(t.type || '').toLowerCase())) ||
@@ -183,17 +184,17 @@ function SurfaceFinishContourModalInner({
       tools[0] ||
       null
     );
-  }, [operation, tools, isFlowline, isShallow, isParallel, isPencil]);
+  }, [operation, tools, isFlowline, isShallow, isParallel, isParallelSteep, isPencil]);
 
   const initialDefaults = useMemo(
     () =>
       createDefaultSurfaceFinishState({
         activeMachine,
         stockConfig,
-        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallel ? 'parallel' : isPencil ? 'pencil' : 'contour',
+        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : 'contour',
         tool: initialTool
       }),
-    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isPencil, initialTool]
+    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, initialTool]
   );
 
   const [activeTab, setActiveTab] = useState('toolpath_params');
@@ -237,6 +238,17 @@ function SurfaceFinishContourModalInner({
           shallowToSlope: 35.0,
           maxStepdown: 0.5
         }
+      : isParallelSteep
+        ? {
+            steepEnabled: true,
+            steepFromSlope: Number(operation?.steepFromSlope ?? 35.0),
+            steepToSlope: Number(operation?.steepToSlope ?? 90.0),
+            machiningAngle: Number(operation?.machiningAngle ?? 90.0),
+            maxStepdown: Number(operation?.stepdown ?? operation?.stepover ?? 0.5),
+            totalTolerance: 0.025,
+            openContourDirection: operation?.cuttingMethod || 'zigzag',
+            direction: 'climb'
+          }
       : isParallel
         ? {
             machiningAngle: Number(operation?.machiningAngle ?? 90.0),
@@ -414,11 +426,13 @@ function SurfaceFinishContourModalInner({
         ? 'Surface Finish Pocket'
         : isShallow
           ? 'Surface Finish Shallow'
-          : isParallel
-            ? 'Surface Finish Parallel'
-            : isPencil
-              ? 'Surface Finish Pencil'
-              : 'Surface Finish Contour';
+          : isParallelSteep
+            ? 'Surface Finish Parallel Steep'
+            : isParallel
+              ? 'Surface Finish Parallel'
+              : isPencil
+                ? 'Surface Finish Pencil'
+                : 'Surface Finish Contour';
     const rapidHeight = surfaceParams.clearanceEnabled && surfaceParams.clearanceMode === 'abs'
       ? Number(surfaceParams.clearance)
       : (Number(surfaceParams.retract) || 25.0);
@@ -431,11 +445,13 @@ function SurfaceFinishContourModalInner({
     const updatedOp = {
       ...(operation || {}),
       name: operation?.name || opTitle,
-      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : 'surface_finish_contour',
-      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : 'surface_finish_contour',
-      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallel ? 'parallel' : isPencil ? 'pencil' : 'contour',
-      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallel ? 'PA' : isPencil ? 'PC' : 'SC',
+      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : 'surface_finish_contour',
+      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : 'surface_finish_contour',
+      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : 'contour',
+      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallelSteep ? 'PS' : isParallel ? 'PA' : isPencil ? 'PC' : 'SC',
       machiningAngle: Number(contourParams.machiningAngle ?? 90.0),
+      steepFromSlope: Number(contourParams.steepFromSlope ?? 35.0),
+      steepToSlope: Number(contourParams.steepToSlope ?? 90.0),
       stepover: Number(isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
       cuttingMethod: isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
       toolId: activeTool?.id || toolParams.toolId || 1,
@@ -546,9 +562,13 @@ function SurfaceFinishContourModalInner({
                   ? 'Surface Finish Pocket'
                   : isShallow
                     ? 'Surface Finish Shallow'
-                    : isParallel
-                      ? 'Surface Finish Parallel'
-                      : 'Surface Finish Contour'}
+                    : isParallelSteep
+                      ? 'Surface Finish Parallel Steep'
+                      : isParallel
+                        ? 'Surface Finish Parallel'
+                        : isPencil
+                          ? 'Surface Finish Pencil'
+                          : 'Surface Finish Contour'}
             </span>
             <span
               style={{
@@ -757,6 +777,75 @@ function SurfaceFinishContourModalInner({
           </div>
         )}
 
+        {/* Parallel Steep Tutorial Quick Helper Banner */}
+        {isParallelSteep && (
+          <div
+            style={{
+              background: '#fdf2f8',
+              borderBottom: '1px solid #fbcfe8',
+              padding: '6px 12px',
+              fontSize: '11px',
+              color: '#9d174d',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px'
+            }}
+          >
+            <div>
+              <strong>Surface Finish Parallel Steep:</strong> 1. Select Ball Endmill &rarr; 2. Surface Parameters (Clearance 50mm Abs) &rarr; 3. Finish Parallel Steep Parameters (Angle 90°, Steep Slope 35°–90°, Stepover 0.5mm) &rarr; Click <strong>Green Checkmark (OK)</strong>.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const ballTool = tools.find((t) => t.type === 'ball' || /ball/i.test(t.name)) || tools[0];
+                if (ballTool) {
+                  setSelectedToolId(ballTool.id);
+                  setToolParams((prev) => buildToolStateFromRecord(ballTool, caps, prev));
+                }
+                setSurfaceParams((p) => ({
+                  ...p,
+                  clearanceEnabled: true,
+                  clearance: 50.0,
+                  clearanceMode: 'abs',
+                  retractEnabled: true,
+                  retract: 25.0,
+                  retractMode: 'inc',
+                  feedPlane: 5.0,
+                  feedPlaneMode: 'inc',
+                  stockToLeaveDrive: 0.0,
+                  stockToLeaveCheck: 0.0
+                }));
+                setContourParams((p) => ({
+                  ...p,
+                  steepEnabled: true,
+                  steepFromSlope: 35.0,
+                  steepToSlope: 90.0,
+                  machiningAngle: 90.0,
+                  maxStepdown: 0.5,
+                  totalTolerance: 0.025,
+                  openContourDirection: 'zigzag',
+                  direction: 'climb'
+                }));
+                onNotify?.('Loaded recommended Surface Finish Parallel Steep parameters (35°–90° steep slopes, 90° angle, 0.5mm stepover, Zigzag).', 'success');
+              }}
+              style={{
+                background: '#be185d',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '3px 8px',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⚡ Load Recommended Parallel Steep Values
+            </button>
+          </div>
+        )}
+
         {/* Pencil Tutorial Quick Helper Banner */}
         {isPencil && (
           <div
@@ -839,11 +928,13 @@ function SurfaceFinishContourModalInner({
                   ? 'Finish pocket parameters'
                   : isShallow
                     ? 'Finish shallow parameters'
-                    : isParallel
-                      ? 'Finish parallel parameters'
-                      : isPencil
-                        ? 'Finish pencil parameters'
-                        : 'Finish contour parameters'
+                    : isParallelSteep
+                      ? 'Finish parallel steep parameters'
+                      : isParallel
+                        ? 'Finish parallel parameters'
+                        : isPencil
+                          ? 'Finish pencil parameters'
+                          : 'Finish contour parameters'
             }
           ].map((tab) => {
             const active = activeTab === tab.id;
@@ -1463,7 +1554,7 @@ function SurfaceFinishContourModalInner({
           )}
 
           {/* ==================== TAB 3A: FINISH CONTOUR PARAMETERS (IMAGE 5 VERBATIM) ==================== */}
-          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && !isPencil && (
+          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && !isParallelSteep && !isPencil && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '246px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
                 {/* LEFT COLUMN */}
@@ -1733,7 +1824,7 @@ function SurfaceFinishContourModalInner({
           )}
 
           {/* ==================== TAB 3D: FINISH PARALLEL PARAMETERS (MASTERCAM VERBATIM) ==================== */}
-          {activeTab === 'finish_contour_params' && isParallel && (
+          {activeTab === 'finish_contour_params' && isParallel && !isParallelSteep && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '270px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
                 {/* LEFT COLUMN: Tolerances, Stepover, Angle, Scallop */}
@@ -1900,6 +1991,263 @@ function SurfaceFinishContourModalInner({
                       })}
                       <text x="140" y="85" textAnchor="middle" fontSize="9" fill="#0f172a" fontWeight="600">Drive Surface Normal Contact</text>
                     </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== TAB 3F: FINISH PARALLEL STEEP PARAMETERS (MASTERCAM VERBATIM) ==================== */}
+          {activeTab === 'finish_contour_params' && isParallelSteep && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '270px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
+                {/* LEFT COLUMN: Tolerances, Stepover, Stepdown, Angle, Slope Limits, Scallop */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', minWidth: 0 }}>
+                  {/* Total tolerance */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <button type="button" onClick={() => setActiveSubDialog('total_tolerance')} style={{ ...MC_BUTTON, width: '100%', borderColor: '#3b82f6' }}>
+                      Total tolerance...
+                    </button>
+                    <input
+                      type="number"
+                      step="0.005"
+                      value={contourParams.totalTolerance ?? 0.025}
+                      onChange={(e) => setContourParams((p) => ({ ...p, totalTolerance: Number(e.target.value) }))}
+                      style={CLASSIC_YELLOW}
+                    />
+                  </div>
+
+                  {/* Maximum stepover */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span style={{ fontWeight: 500 }}>Maximum stepover</span>
+                    <input
+                      type="number"
+                      step="0.05"
+                      value={contourParams.maxStepdown ?? 0.5}
+                      onChange={(e) => setContourParams((p) => ({ ...p, maxStepdown: Number(e.target.value) }))}
+                      style={CLASSIC_YELLOW}
+                    />
+                  </div>
+
+                  {/* Scallop Height (computed on steep slope) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span style={{ color: '#64748b' }}>Scallop height</span>
+                    <div style={{ ...CLASSIC_YELLOW, background: '#f8fafc', color: '#be185d', display: 'flex', alignItems: 'center', fontWeight: 600, padding: '0 6px' }}>
+                      {(() => {
+                        const r = Math.max(0.5, (Number(toolParams.toolDiameter) || 6) / 2);
+                        const s = Math.max(0.01, Number(contourParams.maxStepdown) || 0.5);
+                        const scallop = r - Math.sqrt(Math.max(0, r * r - (s / 2) * (s / 2)));
+                        return `${(scallop || 0.005).toFixed(4)} mm`;
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Steep Slope Angle Limits */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', marginTop: '2px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Steep Slope Limits (Mastercam)</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span>From slope (deg)</span>
+                      <input
+                        type="number"
+                        step="1"
+                        value={contourParams.steepFromSlope ?? 35.0}
+                        onChange={(e) => setContourParams((p) => ({ ...p, steepFromSlope: Number(e.target.value) }))}
+                        style={CLASSIC_YELLOW}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span>To slope (deg)</span>
+                      <input
+                        type="number"
+                        step="1"
+                        value={contourParams.steepToSlope ?? 90.0}
+                        onChange={(e) => setContourParams((p) => ({ ...p, steepToSlope: Number(e.target.value) }))}
+                        style={CLASSIC_YELLOW}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginBottom: '6px' }}>
+                      {[
+                        { label: '35°–90°', from: 35, to: 90 },
+                        { label: '45°–90°', from: 45, to: 90 },
+                        { label: '60°–90°', from: 60, to: 90 }
+                      ].map((preset) => {
+                        const isSelected = Number(contourParams.steepFromSlope) === preset.from && Number(contourParams.steepToSlope) === preset.to;
+                        return (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => setContourParams((p) => ({ ...p, steepFromSlope: preset.from, steepToSlope: preset.to }))}
+                            style={{
+                              ...MC_BUTTON,
+                              background: isSelected ? '#fdf2f8' : '#ffffff',
+                              borderColor: isSelected ? '#db2777' : '#9ca3af',
+                              color: isSelected ? '#9d174d' : '#0f172a',
+                              fontWeight: isSelected ? 600 : 400,
+                              padding: '2px 2px',
+                              fontSize: '10.5px'
+                            }}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSubDialog('steep')}
+                      style={{ ...MC_BUTTON, width: '100%', borderColor: '#db2777', color: '#9d174d', fontWeight: 600 }}
+                    >
+                      Steep limits... ({contourParams.steepFromSlope ?? 35}°–{contourParams.steepToSlope ?? 90}°)
+                    </button>
+                  </fieldset>
+
+                  {/* Machining Angle */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', marginTop: '2px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Machining Angle</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span>Cut Angle (deg)</span>
+                      <input
+                        type="number"
+                        step="5"
+                        value={contourParams.machiningAngle ?? 90.0}
+                        onChange={(e) => setContourParams((p) => ({ ...p, machiningAngle: Number(e.target.value) }))}
+                        style={CLASSIC_YELLOW}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+                      {[
+                        { label: '0° (X-axis)', angle: 0 },
+                        { label: '90° (Y-axis)', angle: 90 },
+                        { label: '45° (Diag)', angle: 45 }
+                      ].map((btn) => {
+                        const isSelected = Number(contourParams.machiningAngle) === btn.angle;
+                        return (
+                          <button
+                            key={btn.angle}
+                            type="button"
+                            onClick={() => setContourParams((p) => ({ ...p, machiningAngle: btn.angle }))}
+                            style={{
+                              ...MC_BUTTON,
+                              background: isSelected ? '#fdf2f8' : '#ffffff',
+                              borderColor: isSelected ? '#db2777' : '#9ca3af',
+                              color: isSelected ? '#9d174d' : '#0f172a',
+                              fontWeight: isSelected ? 600 : 400,
+                              padding: '3px 2px',
+                              fontSize: '10.5px'
+                            }}
+                          >
+                            {btn.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  {/* Direction */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', marginTop: '2px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Machining Direction</legend>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      {['climb', 'conventional'].map((dir) => (
+                        <label key={dir} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', textTransform: 'capitalize' }}>
+                          <input
+                            type="radio"
+                            name="parallelSteepDirection"
+                            checked={(contourParams.direction || 'climb') === dir}
+                            onChange={() => setContourParams((p) => ({ ...p, direction: dir }))}
+                          />
+                          {dir}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                </div>
+
+                {/* RIGHT COLUMN: Cutting Method, Action buttons, & Parallel Steep Graphic */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 }}>
+                  {/* Cutting Method */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Cutting Method</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                      {[
+                        { id: 'zigzag', label: 'Zigzag (Bi-dir)', desc: 'Continuous forward & back on steep walls' },
+                        { id: 'one_way', label: 'One Way', desc: 'Single direction + safe air retract' },
+                        { id: 'spiral', label: 'Spiral', desc: 'Inward / outward steep raster' }
+                      ].map((m) => {
+                        const active = (contourParams.openContourDirection || 'zigzag') === m.id;
+                        return (
+                          <div
+                            key={m.id}
+                            onClick={() => setContourParams((p) => ({ ...p, openContourDirection: m.id }))}
+                            style={{
+                              border: active ? '2px solid #be185d' : '1px solid #cbd5e1',
+                              background: active ? '#fdf2f8' : '#ffffff',
+                              padding: '8px 6px',
+                              borderRadius: '2px',
+                              cursor: 'pointer',
+                              textAlign: 'center'
+                            }}
+                          >
+                            <div style={{ fontWeight: active ? 600 : 500, color: active ? '#9d174d' : '#1e293b', fontSize: '11px' }}>
+                              {m.label}
+                            </div>
+                            <div style={{ fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>{m.desc}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  {/* Mastercam Schematic Graphic: Parallel Steep */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '3px', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ fontSize: '10.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                      Parallel Steep Topology (Steep Angle: {contourParams.steepFromSlope ?? 35}°–{contourParams.steepToSlope ?? 90}°, Angle: {contourParams.machiningAngle ?? 90}°)
+                    </div>
+                    <svg width="280" height="90" viewBox="0 0 280 90">
+                      {/* Base surface: Flat floor + Steep walls */}
+                      <path d="M 15 25 L 55 75 L 225 75 L 265 25" fill="none" stroke="#64748b" strokeWidth="2" />
+                      {/* Excluded shallow floor (dashed gray) */}
+                      <line x1="55" y1="75" x2="225" y2="75" stroke="#94a3b8" strokeWidth="2.5" strokeDasharray="4,3" />
+                      <text x="140" y="86" textAnchor="middle" fontSize="8.5" fill="#94a3b8" fontStyle="italic">Shallow Zone (&lt; {contourParams.steepFromSlope ?? 35}° Excluded)</text>
+
+                      {/* Steep Left Wall Toolpath Passes (green) */}
+                      {[0, 1, 2, 3].map((i) => {
+                        const t = (i + 0.5) / 4;
+                        const x = 15 + t * 40;
+                        const y = 25 + t * 50;
+                        return (
+                          <g key={`l-${i}`}>
+                            <line x1={x - 6} y1={y - 8} x2={x} y2={y} stroke="#10b981" strokeWidth="2.5" />
+                            <circle cx={x} cy={y} r="2.5" fill="#059669" />
+                          </g>
+                        );
+                      })}
+
+                      {/* Steep Right Wall Toolpath Passes (green) */}
+                      {[0, 1, 2, 3].map((i) => {
+                        const t = (i + 0.5) / 4;
+                        const x = 225 + t * 40;
+                        const y = 75 - t * 50;
+                        return (
+                          <g key={`r-${i}`}>
+                            <line x1={x + 6} y1={y - 8} x2={x} y2={y} stroke="#10b981" strokeWidth="2.5" />
+                            <circle cx={x} cy={y} r="2.5" fill="#059669" />
+                          </g>
+                        );
+                      })}
+
+                      {/* Rapid Link across shallow gap */}
+                      <path d="M 50 68 Q 140 38 230 68" fill="none" stroke="#be185d" strokeWidth="1.5" strokeDasharray="3,3" />
+                      <text x="140" y="44" textAnchor="middle" fontSize="8" fill="#be185d" fontWeight="600">Steep Wall Transition</text>
+                      <text x="35" y="18" textAnchor="middle" fontSize="8.5" fill="#059669" fontWeight="600">Steep Wall ({contourParams.steepFromSlope ?? 35}°–90°)</text>
+                      <text x="245" y="18" textAnchor="middle" fontSize="8.5" fill="#059669" fontWeight="600">Steep Wall ({contourParams.steepFromSlope ?? 35}°–90°)</text>
+                    </svg>
+                  </div>
+
+                  {/* Action buttons row: Cut depths, Gap settings, Advanced settings */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', marginTop: 'auto' }}>
+                    <button type="button" onClick={() => setActiveSubDialog('cut_depths')} style={MC_BUTTON}>Cut depths...</button>
+                    <button type="button" onClick={() => setActiveSubDialog('gap_settings')} style={MC_BUTTON}>Gap settings...</button>
+                    <button type="button" onClick={() => setActiveSubDialog('advanced_settings')} style={MC_BUTTON}>Advanced settings...</button>
                   </div>
                 </div>
               </div>

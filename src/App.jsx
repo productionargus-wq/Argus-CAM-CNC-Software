@@ -1939,6 +1939,8 @@ export default function App() {
       op?.badgeClass === 'shallow' ||
       op?.strategyKey === 'surface_finish_parallel' ||
       op?.badgeClass === 'parallel' ||
+      op?.strategyKey === 'surface_finish_parallel_steep' ||
+      op?.badgeClass === 'parallel_steep' ||
       op?.strategyKey === 'surface_finish_pencil' ||
       op?.badgeClass === 'pencil' ||
       op?.usesCustomSurfaces
@@ -1950,11 +1952,13 @@ export default function App() {
             ? 'pocket'
             : op.strategyKey === 'surface_finish_shallow' || op.badgeClass === 'shallow'
               ? 'shallow'
-              : op.strategyKey === 'surface_finish_parallel' || op.badgeClass === 'parallel'
-                ? 'parallel'
-                : op.strategyKey === 'surface_finish_pencil' || op.badgeClass === 'pencil'
-                  ? 'pencil'
-                  : 'contour';
+              : op.strategyKey === 'surface_finish_parallel_steep' || op.badgeClass === 'parallel_steep'
+                ? 'parallel_steep'
+                : op.strategyKey === 'surface_finish_parallel' || op.badgeClass === 'parallel'
+                  ? 'parallel'
+                  : op.strategyKey === 'surface_finish_pencil' || op.badgeClass === 'pencil'
+                    ? 'pencil'
+                    : 'contour';
       if (mode === 'flowline') {
         setSurfaceSelectionDraft({
           mode: 'flowline',
@@ -2184,6 +2188,9 @@ export default function App() {
     } else if (s === 'parallel' || s === 'surface_finish_parallel' || s === '3d_parallel') {
       openSurfaceFinishModal('parallel', null);
       return;
+    } else if (s === 'parallel_steep' || s === 'surface_finish_parallel_steep' || s === '3d_parallel_steep') {
+      openSurfaceFinishModal('parallel_steep', null);
+      return;
     } else if (s === 'pencil' || s === 'surface_finish_pencil' || s === '3d_pencil') {
       openSurfaceFinishModal('pencil', null);
       return;
@@ -2249,23 +2256,6 @@ export default function App() {
         totalDepth: 15.0,
         refToolDiameter: 12.0,
         stockToLeaveXY: 0.1,
-        stockToLeaveZ: 0.0,
-        rapidHeight: 15.0
-      };
-    } else if (s === 'pencil') {
-      newOp = {
-        id: nextId,
-        name: `3D Pencil Trace ${nextId}`,
-        toolId: 3,
-        toolName: 'T3 - 6mm Ballnose',
-        badgeClass: 'pencil',
-        badgeText: 'PC',
-        visible: true,
-        stepoverPct: 15,
-        stepdown: 1.0,
-        totalDepth: 15.0,
-        biTangencyRadius: 3.0,
-        stockToLeaveXY: 0.0,
         stockToLeaveZ: 0.0,
         rapidHeight: 15.0
       };
@@ -3344,8 +3334,10 @@ export default function App() {
           ? 'Surface Finish Pocket'
           : updatedOp.strategyKey === 'surface_finish_shallow'
             ? 'Surface Finish Shallow'
-            : updatedOp.strategyKey === 'surface_finish_parallel'
-              ? 'Surface Finish Parallel'
+            : updatedOp.strategyKey === 'surface_finish_parallel_steep'
+              ? 'Surface Finish Parallel Steep'
+              : updatedOp.strategyKey === 'surface_finish_parallel'
+                ? 'Surface Finish Parallel'
               : updatedOp.strategyKey === 'surface_finish_pencil'
                 ? 'Surface Finish Pencil'
                 : 'Surface Finish Contour';
@@ -3526,6 +3518,10 @@ export default function App() {
       case 'surface_finish_parallel':
       case 'parallel':
         openSurfaceFinishModal('parallel', null);
+        break;
+      case 'surface_finish_parallel_steep':
+      case 'parallel_steep':
+        openSurfaceFinishModal('parallel_steep', null);
         break;
       case 'surface_finish_pencil':
       case 'pencil':
@@ -5963,6 +5959,7 @@ export default function App() {
         onOpenSurfaceFinishFlowline={() => openSurfaceFinishFlowline(null)}
         onOpenSurfaceFinishShallow={() => openSurfaceFinishModal('shallow', null)}
         onOpenSurfaceFinishParallel={() => openSurfaceFinishModal('parallel', null)}
+        onOpenSurfaceFinishParallelSteep={() => openSurfaceFinishModal('parallel_steep', null)}
         onOpenSurfaceFinishPencil={() => openSurfaceFinishModal('pencil', null)}
         onCopyViewportImage={handleCopyViewportImage}
         onPasteOp={handlePasteOp}
@@ -6213,6 +6210,7 @@ export default function App() {
           onOpenSurfaceFinishFlowline={() => openSurfaceFinishFlowline(null)}
           onOpenSurfaceFinishShallow={() => openSurfaceFinishModal('shallow', null)}
           onOpenSurfaceFinishParallel={() => openSurfaceFinishModal('parallel', null)}
+          onOpenSurfaceFinishParallelSteep={() => openSurfaceFinishModal('parallel_steep', null)}
           onOpenSurfaceFinishPencil={() => openSurfaceFinishModal('pencil', null)}
           onEditOpGeometry={handleOpenFlowlineGeometryEdit}
           onExportStockSTL={handleExportStockSTL}

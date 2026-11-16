@@ -157,6 +157,7 @@ export default function RibbonBar({
   onOpenSurfaceFinishFlowline,
   onOpenSurfaceFinishShallow,
   onOpenSurfaceFinishParallel,
+  onOpenSurfaceFinishParallelSteep,
   onOpenSurfaceFinishPencil,
   onCopyViewportImage,
   onPasteOp,
@@ -1736,6 +1737,10 @@ export default function RibbonBar({
                 }
                 if ((action === 'tp_3d_finish_parallel' || action === 'tp_3d_parallel') && onOpenSurfaceFinishParallel) {
                   onOpenSurfaceFinishParallel();
+                  return;
+                }
+                if ((action === 'tp_3d_finish_parallel_steep' || action === 'tp_3d_parallel_steep') && onOpenSurfaceFinishParallelSteep) {
+                  onOpenSurfaceFinishParallelSteep();
                   return;
                 }
                 if ((action === 'tp_3d_finish_pencil' || action === 'tp_3d_pencil') && onOpenSurfaceFinishPencil) {

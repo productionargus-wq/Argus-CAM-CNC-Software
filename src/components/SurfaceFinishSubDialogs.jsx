@@ -357,6 +357,10 @@ export function SurfaceFinishSubDialog({
     fromSlope: contourParams.shallowFromSlope,
     toSlope: contourParams.shallowToSlope
   });
+  const [localSteep, setLocalSteep] = useState({
+    fromSlope: contourParams.steepFromSlope ?? 35.0,
+    toSlope: contourParams.steepToSlope ?? 90.0
+  });
   const [localFlats, setLocalFlats] = useState({
     extendToStock: contourParams.flatsExtendToStock
   });
@@ -882,6 +886,34 @@ export function SurfaceFinishSubDialog({
           <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', alignItems: 'center', gap: '8px' }}>
             <span>Plunge angle (deg):</span>
             <input type="number" step="0.5" value={localHelix.angle} onChange={(e) => setLocalHelix((p) => ({ ...p, angle: Number(e.target.value) }))} style={rowInput} />
+          </div>
+        </div>
+      </SubDialogShell>
+    );
+  }
+
+  if (dialog === 'steep' || dialog === 'steep_limits') {
+    return (
+      <SubDialogShell
+        title="Steep Slope Angle Limits"
+        width={360}
+        onClose={onClose}
+        onOk={() => {
+          setContourParams((p) => ({ ...p, steepEnabled: true, steepFromSlope: localSteep.fromSlope, steepToSlope: localSteep.toSlope }));
+          onClose();
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '145px 1fr', alignItems: 'center', gap: '8px' }}>
+            <span>From slope angle (deg):</span>
+            <input type="number" step="1" value={localSteep.fromSlope} onChange={(e) => setLocalSteep((p) => ({ ...p, fromSlope: Number(e.target.value) }))} style={rowInput} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '145px 1fr', alignItems: 'center', gap: '8px' }}>
+            <span>To slope angle (deg):</span>
+            <input type="number" step="1" value={localSteep.toSlope} onChange={(e) => setLocalSteep((p) => ({ ...p, toSlope: Number(e.target.value) }))} style={rowInput} />
+          </div>
+          <div style={{ fontSize: '10px', color: '#64748b', fontStyle: 'italic', marginTop: '4px' }}>
+            Parallel steep cuts will strictly machine faces with surface slope between these two angles.
           </div>
         </div>
       </SubDialogShell>
