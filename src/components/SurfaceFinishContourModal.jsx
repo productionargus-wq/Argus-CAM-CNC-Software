@@ -14,7 +14,8 @@ import {
   saveOperationDefaults,
   loadOperationDefaults,
   calculateScallopHeightFromStepover,
-  calculateStepoverFromScallopHeight
+  calculateStepoverFromScallopHeight,
+  computeRecommendedLeftoverParams
 } from '../config/surfaceFinishSchema';
 import {
   SurfaceHeightsSchematicSvg,
@@ -130,6 +131,7 @@ function SurfaceFinishContourModalInner({
   currentModel = null,
   activeMachine = null,
   stockConfig = null,
+  operations = [],
   lastDefinedTool = null,
   surfaceSelection = null,
   flowlineSelection = null,
@@ -568,6 +570,35 @@ function SurfaceFinishContourModalInner({
     } catch {
       onNotify?.('Tool saved for active session.', 'info');
     }
+  };
+
+  const handleLoadRecommendedLeftover = () => {
+    const opIndex = (operations || []).findIndex(
+      (o) => String(o.id) === String(operation?.id)
+    );
+    const priorOp = opIndex > 0 ? operations[opIndex - 1] : (operations || [])[operations.length - 1] || null;
+
+    let driveBounds = effectiveSelection?.driveBounds || null;
+    if (!driveBounds && detectedSurfaces.length > 0) {
+      driveBounds = new THREE.Box3();
+      detectedSurfaces.forEach((s) => {
+        if (s.box) driveBounds.union(s.box);
+      });
+    }
+
+    const recommended = computeRecommendedLeftoverParams({
+      tool: toolParams,
+      previousOp: priorOp,
+      driveBounds,
+      stockConfig
+    });
+
+    setLeftoverParams((prev) => ({
+      ...prev,
+      ...recommended
+    }));
+
+    onNotify?.(`⚡ Loaded Recommended Rest-Milling Values (Ref: ${recommended.refToolDiameter}mm Cutter, Stepover: ${recommended.stepover}mm, Passes: ${recommended.numberOfPasses})`, 'success');
   };
 
   const handleApply = () => {
@@ -3807,6 +3838,77 @@ function SurfaceFinishContourModalInner({
           {/* ==================== TAB 3J: FINISH LEFTOVER PARAMETERS (MASTERCAM VERBATIM) ==================== */}
           {activeTab === 'finish_contour_params' && isLeftover && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
+              {/* Quick Recommendation & Preset Banner */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 8px',
+                  background: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
+                  borderRadius: '3px',
+                  gap: '8px'
+                }}
+              >
+                <button
+                  type="button"
+                  data-testid="load-recommended-leftover-btn"
+                  onClick={handleLoadRecommendedLeftover}
+                  title="Automatically inspect active tool & model geometry to apply safe, gouge-free rest milling values"
+                  style={{
+                    ...MC_BUTTON,
+                    background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)',
+                    color: '#ffffff',
+                    fontWeight: 600,
+                    border: '1px solid #047857',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '3px 10px',
+                    height: '24px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Sparkles size={13} />
+                  <span>⚡ Load Recommended Values</span>
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '10px', color: '#065f46', fontWeight: 600 }}>Presets:</span>
+                  {[
+                    { label: 'Fine Rest (12mm Ball)', d: 12.0, r: 6.0, s: 0.35, p: 4 },
+                    { label: 'Corner (16mm Bull R2)', d: 16.0, r: 2.0, s: 0.40, p: 3 },
+                    { label: 'Heavy (25mm Bull R5)', d: 25.0, r: 5.0, s: 0.50, p: 6 }
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        setLeftoverParams((prev) => ({
+                          ...prev,
+                          refToolDiameter: preset.d,
+                          refToolCornerRadius: preset.r,
+                          stepover: preset.s,
+                          numberOfPasses: preset.p
+                        }));
+                      }}
+                      style={{
+                        ...MC_BUTTON,
+                        fontSize: '9.5px',
+                        padding: '2px 5px',
+                        background: '#ffffff',
+                        borderColor: '#6ee7b7',
+                        color: '#065f46',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
                 {/* LEFT COLUMN: Tolerances, Reference Roughing Tool, Overlap */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>

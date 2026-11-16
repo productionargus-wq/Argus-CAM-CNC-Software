@@ -7558,6 +7558,7 @@ export default function App() {
         currentModel={currentModel}
         activeMachine={activeMachine}
         stockConfig={stockConfig}
+        operations={operations}
         lastDefinedTool={lastDefinedToolState}
         surfaceSelection={{
           ...surfaceSelectionDraft,

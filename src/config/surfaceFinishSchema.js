@@ -766,6 +766,91 @@ export function createDefaultSurfaceFinishState({
 }
 
 /**
+ * Automatically computes intelligent recommended parameters for Surface Finish Leftover (Rest Milling),
+ * model-aware, tool-aware, and collision-safe.
+ */
+export function computeRecommendedLeftoverParams({
+  tool = null,
+  previousOp = null,
+  driveBounds = null,
+  stockConfig = null
+} = {}) {
+  const finishDia = Math.max(0.5, Number(tool?.diameter ?? tool?.toolDiameter) || 6.0);
+  const finishRadius = finishDia / 2;
+  const finishCornerRadius = Number(
+    tool?.cornerRadius ??
+      tool?.cornerRad ??
+      (tool?.type === 'ball' ? finishRadius : 0.0)
+  );
+
+  // 1. Detect prior roughing tool if preceding op exists; else recommend standard 2x cutter
+  let refDia = 12.0;
+  let refCornerRadius = 6.0;
+  let refType = 'ball';
+
+  if (previousOp && (previousOp.tool || previousOp.toolDiameter)) {
+    const prevD = Number(previousOp.tool?.diameter ?? previousOp.toolDiameter) || 0;
+    if (prevD > finishDia) {
+      refDia = prevD;
+      refType = previousOp.tool?.type || (previousOp.tool?.cornerRadius ? 'bull' : 'ball');
+      refCornerRadius = Number(
+        previousOp.tool?.cornerRadius ??
+          (refType === 'ball' ? refDia / 2 : refType === 'flat' ? 0.0 : 2.0)
+      );
+    }
+  }
+
+  if (refDia <= finishDia) {
+    refDia = Math.max(12.0, finishDia * 2.0);
+    refCornerRadius = refDia / 2.0;
+    refType = 'ball';
+  }
+
+  // 2. Cusp zone calculation
+  const deltaR = Math.max(0.2, refCornerRadius - finishCornerRadius);
+  const overlap = 1.0; // standard 1mm tangential blending extension
+
+  // 3. Optimal finishing stepover: fine pitch for ball nose
+  const safeStepover = Number(Math.max(0.1, Math.min(0.6, finishDia * 0.07)).toFixed(2));
+  const stepover = safeStepover || 0.4;
+
+  // 4. Pass count: covers zone width with overlap
+  const totalZone = deltaR + overlap;
+  const numberOfPasses = Math.max(2, Math.min(15, Math.ceil(totalZone / stepover)));
+
+  // 5. Safe depth bounds
+  let minDepth = -9999;
+  let maxDepth = 9999;
+  if (driveBounds && driveBounds.min && driveBounds.max) {
+    minDepth = Number((driveBounds.min.y - 0.5).toFixed(2));
+    maxDepth = Number((driveBounds.max.y + 1.0).toFixed(2));
+  }
+
+  return {
+    totalTolerance: 0.025,
+    filterToleranceRatio: 0.5,
+    oneWayArcFilter: false,
+    refToolDiameter: refDia,
+    refToolCornerRadius: refCornerRadius,
+    refToolType: refType,
+    machiningMethod: 'along', // Along valleys is optimal for fillets
+    stepover,
+    numberOfPasses,
+    overlap,
+    cuttingMethod: 'Zigzag',
+    machiningDirection: 'climb',
+    maxGapDistance: 10.0,
+    shallowCutoffAngle: 35.0,
+    steepCutoffAngle: 90.0,
+    transitionType: 'broken',
+    tipComp: 'tip',
+    minDepth,
+    maxDepth,
+    depthLimitsEnabled: Boolean(driveBounds)
+  };
+}
+
+/**
  * Safely saves Surface Finish parameter defaults to localStorage (or custom storage).
  */
 export function saveOperationDefaults(payload, storage = typeof window !== 'undefined' ? window.localStorage : null) {

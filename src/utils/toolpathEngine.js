@@ -2763,8 +2763,9 @@ export function generateSurfaceLeftoverToolpath(bounds, tool, params = {}, model
 
   const raycaster = new THREE.Raycaster();
   const rayDown = new THREE.Vector3(0, -1, 0);
+  let lastValidSurfaceY = null;
 
-  // Surface sampling function with contact normal compensation
+  // Surface sampling function with multi-probe contact normal compensation
   const samplePoint = (x, z) => {
     let surfaceY = null;
     let contactNormal = new THREE.Vector3(0, 1, 0);
@@ -2777,13 +2778,38 @@ export function generateSurfaceLeftoverToolpath(bounds, tool, params = {}, model
         if (hits[0].face) {
           contactNormal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
         }
+      } else {
+        // Multi-probe neighborhood: check 8 surrounding points in a circular ring
+        const probeRadius = Math.max(0.2, Math.min(0.6, toolRadius * 0.15));
+        for (let a = 0; a < 8; a++) {
+          const angle = (a / 8) * Math.PI * 2;
+          const px = x + Math.cos(angle) * probeRadius;
+          const pz = z + Math.sin(angle) * probeRadius;
+          raycaster.set(new THREE.Vector3(px, topY + 50, pz), rayDown);
+          const pHits = raycaster.intersectObjects(raycastMeshes, false);
+          if (pHits.length > 0) {
+            surfaceY = pHits[0].point.y;
+            if (pHits[0].face) {
+              contactNormal = pHits[0].face.normal.clone().transformDirection(pHits[0].object.matrixWorld).normalize();
+            }
+            break;
+          }
+        }
       }
     }
 
-    if (surfaceY == null) {
-      // Procedural fallback (concave pocket valley with radius matching refToolCornerRadius)
-      surfaceY = floorY;
+    if (surfaceY != null) {
+      lastValidSurfaceY = surfaceY;
+    } else if (lastValidSurfaceY != null) {
+      // Retain previous surface elevation along path
+      surfaceY = lastValidSurfaceY;
+    } else {
+      // Clamped procedural fallback: NEVER drop below physical drive bounds floor
+      surfaceY = Math.max(floorY, effBounds.min.y);
     }
+
+    // Hard floor boundary clamping: guarantee toolpath cannot plunge beneath drive model floor
+    surfaceY = Math.max(effBounds.min.y, surfaceY);
 
     let compY = surfaceY + stockToLeaveZ;
     if (isBall) {
@@ -2792,6 +2818,21 @@ export function generateSurfaceLeftoverToolpath(bounds, tool, params = {}, model
     }
 
     return new THREE.Vector3(x, compY, z);
+  };
+
+  // Anti-Spike Gouge Guard: filters single-point vertical drop-offs
+  const filterSpikes = (pts) => {
+    if (!pts || pts.length < 3) return pts;
+    const cleaned = [...pts];
+    for (let i = 1; i < cleaned.length - 1; i++) {
+      const prevY = cleaned[i - 1].y;
+      const curY = cleaned[i].y;
+      const nextY = cleaned[i + 1].y;
+      if (prevY - curY > 2.0 && nextY - curY > 2.0 && Math.abs(prevY - nextY) < 1.5) {
+        cleaned[i] = new THREE.Vector3(cleaned[i].x, (prevY + nextY) / 2, cleaned[i].z);
+      }
+    }
+    return cleaned;
   };
 
   // Base fillet centerline inset from cavity boundary
@@ -2865,7 +2906,7 @@ export function generateSurfaceLeftoverToolpath(bounds, tool, params = {}, model
 
     stations.forEach((st, sIdx) => {
       // Stroke endpoints across the leftover width
-      const strokePoints = [];
+      const rawStrokePoints = [];
       const numPts = 6;
       const reverse = !isOneWay && (sIdx % 2 === 1);
 
@@ -2874,8 +2915,9 @@ export function generateSurfaceLeftoverToolpath(bounds, tool, params = {}, model
         const w = -halfZoneWidth + u * (2 * halfZoneWidth);
         const px = st.x + st.nx * w;
         const pz = st.z + st.nz * w;
-        strokePoints.push(samplePoint(px, pz));
+        rawStrokePoints.push(samplePoint(px, pz));
       }
+      const strokePoints = filterSpikes(rawStrokePoints);
 
       const pStart = strokePoints[0];
       const pEnd = strokePoints[strokePoints.length - 1];
@@ -2980,15 +3022,16 @@ export function generateSurfaceLeftoverToolpath(bounds, tool, params = {}, model
       }
       sampled3D.push(samplePoint(rawPoints2D[rawPoints2D.length - 1].x, rawPoints2D[rawPoints2D.length - 1].z));
 
-      if (sampled3D.length < 2) return;
+      const finalSampled3D = filterSpikes(sampled3D);
+      if (finalSampled3D.length < 2) return;
 
       // Reverse direction in Zigzag for alternating passes
       if (!isOneWay && (passIdx % 2 === 1)) {
-        sampled3D.reverse();
+        finalSampled3D.reverse();
       }
 
-      const pFirst = sampled3D[0];
-      const pLast = sampled3D[sampled3D.length - 1];
+      const pFirst = finalSampled3D[0];
+      const pLast = finalSampled3D[finalSampled3D.length - 1];
 
       // Approach motion
       rapidLines.push([
@@ -3001,8 +3044,8 @@ export function generateSurfaceLeftoverToolpath(bounds, tool, params = {}, model
       ]);
 
       // Cut along loop
-      for (let i = 0; i < sampled3D.length - 1; i++) {
-        cuttingLines.push([sampled3D[i], sampled3D[i + 1]]);
+      for (let i = 0; i < finalSampled3D.length - 1; i++) {
+        cuttingLines.push([finalSampled3D[i], finalSampled3D[i + 1]]);
       }
 
       // Retract
