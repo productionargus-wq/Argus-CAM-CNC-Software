@@ -122,6 +122,33 @@ function buildToolStateFromRecord(tool, caps, current) {
   };
 }
 
+export function getSurfaceFinishTitle(flags = {}) {
+  const {
+    isFlowline,
+    isPocket,
+    isShallow,
+    isParallelSteep,
+    isParallel,
+    isPencil,
+    isRadial,
+    isProject,
+    isLeftover,
+    isScallop
+  } = flags;
+
+  if (isFlowline) return 'Surface Finish Flowline';
+  if (isPocket) return 'Surface Finish Pocket';
+  if (isShallow) return 'Surface Finish Shallow';
+  if (isParallelSteep) return 'Surface Finish Parallel Steep';
+  if (isParallel) return 'Surface Finish Parallel';
+  if (isPencil) return 'Surface Finish Pencil';
+  if (isRadial) return 'Surface Finish Radial';
+  if (isProject) return 'Surface Finish Project';
+  if (isLeftover) return 'Surface Finish Leftover';
+  if (isScallop) return 'Surface Finish Scallop';
+  return 'Surface Finish Contour';
+}
+
 function SurfaceFinishContourModalInner({
   onClose,
   operation,
@@ -151,6 +178,18 @@ function SurfaceFinishContourModalInner({
   const isProject = strategyMode === 'project' || operation?.strategyKey === 'surface_finish_project' || operation?.badgeClass === 'project';
   const isLeftover = strategyMode === 'leftover' || strategyMode === 'rest_milling' || operation?.strategyKey === 'surface_finish_leftover' || operation?.badgeClass === 'leftover';
   const isScallop = strategyMode === 'scallop' || strategyMode === 'equal_scallop' || operation?.strategyKey === 'surface_finish_scallop' || operation?.badgeClass === 'scallop';
+  const strategyTitle = getSurfaceFinishTitle({
+    isFlowline,
+    isPocket,
+    isShallow,
+    isParallelSteep,
+    isParallel,
+    isPencil,
+    isRadial,
+    isProject,
+    isLeftover,
+    isScallop
+  });
   const effectiveSelection = surfaceSelection || flowlineSelection || null;
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
@@ -204,7 +243,7 @@ function SurfaceFinishContourModalInner({
         null
       );
     }
-    if (isFlowline || isShallow || isParallel || isParallelSteep || isPencil || isRadial || isProject || isLeftover) {
+    if (isFlowline || isShallow || isParallel || isParallelSteep || isPencil || isRadial || isProject || isLeftover || isScallop) {
       return (
         tools.find((t) => ['ball'].includes(String(t.type || '').toLowerCase())) ||
         tools.find((t) => ['bull', 'ball', 'flat', 'engrave'].includes(String(t.type || '').toLowerCase())) ||
@@ -217,17 +256,17 @@ function SurfaceFinishContourModalInner({
       tools[0] ||
       null
     );
-  }, [operation, tools, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, isLeftover]);
+  }, [operation, tools, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, isLeftover, isScallop]);
 
   const initialDefaults = useMemo(
     () =>
       createDefaultSurfaceFinishState({
         activeMachine,
         stockConfig,
-        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : isLeftover ? 'leftover' : 'contour',
+        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : isLeftover ? 'leftover' : isScallop ? 'scallop' : 'contour',
         tool: initialTool
       }),
-    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, isLeftover, initialTool]
+    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, isLeftover, isScallop, initialTool]
   );
 
   const [activeTab, setActiveTab] = useState('toolpath_params');
@@ -611,27 +650,7 @@ function SurfaceFinishContourModalInner({
       });
     }
 
-    const opTitle = isFlowline
-      ? 'Surface Finish Flowline'
-      : isPocket
-        ? 'Surface Finish Pocket'
-        : isShallow
-          ? 'Surface Finish Shallow'
-          : isParallelSteep
-            ? 'Surface Finish Parallel Steep'
-            : isParallel
-              ? 'Surface Finish Parallel'
-              : isPencil
-                ? 'Surface Finish Pencil'
-                : isRadial
-                  ? 'Surface Finish Radial'
-                  : isProject
-                    ? 'Surface Finish Project'
-                    : isLeftover
-                      ? 'Surface Finish Leftover'
-                      : isScallop
-                        ? 'Surface Finish Scallop'
-                        : 'Surface Finish Contour';
+    const opTitle = strategyTitle;
     const rapidHeight = surfaceParams.clearanceEnabled && surfaceParams.clearanceMode === 'abs'
       ? Number(surfaceParams.clearance)
       : (Number(surfaceParams.retract) || 25.0);
@@ -699,7 +718,7 @@ function SurfaceFinishContourModalInner({
       machineParams: { ...machineParams },
       surfaceParams: {
         ...surfaceParams,
-        driveSurfacesCount: isFlowline ? (driveFaceIds.length || activeSurfaces.length) : activeSurfaces.length,
+        driveSurfacesCount: driveFaceIds.length > 0 ? driveFaceIds.length : (activeSurfaces.length || 1),
         checkSurfacesCount: checkFaceIds.length
       },
       contourParams: { ...contourParams },
@@ -709,7 +728,8 @@ function SurfaceFinishContourModalInner({
       pencilParams: { ...pencilParams },
       radialParams: { ...radialParams },
       projectParams: { ...projectParams },
-      leftoverParams: { ...leftoverParams }
+      leftoverParams: { ...leftoverParams },
+      scallopParams: isScallop ? { ...scallopParams } : undefined
     };
 
     onSaveOperation?.(updatedOp);
@@ -767,25 +787,7 @@ function SurfaceFinishContourModalInner({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontWeight: 500 }}>
-              {isFlowline
-                ? 'Surface Finish Flowline'
-                : isPocket
-                  ? 'Surface Finish Pocket'
-                  : isShallow
-                    ? 'Surface Finish Shallow'
-                    : isParallelSteep
-                      ? 'Surface Finish Parallel Steep'
-                      : isParallel
-                        ? 'Surface Finish Parallel'
-                        : isPencil
-                          ? 'Surface Finish Pencil'
-                          : isRadial
-                            ? 'Surface Finish Radial'
-                            : isProject
-                              ? 'Surface Finish Project'
-                              : isLeftover
-                                ? 'Surface Finish Leftover'
-                                : 'Surface Finish Contour'}
+              {strategyTitle}
             </span>
             <span
               style={{
@@ -1346,6 +1348,71 @@ function SurfaceFinishContourModalInner({
               }}
             >
               ⚡ Load Recommended Leftover Values
+            </button>
+          </div>
+        )}
+
+        {/* Scallop Quick Recommendation Banner */}
+        {isScallop && (
+          <div
+            style={{
+              background: '#f0fdf4',
+              borderBottom: '1px solid #bbf7d0',
+              padding: '6px 12px',
+              fontSize: '11px',
+              color: '#166534',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px'
+            }}
+          >
+            <div>
+              <strong>Surface Finish Scallop:</strong> Constant 3D cusp height finishing across steep and shallow walls with spherical scallop contouring.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const finishTool = tools.find((t) => t.type === 'ball' || /ball/i.test(t.name)) || tools[0];
+                if (finishTool) {
+                  setSelectedToolId(finishTool.id);
+                  setToolParams((prev) => buildToolStateFromRecord(finishTool, caps, prev));
+                }
+                setSurfaceParams((p) => ({
+                  ...p,
+                  clearanceEnabled: true,
+                  clearance: 25.0,
+                  clearanceMode: 'abs',
+                  retractEnabled: true,
+                  retract: 2.5,
+                  retractMode: 'inc',
+                  feedPlane: 2.0,
+                  feedPlaneMode: 'inc',
+                  stockToLeaveDrive: 0.0
+                }));
+                setScallopParams((p) => ({
+                  ...p,
+                  stepoverMode: 'scallop_height',
+                  scallopHeight: 0.005,
+                  stepover: 0.5,
+                  cuttingMethod: 'Zigzag',
+                  machiningDirection: 'climb'
+                }));
+                onNotify?.('Loaded recommended scallop finishing parameters (5µm cusp height, 0.5mm stepover, Zigzag).', 'success');
+              }}
+              style={{
+                background: '#059669',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '3px 8px',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⚡ Load Recommended Scallop Values
             </button>
           </div>
         )}
@@ -4624,7 +4691,7 @@ function SurfaceFinishContourModalInner({
               type="button"
               onClick={() =>
                 onNotify?.(
-                  `${isFlowline ? 'Surface Finish Flowline' : isPocket ? 'Surface Finish Pocket' : isShallow ? 'Surface Finish Shallow' : isParallelSteep ? 'Surface Finish Parallel Steep' : isParallel ? 'Surface Finish Parallel' : isPencil ? 'Surface Finish Pencil' : isRadial ? 'Surface Finish Radial' : 'Surface Finish Contour'} (${caps.machineName} - ${caps.axesCount}-Axis)`,
+                  `${strategyTitle} (${caps.machineName} - ${caps.axesCount}-Axis)`,
                   'info'
                 )
               }
