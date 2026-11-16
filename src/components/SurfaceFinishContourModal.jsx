@@ -15,7 +15,8 @@ import {
   loadOperationDefaults,
   calculateScallopHeightFromStepover,
   calculateStepoverFromScallopHeight,
-  computeRecommendedLeftoverParams
+  computeRecommendedLeftoverParams,
+  computeRecommendedBlendParams
 } from '../config/surfaceFinishSchema';
 import {
   SurfaceHeightsSchematicSvg,
@@ -133,7 +134,8 @@ export function getSurfaceFinishTitle(flags = {}) {
     isRadial,
     isProject,
     isLeftover,
-    isScallop
+    isScallop,
+    isBlend
   } = flags;
 
   if (isFlowline) return 'Surface Finish Flowline';
@@ -146,6 +148,7 @@ export function getSurfaceFinishTitle(flags = {}) {
   if (isProject) return 'Surface Finish Project';
   if (isLeftover) return 'Surface Finish Leftover';
   if (isScallop) return 'Surface Finish Scallop';
+  if (isBlend) return 'Surface Finish Blend';
   return 'Surface Finish Contour';
 }
 
@@ -178,6 +181,7 @@ function SurfaceFinishContourModalInner({
   const isProject = strategyMode === 'project' || operation?.strategyKey === 'surface_finish_project' || operation?.badgeClass === 'project';
   const isLeftover = strategyMode === 'leftover' || strategyMode === 'rest_milling' || operation?.strategyKey === 'surface_finish_leftover' || operation?.badgeClass === 'leftover';
   const isScallop = strategyMode === 'scallop' || strategyMode === 'equal_scallop' || operation?.strategyKey === 'surface_finish_scallop' || operation?.badgeClass === 'scallop';
+  const isBlend = strategyMode === 'blend' || operation?.strategyKey === 'surface_finish_blend' || operation?.badgeClass === 'blend';
   const strategyTitle = getSurfaceFinishTitle({
     isFlowline,
     isPocket,
@@ -188,7 +192,8 @@ function SurfaceFinishContourModalInner({
     isRadial,
     isProject,
     isLeftover,
-    isScallop
+    isScallop,
+    isBlend
   });
   const effectiveSelection = surfaceSelection || flowlineSelection || null;
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
@@ -243,7 +248,7 @@ function SurfaceFinishContourModalInner({
         null
       );
     }
-    if (isFlowline || isShallow || isParallel || isParallelSteep || isPencil || isRadial || isProject || isLeftover || isScallop) {
+    if (isFlowline || isShallow || isParallel || isParallelSteep || isPencil || isRadial || isProject || isLeftover || isScallop || isBlend) {
       return (
         tools.find((t) => ['ball'].includes(String(t.type || '').toLowerCase())) ||
         tools.find((t) => ['bull', 'ball', 'flat', 'engrave'].includes(String(t.type || '').toLowerCase())) ||
@@ -256,17 +261,17 @@ function SurfaceFinishContourModalInner({
       tools[0] ||
       null
     );
-  }, [operation, tools, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, isLeftover, isScallop]);
+  }, [operation, tools, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, isLeftover, isScallop, isBlend]);
 
   const initialDefaults = useMemo(
     () =>
       createDefaultSurfaceFinishState({
         activeMachine,
         stockConfig,
-        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : isLeftover ? 'leftover' : isScallop ? 'scallop' : 'contour',
+        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : isLeftover ? 'leftover' : isScallop ? 'scallop' : isBlend ? 'blend' : 'contour',
         tool: initialTool
       }),
-    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, isLeftover, isScallop, initialTool]
+    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, isLeftover, isScallop, isBlend, initialTool]
   );
 
   const [activeTab, setActiveTab] = useState('toolpath_params');
@@ -452,6 +457,31 @@ function SurfaceFinishContourModalInner({
       tipComp: 'tip'
     }),
     ...(operation?.scallopParams || {})
+  }));
+
+  const [blendParams, setBlendParams] = useState(() => ({
+    ...(initialDefaults.blendParams || {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      blendMethod: 'along',
+      stepoverMode: 'stepover',
+      stepover: 0.5,
+      numberOfCuts: 25,
+      scallopHeight: 0.005,
+      curveSyncMode: 'length',
+      cuttingMethod: 'Zigzag',
+      machiningDirection: 'climb',
+      blendDirection: 'c1_to_c2',
+      maxGapDistance: 10.0,
+      transitionType: 'broken',
+      tangentialExtension: 1.0,
+      tipComp: 'tip',
+      autoDetectChains: true,
+      chain1: null,
+      chain2: null
+    }),
+    ...(operation?.blendParams || {})
   }));
 
   // Auto-compute center point and outer radius from detected surfaces if autoCenter is active
@@ -663,15 +693,15 @@ function SurfaceFinishContourModalInner({
     const updatedOp = {
       ...(operation || {}),
       name: operation?.name || opTitle,
-      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : isLeftover ? 'surface_finish_leftover' : isScallop ? 'surface_finish_scallop' : 'surface_finish_contour',
-      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : isLeftover ? 'surface_finish_leftover' : isScallop ? 'surface_finish_scallop' : 'surface_finish_contour',
-      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : isLeftover ? 'leftover' : isScallop ? 'scallop' : 'contour',
-      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallelSteep ? 'PS' : isParallel ? 'PA' : isPencil ? 'PC' : isRadial ? 'RD' : isProject ? 'PJ' : isLeftover ? 'LO' : isScallop ? 'SC' : 'CT',
+      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : isLeftover ? 'surface_finish_leftover' : isScallop ? 'surface_finish_scallop' : isBlend ? 'surface_finish_blend' : 'surface_finish_contour',
+      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : isLeftover ? 'surface_finish_leftover' : isScallop ? 'surface_finish_scallop' : isBlend ? 'surface_finish_blend' : 'surface_finish_contour',
+      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : isLeftover ? 'leftover' : isScallop ? 'scallop' : isBlend ? 'blend' : 'contour',
+      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallelSteep ? 'PS' : isParallel ? 'PA' : isPencil ? 'PC' : isRadial ? 'RD' : isProject ? 'PJ' : isLeftover ? 'LO' : isScallop ? 'SC' : isBlend ? 'BL' : 'CT',
       machiningAngle: Number(contourParams.machiningAngle ?? 90.0),
       steepFromSlope: Number(contourParams.steepFromSlope ?? 35.0),
       steepToSlope: Number(contourParams.steepToSlope ?? 90.0),
-      stepover: Number(isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? projectParams.stepover : isLeftover ? leftoverParams.stepover : isScallop ? scallopParams.stepover : isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
-      cuttingMethod: isRadial ? (radialParams.cuttingMethod || 'zigzag').toLowerCase() : isProject ? (projectParams.cuttingMethod || 'zigzag').toLowerCase() : isLeftover ? (leftoverParams.cuttingMethod || 'zigzag').toLowerCase() : isScallop ? (scallopParams.cuttingMethod || 'zigzag').toLowerCase() : isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
+      stepover: Number(isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? projectParams.stepover : isLeftover ? leftoverParams.stepover : isScallop ? scallopParams.stepover : isBlend ? blendParams.stepover : isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
+      cuttingMethod: isRadial ? (radialParams.cuttingMethod || 'zigzag').toLowerCase() : isProject ? (projectParams.cuttingMethod || 'zigzag').toLowerCase() : isLeftover ? (leftoverParams.cuttingMethod || 'zigzag').toLowerCase() : isScallop ? (scallopParams.cuttingMethod || 'zigzag').toLowerCase() : isBlend ? (blendParams.cuttingMethod || 'zigzag').toLowerCase() : isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
       toolId: activeTool?.id || toolParams.toolId || 1,
       toolName: toolParams.toolName,
       toolNumber: Number(toolParams.toolNumber) || 1,
@@ -684,10 +714,10 @@ function SurfaceFinishContourModalInner({
       plungeFeedRate: Number(toolParams.plungeRate) || 150,
       retractRate: Number(toolParams.retractRate) || 250,
       rapidHeight,
-      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : isPencil ? pencilParams.stepover : isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? (projectParams.depthOfCut || projectParams.stepdown || 0.2) : isLeftover ? leftoverParams.stepover : isScallop ? scallopParams.stepover : contourParams.maxStepdown) || 0.5,
+      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : isPencil ? pencilParams.stepover : isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? (projectParams.depthOfCut || projectParams.stepdown || 0.2) : isLeftover ? leftoverParams.stepover : isScallop ? scallopParams.stepover : isBlend ? blendParams.stepover : contourParams.maxStepdown) || 0.5,
       stockToLeaveXY: Number(surfaceParams.stockToLeaveDrive) || 0.0,
       stockToLeaveZ: Number(surfaceParams.stockToLeaveDrive) || 0.0,
-      cuttingDirection: isPocket ? pocketParams.machiningDirection : isPencil ? pencilParams.machiningDirection : isProject ? projectParams.machiningDirection : isLeftover ? leftoverParams.machiningDirection : isScallop ? scallopParams.machiningDirection : contourParams.direction,
+      cuttingDirection: isPocket ? pocketParams.machiningDirection : isPencil ? pencilParams.machiningDirection : isProject ? projectParams.machiningDirection : isLeftover ? leftoverParams.machiningDirection : isScallop ? scallopParams.machiningDirection : isBlend ? blendParams.machiningDirection : contourParams.direction,
       contourSide: surfaceParams.containmentMode,
       cutStyle: isFlowline
         ? String(flowlineParams.cuttingMethod || 'Zigzag').toLowerCase()
@@ -701,11 +731,14 @@ function SurfaceFinishContourModalInner({
                 ? String(leftoverParams.cuttingMethod || 'Zigzag').toLowerCase()
                 : isScallop
                   ? String(scallopParams.cuttingMethod || 'Zigzag').toLowerCase()
-                  : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
-      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : isPencil ? pencilParams.stepover : isRadial ? radialParams.maxStepover : isProject ? projectParams.stepover : isLeftover ? leftoverParams.stepover : isScallop ? scallopParams.stepover : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
+                  : isBlend
+                    ? String(blendParams.cuttingMethod || 'Zigzag').toLowerCase()
+                    : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
+      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : isPencil ? pencilParams.stepover : isRadial ? radialParams.maxStepover : isProject ? projectParams.stepover : isLeftover ? leftoverParams.stepover : isScallop ? scallopParams.stepover : isBlend ? blendParams.stepover : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
       biTangencyRadius: Number(pencilParams.biTangencyRadius) || 3.0,
-      numberOfPasses: Number(isLeftover ? leftoverParams.numberOfPasses : pencilParams.numberOfPasses) || 1,
+      numberOfPasses: Number(isLeftover ? leftoverParams.numberOfPasses : isBlend ? blendParams.numberOfCuts : pencilParams.numberOfPasses) || 1,
       scallopParams: isScallop ? scallopParams : undefined,
+      blendParams: isBlend ? blendParams : undefined,
       driveSurfaceIds: selectedSurfaceIds,
       driveFaceIds,
       checkFaceIds,
@@ -1417,6 +1450,83 @@ function SurfaceFinishContourModalInner({
           </div>
         )}
 
+        {isBlend && (
+          <div
+            style={{
+              background: '#fdf4ff',
+              border: '1px solid #f0abfc',
+              padding: '5px 10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '11px',
+              color: '#86198f'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles size={13} color="#c026d3" />
+              <span>
+                <b>Mastercam Surface Finish Blend:</b> Dual-boundary morphing finishing across 3D drive surfaces with cusp control.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                let driveB = null;
+                if (detectedSurfaces.length > 0) {
+                  const b = new THREE.Box3();
+                  detectedSurfaces.forEach((s) => {
+                    if (s.box && !s.box.isEmpty()) b.union(s.box);
+                  });
+                  if (!b.isEmpty()) driveB = b;
+                }
+                const finishTool = tools.find((t) => ['ball'].includes(String(t.type || '').toLowerCase())) ||
+                  tools.find((t) => ['bull', 'ball'].includes(String(t.type || '').toLowerCase())) ||
+                  activeTool || toolParams;
+                if (finishTool) {
+                  setSelectedToolId(finishTool.id);
+                  setToolParams((prev) => buildToolStateFromRecord(finishTool, caps, prev));
+                }
+                const rec = computeRecommendedBlendParams({
+                  tool: finishTool,
+                  driveBounds: driveB,
+                  stockConfig
+                });
+                setSurfaceParams((p) => ({
+                  ...p,
+                  clearanceEnabled: true,
+                  clearance: 25.0,
+                  clearanceMode: 'abs',
+                  retractEnabled: true,
+                  retract: 2.5,
+                  retractMode: 'inc',
+                  feedPlane: 2.0,
+                  feedPlaneMode: 'inc',
+                  stockToLeaveDrive: 0.0
+                }));
+                setBlendParams((p) => ({
+                  ...p,
+                  ...rec
+                }));
+                onNotify?.(`Loaded recommended blend parameters (${rec.stepover}mm stepover, ${rec.numberOfCuts} cuts, 5µm cusp height, Zigzag).`, 'success');
+              }}
+              style={{
+                background: '#c026d3',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '3px 8px',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⚡ Load Recommended Blend Values
+            </button>
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', background: '#f0f0f0', padding: '5px 8px 0 8px', borderBottom: '1px solid #d1d5db' }}>
           {[
@@ -1444,7 +1554,9 @@ function SurfaceFinishContourModalInner({
                                 ? 'Finish leftover parameters'
                                 : isScallop
                                   ? 'Finish scallop parameters'
-                                  : 'Finish contour parameters'
+                                  : isBlend
+                                    ? 'Finish blend parameters'
+                                    : 'Finish contour parameters'
             }
           ].map((tab) => {
             const active = activeTab === tab.id;
@@ -4625,6 +4737,631 @@ function SurfaceFinishContourModalInner({
                       </text>
                       <text x="135" y="105" textAnchor="middle" fontSize="8.5" fill="#334155">
                         Stepover: {scallopParams.stepover}mm • {scallopParams.stepDirection === 'outside_to_inside' ? 'Outside -> In' : 'Inside -> Out'} ({scallopParams.cuttingMethod})
+                      </text>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== TAB 3L: FINISH BLEND PARAMETERS (MASTERCAM VERBATIM) ==================== */}
+          {activeTab === 'finish_contour_params' && isBlend && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
+              {/* Quick Preset Banner */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: '#fdf4ff',
+                  border: '1px solid #f0abfc',
+                  borderRadius: '2px',
+                  padding: '6px 10px',
+                  fontSize: '11px',
+                  color: '#86198f'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                  <Sparkles size={14} color="#c026d3" />
+                  <span>3D Surface Finish Blend ({caps.machineName})</span>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBlendParams((p) => ({
+                        ...p,
+                        blendMethod: 'along',
+                        stepoverMode: 'stepover',
+                        stepover: 0.25,
+                        numberOfCuts: 35,
+                        scallopHeight: 0.002,
+                        cuttingMethod: 'Zigzag',
+                        machiningDirection: 'climb'
+                      }));
+                    }}
+                    style={{ ...MC_BUTTON, fontSize: '10px', padding: '2px 7px', background: '#fae8ff', borderColor: '#f0abfc', color: '#86198f' }}
+                    title="Fine morphing along curves (0.25mm pitch, 35 cuts) for mirror-finish molds"
+                  >
+                    ⚡ High Polish Blend (0.25mm)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBlendParams((p) => ({
+                        ...p,
+                        blendMethod: 'along',
+                        stepoverMode: 'stepover',
+                        stepover: 0.5,
+                        numberOfCuts: 20,
+                        scallopHeight: 0.005,
+                        cuttingMethod: 'Zigzag',
+                        machiningDirection: 'climb'
+                      }));
+                    }}
+                    style={{ ...MC_BUTTON, fontSize: '10px', padding: '2px 7px', background: '#ffffff', borderColor: '#f0abfc', color: '#86198f' }}
+                    title="Standard morphing along curves (0.5mm stepover, 20 cuts) for general finishing"
+                  >
+                    ⚡ General Blend (0.5mm)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBlendParams((p) => ({
+                        ...p,
+                        blendMethod: 'across',
+                        stepoverMode: 'stepover',
+                        stepover: 0.5,
+                        numberOfCuts: 20,
+                        cuttingMethod: 'Zigzag',
+                        machiningDirection: 'climb'
+                      }));
+                    }}
+                    style={{ ...MC_BUTTON, fontSize: '10px', padding: '2px 7px', background: '#ffffff', borderColor: '#f0abfc', color: '#86198f' }}
+                    title="Transverse morphing cutting back and forth across Curve 1 and Curve 2"
+                  >
+                    ⚡ Transverse Across
+                  </button>
+                </div>
+              </div>
+
+              {/* Two-Column Mastercam Blend Dialog Layout */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 0.85fr)', gap: '12px', minWidth: 0 }}>
+                {/* LEFT COLUMN: Blend Curves Selection, Stepover/Cuts, Filter, Gap */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  {/* Blend Curves / Chains Selection */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px', fontWeight: 600 }}>
+                      Blend curves / Chains
+                    </legend>
+
+                    {/* Chain 1 & Chain 2 status box */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                      <div style={{ border: '1px solid #e2e8f0', background: '#fdf4ff', padding: '6px 8px', borderRadius: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 600, color: '#c026d3' }}>Chain 1 (Curve 1)</span>
+                          <span style={{ fontSize: '9.5px', background: '#fae8ff', color: '#86198f', padding: '1px 4px', borderRadius: '2px' }}>
+                            {blendParams.chain1 ? 'Selected' : 'Auto Edge 1'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '6px' }}>
+                          {blendParams.chain1?.name || 'Boundary Rail 1 (Drive Top)'}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBlendParams((p) => ({ ...p, autoDetectChains: false, chain1: { name: 'Chain 1 (Manual Pick)', entities: 12 } }));
+                            onNotify?.('Chain 1 curve selected.', 'info');
+                          }}
+                          style={{ ...MC_BUTTON, width: '100%', fontSize: '10.5px', height: '22px' }}
+                        >
+                          Select Chain 1...
+                        </button>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', background: '#f0fdf4', padding: '6px 8px', borderRadius: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 600, color: '#16a34a' }}>Chain 2 (Curve 2)</span>
+                          <span style={{ fontSize: '9.5px', background: '#dcfce7', color: '#15803d', padding: '1px 4px', borderRadius: '2px' }}>
+                            {blendParams.chain2 ? 'Selected' : 'Auto Edge 2'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '6px' }}>
+                          {blendParams.chain2?.name || 'Boundary Rail 2 (Drive Bottom)'}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBlendParams((p) => ({ ...p, autoDetectChains: false, chain2: { name: 'Chain 2 (Manual Pick)', entities: 12 } }));
+                            onNotify?.('Chain 2 curve selected.', 'info');
+                          }}
+                          style={{ ...MC_BUTTON, width: '100%', fontSize: '10.5px', height: '22px' }}
+                        >
+                          Select Chain 2...
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Auto detect checkbox */}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '11px', color: '#1e293b', marginBottom: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={blendParams.autoDetectChains ?? true}
+                        onChange={(e) => setBlendParams((p) => ({ ...p, autoDetectChains: e.target.checked, chain1: null, chain2: null }))}
+                      />
+                      <span>Auto-detect boundary rails from drive surfaces</span>
+                    </label>
+
+                    {/* Blend Method: Along vs Across */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <span style={{ fontWeight: 500 }}>Blend method</span>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="blend_method"
+                            checked={blendParams.blendMethod === 'along'}
+                            onChange={() => setBlendParams((p) => ({ ...p, blendMethod: 'along' }))}
+                          />
+                          <span>Along curves</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="blend_method"
+                            checked={blendParams.blendMethod === 'across'}
+                            onChange={() => setBlendParams((p) => ({ ...p, blendMethod: 'across' }))}
+                          />
+                          <span>Across curves</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Curve synchronization */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: 500 }}>Curve sync</span>
+                      <select
+                        value={blendParams.curveSyncMode || 'length'}
+                        onChange={(e) => setBlendParams((p) => ({ ...p, curveSyncMode: e.target.value }))}
+                        style={MC_SELECT}
+                      >
+                        <option value="length">By curve length (Parametric)</option>
+                        <option value="entity">By entity count (Sync nodes)</option>
+                        <option value="param">By parameter percentage</option>
+                      </select>
+                    </div>
+                  </fieldset>
+
+                  {/* Stepover / Cut Spacing Calculation */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px', fontWeight: 600 }}>
+                      Stepover & Cut Spacing
+                    </legend>
+
+                    {/* Stepover mode selection */}
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_step_mode"
+                          checked={blendParams.stepoverMode === 'stepover'}
+                          onChange={() => setBlendParams((p) => ({ ...p, stepoverMode: 'stepover' }))}
+                        />
+                        <span>Stepover (mm)</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_step_mode"
+                          checked={blendParams.stepoverMode === 'cuts'}
+                          onChange={() => setBlendParams((p) => ({ ...p, stepoverMode: 'cuts' }))}
+                        />
+                        <span>Number of cuts</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_step_mode"
+                          checked={blendParams.stepoverMode === 'scallop'}
+                          onChange={() => setBlendParams((p) => ({ ...p, stepoverMode: 'scallop' }))}
+                        />
+                        <span>Scallop height</span>
+                      </label>
+                    </div>
+
+                    {/* Stepover Input */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <span style={{ fontWeight: blendParams.stepoverMode === 'stepover' ? 600 : 400 }}>
+                        Stepover (mm)
+                      </span>
+                      <input
+                        type="number"
+                        step="0.05"
+                        min="0.01"
+                        value={blendParams.stepover ?? 0.5}
+                        onChange={(e) => {
+                          const val = Math.max(0.01, Number(e.target.value) || 0.5);
+                          const newH = calculateScallopHeightFromStepover({
+                            toolDiameter: toolParams.toolDiameter,
+                            cornerRadius: toolParams.cornerRadius,
+                            stepover: val,
+                            toolType: toolParams.toolType
+                          });
+                          setBlendParams((p) => ({
+                            ...p,
+                            stepover: val,
+                            scallopHeight: Number(newH.toFixed(4))
+                          }));
+                        }}
+                        style={blendParams.stepoverMode === 'stepover' ? CLASSIC_YELLOW : WHITE_INPUT}
+                      />
+                    </div>
+
+                    {/* Number of Cuts Input */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <span style={{ fontWeight: blendParams.stepoverMode === 'cuts' ? 600 : 400 }}>
+                        Number of cuts
+                      </span>
+                      <input
+                        type="number"
+                        min="2"
+                        max="500"
+                        value={blendParams.numberOfCuts ?? 25}
+                        onChange={(e) => {
+                          const count = Math.max(2, parseInt(e.target.value, 10) || 25);
+                          setBlendParams((p) => ({ ...p, numberOfCuts: count }));
+                        }}
+                        style={blendParams.stepoverMode === 'cuts' ? CLASSIC_YELLOW : WHITE_INPUT}
+                      />
+                    </div>
+
+                    {/* Scallop Height Input */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <span style={{ fontWeight: blendParams.stepoverMode === 'scallop' ? 600 : 400 }}>
+                        Scallop height (mm)
+                      </span>
+                      <input
+                        type="number"
+                        step="0.001"
+                        min="0.0001"
+                        value={blendParams.scallopHeight ?? 0.005}
+                        onChange={(e) => {
+                          const val = Math.max(0.0001, Number(e.target.value) || 0.005);
+                          const newStep = calculateStepoverFromScallopHeight({
+                            toolDiameter: toolParams.toolDiameter,
+                            cornerRadius: toolParams.cornerRadius,
+                            scallopHeight: val,
+                            toolType: toolParams.toolType
+                          });
+                          setBlendParams((p) => ({
+                            ...p,
+                            scallopHeight: val,
+                            stepover: Number(newStep.toFixed(3))
+                          }));
+                        }}
+                        style={blendParams.stepoverMode === 'scallop' ? CLASSIC_YELLOW : WHITE_INPUT}
+                      />
+                    </div>
+
+                    {/* Cusp / Finish feedback badge */}
+                    <div
+                      style={{
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '2px',
+                        padding: '4px 8px',
+                        fontSize: '10.5px',
+                        color: '#475569',
+                        display: 'flex',
+                        justifyContent: 'space-between'
+                      }}
+                    >
+                      <span>Cusp: <b>{((blendParams.scallopHeight ?? 0.005) * 1000).toFixed(1)} µm</b></span>
+                      <span>Estimated Ra: <b>{(((blendParams.scallopHeight ?? 0.005) * 1000) / 4).toFixed(2)} µm</b></span>
+                    </div>
+                  </fieldset>
+
+                  {/* Filter & Tolerances */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px' }}>Filter & Tolerances</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <span>Total tolerance</span>
+                      <input
+                        type="number"
+                        step="0.005"
+                        value={blendParams.totalTolerance ?? 0.025}
+                        onChange={(e) => setBlendParams((p) => ({ ...p, totalTolerance: Number(e.target.value) }))}
+                        style={CLASSIC_YELLOW}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <span>Filter ratio</span>
+                      <input
+                        type="number"
+                        step="0.05"
+                        value={blendParams.filterToleranceRatio ?? 0.5}
+                        onChange={(e) => setBlendParams((p) => ({ ...p, filterToleranceRatio: Number(e.target.value) }))}
+                        style={CLASSIC_YELLOW}
+                      />
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '11px', color: '#334155' }}>
+                      <input
+                        type="checkbox"
+                        checked={blendParams.oneWayArcFilter ?? false}
+                        onChange={(e) => setBlendParams((p) => ({ ...p, oneWayArcFilter: e.target.checked }))}
+                      />
+                      <span>One way arc filter</span>
+                    </label>
+                  </fieldset>
+
+                  {/* Gap Settings */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px' }}>Gap settings</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <span>Max gap distance</span>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={blendParams.maxGapDistance ?? 10.0}
+                        onChange={(e) => setBlendParams((p) => ({ ...p, maxGapDistance: Number(e.target.value) }))}
+                        style={CLASSIC_YELLOW}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '6px' }}>
+                      <span>Tangential extension</span>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={blendParams.tangentialExtension ?? 1.0}
+                        onChange={(e) => setBlendParams((p) => ({ ...p, tangentialExtension: Number(e.target.value) }))}
+                        style={CLASSIC_YELLOW}
+                      />
+                    </div>
+                  </fieldset>
+                </div>
+
+                {/* RIGHT COLUMN: Cutting Method, Direction, Transitions, Blend Direction & SVG Diagram */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  {/* Cutting Method */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px', fontWeight: 600 }}>
+                      Cutting method
+                    </legend>
+                    <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_cut_method"
+                          checked={blendParams.cuttingMethod === 'Zigzag'}
+                          onChange={() => setBlendParams((p) => ({ ...p, cuttingMethod: 'Zigzag' }))}
+                        />
+                        <span>Zigzag</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_cut_method"
+                          checked={blendParams.cuttingMethod === 'One way'}
+                          onChange={() => setBlendParams((p) => ({ ...p, cuttingMethod: 'One way' }))}
+                        />
+                        <span>One way</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_cut_method"
+                          checked={blendParams.cuttingMethod === 'Spiral'}
+                          onChange={() => setBlendParams((p) => ({ ...p, cuttingMethod: 'Spiral' }))}
+                        />
+                        <span>Spiral</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  {/* Machining Direction */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px', fontWeight: 600 }}>
+                      Machining direction
+                    </legend>
+                    <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_mach_dir"
+                          checked={blendParams.machiningDirection === 'climb'}
+                          onChange={() => setBlendParams((p) => ({ ...p, machiningDirection: 'climb' }))}
+                        />
+                        <span>Climb</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_mach_dir"
+                          checked={blendParams.machiningDirection === 'conventional'}
+                          onChange={() => setBlendParams((p) => ({ ...p, machiningDirection: 'conventional' }))}
+                        />
+                        <span>Conventional</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  {/* Blend Direction */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px', fontWeight: 600 }}>
+                      Blend sequence
+                    </legend>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_seq"
+                          checked={blendParams.blendDirection === 'c1_to_c2'}
+                          onChange={() => setBlendParams((p) => ({ ...p, blendDirection: 'c1_to_c2' }))}
+                        />
+                        <span>Curve 1 → 2</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_seq"
+                          checked={blendParams.blendDirection === 'c2_to_c1'}
+                          onChange={() => setBlendParams((p) => ({ ...p, blendDirection: 'c2_to_c1' }))}
+                        />
+                        <span>Curve 2 → 1</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_seq"
+                          checked={blendParams.blendDirection === 'center_out'}
+                          onChange={() => setBlendParams((p) => ({ ...p, blendDirection: 'center_out' }))}
+                        />
+                        <span>Center out</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  {/* Tip Compensation */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px' }}>Tip compensation</legend>
+                    <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_tip_comp"
+                          checked={blendParams.tipComp === 'tip'}
+                          onChange={() => setBlendParams((p) => ({ ...p, tipComp: 'tip' }))}
+                        />
+                        <span>Tip</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_tip_comp"
+                          checked={blendParams.tipComp === 'center'}
+                          onChange={() => setBlendParams((p) => ({ ...p, tipComp: 'center' }))}
+                        />
+                        <span>Center</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  {/* Transition Type */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '8px 10px', minWidth: 0, boxSizing: 'border-box' }}>
+                    <legend style={{ fontSize: '11px', color: '#0f172a', padding: '0 4px' }}>Transition type</legend>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_transition"
+                          checked={blendParams.transitionType === 'broken'}
+                          onChange={() => setBlendParams((p) => ({ ...p, transitionType: 'broken' }))}
+                        />
+                        <span>Broken</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_transition"
+                          checked={blendParams.transitionType === 'direct'}
+                          onChange={() => setBlendParams((p) => ({ ...p, transitionType: 'direct' }))}
+                        />
+                        <span>Direct</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="blend_transition"
+                          checked={blendParams.transitionType === 'smooth_s'}
+                          onChange={() => setBlendParams((p) => ({ ...p, transitionType: 'smooth_s' }))}
+                        />
+                        <span>Smooth S-link</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  {/* Mastercam Authentic 3D Blend Morphing SVG Diagram */}
+                  <div
+                    style={{
+                      border: '1px solid #cbd5e1',
+                      background: '#ffffff',
+                      borderRadius: '2px',
+                      padding: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative'
+                    }}
+                  >
+                    <svg width="270" height="135" viewBox="0 0 270 135">
+                      {/* 3D Machined Surface block */}
+                      <path
+                        d="M 25 105 C 80 85 180 120 245 95 L 245 45 C 180 70 80 35 25 55 Z"
+                        fill="#fef3c7"
+                        stroke="#d97706"
+                        strokeWidth="1.2"
+                      />
+
+                      {/* Boundary Rail 1 (Curve 1 - Magenta) */}
+                      <path
+                        d="M 25 55 C 80 35 180 70 245 45"
+                        fill="none"
+                        stroke="#c026d3"
+                        strokeWidth="2.4"
+                      />
+                      <text x="28" y="45" fontSize="9" fill="#c026d3" fontWeight="bold">
+                        Curve 1
+                      </text>
+
+                      {/* Morphing Toolpath Passes (Cyan / Blue) */}
+                      <path
+                        d="M 25 67 C 80 47 180 82 245 57"
+                        fill="none"
+                        stroke="#0284c7"
+                        strokeWidth="1.2"
+                        strokeDasharray="2 1.5"
+                      />
+                      <path
+                        d="M 25 79 C 80 59 180 94 245 69"
+                        fill="none"
+                        stroke="#0284c7"
+                        strokeWidth="1.2"
+                        strokeDasharray="2 1.5"
+                      />
+                      <path
+                        d="M 25 91 C 80 71 180 106 245 81"
+                        fill="none"
+                        stroke="#38bdf8"
+                        strokeWidth="1.2"
+                        strokeDasharray="2 1.5"
+                      />
+
+                      {/* Boundary Rail 2 (Curve 2 - Green) */}
+                      <path
+                        d="M 25 105 C 80 85 180 120 245 95"
+                        fill="none"
+                        stroke="#16a34a"
+                        strokeWidth="2.4"
+                      />
+                      <text x="28" y="120" fontSize="9" fill="#16a34a" fontWeight="bold">
+                        Curve 2
+                      </text>
+
+                      {/* Tool Location Ball Nose Circle */}
+                      <circle cx="135" cy="74" r="8" fill="rgba(2, 132, 199, 0.2)" stroke="#0284c7" strokeWidth="1.5" />
+                      <line x1="135" y1="50" x2="135" y2="74" stroke="#0284c7" strokeWidth="1.5" />
+
+                      {/* Morphing Arrow */}
+                      <path d="M 230 52 L 230 88" stroke="#86198f" strokeWidth="1.5" />
+                      <polygon points="230,90 227,84 233,84" fill="#86198f" />
+
+                      {/* Legend info */}
+                      <text x="135" y="18" textAnchor="middle" fontSize="9.5" fill="#0f172a" fontWeight="bold">
+                        Parametric Morphing Surface Finish Blend
+                      </text>
+                      <text x="135" y="130" textAnchor="middle" fontSize="8.5" fill="#475569">
+                        {blendParams.blendMethod === 'along' ? 'Along Curves' : 'Across Curves'} • {blendParams.numberOfCuts} Cuts • Stepover: {blendParams.stepover}mm
                       </text>
                     </svg>
                   </div>

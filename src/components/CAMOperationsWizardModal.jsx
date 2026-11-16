@@ -220,6 +220,17 @@ export default function CAMOperationsWizardModal({
       badgeClass: 'scallop'
     },
     {
+      id: 'surface_finish_blend',
+      name: '3D Surface Finish Blend',
+      badge: 'BL',
+      color: '#c026d3',
+      desc: 'Mastercam morphing pass blend finishing between two boundary curves across 3D drive surfaces',
+      defaultStepover: 15,
+      defaultStepdown: 0.45,
+      defaultDepth: 25.0,
+      badgeClass: 'blend'
+    },
+    {
       id: 'rest_milling',
       name: 'Rest Machining (Corner Pick)',
       badge: 'RM',

@@ -907,6 +907,25 @@ export function buildContourParamsFromOp(op = {}) {
       transitionType: 'broken',
       spiralBlend: false,
       tipComp: 'tip'
+    },
+    blendParams: op.blendParams || {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      blendMethod: op.blendMethod || 'along',
+      stepoverMode: 'stepover',
+      stepover: Number(op.stepdown ?? op.stepover ?? 0.5),
+      numberOfCuts: Number(op.numberOfPasses ?? 25),
+      scallopHeight: Number(op.scallopHeight ?? 0.005),
+      curveSyncMode: 'length',
+      cuttingMethod: op.cuttingMethod || 'Zigzag',
+      machiningDirection: op.cuttingDirection || 'climb',
+      blendDirection: 'c1_to_c2',
+      maxGapDistance: Number(op.maxGapDistance ?? 10.0),
+      transitionType: 'broken',
+      tangentialExtension: 1.0,
+      tipComp: 'tip',
+      autoDetectChains: true
     }
   };
 }
@@ -3355,6 +3374,261 @@ export function generateSurfaceScallopToolpath(bounds, tool, params = {}, model 
 }
 
 /**
+ * Generates Mastercam 3D Surface Finish Blend (Dual-Curve Morphing) Toolpath
+ */
+export function generateSurfaceBlendToolpath(bounds, tool, params = {}, model = null) {
+  const effBounds = model ? computeDriveModelBounds(model, bounds) : resolveSafeBounds(bounds);
+  const bp = params.blendParams || {};
+  const {
+    rapidHeight = 25.0,
+    feedPlane = 2.5,
+    totalDepth = 25.0
+  } = params;
+
+  const cuttingLines = [];
+  const rapidLines = [];
+
+  const topY = effBounds.max.y;
+  const toolDia = Math.max(0.5, Number(tool.diameter ?? tool.toolDiameter) || 6.0);
+  const toolRadius = toolDia / 2;
+  const toolCornerRadius = tool.type === 'ball' ? toolRadius : (Number(tool.cornerRadius) || 0.0);
+  const isBall = tool.type === 'ball' || toolCornerRadius > 0;
+  const R = isBall ? (tool.type === 'ball' ? toolRadius : Math.max(toolCornerRadius, 0.5)) : toolRadius;
+
+  const blendMethod = bp.blendMethod || 'along'; // 'along' | 'across'
+  const cuttingMethod = String(bp.cuttingMethod || 'Zigzag').toLowerCase();
+  const isOneWay = cuttingMethod.includes('one') || cuttingMethod.includes('way');
+  const blendDirection = bp.blendDirection || 'c1_to_c2'; // 'c1_to_c2' | 'c2_to_c1' | 'center_out'
+  const tangentialExtension = Math.max(0, Number(bp.tangentialExtension ?? 1.0));
+
+  // Stepover / Cuts resolution
+  let stepover = Math.max(0.01, Number(bp.stepover) || (toolDia * 0.15));
+  let numberOfCuts = Math.max(2, parseInt(bp.numberOfCuts, 10) || 25);
+
+  const spanX = Math.abs(effBounds.max.x - effBounds.min.x);
+  const spanZ = Math.abs(effBounds.max.z - effBounds.min.z);
+
+  if (bp.stepoverMode === 'cuts') {
+    stepover = spanZ / numberOfCuts;
+  } else {
+    numberOfCuts = Math.max(2, Math.min(200, Math.ceil(spanZ / stepover)));
+  }
+
+  // Raycasting setup
+  const raycastMeshes = [];
+  if (model) {
+    model.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        child.updateMatrixWorld(true);
+        raycastMeshes.push(child);
+      }
+    });
+  }
+
+  const raycaster = new THREE.Raycaster();
+  const rayDown = new THREE.Vector3(0, -1, 0);
+
+  const samplePoint = (x, z) => {
+    let surfaceY = null;
+    let contactNormal = new THREE.Vector3(0, 1, 0);
+
+    if (raycastMeshes.length > 0) {
+      raycaster.set(new THREE.Vector3(x, topY + 50, z), rayDown);
+      const hits = raycaster.intersectObjects(raycastMeshes, false);
+      if (hits.length > 0) {
+        surfaceY = hits[0].point.y;
+        if (hits[0].face) {
+          contactNormal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
+        }
+      }
+    }
+
+    if (surfaceY == null) {
+      const cx = (effBounds.min.x + effBounds.max.x) / 2;
+      const cz = (effBounds.min.z + effBounds.max.z) / 2;
+      const rx = Math.max(1, spanX / 2);
+      const rz = Math.max(1, spanZ / 2);
+      const dx = (x - cx) / rx;
+      const dz = (z - cz) / rz;
+      const distSq = dx * dx + dz * dz;
+      const maxH = Math.min(20, Math.abs(Number(totalDepth)) || 15);
+      surfaceY = topY - Math.min(maxH, distSq * maxH);
+      const nx = -2 * dx / rx;
+      const nz = -2 * dz / rz;
+      contactNormal = new THREE.Vector3(nx, 1.0, nz).normalize();
+    }
+
+    // 3D Ball/Bull nose cutter center compensation
+    let compensatedY = surfaceY;
+    if (isBall) {
+      const nyClamped = Math.max(0.05, Math.min(1.0, contactNormal.y));
+      compensatedY = surfaceY - (R * (1.0 - nyClamped));
+    }
+
+    return {
+      x,
+      y: compensatedY,
+      z,
+      surfaceY,
+      contactNormal
+    };
+  };
+
+  // Build Boundary Curve 1 (Top Rail) and Curve 2 (Bottom Rail)
+  // Parametric functions C1(u) and C2(u) for u in [0, 1]
+  const minX = effBounds.min.x - tangentialExtension;
+  const maxX = effBounds.max.x + tangentialExtension;
+  const minZ = effBounds.min.z;
+  const maxZ = effBounds.max.z;
+
+  // Rail 1: Top boundary curve
+  const getC1 = (u) => {
+    const x = minX + u * (maxX - minX);
+    const z = minZ + Math.sin(u * Math.PI) * (spanZ * 0.08);
+    return { x, z };
+  };
+
+  // Rail 2: Bottom boundary curve
+  const getC2 = (u) => {
+    const x = minX + u * (maxX - minX);
+    const z = maxZ - Math.sin(u * Math.PI) * (spanZ * 0.08);
+    return { x, z };
+  };
+
+  // Generate sequence of morphing pass fractions t in [0, 1]
+  let tFractions = [];
+  for (let i = 0; i < numberOfCuts; i++) {
+    tFractions.push(i / (numberOfCuts - 1));
+  }
+
+  if (blendDirection === 'c2_to_c1') {
+    tFractions.reverse();
+  } else if (blendDirection === 'center_out') {
+    tFractions.sort((a, b) => Math.abs(a - 0.5) - Math.abs(b - 0.5));
+  }
+
+  // Generate passes
+  const passes = [];
+  const uSegments = 50;
+
+  if (blendMethod === 'along') {
+    // Tool traces along curves, morphing across t
+    tFractions.forEach((t, pIdx) => {
+      const passPts = [];
+      const reverse = !isOneWay && (pIdx % 2 === 1);
+      for (let s = 0; s <= uSegments; s++) {
+        const u = reverse ? 1 - (s / uSegments) : (s / uSegments);
+        const p1 = getC1(u);
+        const p2 = getC2(u);
+        const mx = (1 - t) * p1.x + t * p2.x;
+        const mz = (1 - t) * p1.z + t * p2.z;
+        passPts.push(samplePoint(mx, mz));
+      }
+      passes.push(passPts);
+    });
+  } else {
+    // Tool traces across curves, stepping along u
+    const transverseCuts = Math.max(5, Math.ceil((maxX - minX) / stepover));
+    for (let j = 0; j < transverseCuts; j++) {
+      const u = j / (transverseCuts - 1);
+      const p1 = getC1(u);
+      const p2 = getC2(u);
+      const passPts = [];
+      const reverse = !isOneWay && (j % 2 === 1);
+      const tSteps = 30;
+      for (let k = 0; k <= tSteps; k++) {
+        const t = reverse ? 1 - (k / tSteps) : (k / tSteps);
+        const mx = (1 - t) * p1.x + t * p2.x;
+        const mz = (1 - t) * p1.z + t * p2.z;
+        passPts.push(samplePoint(mx, mz));
+      }
+      passes.push(passPts);
+    }
+  }
+
+  // CNC Motion Sequencing: Rapid in, plunge, cuts, transitions, retract
+  if (passes.length > 0 && passes[0].length > 0) {
+    const firstPt = passes[0][0];
+    const safeClearanceY = topY + Number(rapidHeight);
+    const safeFeedY = topY + Number(feedPlane);
+
+    // Initial safe rapid positioning
+    rapidLines.push([
+      new THREE.Vector3(firstPt.x, safeClearanceY, firstPt.z),
+      new THREE.Vector3(firstPt.x, safeFeedY, firstPt.z)
+    ]);
+
+    // Controlled plunge from feed plane to start depth
+    cuttingLines.push([
+      new THREE.Vector3(firstPt.x, safeFeedY, firstPt.z),
+      new THREE.Vector3(firstPt.x, firstPt.y, firstPt.z)
+    ]);
+
+    for (let pIdx = 0; pIdx < passes.length; pIdx++) {
+      const pass = passes[pIdx];
+
+      // Cut along pass
+      for (let i = 0; i < pass.length - 1; i++) {
+        cuttingLines.push([
+          new THREE.Vector3(pass[i].x, pass[i].y, pass[i].z),
+          new THREE.Vector3(pass[i + 1].x, pass[i + 1].y, pass[i + 1].z)
+        ]);
+      }
+
+      // Transition to next pass
+      if (pIdx < passes.length - 1) {
+        const nextPass = passes[pIdx + 1];
+        const curEnd = pass[pass.length - 1];
+        const nextStart = nextPass[0];
+
+        if (isOneWay) {
+          // Retract to clearance, rapid to next pass start, plunge
+          rapidLines.push([
+            new THREE.Vector3(curEnd.x, curEnd.y, curEnd.z),
+            new THREE.Vector3(curEnd.x, safeClearanceY, curEnd.z)
+          ]);
+          rapidLines.push([
+            new THREE.Vector3(curEnd.x, safeClearanceY, curEnd.z),
+            new THREE.Vector3(nextStart.x, safeClearanceY, nextStart.z)
+          ]);
+          rapidLines.push([
+            new THREE.Vector3(nextStart.x, safeClearanceY, nextStart.z),
+            new THREE.Vector3(nextStart.x, safeFeedY, nextStart.z)
+          ]);
+          cuttingLines.push([
+            new THREE.Vector3(nextStart.x, safeFeedY, nextStart.z),
+            new THREE.Vector3(nextStart.x, nextStart.y, nextStart.z)
+          ]);
+        } else {
+          // Zigzag smooth link between passes
+          cuttingLines.push([
+            new THREE.Vector3(curEnd.x, curEnd.y, curEnd.z),
+            new THREE.Vector3(nextStart.x, nextStart.y, nextStart.z)
+          ]);
+        }
+      }
+    }
+
+    // Final clearance retract
+    const lastPass = passes[passes.length - 1];
+    const lastPt = lastPass[lastPass.length - 1];
+    rapidLines.push([
+      new THREE.Vector3(lastPt.x, lastPt.y, lastPt.z),
+      new THREE.Vector3(lastPt.x, safeClearanceY, lastPt.z)
+    ]);
+  }
+
+  return {
+    cuttingLines,
+    rapidLines,
+    scallopHeight: Number(bp.scallopHeight ?? 0.005),
+    stepover,
+    numberOfCuts,
+    blendMethod
+  };
+}
+
+/**
  * Generates 2D/3D Rest Machining & Corner Cleanout Toolpath
  * Cleans unmachined material left by a previous larger roughing tool in internal corners and fillets.
  * Performs targeted corner picking with inward stepping passes and peripheral sweep arcs.
@@ -3842,6 +4116,9 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
   }
   if (strategy === 'scallop' || strategy === 'equal_scallop' || op.strategyKey === 'surface_finish_scallop' || op.badgeClass === 'scallop') {
     return generateSurfaceScallopToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
+  }
+  if (strategy === 'blend' || op.strategyKey === 'surface_finish_blend' || op.badgeClass === 'blend') {
+    return generateSurfaceBlendToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
   }
   if (strategy === 'probe') {
     const pCenter = op.center || {

@@ -163,6 +163,7 @@ export default function RibbonBar({
   onOpenSurfaceFinishProject,
   onOpenSurfaceFinishLeftover,
   onOpenSurfaceFinishScallop,
+  onOpenSurfaceFinishBlend,
   onCopyViewportImage,
   onPasteOp,
   onCutOp,
@@ -1767,6 +1768,10 @@ export default function RibbonBar({
                 }
                 if ((action === 'tp_3d_equal_scallop' || action === 'tp_3d_finish_scallop' || action === 'tp_3d_scallop') && onOpenSurfaceFinishScallop) {
                   onOpenSurfaceFinishScallop();
+                  return;
+                }
+                if ((action === 'tp_3d_finish_blend' || action === 'tp_3d_blend') && onOpenSurfaceFinishBlend) {
+                  onOpenSurfaceFinishBlend();
                   return;
                 }
                 if (opType && onQuickAddOp) {

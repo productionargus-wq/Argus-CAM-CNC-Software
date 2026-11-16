@@ -761,7 +761,100 @@ export function createDefaultSurfaceFinishState({
       transitionType: 'broken',
       spiralBlend: false,
       tipComp: 'tip'
+    },
+    blendParams: {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      blendMethod: 'along', // 'along' (along curves) | 'across' (across curves)
+      stepoverMode: 'stepover', // 'stepover' | 'cuts' | 'scallop'
+      stepover: Number((diameter * 0.15).toFixed(2)) || 0.5,
+      numberOfCuts: 25,
+      scallopHeight: 0.005, // 5 microns standard mold finish
+      curveSyncMode: 'length', // 'length' | 'entity' | 'param'
+      cuttingMethod: 'Zigzag', // 'Zigzag' | 'One way' | 'Spiral'
+      machiningDirection: 'climb', // 'climb' | 'conventional'
+      blendDirection: 'c1_to_c2', // 'c1_to_c2' | 'c2_to_c1' | 'center_out'
+      maxGapDistance: 10.0,
+      transitionType: 'broken', // 'broken' | 'smooth_s' | 'direct'
+      tangentialExtension: 1.0,
+      tipComp: 'tip',
+      autoDetectChains: true,
+      chain1: null,
+      chain2: null
     }
+  };
+}
+
+/**
+ * Automatically computes intelligent recommended parameters for Surface Finish Blend,
+ * model-aware, tool-aware, and collision-safe.
+ */
+export function computeRecommendedBlendParams({
+  tool = null,
+  driveBounds = null,
+  stockConfig = null
+} = {}) {
+  const finishDia = Math.max(0.5, Number(tool?.diameter ?? tool?.toolDiameter) || 6.0);
+  const finishRadius = finishDia / 2;
+  const finishCornerRadius = Number(
+    tool?.cornerRadius ??
+      tool?.cornerRad ??
+      (tool?.type === 'ball' ? finishRadius : 0.0)
+  );
+
+  // 1. Optimal finishing stepover: fine pitch for ball nose (~10% - 15% of cutter diameter)
+  const safeStepover = Number(Math.max(0.1, Math.min(1.0, finishDia * 0.12)).toFixed(2));
+  const stepover = safeStepover || 0.45;
+
+  // 2. Scallop height calculation
+  const scallopHeight = calculateScallopHeightFromStepover({
+    toolDiameter: finishDia,
+    cornerRadius: finishCornerRadius,
+    stepover,
+    toolType: tool?.type || 'ball'
+  });
+
+  // 3. Recommended cut count across typical part span
+  let numberOfCuts = 25;
+  if (driveBounds && driveBounds.min && driveBounds.max) {
+    const spanX = Math.abs(driveBounds.max.x - driveBounds.min.x);
+    const spanZ = Math.abs(driveBounds.max.z - driveBounds.min.z);
+    const maxSpan = Math.max(spanX, spanZ);
+    if (maxSpan > 0) {
+      numberOfCuts = Math.max(10, Math.min(150, Math.ceil(maxSpan / stepover)));
+    }
+  }
+
+  // 4. Safe depth bounds
+  let minDepth = -9999;
+  let maxDepth = 9999;
+  if (driveBounds && driveBounds.min && driveBounds.max) {
+    minDepth = Number((driveBounds.min.y - 0.5).toFixed(2));
+    maxDepth = Number((driveBounds.max.y + 1.0).toFixed(2));
+  }
+
+  return {
+    totalTolerance: 0.025,
+    filterToleranceRatio: 0.5,
+    oneWayArcFilter: false,
+    blendMethod: 'along',
+    stepoverMode: 'stepover',
+    stepover,
+    numberOfCuts,
+    scallopHeight: Number(scallopHeight.toFixed(4)) || 0.005,
+    curveSyncMode: 'length',
+    cuttingMethod: 'Zigzag',
+    machiningDirection: 'climb',
+    blendDirection: 'c1_to_c2',
+    maxGapDistance: 10.0,
+    transitionType: 'broken',
+    tangentialExtension: 1.0,
+    tipComp: 'tip',
+    autoDetectChains: true,
+    minDepth,
+    maxDepth,
+    depthLimitsEnabled: Boolean(driveBounds)
   };
 }
 

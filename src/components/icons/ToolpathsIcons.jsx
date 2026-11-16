@@ -208,6 +208,18 @@ export function Tp3dEqualScallopIcon({ size = 16, className = '' }) {
   );
 }
 
+export function Tp3dBlendIcon({ size = 16, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" className={className}>
+      <path d="M2 15 C 6 12 14 17 18 13 L 18 6 C 14 10 6 5 2 8 Z" fill="#fde68a" stroke="#d97706" strokeWidth="0.8" />
+      <path d="M2 8 C 6 5 14 10 18 6" stroke="#c026d3" strokeWidth="1.2" fill="none" />
+      <path d="M2 10.3 C 6 7.3 14 12.3 18 8.3" stroke="#0284c7" strokeWidth="1" strokeDasharray="1.5 1" fill="none" />
+      <path d="M2 12.6 C 6 9.6 14 14.6 18 10.6" stroke="#38bdf8" strokeWidth="1" strokeDasharray="1.5 1" fill="none" />
+      <path d="M2 15 C 6 12 14 17 18 13" stroke="#16a34a" strokeWidth="1.2" fill="none" />
+    </svg>
+  );
+}
+
 export function Tp3dWaterlineIcon({ size = 16, className = '' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none" className={className}>
@@ -544,6 +556,7 @@ export const TOOLPATHS_ICON_MAP = {
   Tp3dProject: Tp3dProjectIcon,
   Tp3dParallel: Tp3dParallelIcon,
   Tp3dEqualScallop: Tp3dEqualScallopIcon,
+  Tp3dBlend: Tp3dBlendIcon,
   Tp3dWaterline: Tp3dWaterlineIcon,
   Tp3dSpiral: Tp3dSpiralIcon,
   Tp3dRadial: Tp3dRadialIcon,

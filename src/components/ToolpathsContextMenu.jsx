@@ -134,6 +134,7 @@ export default function ToolpathsContextMenu({
   onOpenSurfaceFinishProject,
   onOpenSurfaceFinishLeftover,
   onOpenSurfaceFinishScallop,
+  onOpenSurfaceFinishBlend,
   onExportStockSTL,
   onToggleLockOp,
   onToggleGhostOp,
@@ -318,7 +319,7 @@ export default function ToolpathsContextMenu({
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishPencil ? onOpenSurfaceFinishPencil() : onAddOperation?.('pencil'))}>Pencil</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishLeftover ? onOpenSurfaceFinishLeftover() : onAddOperation?.('surface_finish_leftover'))}>Leftover</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishScallop ? onOpenSurfaceFinishScallop() : onAddOperation?.('scallop'))}>Scallop</div>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('blend'))}>Blend</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceFinishBlend ? onOpenSurfaceFinishBlend() : onAddOperation?.('blend'))}>Blend</div>
                 </div>
               )}
             </div>

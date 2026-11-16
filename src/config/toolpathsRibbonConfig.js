@@ -251,6 +251,14 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         action: 'tp_3d_finish_leftover',
         opType: 'surface_finish_leftover',
         tooltip: 'Surface Finish Leftover Material from Previous Larger Tool'
+      },
+      {
+        id: '3d_blend',
+        label: 'Blend',
+        icon: 'Tp3dBlend',
+        action: 'tp_3d_finish_blend',
+        opType: 'surface_finish_blend',
+        tooltip: 'Surface Finish Blend - Morphing Pass Toolpath Between Two Boundary Curves Across Drive Surfaces'
       }
     ]
   },

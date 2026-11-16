@@ -84,7 +84,8 @@ export default function ToolpathSurfaceSelectionModal({
     project: 'Project',
     leftover: 'Leftover',
     scallop: 'Scallop',
-    equal_scallop: 'Equal Scallop'
+    equal_scallop: 'Equal Scallop',
+    blend: 'Blend'
   };
   const activeTitle = strategyLabel || strategyTitles[mode] || 'Surface Finish';
 
