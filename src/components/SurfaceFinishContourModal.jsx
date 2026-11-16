@@ -136,6 +136,7 @@ function SurfaceFinishContourModalInner({
   const isParallelSteep = strategyMode === 'parallel_steep' || strategyMode === 'steep' || operation?.strategyKey === 'surface_finish_parallel_steep' || operation?.badgeClass === 'parallel_steep';
   const isPencil = strategyMode === 'pencil' || operation?.strategyKey === 'surface_finish_pencil' || operation?.badgeClass === 'pencil';
   const isRadial = strategyMode === 'radial' || operation?.strategyKey === 'surface_finish_radial' || operation?.badgeClass === 'radial';
+  const isProject = strategyMode === 'project' || operation?.strategyKey === 'surface_finish_project' || operation?.badgeClass === 'project';
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
   const detectedSurfaces = useMemo(() => {
@@ -188,10 +189,10 @@ function SurfaceFinishContourModalInner({
         null
       );
     }
-    if (isFlowline || isShallow || isParallel || isParallelSteep || isPencil || isRadial) {
+    if (isFlowline || isShallow || isParallel || isParallelSteep || isPencil || isRadial || isProject) {
       return (
         tools.find((t) => ['ball'].includes(String(t.type || '').toLowerCase())) ||
-        tools.find((t) => ['bull', 'ball'].includes(String(t.type || '').toLowerCase())) ||
+        tools.find((t) => ['bull', 'ball', 'flat', 'engrave'].includes(String(t.type || '').toLowerCase())) ||
         tools[0] ||
         null
       );
@@ -201,17 +202,17 @@ function SurfaceFinishContourModalInner({
       tools[0] ||
       null
     );
-  }, [operation, tools, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial]);
+  }, [operation, tools, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject]);
 
   const initialDefaults = useMemo(
     () =>
       createDefaultSurfaceFinishState({
         activeMachine,
         stockConfig,
-        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : 'contour',
+        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : 'contour',
         tool: initialTool
       }),
-    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, initialTool]
+    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, initialTool]
   );
 
   const [activeTab, setActiveTab] = useState('toolpath_params');
@@ -329,6 +330,32 @@ function SurfaceFinishContourModalInner({
       maxGapDistance: 10.0
     }),
     ...(operation?.radialParams || {})
+  }));
+
+  const [projectParams, setProjectParams] = useState(() => ({
+    ...(initialDefaults.projectParams || {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      projectType: 'curve',
+      projectionDirection: 'view_z',
+      curveSource: 'active_sketch',
+      machiningAngle: 0.0,
+      stepover: 1.0,
+      crosshatchEnabled: false,
+      crossAngle: 90.0,
+      crossStepover: 1.0,
+      sourceOpId: null,
+      depthOfCut: 0.2,
+      numberOfPasses: 1,
+      stepdown: 0.2,
+      cuttingMethod: 'Zigzag',
+      machiningDirection: 'climb',
+      maxGapDistance: 10.0,
+      transitionType: 'broken',
+      tipComp: 'tip'
+    }),
+    ...(operation?.projectParams || {})
   }));
 
   // Auto-compute center point and outer radius from detected surfaces if autoCenter is active
@@ -512,7 +539,9 @@ function SurfaceFinishContourModalInner({
                 ? 'Surface Finish Pencil'
                 : isRadial
                   ? 'Surface Finish Radial'
-                  : 'Surface Finish Contour';
+                  : isProject
+                    ? 'Surface Finish Project'
+                    : 'Surface Finish Contour';
     const rapidHeight = surfaceParams.clearanceEnabled && surfaceParams.clearanceMode === 'abs'
       ? Number(surfaceParams.clearance)
       : (Number(surfaceParams.retract) || 25.0);
@@ -525,15 +554,15 @@ function SurfaceFinishContourModalInner({
     const updatedOp = {
       ...(operation || {}),
       name: operation?.name || opTitle,
-      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : 'surface_finish_contour',
-      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : 'surface_finish_contour',
-      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : 'contour',
-      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallelSteep ? 'PS' : isParallel ? 'PA' : isPencil ? 'PC' : isRadial ? 'RD' : 'SC',
+      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : 'surface_finish_contour',
+      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : 'surface_finish_contour',
+      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : 'contour',
+      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallelSteep ? 'PS' : isParallel ? 'PA' : isPencil ? 'PC' : isRadial ? 'RD' : isProject ? 'PJ' : 'SC',
       machiningAngle: Number(contourParams.machiningAngle ?? 90.0),
       steepFromSlope: Number(contourParams.steepFromSlope ?? 35.0),
       steepToSlope: Number(contourParams.steepToSlope ?? 90.0),
-      stepover: Number(isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
-      cuttingMethod: isRadial ? (radialParams.cuttingMethod || 'zigzag').toLowerCase() : isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
+      stepover: Number(isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? projectParams.stepover : isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
+      cuttingMethod: isRadial ? (radialParams.cuttingMethod || 'zigzag').toLowerCase() : isProject ? (projectParams.cuttingMethod || 'zigzag').toLowerCase() : isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
       toolId: activeTool?.id || toolParams.toolId || 1,
       toolName: toolParams.toolName,
       toolNumber: Number(toolParams.toolNumber) || 1,
@@ -546,10 +575,10 @@ function SurfaceFinishContourModalInner({
       plungeFeedRate: Number(toolParams.plungeRate) || 150,
       retractRate: Number(toolParams.retractRate) || 250,
       rapidHeight,
-      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : isPencil ? pencilParams.stepover : isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : contourParams.maxStepdown) || 0.5,
+      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : isPencil ? pencilParams.stepover : isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? (projectParams.depthOfCut || projectParams.stepdown || 0.2) : contourParams.maxStepdown) || 0.5,
       stockToLeaveXY: Number(surfaceParams.stockToLeaveDrive) || 0.0,
       stockToLeaveZ: Number(surfaceParams.stockToLeaveDrive) || 0.0,
-      cuttingDirection: isPocket ? pocketParams.machiningDirection : isPencil ? pencilParams.machiningDirection : contourParams.direction,
+      cuttingDirection: isPocket ? pocketParams.machiningDirection : isPencil ? pencilParams.machiningDirection : isProject ? projectParams.machiningDirection : contourParams.direction,
       contourSide: surfaceParams.containmentMode,
       cutStyle: isFlowline
         ? String(flowlineParams.cuttingMethod || 'Zigzag').toLowerCase()
@@ -557,8 +586,10 @@ function SurfaceFinishContourModalInner({
           ? String(pencilParams.cuttingMethod || 'Zigzag').toLowerCase()
           : isRadial
             ? String(radialParams.cuttingMethod || 'Zigzag').toLowerCase()
-            : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
-      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : isPencil ? pencilParams.stepover : isRadial ? radialParams.maxStepover : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
+            : isProject
+              ? String(projectParams.cuttingMethod || 'Zigzag').toLowerCase()
+              : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
+      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : isPencil ? pencilParams.stepover : isRadial ? radialParams.maxStepover : isProject ? projectParams.stepover : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
       biTangencyRadius: Number(pencilParams.biTangencyRadius) || 3.0,
       numberOfPasses: Number(pencilParams.numberOfPasses) || 1,
       driveSurfaceIds: selectedSurfaceIds,
@@ -581,7 +612,8 @@ function SurfaceFinishContourModalInner({
       flowlineData: { ...flowlineData },
       flowlineParams: { ...flowlineParams },
       pencilParams: { ...pencilParams },
-      radialParams: { ...radialParams }
+      radialParams: { ...radialParams },
+      projectParams: { ...projectParams }
     };
 
     onSaveOperation?.(updatedOp);
@@ -653,7 +685,9 @@ function SurfaceFinishContourModalInner({
                           ? 'Surface Finish Pencil'
                           : isRadial
                             ? 'Surface Finish Radial'
-                            : 'Surface Finish Contour'}
+                            : isProject
+                              ? 'Surface Finish Project'
+                              : 'Surface Finish Contour'}
             </span>
             <span
               style={{
@@ -1077,6 +1111,77 @@ function SurfaceFinishContourModalInner({
           </div>
         )}
 
+        {/* Project Tutorial Quick Helper Banner */}
+        {isProject && (
+          <div
+            style={{
+              background: '#f5f3ff',
+              borderBottom: '1px solid #ddd6fe',
+              padding: '6px 12px',
+              fontSize: '11px',
+              color: '#5b21b6',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px'
+            }}
+          >
+            <div>
+              <strong>Surface Finish Project:</strong> 1. Select Ball/Bull Nose or Engrave Tool &rarr; 2. Surface Parameters (Clearance 25mm Abs) &rarr; 3. Project Parameters (Curve/Crosshatch, Depth 0.2mm, Zigzag) &rarr; Click <strong>Green Checkmark (OK)</strong>.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const projTool = tools.find((t) => t.type === 'ball' || /ball|engrave|bull/i.test(t.name)) || tools[0];
+                if (projTool) {
+                  setSelectedToolId(projTool.id);
+                  setToolParams((prev) => buildToolStateFromRecord(projTool, caps, prev));
+                }
+                setSurfaceParams((p) => ({
+                  ...p,
+                  clearanceEnabled: true,
+                  clearance: 25.0,
+                  clearanceMode: 'abs',
+                  retractEnabled: true,
+                  retract: 2.5,
+                  retractMode: 'inc',
+                  feedPlane: 2.0,
+                  feedPlaneMode: 'inc',
+                  stockToLeaveDrive: 0.0
+                }));
+                setProjectParams((p) => ({
+                  ...p,
+                  totalTolerance: 0.025,
+                  projectType: 'curve',
+                  projectionDirection: 'view_z',
+                  depthOfCut: 0.2,
+                  numberOfPasses: 1,
+                  stepdown: 0.2,
+                  cuttingMethod: 'Zigzag',
+                  machiningDirection: 'climb',
+                  stepover: 1.0,
+                  crosshatchEnabled: false,
+                  maxGapDistance: 10.0
+                }));
+                onNotify?.('Loaded recommended Surface Finish Project parameters (0.2mm depth, Zigzag, View Z).', 'success');
+              }}
+              style={{
+                background: '#7c3aed',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '3px 8px',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⚡ Load Recommended Project Values
+            </button>
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', background: '#f0f0f0', padding: '5px 8px 0 8px', borderBottom: '1px solid #d1d5db' }}>
           {[
@@ -1098,7 +1203,9 @@ function SurfaceFinishContourModalInner({
                           ? 'Finish pencil parameters'
                           : isRadial
                             ? 'Finish radial parameters'
-                            : 'Finish contour parameters'
+                            : isProject
+                              ? 'Finish project parameters'
+                              : 'Finish contour parameters'
             }
           ].map((tab) => {
             const active = activeTab === tab.id;
@@ -3238,6 +3345,316 @@ function SurfaceFinishContourModalInner({
                       })}
                       <text x="140" y="96" textAnchor="middle" fontSize="9" fill="#0f172a" fontWeight="600">
                         Center ({radialParams.centerPoint?.x ?? 0}, {radialParams.centerPoint?.y ?? 0}) • R_in: {radialParams.startRadius ?? 0}mm • R_out: {radialParams.endRadius ?? 50}mm
+                      </text>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== TAB 3I: FINISH PROJECT PARAMETERS (MASTERCAM VERBATIM) ==================== */}
+          {activeTab === 'finish_contour_params' && isProject && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
+                {/* LEFT COLUMN: Projection Type, Source, Angles, Direction, Tolerances */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  {/* Total tolerance */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <button type="button" onClick={() => setActiveSubDialog('total_tolerance')} style={{ ...MC_BUTTON, width: '100%', borderColor: '#7c3aed' }}>
+                      Total tolerance...
+                    </button>
+                    <input
+                      type="number"
+                      step="0.005"
+                      value={projectParams.totalTolerance ?? 0.025}
+                      onChange={(e) => setProjectParams((p) => ({ ...p, totalTolerance: Number(e.target.value) }))}
+                      style={CLASSIC_YELLOW}
+                    />
+                  </div>
+
+                  {/* Projection Source Type */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Project Source Entity</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '8px' }}>
+                      {[
+                        { id: 'curve', label: 'Curves / Wireframe', icon: '〰' },
+                        { id: 'crosshatch', label: 'Crosshatch Grid', icon: '▦' },
+                        { id: 'toolpath', label: 'Toolpath (NCI)', icon: '⮑' }
+                      ].map((t) => {
+                        const active = (projectParams.projectType || 'curve') === t.id;
+                        return (
+                          <div
+                            key={t.id}
+                            onClick={() => setProjectParams((p) => ({ ...p, projectType: t.id }))}
+                            style={{
+                              border: active ? '2px solid #7c3aed' : '1px solid #cbd5e1',
+                              background: active ? '#f5f3ff' : '#ffffff',
+                              padding: '6px 4px',
+                              borderRadius: '2px',
+                              cursor: 'pointer',
+                              textAlign: 'center'
+                            }}
+                          >
+                            <div style={{ fontSize: '13px' }}>{t.icon}</div>
+                            <div style={{ fontWeight: active ? 600 : 500, color: active ? '#6d28d9' : '#1e293b', fontSize: '10px', marginTop: '2px' }}>
+                              {t.label}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Mode-Specific Sub-Settings */}
+                    {(projectParams.projectType || 'curve') === 'curve' && (
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '6px', borderRadius: '2px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <div style={{ fontSize: '10.5px', color: '#475569' }}>
+                          <strong>Source:</strong> Active Sketches, Text, & Level 10 Wireframe
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#64748b' }}>
+                          • Discretizes 2D/3D chains and projects down onto 3D surfaces.<br />
+                          • Auto-generates centered demonstration pattern if no curves are drawn yet.
+                        </div>
+                      </div>
+                    )}
+
+                    {projectParams.projectType === 'crosshatch' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '10.5px', color: '#475569' }}>Machining angle (°)</span>
+                          <input
+                            type="number"
+                            step="5"
+                            value={projectParams.machiningAngle ?? 0.0}
+                            onChange={(e) => setProjectParams((p) => ({ ...p, machiningAngle: Number(e.target.value) }))}
+                            style={CLASSIC_YELLOW}
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '10.5px', color: '#475569' }}>Stepover (mm)</span>
+                          <input
+                            type="number"
+                            step="0.2"
+                            min="0.1"
+                            value={projectParams.stepover ?? 1.0}
+                            onChange={(e) => setProjectParams((p) => ({ ...p, stepover: Number(e.target.value) }))}
+                            style={CLASSIC_YELLOW}
+                          />
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginTop: '4px' }}>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(projectParams.crosshatchEnabled)}
+                            onChange={(e) => setProjectParams((p) => ({ ...p, crosshatchEnabled: e.target.checked }))}
+                          />
+                          <span style={{ fontWeight: 600, color: '#1e293b' }}>Enable Crosshatch (2nd Angle)</span>
+                        </label>
+                        {projectParams.crosshatchEnabled && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', paddingLeft: '16px' }}>
+                            <div>
+                              <span style={{ fontSize: '10px', color: '#475569' }}>Cross angle (°)</span>
+                              <input
+                                type="number"
+                                step="5"
+                                value={projectParams.crossAngle ?? 90.0}
+                                onChange={(e) => setProjectParams((p) => ({ ...p, crossAngle: Number(e.target.value) }))}
+                                style={CLASSIC_YELLOW}
+                              />
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '10px', color: '#475569' }}>Cross step (mm)</span>
+                              <input
+                                type="number"
+                                step="0.2"
+                                min="0.1"
+                                value={projectParams.crossStepover ?? projectParams.stepover ?? 1.0}
+                                onChange={(e) => setProjectParams((p) => ({ ...p, crossStepover: Number(e.target.value) }))}
+                                style={CLASSIC_YELLOW}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {projectParams.projectType === 'toolpath' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Source Operation to Project:</span>
+                        <select
+                          value={projectParams.sourceOpId || ''}
+                          onChange={(e) => setProjectParams((p) => ({ ...p, sourceOpId: e.target.value }))}
+                          style={{ ...CLASSIC_YELLOW, height: '26px' }}
+                        >
+                          <option value="">(Most Recent 2D Operation)</option>
+                          {(operation?.availableOps || []).map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.id}: {o.name || o.strategyKey}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </fieldset>
+
+                  {/* Projection Direction */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Projection Direction</legend>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {[
+                        { id: 'view_z', label: 'Along Tool Axis / View Z (Standard 3-Axis Downward)' },
+                        { id: 'surface_normal', label: 'Normal to Drive Surfaces (3D Contact)' }
+                      ].map((dir) => (
+                        <label key={dir.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="projectDirection"
+                            checked={(projectParams.projectionDirection || 'view_z') === dir.id}
+                            onChange={() => setProjectParams((p) => ({ ...p, projectionDirection: dir.id }))}
+                          />
+                          <span>{dir.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  {/* Gap Distance */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: '#475569' }}>Max gap distance (mm)</span>
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      value={projectParams.maxGapDistance ?? 10.0}
+                      onChange={(e) => setProjectParams((p) => ({ ...p, maxGapDistance: Number(e.target.value) }))}
+                      style={CLASSIC_YELLOW}
+                    />
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: Cutting Method, Depth of Cut, Direction, Schematic */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 }}>
+                  {/* Cutting Method */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Cutting Method & Direction</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '6px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569', fontWeight: 600 }}>Method</span>
+                        {[
+                          { id: 'Zigzag', label: 'Zigzag (Bi-directional)' },
+                          { id: 'One way', label: 'One Way (Retract per pass)' }
+                        ].map((m) => (
+                          <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="projMethod"
+                              checked={(projectParams.cuttingMethod || 'Zigzag').toLowerCase() === m.id.toLowerCase()}
+                              onChange={() => setProjectParams((p) => ({ ...p, cuttingMethod: m.id }))}
+                            />
+                            <span>{m.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569', fontWeight: 600 }}>Machining Direction</span>
+                        {[
+                          { id: 'climb', label: 'Climb Milling' },
+                          { id: 'conventional', label: 'Conventional' }
+                        ].map((d) => (
+                          <label key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="projMachDir"
+                              checked={(projectParams.machiningDirection || 'climb') === d.id}
+                              onChange={() => setProjectParams((p) => ({ ...p, machiningDirection: d.id }))}
+                            />
+                            <span>{d.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </fieldset>
+
+                  {/* Depth Control & Multi-Passes */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Depth of Cut & Passes</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Depth of Cut (mm)</span>
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="0.0"
+                          value={projectParams.depthOfCut ?? 0.2}
+                          onChange={(e) => setProjectParams((p) => ({ ...p, depthOfCut: Number(e.target.value) }))}
+                          style={CLASSIC_YELLOW}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Number of Passes</span>
+                        <input
+                          type="number"
+                          step="1"
+                          min="1"
+                          max="10"
+                          value={projectParams.numberOfPasses ?? 1}
+                          onChange={(e) => setProjectParams((p) => ({ ...p, numberOfPasses: Math.max(1, parseInt(e.target.value) || 1) }))}
+                          style={CLASSIC_YELLOW}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Stepdown (mm)</span>
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="0.05"
+                          value={projectParams.stepdown ?? 0.2}
+                          onChange={(e) => setProjectParams((p) => ({ ...p, stepdown: Number(e.target.value) }))}
+                          style={CLASSIC_YELLOW}
+                        />
+                      </div>
+                    </div>
+                  </fieldset>
+
+                  {/* Mastercam Schematic Graphic for 3D Project */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '3px', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ fontSize: '10.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                      3D Surface Project Topology ({projectParams.projectType || 'curve'} • Depth: {projectParams.depthOfCut ?? 0.2}mm • {projectParams.cuttingMethod || 'Zigzag'})
+                    </div>
+                    <svg width="280" height="100" viewBox="0 0 280 100">
+                      {/* Projection Source Plane (Top) */}
+                      <line x1="30" y1="18" x2="250" y2="18" stroke="#7c3aed" strokeWidth="2" strokeDasharray="4,4" />
+                      <text x="140" y="14" textAnchor="middle" fontSize="9" fill="#6d28d9" fontWeight="600">
+                        {projectParams.projectType === 'crosshatch' ? 'Crosshatch Grid Pattern (Z_top)' : projectParams.projectType === 'toolpath' ? 'Source Toolpath Curve' : '2D / 3D Curve Geometry'}
+                      </text>
+                      {/* Curved 3D Drive Surface (Dome Profile) */}
+                      <path
+                        d="M 20 85 Q 140 38 260 85"
+                        fill="none"
+                        stroke="#0284c7"
+                        strokeWidth="3"
+                      />
+                      <text x="140" y="78" textAnchor="middle" fontSize="9" fill="#0369a1" fontWeight="600">
+                        3D Drive Surface
+                      </text>
+                      {/* Downward Projection Rays */}
+                      {[50, 80, 110, 140, 170, 200, 230].map((rx) => {
+                        const normX = (rx - 140) / 120;
+                        const hitY = 38 + 47 * (normX * normX);
+                        return (
+                          <g key={rx}>
+                            <line x1={rx} y1="20" x2={rx} y2={hitY} stroke="#a855f7" strokeWidth="1.2" strokeDasharray="2,2" />
+                            <polygon points={`${rx - 2.5},${hitY - 5} ${rx + 2.5},${hitY - 5} ${rx},${hitY}`} fill="#a855f7" />
+                            <circle cx={rx} cy={hitY} r="2.2" fill="#10b981" />
+                          </g>
+                        );
+                      })}
+                      {/* Tool Representation touching center */}
+                      <g transform="translate(140, 38)">
+                        <rect x="-3" y="-30" width="6" height="26" fill="#64748b" />
+                        <path d="M -3 -4 A 3 3 0 0 0 3 -4 Z" fill="#f59e0b" />
+                      </g>
+                      <text x="140" y="96" textAnchor="middle" fontSize="9" fill="#0f172a">
+                        Projection: View Z &rarr; Surface Normal Contact &rarr; Depth: {projectParams.depthOfCut ?? 0.2}mm
                       </text>
                     </svg>
                   </div>

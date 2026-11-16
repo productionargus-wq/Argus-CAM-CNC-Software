@@ -667,6 +667,28 @@ export function createDefaultSurfaceFinishState({
       steepToSlope: 90.0,
       transitionType: 'broken',
       maxGapDistance: 10.0
+    },
+    projectParams: {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      projectType: 'curve', // 'curve' | 'crosshatch' | 'toolpath'
+      projectionDirection: 'view_z', // 'view_z' | 'surface_normal'
+      curveSource: 'active_sketch', // 'active_sketch' | 'all_wireframe'
+      machiningAngle: 0.0, // degrees for crosshatch/raster
+      stepover: Number((diameter * 0.25).toFixed(2)) || 1.0,
+      crosshatchEnabled: false,
+      crossAngle: 90.0,
+      crossStepover: Number((diameter * 0.25).toFixed(2)) || 1.0,
+      sourceOpId: null,
+      depthOfCut: 0.2, // mm engraving/cutting depth into surface
+      numberOfPasses: 1,
+      stepdown: 0.2,
+      cuttingMethod: 'Zigzag', // 'Zigzag' | 'One way'
+      machiningDirection: 'climb',
+      maxGapDistance: 10.0,
+      transitionType: 'broken',
+      tipComp: 'tip'
     }
   };
 }

@@ -141,9 +141,9 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         id: '3d_project',
         label: 'Project',
         icon: 'Tp3dProject',
-        action: 'tp_3d_project',
-        opType: 'pencil',
-        tooltip: 'Project Toolpath Curves onto 3D Geometry'
+        action: 'tp_3d_finish_project',
+        opType: 'surface_finish_project',
+        tooltip: 'Surface Finish Project Curves, Patterns & Toolpaths onto 3D Drive Surfaces'
       },
       {
         id: '3d_finish_flowline',

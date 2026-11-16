@@ -187,6 +187,17 @@ export default function CAMOperationsWizardModal({
       badgeClass: 'radial'
     },
     {
+      id: 'project',
+      name: '3D Surface Finish Project',
+      badge: 'PJ',
+      color: '#8b5cf6',
+      desc: 'Project 2D/3D wireframe curves, crosshatch patterns, or toolpaths onto 3D drive surfaces',
+      defaultStepover: 20,
+      defaultStepdown: 0.2,
+      defaultDepth: 0.2,
+      badgeClass: 'project'
+    },
+    {
       id: 'rest_milling',
       name: 'Rest Machining (Corner Pick)',
       badge: 'RM',

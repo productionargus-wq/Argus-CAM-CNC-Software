@@ -42,6 +42,7 @@ const ALL_MASTERCAM_COMMANDS = [
   { id: 'surface_finish_shallow', name: 'Surface Finish Shallow', category: 'Toolpaths > 3D', shortcut: '', desc: '3D surface finish shallow toolpath for flat and gentle slopes (0°–35°)' },
   { id: 'surface_finish_pencil', name: 'Surface Finish Pencil', category: 'Toolpaths > 3D', shortcut: '', desc: '3D bi-tangency fillet corner and valley cleanup' },
   { id: 'surface_finish_radial', name: 'Surface Finish Radial', category: 'Toolpaths > 3D', shortcut: '', desc: '3D surface finish radial toolpath radiating from or toward a center point' },
+  { id: 'surface_finish_project', name: 'Surface Finish Project', category: 'Toolpaths > 3D', shortcut: '', desc: '3D surface finish project curves, crosshatch patterns, or toolpaths onto drive surfaces' },
   { id: 'contour_2d', name: '2D Contour', category: 'Toolpaths > 2D', shortcut: '', desc: 'Profile milling along open or closed 2D chains' },
   { id: 'pocket_2d', name: '2D Pocket', category: 'Toolpaths > 2D', shortcut: '', desc: 'Zigzag, spiral, or true spiral pocket milling' },
   { id: 'drill_cycle', name: 'Hole Drilling', category: 'Toolpaths > 2D', shortcut: '', desc: 'Canned drilling, pecking (G83), and tapping cycles' },

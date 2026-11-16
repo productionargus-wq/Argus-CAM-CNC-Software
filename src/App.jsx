@@ -1945,6 +1945,8 @@ export default function App() {
       op?.badgeClass === 'pencil' ||
       op?.strategyKey === 'surface_finish_radial' ||
       op?.badgeClass === 'radial' ||
+      op?.strategyKey === 'surface_finish_project' ||
+      op?.badgeClass === 'project' ||
       op?.usesCustomSurfaces
     ) {
       const mode =
@@ -1962,7 +1964,9 @@ export default function App() {
                     ? 'pencil'
                     : op.strategyKey === 'surface_finish_radial' || op.badgeClass === 'radial'
                       ? 'radial'
-                      : 'contour';
+                      : op.strategyKey === 'surface_finish_project' || op.badgeClass === 'project'
+                        ? 'project'
+                        : 'contour';
       if (mode === 'flowline') {
         setSurfaceSelectionDraft({
           mode: 'flowline',
@@ -2200,6 +2204,9 @@ export default function App() {
       return;
     } else if (s === 'radial' || s === 'surface_finish_radial' || s === '3d_radial') {
       openSurfaceFinishModal('radial', null);
+      return;
+    } else if (s === 'project' || s === 'surface_finish_project' || s === '3d_project') {
+      openSurfaceFinishModal('project', null);
       return;
     } else if (s === 'swarf' || s === '5axis_swarf') {
       newOp = {
@@ -3349,6 +3356,8 @@ export default function App() {
                 ? 'Surface Finish Pencil'
                 : updatedOp.strategyKey === 'surface_finish_radial'
                   ? 'Surface Finish Radial'
+                : updatedOp.strategyKey === 'surface_finish_project'
+                  ? 'Surface Finish Project'
                   : 'Surface Finish Contour';
     const finalOp = {
       ...updatedOp,
@@ -3539,6 +3548,10 @@ export default function App() {
       case 'surface_finish_radial':
       case 'radial':
         openSurfaceFinishModal('radial', null);
+        break;
+      case 'surface_finish_project':
+      case 'project':
+        openSurfaceFinishModal('project', null);
         break;
       case 'verify_solid':
         setIsSolidVerifyModalOpen(true);
@@ -5976,6 +5989,7 @@ export default function App() {
         onOpenSurfaceFinishParallelSteep={() => openSurfaceFinishModal('parallel_steep', null)}
         onOpenSurfaceFinishPencil={() => openSurfaceFinishModal('pencil', null)}
         onOpenSurfaceFinishRadial={() => openSurfaceFinishModal('radial', null)}
+        onOpenSurfaceFinishProject={() => openSurfaceFinishModal('project', null)}
         onCopyViewportImage={handleCopyViewportImage}
         onPasteOp={handlePasteOp}
         onCutOp={handleCutOp}
@@ -6228,6 +6242,7 @@ export default function App() {
           onOpenSurfaceFinishParallelSteep={() => openSurfaceFinishModal('parallel_steep', null)}
           onOpenSurfaceFinishPencil={() => openSurfaceFinishModal('pencil', null)}
           onOpenSurfaceFinishRadial={() => openSurfaceFinishModal('radial', null)}
+          onOpenSurfaceFinishProject={() => openSurfaceFinishModal('project', null)}
           onEditOpGeometry={handleOpenFlowlineGeometryEdit}
           onExportStockSTL={handleExportStockSTL}
           activeDrawingTool={activeDrawingTool}
