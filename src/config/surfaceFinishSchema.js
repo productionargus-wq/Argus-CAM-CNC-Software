@@ -689,6 +689,25 @@ export function createDefaultSurfaceFinishState({
       maxGapDistance: 10.0,
       transitionType: 'broken',
       tipComp: 'tip'
+    },
+    leftoverParams: {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      refToolDiameter: 12.0,
+      refToolCornerRadius: 6.0,
+      refToolType: 'ball', // 'ball' | 'bull' | 'flat'
+      machiningMethod: 'along', // 'along' | 'across'
+      stepover: Number((diameter * 0.15).toFixed(2)) || 0.4,
+      numberOfPasses: 3,
+      overlap: 1.0, // mm tangential extension to blend
+      cuttingMethod: 'Zigzag', // 'Zigzag' | 'One way'
+      machiningDirection: 'climb',
+      maxGapDistance: 10.0,
+      shallowCutoffAngle: 35.0,
+      steepCutoffAngle: 90.0,
+      transitionType: 'broken',
+      tipComp: 'tip'
     }
   };
 }

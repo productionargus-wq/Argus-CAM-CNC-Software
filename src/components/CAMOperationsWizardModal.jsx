@@ -198,6 +198,17 @@ export default function CAMOperationsWizardModal({
       badgeClass: 'project'
     },
     {
+      id: 'surface_finish_leftover',
+      name: '3D Surface Finish Leftover',
+      badge: 'LO',
+      color: '#10b981',
+      desc: 'Mastercam 3D rest milling targeting leftover fillet/corner material with tangential overlap blending',
+      defaultStepover: 15,
+      defaultStepdown: 0.4,
+      defaultDepth: 15.0,
+      badgeClass: 'leftover'
+    },
+    {
       id: 'rest_milling',
       name: 'Rest Machining (Corner Pick)',
       badge: 'RM',

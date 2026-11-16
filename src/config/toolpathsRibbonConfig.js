@@ -243,6 +243,14 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         action: 'tp_3d_hybrid',
         opType: 'waterline',
         tooltip: 'Combined Steep Waterline & Shallow Scallop'
+      },
+      {
+        id: '3d_leftover',
+        label: 'Leftover',
+        icon: 'Tp3dEqualScallop',
+        action: 'tp_3d_finish_leftover',
+        opType: 'surface_finish_leftover',
+        tooltip: 'Surface Finish Leftover Material from Previous Larger Tool'
       }
     ]
   },

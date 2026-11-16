@@ -874,6 +874,21 @@ export function buildContourParamsFromOp(op = {}) {
       crossAngle: Number(op.crossAngle ?? 90.0),
       crossStepover: Number(op.crossStepover ?? op.stepover ?? 1.0),
       maxGapDistance: Number(op.maxGapDistance ?? 10.0)
+    },
+    leftoverParams: op.leftoverParams || {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      refToolDiameter: Number(op.refToolDiameter ?? 12.0),
+      refToolCornerRadius: Number(op.refToolCornerRadius ?? 6.0),
+      refToolType: op.refToolType || 'ball',
+      machiningMethod: op.machiningMethod || 'along',
+      stepover: Number(op.stepover ?? 0.4),
+      numberOfPasses: Number(op.numberOfPasses ?? 3),
+      overlap: Number(op.overlap ?? 1.0),
+      cuttingMethod: op.cuttingMethod || 'Zigzag',
+      machiningDirection: op.cuttingDirection || 'climb',
+      maxGapDistance: Number(op.maxGapDistance ?? 10.0)
     }
   };
 }
@@ -2673,6 +2688,370 @@ export function generateSurfaceShallowToolpath(bounds, tool, params = {}, model 
 }
 
 /**
+ * Generates 3D Surface Finish Leftover (Rest Machining) Toolpath
+ * Mastercam-standard 3D finishing that removes material left behind by a larger
+ * reference roughing/semi-finishing cutter in concave fillets, valleys, and corners.
+ */
+export function generateSurfaceLeftoverToolpath(bounds, tool, params = {}, model = null) {
+  const effBounds = model ? computeDriveModelBounds(model, bounds) : resolveSafeBounds(bounds);
+  const lp = params.leftoverParams || {};
+  const {
+    rapidHeight = 15.0,
+    feedPlane = 2.5,
+    stockToLeaveZ = 0.0,
+    totalDepth = 15.0
+  } = params;
+
+  const cuttingLines = [];
+  const rapidLines = [];
+
+  const topY = effBounds.max.y;
+  const safeTotalDepth = Math.abs(Number(totalDepth)) || 15.0;
+  const floorY = topY - safeTotalDepth;
+
+  // Active finishing tool geometry
+  const toolDia = Math.max(0.5, Number(tool.diameter ?? tool.toolDiameter) || 6.0);
+  const toolRadius = toolDia / 2;
+  const toolCornerRadius = tool.type === 'ball' ? toolRadius : (Number(tool.cornerRadius) || 0.0);
+  const isBall = tool.type === 'ball' || toolCornerRadius > 0;
+
+  // Reference roughing tool geometry
+  const refToolDia = Math.max(toolDia, Number(lp.refToolDiameter) || 12.0);
+  const refToolRadius = refToolDia / 2;
+  const refToolCornerRadius = Number(lp.refToolCornerRadius ?? refToolRadius);
+
+  // Leftover zone dimensions
+  const deltaR = Math.max(0.1, refToolCornerRadius - toolCornerRadius);
+  const overlap = Math.max(0.0, Number(lp.overlap ?? 1.0));
+  const halfZoneWidth = deltaR + overlap;
+
+  const machiningMethod = lp.machiningMethod || 'along'; // 'along' | 'across'
+  const rawMethod = String(lp.cuttingMethod || params.cuttingMethod || 'zigzag').toLowerCase().replace(/[\s_-]+/g, '');
+  const isOneWay = rawMethod === 'oneway';
+  const maxGapDistance = Math.max(1.0, Number(lp.maxGapDistance ?? 10.0));
+  const nPasses = Math.max(1, Math.min(50, Math.round(Number(lp.numberOfPasses)) || 3));
+  const stepover = Math.max(0.05, Number(lp.stepover) || (halfZoneWidth * 2 / Math.max(1, nPasses - 1)));
+
+  // Setup raycasting meshes
+  const raycastMeshes = [];
+  if (model) {
+    model.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        child.updateMatrixWorld(true);
+        raycastMeshes.push(child);
+      }
+    });
+  }
+
+  const raycaster = new THREE.Raycaster();
+  const rayDown = new THREE.Vector3(0, -1, 0);
+
+  // Surface sampling function with contact normal compensation
+  const samplePoint = (x, z) => {
+    let surfaceY = null;
+    let contactNormal = new THREE.Vector3(0, 1, 0);
+
+    if (raycastMeshes.length > 0) {
+      raycaster.set(new THREE.Vector3(x, topY + 50, z), rayDown);
+      const hits = raycaster.intersectObjects(raycastMeshes, false);
+      if (hits.length > 0) {
+        surfaceY = hits[0].point.y;
+        if (hits[0].face) {
+          contactNormal = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld).normalize();
+        }
+      }
+    }
+
+    if (surfaceY == null) {
+      // Procedural fallback (concave pocket valley with radius matching refToolCornerRadius)
+      surfaceY = floorY;
+    }
+
+    let compY = surfaceY + stockToLeaveZ;
+    if (isBall) {
+      const ny = Math.max(0.05, Math.min(1.0, Math.abs(contactNormal.y)));
+      compY += toolRadius * (1.0 - ny);
+    }
+
+    return new THREE.Vector3(x, compY, z);
+  };
+
+  // Base fillet centerline inset from cavity boundary
+  const baseFilletInset = Math.max(toolRadius, refToolCornerRadius);
+  const minX = effBounds.min.x + baseFilletInset;
+  const maxX = effBounds.max.x - baseFilletInset;
+  const minZ = effBounds.min.z + baseFilletInset;
+  const maxZ = effBounds.max.z - baseFilletInset;
+
+  if (maxX <= minX || maxZ <= minZ) {
+    // Workpiece too small for reference tool fillet, fallback to central sweep
+    const midX = (effBounds.min.x + effBounds.max.x) / 2;
+    const p1 = samplePoint(midX, effBounds.min.z + toolRadius);
+    const p2 = samplePoint(midX, effBounds.max.z - toolRadius);
+    rapidLines.push([
+      new THREE.Vector3(p1.x, topY + rapidHeight, p1.z),
+      new THREE.Vector3(p1.x, p1.y + feedPlane, p1.z)
+    ]);
+    cuttingLines.push([
+      new THREE.Vector3(p1.x, p1.y + feedPlane, p1.z),
+      p1,
+      p2
+    ]);
+    rapidLines.push([
+      p2,
+      new THREE.Vector3(p2.x, topY + rapidHeight, p2.z)
+    ]);
+    return { cuttingLines, rapidLines };
+  }
+
+  // Corner arc radius
+  const cornerR = Math.max(0.5, Math.min(refToolCornerRadius, (maxX - minX) / 3, (maxZ - minZ) / 3));
+
+  // Compute offset values across leftover zone: [-halfZoneWidth, ..., +halfZoneWidth]
+  const passOffsets = [];
+  if (nPasses === 1) {
+    passOffsets.push(0);
+  } else {
+    for (let i = 0; i < nPasses; i++) {
+      const t = i / (nPasses - 1); // 0 to 1
+      const offset = -halfZoneWidth + t * (2 * halfZoneWidth);
+      passOffsets.push(offset);
+    }
+  }
+
+  if (machiningMethod === 'across') {
+    // ACROSS SURFACE: transverse raster strokes across fillet width [-halfZoneWidth, +halfZoneWidth]
+    // at stations along the valley perimeter
+    const stations = [];
+    const stepStation = Math.max(stepover, 1.0);
+
+    // Generate stations along rectangle with rounded corners
+    // Top side: minX to maxX at minZ
+    for (let x = minX; x <= maxX; x += stepStation) {
+      stations.push({ x, z: minZ, nx: 0, nz: -1 }); // normal points outward
+    }
+    // Right side: minZ to maxZ at maxX
+    for (let z = minZ; z <= maxZ; z += stepStation) {
+      stations.push({ x: maxX, z, nx: 1, nz: 0 });
+    }
+    // Bottom side: maxX down to minX at maxZ
+    for (let x = maxX; x >= minX; x -= stepStation) {
+      stations.push({ x, z: maxZ, nx: 0, nz: 1 });
+    }
+    // Left side: maxZ down to minZ at minX
+    for (let z = maxZ; z >= minZ; z -= stepStation) {
+      stations.push({ x: minX, z, nx: -1, nz: 0 });
+    }
+
+    let lastPt = null;
+
+    stations.forEach((st, sIdx) => {
+      // Stroke endpoints across the leftover width
+      const strokePoints = [];
+      const numPts = 6;
+      const reverse = !isOneWay && (sIdx % 2 === 1);
+
+      for (let j = 0; j <= numPts; j++) {
+        const u = reverse ? (1 - j / numPts) : (j / numPts);
+        const w = -halfZoneWidth + u * (2 * halfZoneWidth);
+        const px = st.x + st.nx * w;
+        const pz = st.z + st.nz * w;
+        strokePoints.push(samplePoint(px, pz));
+      }
+
+      const pStart = strokePoints[0];
+      const pEnd = strokePoints[strokePoints.length - 1];
+
+      // Linking motion
+      if (!lastPt || isOneWay || lastPt.distanceTo(pStart) > maxGapDistance) {
+        if (lastPt) {
+          rapidLines.push([
+            lastPt,
+            new THREE.Vector3(lastPt.x, topY + rapidHeight, lastPt.z),
+            new THREE.Vector3(pStart.x, topY + rapidHeight, pStart.z),
+            new THREE.Vector3(pStart.x, pStart.y + feedPlane, pStart.z)
+          ]);
+        } else {
+          rapidLines.push([
+            new THREE.Vector3(pStart.x, topY + rapidHeight, pStart.z),
+            new THREE.Vector3(pStart.x, pStart.y + feedPlane, pStart.z)
+          ]);
+        }
+        cuttingLines.push([
+          new THREE.Vector3(pStart.x, pStart.y + feedPlane, pStart.z),
+          pStart
+        ]);
+      } else {
+        // Direct on-surface / clearance stepover linking
+        cuttingLines.push([lastPt, pStart]);
+      }
+
+      // Cut stroke
+      for (let j = 0; j < strokePoints.length - 1; j++) {
+        cuttingLines.push([strokePoints[j], strokePoints[j + 1]]);
+      }
+
+      lastPt = pEnd;
+    });
+
+    if (lastPt) {
+      rapidLines.push([
+        lastPt,
+        new THREE.Vector3(lastPt.x, topY + rapidHeight, lastPt.z)
+      ]);
+    }
+  } else {
+    // ALONG SURFACE: multi-pass longitudinal paths following internal valleys/fillet lines
+    // 1. Bottom Floor Fillet Passes
+    passOffsets.forEach((pOffset, passIdx) => {
+      const inset = baseFilletInset + pOffset;
+      const pMinX = effBounds.min.x + inset;
+      const pMaxX = effBounds.max.x - inset;
+      const pMinZ = effBounds.min.z + inset;
+      const pMaxZ = effBounds.max.z - inset;
+
+      if (pMaxX <= pMinX || pMaxZ <= pMinZ) return;
+
+      const cR = Math.max(0.5, Math.min(cornerR, (pMaxX - pMinX) / 3, (pMaxZ - pMinZ) / 3));
+      const rawPoints2D = [];
+
+      const addArc = (cx, cz, aStart, aEnd) => {
+        const segs = 4;
+        for (let s = 0; s <= segs; s++) {
+          const th = aStart + (aEnd - aStart) * (s / segs);
+          rawPoints2D.push({ x: cx + cR * Math.cos(th), z: cz + cR * Math.sin(th) });
+        }
+      };
+
+      // Top edge
+      rawPoints2D.push({ x: pMinX + cR, z: pMinZ });
+      rawPoints2D.push({ x: pMaxX - cR, z: pMinZ });
+      addArc(pMaxX - cR, pMinZ + cR, -Math.PI / 2, 0);
+
+      // Right edge
+      rawPoints2D.push({ x: pMaxX, z: pMaxZ - cR });
+      addArc(pMaxX - cR, pMaxZ - cR, 0, Math.PI / 2);
+
+      // Bottom edge
+      rawPoints2D.push({ x: pMinX + cR, z: pMaxZ });
+      addArc(pMinX + cR, pMaxZ - cR, Math.PI / 2, Math.PI);
+
+      // Left edge
+      rawPoints2D.push({ x: pMinX, z: pMinZ + cR });
+      addArc(pMinX + cR, pMinZ + cR, Math.PI, 3 * Math.PI / 2);
+
+      // Close loop
+      rawPoints2D.push({ x: pMinX + cR, z: pMinZ });
+
+      // Discretize and sample 3D points
+      const sampled3D = [];
+      const sampleStep = 2.0;
+
+      for (let i = 0; i < rawPoints2D.length - 1; i++) {
+        const pA = rawPoints2D[i];
+        const pB = rawPoints2D[i + 1];
+        const segDist = Math.hypot(pB.x - pA.x, pB.z - pA.z);
+        const steps = Math.max(1, Math.ceil(segDist / sampleStep));
+
+        for (let s = 0; s < steps; s++) {
+          const frac = s / steps;
+          const sx = pA.x + (pB.x - pA.x) * frac;
+          const sz = pA.z + (pB.z - pA.z) * frac;
+          sampled3D.push(samplePoint(sx, sz));
+        }
+      }
+      sampled3D.push(samplePoint(rawPoints2D[rawPoints2D.length - 1].x, rawPoints2D[rawPoints2D.length - 1].z));
+
+      if (sampled3D.length < 2) return;
+
+      // Reverse direction in Zigzag for alternating passes
+      if (!isOneWay && (passIdx % 2 === 1)) {
+        sampled3D.reverse();
+      }
+
+      const pFirst = sampled3D[0];
+      const pLast = sampled3D[sampled3D.length - 1];
+
+      // Approach motion
+      rapidLines.push([
+        new THREE.Vector3(pFirst.x, topY + rapidHeight, pFirst.z),
+        new THREE.Vector3(pFirst.x, pFirst.y + feedPlane, pFirst.z)
+      ]);
+      cuttingLines.push([
+        new THREE.Vector3(pFirst.x, pFirst.y + feedPlane, pFirst.z),
+        pFirst
+      ]);
+
+      // Cut along loop
+      for (let i = 0; i < sampled3D.length - 1; i++) {
+        cuttingLines.push([sampled3D[i], sampled3D[i + 1]]);
+      }
+
+      // Retract
+      rapidLines.push([
+        pLast,
+        new THREE.Vector3(pLast.x, topY + rapidHeight, pLast.z)
+      ]);
+    });
+
+    // 2. Vertical Internal Corner Cleanup Passes
+    const verticalCorners = [
+      { x: minX, z: minZ, dirX: 1, dirZ: 1 },
+      { x: maxX, z: minZ, dirX: -1, dirZ: 1 },
+      { x: maxX, z: maxZ, dirX: -1, dirZ: -1 },
+      { x: minX, z: maxZ, dirX: 1, dirZ: -1 }
+    ];
+
+    verticalCorners.forEach((vc) => {
+      passOffsets.forEach((pOffset, passIdx) => {
+        // Offset along bisector of the corner
+        const ox = vc.x + vc.dirX * (pOffset * 0.707);
+        const oz = vc.z + vc.dirZ * (pOffset * 0.707);
+
+        const zBottom = samplePoint(ox, oz).y;
+        const zTop = topY;
+        const height = Math.max(1.0, zTop - zBottom);
+        const vSteps = Math.max(3, Math.ceil(height / stepover));
+
+        const vPoints = [];
+        for (let s = 0; s <= vSteps; s++) {
+          const frac = s / vSteps;
+          const y = zBottom + frac * height;
+          vPoints.push(new THREE.Vector3(ox, y, oz));
+        }
+
+        if (!isOneWay && passIdx % 2 === 1) {
+          vPoints.reverse();
+        }
+
+        const pFirst = vPoints[0];
+        const pLast = vPoints[vPoints.length - 1];
+
+        rapidLines.push([
+          new THREE.Vector3(pFirst.x, topY + rapidHeight, pFirst.z),
+          new THREE.Vector3(pFirst.x, pFirst.y + feedPlane, pFirst.z)
+        ]);
+        cuttingLines.push([
+          new THREE.Vector3(pFirst.x, pFirst.y + feedPlane, pFirst.z),
+          pFirst
+        ]);
+
+        for (let i = 0; i < vPoints.length - 1; i++) {
+          cuttingLines.push([vPoints[i], vPoints[i + 1]]);
+        }
+
+        rapidLines.push([
+          pLast,
+          new THREE.Vector3(pLast.x, topY + rapidHeight, pLast.z)
+        ]);
+      });
+    });
+  }
+
+  return { cuttingLines, rapidLines };
+}
+
+/**
  * Generates 2D/3D Rest Machining & Corner Cleanout Toolpath
  * Cleans unmachined material left by a previous larger roughing tool in internal corners and fillets.
  * Performs targeted corner picking with inward stepping passes and peripheral sweep arcs.
@@ -3154,6 +3533,9 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
       customGeometry: op.customGeometry,
       operations: op.operations
     });
+  }
+  if (strategy === 'leftover' || strategy === 'surface_finish_leftover' || op.strategyKey === 'surface_finish_leftover' || op.badgeClass === 'leftover') {
+    return generateSurfaceLeftoverToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
   }
   if (strategy === 'probe') {
     const pCenter = op.center || {

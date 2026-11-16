@@ -86,6 +86,7 @@ export default function OperationsTree({
   onOpenSurfaceFinishPencil,
   onOpenSurfaceFinishRadial,
   onOpenSurfaceFinishProject,
+  onOpenSurfaceFinishLeftover,
   onEditOpGeometry,
   onExportStockSTL,
   activeDrawingTool = null,
@@ -1825,6 +1826,7 @@ export default function OperationsTree({
           onOpenSurfaceFinishPencil={onOpenSurfaceFinishPencil}
           onOpenSurfaceFinishRadial={onOpenSurfaceFinishRadial}
           onOpenSurfaceFinishProject={onOpenSurfaceFinishProject}
+          onOpenSurfaceFinishLeftover={onOpenSurfaceFinishLeftover}
           onExportStockSTL={onExportStockSTL}
           onToggleLockOp={onToggleLockOp}
           onToggleGhostOp={onToggleGhostOp}

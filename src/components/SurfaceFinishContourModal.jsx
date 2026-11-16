@@ -137,6 +137,7 @@ function SurfaceFinishContourModalInner({
   const isPencil = strategyMode === 'pencil' || operation?.strategyKey === 'surface_finish_pencil' || operation?.badgeClass === 'pencil';
   const isRadial = strategyMode === 'radial' || operation?.strategyKey === 'surface_finish_radial' || operation?.badgeClass === 'radial';
   const isProject = strategyMode === 'project' || operation?.strategyKey === 'surface_finish_project' || operation?.badgeClass === 'project';
+  const isLeftover = strategyMode === 'leftover' || strategyMode === 'rest_milling' || operation?.strategyKey === 'surface_finish_leftover' || operation?.badgeClass === 'leftover';
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
   const detectedSurfaces = useMemo(() => {
@@ -189,7 +190,7 @@ function SurfaceFinishContourModalInner({
         null
       );
     }
-    if (isFlowline || isShallow || isParallel || isParallelSteep || isPencil || isRadial || isProject) {
+    if (isFlowline || isShallow || isParallel || isParallelSteep || isPencil || isRadial || isProject || isLeftover) {
       return (
         tools.find((t) => ['ball'].includes(String(t.type || '').toLowerCase())) ||
         tools.find((t) => ['bull', 'ball', 'flat', 'engrave'].includes(String(t.type || '').toLowerCase())) ||
@@ -202,17 +203,17 @@ function SurfaceFinishContourModalInner({
       tools[0] ||
       null
     );
-  }, [operation, tools, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject]);
+  }, [operation, tools, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, isLeftover]);
 
   const initialDefaults = useMemo(
     () =>
       createDefaultSurfaceFinishState({
         activeMachine,
         stockConfig,
-        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : 'contour',
+        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : isLeftover ? 'leftover' : 'contour',
         tool: initialTool
       }),
-    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, initialTool]
+    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, isProject, isLeftover, initialTool]
   );
 
   const [activeTab, setActiveTab] = useState('toolpath_params');
@@ -356,6 +357,29 @@ function SurfaceFinishContourModalInner({
       tipComp: 'tip'
     }),
     ...(operation?.projectParams || {})
+  }));
+
+  const [leftoverParams, setLeftoverParams] = useState(() => ({
+    ...(initialDefaults.leftoverParams || {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      refToolDiameter: 12.0,
+      refToolCornerRadius: 6.0,
+      refToolType: 'ball',
+      machiningMethod: 'along',
+      stepover: 0.4,
+      numberOfPasses: 3,
+      overlap: 1.0,
+      cuttingMethod: 'Zigzag',
+      machiningDirection: 'climb',
+      maxGapDistance: 10.0,
+      shallowCutoffAngle: 35.0,
+      steepCutoffAngle: 90.0,
+      transitionType: 'broken',
+      tipComp: 'tip'
+    }),
+    ...(operation?.leftoverParams || {})
   }));
 
   // Auto-compute center point and outer radius from detected surfaces if autoCenter is active
@@ -541,7 +565,9 @@ function SurfaceFinishContourModalInner({
                   ? 'Surface Finish Radial'
                   : isProject
                     ? 'Surface Finish Project'
-                    : 'Surface Finish Contour';
+                    : isLeftover
+                      ? 'Surface Finish Leftover'
+                      : 'Surface Finish Contour';
     const rapidHeight = surfaceParams.clearanceEnabled && surfaceParams.clearanceMode === 'abs'
       ? Number(surfaceParams.clearance)
       : (Number(surfaceParams.retract) || 25.0);
@@ -554,15 +580,15 @@ function SurfaceFinishContourModalInner({
     const updatedOp = {
       ...(operation || {}),
       name: operation?.name || opTitle,
-      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : 'surface_finish_contour',
-      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : 'surface_finish_contour',
-      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : 'contour',
-      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallelSteep ? 'PS' : isParallel ? 'PA' : isPencil ? 'PC' : isRadial ? 'RD' : isProject ? 'PJ' : 'SC',
+      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : isLeftover ? 'surface_finish_leftover' : 'surface_finish_contour',
+      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : isProject ? 'surface_finish_project' : isLeftover ? 'surface_finish_leftover' : 'surface_finish_contour',
+      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : isProject ? 'project' : isLeftover ? 'leftover' : 'contour',
+      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallelSteep ? 'PS' : isParallel ? 'PA' : isPencil ? 'PC' : isRadial ? 'RD' : isProject ? 'PJ' : isLeftover ? 'LO' : 'SC',
       machiningAngle: Number(contourParams.machiningAngle ?? 90.0),
       steepFromSlope: Number(contourParams.steepFromSlope ?? 35.0),
       steepToSlope: Number(contourParams.steepToSlope ?? 90.0),
-      stepover: Number(isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? projectParams.stepover : isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
-      cuttingMethod: isRadial ? (radialParams.cuttingMethod || 'zigzag').toLowerCase() : isProject ? (projectParams.cuttingMethod || 'zigzag').toLowerCase() : isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
+      stepover: Number(isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? projectParams.stepover : isLeftover ? leftoverParams.stepover : isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
+      cuttingMethod: isRadial ? (radialParams.cuttingMethod || 'zigzag').toLowerCase() : isProject ? (projectParams.cuttingMethod || 'zigzag').toLowerCase() : isLeftover ? (leftoverParams.cuttingMethod || 'zigzag').toLowerCase() : isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
       toolId: activeTool?.id || toolParams.toolId || 1,
       toolName: toolParams.toolName,
       toolNumber: Number(toolParams.toolNumber) || 1,
@@ -575,10 +601,10 @@ function SurfaceFinishContourModalInner({
       plungeFeedRate: Number(toolParams.plungeRate) || 150,
       retractRate: Number(toolParams.retractRate) || 250,
       rapidHeight,
-      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : isPencil ? pencilParams.stepover : isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? (projectParams.depthOfCut || projectParams.stepdown || 0.2) : contourParams.maxStepdown) || 0.5,
+      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : isPencil ? pencilParams.stepover : isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isProject ? (projectParams.depthOfCut || projectParams.stepdown || 0.2) : isLeftover ? leftoverParams.stepover : contourParams.maxStepdown) || 0.5,
       stockToLeaveXY: Number(surfaceParams.stockToLeaveDrive) || 0.0,
       stockToLeaveZ: Number(surfaceParams.stockToLeaveDrive) || 0.0,
-      cuttingDirection: isPocket ? pocketParams.machiningDirection : isPencil ? pencilParams.machiningDirection : isProject ? projectParams.machiningDirection : contourParams.direction,
+      cuttingDirection: isPocket ? pocketParams.machiningDirection : isPencil ? pencilParams.machiningDirection : isProject ? projectParams.machiningDirection : isLeftover ? leftoverParams.machiningDirection : contourParams.direction,
       contourSide: surfaceParams.containmentMode,
       cutStyle: isFlowline
         ? String(flowlineParams.cuttingMethod || 'Zigzag').toLowerCase()
@@ -588,10 +614,12 @@ function SurfaceFinishContourModalInner({
             ? String(radialParams.cuttingMethod || 'Zigzag').toLowerCase()
             : isProject
               ? String(projectParams.cuttingMethod || 'Zigzag').toLowerCase()
-              : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
-      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : isPencil ? pencilParams.stepover : isRadial ? radialParams.maxStepover : isProject ? projectParams.stepover : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
+              : isLeftover
+                ? String(leftoverParams.cuttingMethod || 'Zigzag').toLowerCase()
+                : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
+      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : isPencil ? pencilParams.stepover : isRadial ? radialParams.maxStepover : isProject ? projectParams.stepover : isLeftover ? leftoverParams.stepover : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
       biTangencyRadius: Number(pencilParams.biTangencyRadius) || 3.0,
-      numberOfPasses: Number(pencilParams.numberOfPasses) || 1,
+      numberOfPasses: Number(isLeftover ? leftoverParams.numberOfPasses : pencilParams.numberOfPasses) || 1,
       driveSurfaceIds: selectedSurfaceIds,
       driveFaceIds,
       checkFaceIds,
@@ -613,7 +641,8 @@ function SurfaceFinishContourModalInner({
       flowlineParams: { ...flowlineParams },
       pencilParams: { ...pencilParams },
       radialParams: { ...radialParams },
-      projectParams: { ...projectParams }
+      projectParams: { ...projectParams },
+      leftoverParams: { ...leftoverParams }
     };
 
     onSaveOperation?.(updatedOp);
@@ -687,7 +716,9 @@ function SurfaceFinishContourModalInner({
                             ? 'Surface Finish Radial'
                             : isProject
                               ? 'Surface Finish Project'
-                              : 'Surface Finish Contour'}
+                              : isLeftover
+                                ? 'Surface Finish Leftover'
+                                : 'Surface Finish Contour'}
             </span>
             <span
               style={{
@@ -1182,6 +1213,76 @@ function SurfaceFinishContourModalInner({
           </div>
         )}
 
+        {/* Leftover Rest Machining Quick Helper Banner */}
+        {isLeftover && (
+          <div
+            style={{
+              background: '#ecfdf5',
+              borderBottom: '1px solid #a7f3d0',
+              padding: '6px 12px',
+              fontSize: '11px',
+              color: '#065f46',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={14} color="#10b981" />
+              <span>
+                <strong>Surface Finish Leftover:</strong> Targets unmachined material in fillets & corners left by previous roughing tool (D={leftoverParams.refToolDiameter}mm R={leftoverParams.refToolCornerRadius}mm) with tangential overlap blending.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const finishTool = tools.find((t) => t.type === 'ball' || /ball/i.test(t.name)) || tools[0];
+                if (finishTool) {
+                  setSelectedToolId(finishTool.id);
+                  setToolParams((prev) => buildToolStateFromRecord(finishTool, caps, prev));
+                }
+                setSurfaceParams((p) => ({
+                  ...p,
+                  clearanceEnabled: true,
+                  clearance: 25.0,
+                  clearanceMode: 'abs',
+                  retractEnabled: true,
+                  retract: 2.5,
+                  retractMode: 'inc',
+                  feedPlane: 2.0,
+                  feedPlaneMode: 'inc',
+                  stockToLeaveDrive: 0.0
+                }));
+                setLeftoverParams((p) => ({
+                  ...p,
+                  refToolDiameter: Math.max(12.0, (Number(toolParams.toolDiameter) || 6.0) * 2),
+                  refToolCornerRadius: Math.max(6.0, Number(toolParams.toolDiameter) || 6.0),
+                  overlap: 1.0,
+                  stepover: Number(((Number(toolParams.toolDiameter) || 6.0) * 0.15).toFixed(2)) || 0.4,
+                  numberOfPasses: 3,
+                  cuttingMethod: 'Zigzag',
+                  machiningMethod: 'along'
+                }));
+                onNotify?.('Loaded recommended leftover parameters for active tool', 'info');
+              }}
+              style={{
+                background: '#059669',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '3px 8px',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⚡ Load Recommended Leftover Values
+            </button>
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', background: '#f0f0f0', padding: '5px 8px 0 8px', borderBottom: '1px solid #d1d5db' }}>
           {[
@@ -1205,7 +1306,9 @@ function SurfaceFinishContourModalInner({
                             ? 'Finish radial parameters'
                             : isProject
                               ? 'Finish project parameters'
-                              : 'Finish contour parameters'
+                              : isLeftover
+                                ? 'Finish leftover parameters'
+                                : 'Finish contour parameters'
             }
           ].map((tab) => {
             const active = activeTab === tab.id;
@@ -1825,7 +1928,7 @@ function SurfaceFinishContourModalInner({
           )}
 
           {/* ==================== TAB 3A: FINISH CONTOUR PARAMETERS (IMAGE 5 VERBATIM) ==================== */}
-          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && !isParallelSteep && !isPencil && !isRadial && (
+          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && !isParallelSteep && !isPencil && !isRadial && !isProject && !isLeftover && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '246px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
                 {/* LEFT COLUMN */}
@@ -3655,6 +3758,275 @@ function SurfaceFinishContourModalInner({
                       </g>
                       <text x="140" y="96" textAnchor="middle" fontSize="9" fill="#0f172a">
                         Projection: View Z &rarr; Surface Normal Contact &rarr; Depth: {projectParams.depthOfCut ?? 0.2}mm
+                      </text>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== TAB 3J: FINISH LEFTOVER PARAMETERS (MASTERCAM VERBATIM) ==================== */}
+          {activeTab === 'finish_contour_params' && isLeftover && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '300px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
+                {/* LEFT COLUMN: Tolerances, Reference Roughing Tool, Overlap */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  {/* Total tolerance */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <button type="button" onClick={() => setActiveSubDialog('total_tolerance')} style={{ ...MC_BUTTON, width: '100%', borderColor: '#10b981' }}>
+                      Total tolerance...
+                    </button>
+                    <input
+                      type="number"
+                      step="0.001"
+                      value={leftoverParams.totalTolerance ?? 0.025}
+                      onChange={(e) => setLeftoverParams((p) => ({ ...p, totalTolerance: Number(e.target.value) }))}
+                      style={{ ...MC_INPUT, width: '100%' }}
+                    />
+                  </div>
+
+                  {/* Reference Roughing Tool Parameters Fieldset */}
+                  <fieldset style={{ border: '1px solid #10b981', padding: '8px 10px', margin: 0, borderRadius: '2px', background: '#ecfdf5' }}>
+                    <legend style={{ padding: '0 4px', color: '#047857', fontWeight: 600, fontSize: '11px' }}>
+                      Reference Roughing Tool (Prior Cutter)
+                    </legend>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '136px minmax(0, 1fr)', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ color: '#065f46' }}>Rough tool dia:</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="1.0"
+                            value={leftoverParams.refToolDiameter ?? 12.0}
+                            onChange={(e) => setLeftoverParams((p) => ({ ...p, refToolDiameter: Math.max(1, Number(e.target.value)) }))}
+                            style={{ ...MC_INPUT, width: '100%', fontWeight: 600 }}
+                          />
+                          <span style={{ fontSize: '10.5px', color: '#64748b' }}>mm</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '136px minmax(0, 1fr)', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ color: '#065f46' }}>Rough corner rad:</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input
+                            type="number"
+                            step="0.25"
+                            min="0.0"
+                            value={leftoverParams.refToolCornerRadius ?? 6.0}
+                            onChange={(e) => setLeftoverParams((p) => ({ ...p, refToolCornerRadius: Math.max(0, Number(e.target.value)) }))}
+                            style={{ ...MC_INPUT, width: '100%' }}
+                          />
+                          <span style={{ fontSize: '10.5px', color: '#64748b' }}>mm</span>
+                        </div>
+                      </div>
+
+                      {/* Quick Presets */}
+                      <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                        {[
+                          { label: '16 Bull R2', d: 16.0, r: 2.0 },
+                          { label: '12 Ball', d: 12.0, r: 6.0 },
+                          { label: '10 Flat', d: 10.0, r: 0.0 }
+                        ].map((preset) => (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => setLeftoverParams((p) => ({ ...p, refToolDiameter: preset.d, refToolCornerRadius: preset.r }))}
+                            style={{
+                              ...MC_BUTTON,
+                              flex: 1,
+                              fontSize: '9.5px',
+                              padding: '2px 4px',
+                              background: '#ffffff',
+                              borderColor: '#a7f3d0'
+                            }}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </fieldset>
+
+                  {/* Overlap / Tangential Extension */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span title="Tangential overlap extension to blend with pre-cut surfaces without cusps">Overlap / extension:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0.0"
+                        value={leftoverParams.overlap ?? 1.0}
+                        onChange={(e) => setLeftoverParams((p) => ({ ...p, overlap: Math.max(0, Number(e.target.value)) }))}
+                        style={{ ...MC_INPUT, width: '100%' }}
+                      />
+                      <span style={{ fontSize: '10.5px', color: '#64748b' }}>mm</span>
+                    </div>
+                  </div>
+
+                  {/* Max Gap Distance */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span>Max gap distance:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <input
+                        type="number"
+                        step="1.0"
+                        min="0.5"
+                        value={leftoverParams.maxGapDistance ?? 10.0}
+                        onChange={(e) => setLeftoverParams((p) => ({ ...p, maxGapDistance: Math.max(0.5, Number(e.target.value)) }))}
+                        style={{ ...MC_INPUT, width: '100%' }}
+                      />
+                      <span style={{ fontSize: '10.5px', color: '#64748b' }}>mm</span>
+                    </div>
+                  </div>
+
+                  {/* Filter Tolerance Ratio */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span>Filter ratio:</span>
+                    <input
+                      type="number"
+                      step="0.05"
+                      min="0.1"
+                      max="0.9"
+                      value={leftoverParams.filterToleranceRatio ?? 0.5}
+                      onChange={(e) => setLeftoverParams((p) => ({ ...p, filterToleranceRatio: Number(e.target.value) }))}
+                      style={{ ...MC_INPUT, width: '100%' }}
+                    />
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: Machining Method, Passes, Stepover, Cut Style, and SVG Schematic */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  {/* Machining Method */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 600 }}>Machining method:</span>
+                    <select
+                      value={leftoverParams.machiningMethod || 'along'}
+                      onChange={(e) => setLeftoverParams((p) => ({ ...p, machiningMethod: e.target.value }))}
+                      style={{ ...MC_SELECT, width: '100%', borderColor: '#10b981' }}
+                    >
+                      <option value="along">Along Surface (Valleys & Fillets)</option>
+                      <option value="across">Across Surface (Transverse Passes)</option>
+                    </select>
+                  </div>
+
+                  {/* Stepover & Number of Passes */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '8px' }}>
+                    <span>Stepover:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <input
+                        type="number"
+                        step="0.05"
+                        min="0.05"
+                        value={leftoverParams.stepover ?? 0.4}
+                        onChange={(e) => setLeftoverParams((p) => ({ ...p, stepover: Math.max(0.01, Number(e.target.value)) }))}
+                        style={{ ...MC_INPUT, width: '100%' }}
+                      />
+                      <span style={{ fontSize: '10.5px', color: '#64748b' }}>mm</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '8px' }}>
+                    <span>Number of passes:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={leftoverParams.numberOfPasses ?? 3}
+                      onChange={(e) => setLeftoverParams((p) => ({ ...p, numberOfPasses: Math.max(1, parseInt(e.target.value, 10) || 1) }))}
+                      style={{ ...MC_INPUT, width: '100%' }}
+                    />
+                  </div>
+
+                  {/* Cutting Method & Machining Direction */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '8px' }}>
+                    <span>Cutting method:</span>
+                    <select
+                      value={leftoverParams.cuttingMethod || 'Zigzag'}
+                      onChange={(e) => setLeftoverParams((p) => ({ ...p, cuttingMethod: e.target.value }))}
+                      style={{ ...MC_SELECT, width: '100%' }}
+                    >
+                      <option value="Zigzag">Zigzag (Bi-directional)</option>
+                      <option value="One way">One way (Climb/Conventional retracts)</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '8px' }}>
+                    <span>Direction:</span>
+                    <select
+                      value={leftoverParams.machiningDirection || 'climb'}
+                      onChange={(e) => setLeftoverParams((p) => ({ ...p, machiningDirection: e.target.value }))}
+                      style={{ ...MC_SELECT, width: '100%' }}
+                    >
+                      <option value="climb">Climb milling</option>
+                      <option value="conventional">Conventional milling</option>
+                    </select>
+                  </div>
+
+                  {/* Mastercam Leftover Rest Machining SVG Diagram */}
+                  <div
+                    style={{
+                      height: '110px',
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '3px',
+                      marginTop: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <svg width="280" height="106" viewBox="0 0 280 106" style={{ width: '100%', height: '100%' }}>
+                      {/* Fillet / Valley Surface Profile */}
+                      <path
+                        d="M 15 15 L 15 50 Q 15 85 50 85 L 265 85"
+                        fill="none"
+                        stroke="#334155"
+                        strokeWidth="2.5"
+                      />
+                      {/* Roughing tool envelope (dashed reference tool) */}
+                      <circle
+                        cx="75"
+                        cy="45"
+                        r="38"
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth="1.5"
+                        strokeDasharray="4,3"
+                      />
+                      <text x="82" y="32" fontSize="8.5" fill="#2563eb" fontWeight="600">
+                        Ref D={leftoverParams.refToolDiameter ?? 12}mm
+                      </text>
+
+                      {/* Leftover Material Cusp Zone */}
+                      <path
+                        d="M 15 65 Q 15 85 35 85 Q 22 75 15 65 Z"
+                        fill="#fef08a"
+                        stroke="#eab308"
+                        strokeWidth="0.8"
+                      />
+
+                      {/* Finishing active tool (smaller) */}
+                      <circle
+                        cx="32"
+                        cy="68"
+                        r="16"
+                        fill="rgba(16, 185, 129, 0.2)"
+                        stroke="#10b981"
+                        strokeWidth="1.5"
+                      />
+                      {/* Multiple rest milling passes */}
+                      <line x1="24" y1="78" x2="24" y2="72" stroke="#10b981" strokeWidth="1.5" strokeDasharray="1,1" />
+                      <line x1="30" y1="82" x2="30" y2="76" stroke="#10b981" strokeWidth="1.5" strokeDasharray="1,1" />
+                      <line x1="36" y1="84" x2="36" y2="78" stroke="#10b981" strokeWidth="1.5" strokeDasharray="1,1" />
+
+                      <text x="45" y="70" fontSize="8.5" fill="#047857" fontWeight="600">
+                        Finish D={toolParams.toolDiameter}mm
+                      </text>
+                      <text x="140" y="99" textAnchor="middle" fontSize="9" fill="#0f172a">
+                        Mode: {leftoverParams.machiningMethod === 'along' ? 'Along Valleys' : 'Across Ribs'} • Overlap: {leftoverParams.overlap ?? 1.0}mm
                       </text>
                     </svg>
                   </div>

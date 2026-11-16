@@ -1947,6 +1947,8 @@ export default function App() {
       op?.badgeClass === 'radial' ||
       op?.strategyKey === 'surface_finish_project' ||
       op?.badgeClass === 'project' ||
+      op?.strategyKey === 'surface_finish_leftover' ||
+      op?.badgeClass === 'leftover' ||
       op?.usesCustomSurfaces
     ) {
       const mode =
@@ -1966,7 +1968,9 @@ export default function App() {
                       ? 'radial'
                       : op.strategyKey === 'surface_finish_project' || op.badgeClass === 'project'
                         ? 'project'
-                        : 'contour';
+                        : op.strategyKey === 'surface_finish_leftover' || op.badgeClass === 'leftover'
+                          ? 'leftover'
+                          : 'contour';
       if (mode === 'flowline') {
         setSurfaceSelectionDraft({
           mode: 'flowline',
@@ -2207,6 +2211,9 @@ export default function App() {
       return;
     } else if (s === 'project' || s === 'surface_finish_project' || s === '3d_project') {
       openSurfaceFinishModal('project', null);
+      return;
+    } else if (s === 'leftover' || s === 'surface_finish_leftover' || s === '3d_leftover' || s === '3d_finish_leftover') {
+      openSurfaceFinishModal('leftover', null);
       return;
     } else if (s === 'swarf' || s === '5axis_swarf') {
       newOp = {
@@ -3358,7 +3365,9 @@ export default function App() {
                   ? 'Surface Finish Radial'
                 : updatedOp.strategyKey === 'surface_finish_project'
                   ? 'Surface Finish Project'
-                  : 'Surface Finish Contour';
+                  : updatedOp.strategyKey === 'surface_finish_leftover'
+                    ? 'Surface Finish Leftover'
+                    : 'Surface Finish Contour';
     const finalOp = {
       ...updatedOp,
       id: nextId,
@@ -3552,6 +3561,10 @@ export default function App() {
       case 'surface_finish_project':
       case 'project':
         openSurfaceFinishModal('project', null);
+        break;
+      case 'surface_finish_leftover':
+      case 'leftover':
+        openSurfaceFinishModal('leftover', null);
         break;
       case 'verify_solid':
         setIsSolidVerifyModalOpen(true);
@@ -5990,6 +6003,7 @@ export default function App() {
         onOpenSurfaceFinishPencil={() => openSurfaceFinishModal('pencil', null)}
         onOpenSurfaceFinishRadial={() => openSurfaceFinishModal('radial', null)}
         onOpenSurfaceFinishProject={() => openSurfaceFinishModal('project', null)}
+        onOpenSurfaceFinishLeftover={() => openSurfaceFinishModal('leftover', null)}
         onCopyViewportImage={handleCopyViewportImage}
         onPasteOp={handlePasteOp}
         onCutOp={handleCutOp}
@@ -6243,6 +6257,7 @@ export default function App() {
           onOpenSurfaceFinishPencil={() => openSurfaceFinishModal('pencil', null)}
           onOpenSurfaceFinishRadial={() => openSurfaceFinishModal('radial', null)}
           onOpenSurfaceFinishProject={() => openSurfaceFinishModal('project', null)}
+          onOpenSurfaceFinishLeftover={() => openSurfaceFinishModal('leftover', null)}
           onEditOpGeometry={handleOpenFlowlineGeometryEdit}
           onExportStockSTL={handleExportStockSTL}
           activeDrawingTool={activeDrawingTool}
