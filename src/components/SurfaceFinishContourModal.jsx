@@ -82,6 +82,13 @@ const MC_BUTTON = {
   boxSizing: 'border-box'
 };
 
+const MC_INPUT = CLASSIC_YELLOW;
+
+const MC_SELECT = {
+  ...CLASSIC_YELLOW,
+  cursor: 'pointer'
+};
+
 function buildToolStateFromRecord(tool, caps, current) {
   if (!tool) return current;
   const diameter = Number(tool.diameter) || 10.0;
