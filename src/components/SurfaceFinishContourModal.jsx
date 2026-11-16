@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
-import { X, Check, HelpCircle, MousePointer, ChevronRight, FolderCog } from 'lucide-react';
+import { X, Check, HelpCircle, MousePointer, ChevronRight, FolderCog, Sparkles } from 'lucide-react';
 import {
   resolveMachineToolpathCapabilities,
   isDriveSurfaceEntity,
