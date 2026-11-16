@@ -642,6 +642,31 @@ export function createDefaultSurfaceFinishState({
       machiningDirection: 'climb',
       traceFloorFillet: true,
       traceVerticalCorners: true
+    },
+    radialParams: {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      stepoverMode: 'max_stepover', // 'max_stepover' | 'angular'
+      maxStepover: Number((diameter * 0.25).toFixed(2)) || 1.0,
+      angularIncrement: 2.0, // degrees
+      startAngle: 0.0,
+      sweepAngle: 360.0,
+      startRadius: 0.0,
+      endRadius: 50.0,
+      centerPoint: { x: 0.0, y: 0.0, z: 0.0 },
+      autoCenter: true,
+      cutDirection: 'inside_to_outside', // 'inside_to_outside' | 'outside_to_inside'
+      cuttingMethod: 'Zigzag', // 'Zigzag' | 'One way' | 'Spiral'
+      rotationDirection: 'CW', // 'CW' | 'CCW'
+      shallowEnabled: false,
+      shallowFromSlope: 0.0,
+      shallowToSlope: 35.0,
+      steepEnabled: false,
+      steepFromSlope: 35.0,
+      steepToSlope: 90.0,
+      transitionType: 'broken',
+      maxGapDistance: 10.0
     }
   };
 }

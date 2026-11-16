@@ -176,6 +176,17 @@ export default function CAMOperationsWizardModal({
       badgeClass: 'parallel_steep'
     },
     {
+      id: 'radial',
+      name: '3D Surface Radial Finishing',
+      badge: 'RD',
+      color: '#06b6d4',
+      desc: 'Radial spoke & spiral pattern radiating from center point across 3D drive surfaces',
+      defaultStepover: 15,
+      defaultStepdown: 0.5,
+      defaultDepth: 25.0,
+      badgeClass: 'radial'
+    },
+    {
       id: 'rest_milling',
       name: 'Rest Machining (Corner Pick)',
       badge: 'RM',

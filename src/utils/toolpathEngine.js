@@ -845,7 +845,20 @@ export function buildContourParamsFromOp(op = {}) {
     cuttingMethod: op.cuttingMethod || cp.cuttingMethod || cp.openContourDirection || 'zigzag',
     contourSide: resolvedContainment,
     chain: op.chain || null,
-    leadConfig: resolvedLeadConfig
+    leadConfig: resolvedLeadConfig,
+    radialParams: op.radialParams || {
+      stepoverMode: 'max_stepover',
+      maxStepover: Number(op.stepdown ?? 1.0),
+      angularIncrement: 2.0,
+      startAngle: 0.0,
+      sweepAngle: 360.0,
+      startRadius: 0.0,
+      endRadius: 50.0,
+      centerPoint: op.center || { x: 0, y: 0, z: 0 },
+      cutDirection: 'inside_to_outside',
+      cuttingMethod: op.cuttingMethod || 'Zigzag',
+      rotationDirection: 'CW'
+    }
   };
 }
 
@@ -1923,6 +1936,261 @@ export function generateSurfaceParallelSteepToolpath(bounds, tool, params = {}, 
 }
 
 /**
+ * Generates 3D Surface Finish Radial Toolpath (Mastercam Surface Finish Radial).
+ * Radiates spoke-like cutting passes (or spiral) from/toward a center point (Xc, Yc)
+ * across 3D drive surfaces with ball nose cutter normal contact compensation,
+ * slope limiting, and smooth circumferential transitions.
+ */
+export function generateSurfaceRadialToolpath(bounds, tool, params = {}, model = null) {
+  const effBounds = model ? computeDriveModelBounds(model, bounds) : resolveSafeBounds(bounds);
+  const rp = params.radialParams || {};
+  const {
+    rapidHeight = 15.0,
+    feedPlane = 2.5,
+    stockToLeaveZ = 0.0,
+    shallowEnabled = false,
+    shallowFromSlope = 0.0,
+    shallowToSlope = 35.0,
+    steepEnabled = false,
+    steepFromSlope = 35.0,
+    steepToSlope = 90.0
+  } = params;
+
+  const toolRadius = (tool.diameter || 6) / 2;
+  const isBall = tool.type === 'ball' || (Number(tool.cornerRadius) > 0);
+  const topY = effBounds.max.y;
+
+  // Center Point:
+  // In Three.js: X is horizontal X, Y is vertical up, Z is horizontal table axis (-CNC Y).
+  let cx = (effBounds.min.x + effBounds.max.x) / 2;
+  let cz = (effBounds.min.z + effBounds.max.z) / 2;
+
+  if (rp.centerPoint && typeof rp.centerPoint === 'object' && !rp.autoCenter) {
+    if (Number.isFinite(Number(rp.centerPoint.x))) cx = Number(rp.centerPoint.x);
+    if (Number.isFinite(Number(rp.centerPoint.y))) cz = Number(rp.centerPoint.y);
+    else if (Number.isFinite(Number(rp.centerPoint.z))) cz = Number(rp.centerPoint.z);
+  }
+
+  // Radial limits
+  const startRadius = Math.max(0, Number(rp.startRadius ?? 0.0));
+  const autoMaxR = Math.max(
+    Math.hypot(effBounds.max.x - cx, effBounds.max.z - cz),
+    Math.hypot(effBounds.min.x - cx, effBounds.min.z - cz),
+    10.0
+  );
+  const endRadius = Math.max(startRadius + 1.0, Number(rp.endRadius) > 0 ? Number(rp.endRadius) : autoMaxR);
+
+  // Angular range
+  const startAngleDeg = Number(rp.startAngle ?? 0.0);
+  const sweepAngleDeg = Math.min(360.0, Math.max(1.0, Number(rp.sweepAngle ?? 360.0)));
+  const rotSign = (rp.rotationDirection === 'CCW') ? 1 : -1;
+
+  // Resolution / Stepover
+  let angularStepDeg = 2.0;
+  if (rp.stepoverMode === 'angular') {
+    angularStepDeg = Math.max(0.1, Math.min(30.0, Number(rp.angularIncrement ?? 2.0)));
+  } else {
+    const maxStepover = Math.max(0.05, Number(rp.maxStepover ?? params.stepover ?? 1.0));
+    angularStepDeg = Math.max(0.2, Math.min(15.0, (maxStepover / Math.max(1.0, endRadius)) * (180.0 / Math.PI)));
+  }
+
+  const cutDirection = rp.cutDirection || 'inside_to_outside'; // 'inside_to_outside' | 'outside_to_inside'
+  const rawMethod = String(rp.cuttingMethod || params.cuttingMethod || 'zigzag').toLowerCase().replace(/[\s_-]+/g, '');
+  const isOneWay = rawMethod === 'oneway';
+  const isSpiral = rawMethod === 'spiral';
+
+  // Prepare meshes for raycasting
+  const raycastMeshes = [];
+  if (model) {
+    model.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        child.updateMatrixWorld(true);
+        raycastMeshes.push(child);
+      }
+    });
+  }
+
+  const raycaster = new THREE.Raycaster();
+  const rayDown = new THREE.Vector3(0, -1, 0);
+
+  const cuttingLines = [];
+  const rapidLines = [];
+
+  // Helper to sample 3D point on surface
+  const sampleSurfacePoint = (x, z) => {
+    let surfaceY = null;
+    let contactNormalY = 1.0;
+
+    if (raycastMeshes.length > 0) {
+      raycaster.set(new THREE.Vector3(x, topY + 50, z), rayDown);
+      const hits = raycaster.intersectObjects(raycastMeshes, false);
+      if (hits.length > 0) {
+        surfaceY = hits[0].point.y;
+        if (hits[0].face) {
+          const norm = hits[0].face.normal.clone().transformDirection(hits[0].object.matrixWorld);
+          contactNormalY = Math.min(1, Math.max(0, Math.abs(norm.y)));
+        }
+      }
+    } else {
+      // Fallback parametric spherical dome geometry
+      const distFromCenter = Math.hypot(x - cx, z - cz);
+      const domeR = endRadius * 1.2;
+      if (distFromCenter <= endRadius) {
+        const domeHeight = Math.sqrt(Math.max(0, domeR * domeR - distFromCenter * distFromCenter)) - (domeR - 15);
+        surfaceY = topY + domeHeight;
+        contactNormalY = Math.max(0.1, Math.cos(Math.asin(Math.min(0.99, distFromCenter / domeR))));
+      }
+    }
+
+    if (surfaceY == null) return null;
+
+    // Slope filtering if enabled
+    if (shallowEnabled || steepEnabled) {
+      const slopeDeg = Math.acos(Math.max(0, Math.min(1, contactNormalY))) * (180 / Math.PI);
+      if (shallowEnabled && (slopeDeg < shallowFromSlope || slopeDeg > shallowToSlope)) return null;
+      if (steepEnabled && (slopeDeg < steepFromSlope || slopeDeg > steepToSlope)) return null;
+    }
+
+    const tipY = surfaceY + (isBall ? toolRadius * (contactNormalY - 1) : 0) + (Number(stockToLeaveZ) || 0);
+    return new THREE.Vector3(x, tipY, z);
+  };
+
+  // --- SPIRAL MODE ---
+  if (isSpiral) {
+    const totalTurns = Math.max(1, Math.ceil(sweepAngleDeg / 360) * Math.ceil((endRadius - startRadius) / Math.max(0.5, (tool.diameter || 6) * 0.2)));
+    const totalSteps = totalTurns * 72; // 5 degrees per step
+    const pts = [];
+
+    for (let i = 0; i <= totalSteps; i++) {
+      const t = i / totalSteps;
+      const angleDeg = startAngleDeg + t * (totalTurns * 360) * rotSign;
+      const angleRad = (angleDeg * Math.PI) / 180.0;
+      const r = cutDirection === 'outside_to_inside'
+        ? endRadius - t * (endRadius - startRadius)
+        : startRadius + t * (endRadius - startRadius);
+
+      const x = cx + r * Math.cos(angleRad);
+      const z = cz + r * Math.sin(angleRad);
+      const pt = sampleSurfacePoint(x, z);
+      if (pt) pts.push(pt);
+    }
+
+    if (pts.length >= 2) {
+      rapidLines.push([
+        new THREE.Vector3(pts[0].x, topY + rapidHeight, pts[0].z),
+        new THREE.Vector3(pts[0].x, pts[0].y + feedPlane, pts[0].z)
+      ]);
+      cuttingLines.push([
+        new THREE.Vector3(pts[0].x, pts[0].y + feedPlane, pts[0].z),
+        pts[0]
+      ]);
+      for (let i = 0; i < pts.length - 1; i++) {
+        cuttingLines.push([pts[i], pts[i + 1]]);
+      }
+      const last = pts[pts.length - 1];
+      cuttingLines.push([last, new THREE.Vector3(last.x, last.y + feedPlane, last.z)]);
+      rapidLines.push([new THREE.Vector3(last.x, last.y + feedPlane, last.z), new THREE.Vector3(last.x, topY + rapidHeight, last.z)]);
+    }
+
+    return { cuttingLines, rapidLines };
+  }
+
+  // --- SPOKE MODE (ZIGZAG & ONE-WAY) ---
+  const numSpokes = Math.max(4, Math.ceil(sweepAngleDeg / angularStepDeg));
+  const actualAngleStep = sweepAngleDeg / numSpokes;
+  const numRadialPoints = Math.max(16, Math.round(Math.abs(endRadius - startRadius) / 1.0));
+
+  let passDirection = cutDirection === 'outside_to_inside' ? -1 : 1; // 1 = in -> out, -1 = out -> in
+  let lastSpokeEnd = null;
+
+  for (let s = 0; s <= numSpokes; s++) {
+    const spokeAngleDeg = startAngleDeg + s * actualAngleStep * rotSign;
+    const spokeAngleRad = (spokeAngleDeg * Math.PI) / 180.0;
+    const cosAngle = Math.cos(spokeAngleRad);
+    const sinAngle = Math.sin(spokeAngleRad);
+
+    const rStart = passDirection === 1 ? startRadius : endRadius;
+    const rEnd = passDirection === 1 ? endRadius : startRadius;
+
+    const contiguousSegments = [];
+    let currentSegment = [];
+
+    for (let i = 0; i <= numRadialPoints; i++) {
+      const t = i / numRadialPoints;
+      const r = rStart + (rEnd - rStart) * t;
+      const x = cx + r * cosAngle;
+      const z = cz + r * sinAngle;
+
+      const pt = sampleSurfacePoint(x, z);
+      if (pt) {
+        currentSegment.push(pt);
+      } else {
+        if (currentSegment.length >= 2) contiguousSegments.push(currentSegment);
+        currentSegment = [];
+      }
+    }
+    if (currentSegment.length >= 2) contiguousSegments.push(currentSegment);
+
+    for (let segIdx = 0; segIdx < contiguousSegments.length; segIdx++) {
+      const seg = contiguousSegments[segIdx];
+      const firstPt = seg[0];
+      const lastPt = seg[seg.length - 1];
+
+      // Check if we can do a smooth circumferential link from previous spoke
+      let connectedDirectly = false;
+      if (lastSpokeEnd && !isOneWay) {
+        const gapDist = lastSpokeEnd.distanceTo(firstPt);
+        if (gapDist <= (params.maxGapDistance || 10.0)) {
+          cuttingLines.push([lastSpokeEnd, firstPt]);
+          connectedDirectly = true;
+        }
+      }
+
+      if (!connectedDirectly) {
+        rapidLines.push([
+          new THREE.Vector3(firstPt.x, topY + rapidHeight, firstPt.z),
+          new THREE.Vector3(firstPt.x, firstPt.y + feedPlane, firstPt.z)
+        ]);
+        cuttingLines.push([
+          new THREE.Vector3(firstPt.x, firstPt.y + feedPlane, firstPt.z),
+          firstPt
+        ]);
+      }
+
+      for (let p = 0; p < seg.length - 1; p++) {
+        cuttingLines.push([seg[p], seg[p + 1]]);
+      }
+
+      lastSpokeEnd = lastPt;
+
+      if (isOneWay || segIdx < contiguousSegments.length - 1) {
+        cuttingLines.push([lastPt, new THREE.Vector3(lastPt.x, lastPt.y + feedPlane, lastPt.z)]);
+        rapidLines.push([
+          new THREE.Vector3(lastPt.x, lastPt.y + feedPlane, lastPt.z),
+          new THREE.Vector3(lastPt.x, topY + rapidHeight, lastPt.z)
+        ]);
+        lastSpokeEnd = null;
+      }
+    }
+
+    if (contiguousSegments.length > 0 && !isOneWay) {
+      passDirection *= -1;
+    }
+  }
+
+  // Final retract if needed
+  if (lastSpokeEnd) {
+    cuttingLines.push([lastSpokeEnd, new THREE.Vector3(lastSpokeEnd.x, lastSpokeEnd.y + feedPlane, lastSpokeEnd.z)]);
+    rapidLines.push([
+      new THREE.Vector3(lastSpokeEnd.x, lastSpokeEnd.y + feedPlane, lastSpokeEnd.z),
+      new THREE.Vector3(lastSpokeEnd.x, topY + rapidHeight, lastSpokeEnd.z)
+    ]);
+  }
+
+  return { cuttingLines, rapidLines };
+}
+
+/**
  * Generates 3D Surface Finish Shallow Toolpath.
  * Selectively machines flat and gentle sloped regions defined by [shallowFromSlope, shallowToSlope]
  * with constant stepover and ball nose 3D cutter contact normal compensation.
@@ -2543,6 +2811,9 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
       feedPlane: op.surfaceParams?.feedPlane || 2.5,
       stockToLeaveZ: op.surfaceParams?.stockToLeaveDrive || op.stockToLeaveZ || 0.0
     }, effectiveModel);
+  }
+  if (strategy === 'radial' || strategy === 'surface_finish_radial' || op.strategyKey === 'surface_finish_radial' || op.badgeClass === 'radial') {
+    return generateSurfaceRadialToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
   }
   if (strategy === 'probe') {
     const pCenter = op.center || {

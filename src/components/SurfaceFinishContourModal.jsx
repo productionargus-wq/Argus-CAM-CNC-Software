@@ -135,6 +135,7 @@ function SurfaceFinishContourModalInner({
   const isParallel = strategyMode === 'parallel' || operation?.strategyKey === 'surface_finish_parallel' || operation?.badgeClass === 'parallel';
   const isParallelSteep = strategyMode === 'parallel_steep' || strategyMode === 'steep' || operation?.strategyKey === 'surface_finish_parallel_steep' || operation?.badgeClass === 'parallel_steep';
   const isPencil = strategyMode === 'pencil' || operation?.strategyKey === 'surface_finish_pencil' || operation?.badgeClass === 'pencil';
+  const isRadial = strategyMode === 'radial' || operation?.strategyKey === 'surface_finish_radial' || operation?.badgeClass === 'radial';
   const caps = useMemo(() => resolveMachineToolpathCapabilities(activeMachine), [activeMachine]);
 
   const detectedSurfaces = useMemo(() => {
@@ -187,7 +188,7 @@ function SurfaceFinishContourModalInner({
         null
       );
     }
-    if (isFlowline || isShallow || isParallel || isParallelSteep || isPencil) {
+    if (isFlowline || isShallow || isParallel || isParallelSteep || isPencil || isRadial) {
       return (
         tools.find((t) => ['ball'].includes(String(t.type || '').toLowerCase())) ||
         tools.find((t) => ['bull', 'ball'].includes(String(t.type || '').toLowerCase())) ||
@@ -200,17 +201,17 @@ function SurfaceFinishContourModalInner({
       tools[0] ||
       null
     );
-  }, [operation, tools, isFlowline, isShallow, isParallel, isParallelSteep, isPencil]);
+  }, [operation, tools, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial]);
 
   const initialDefaults = useMemo(
     () =>
       createDefaultSurfaceFinishState({
         activeMachine,
         stockConfig,
-        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : 'contour',
+        strategyMode: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : 'contour',
         tool: initialTool
       }),
-    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, initialTool]
+    [activeMachine, stockConfig, isPocket, isFlowline, isShallow, isParallel, isParallelSteep, isPencil, isRadial, initialTool]
   );
 
   const [activeTab, setActiveTab] = useState('toolpath_params');
@@ -300,6 +301,67 @@ function SurfaceFinishContourModalInner({
     }),
     ...(operation?.pencilParams || {})
   }));
+
+  const [radialParams, setRadialParams] = useState(() => ({
+    ...(initialDefaults.radialParams || {
+      totalTolerance: 0.025,
+      filterToleranceRatio: 0.5,
+      oneWayArcFilter: false,
+      stepoverMode: 'max_stepover',
+      maxStepover: 1.0,
+      angularIncrement: 2.0,
+      startAngle: 0.0,
+      sweepAngle: 360.0,
+      startRadius: 0.0,
+      endRadius: 50.0,
+      centerPoint: { x: 0.0, y: 0.0, z: 0.0 },
+      autoCenter: true,
+      cutDirection: 'inside_to_outside',
+      cuttingMethod: 'Zigzag',
+      rotationDirection: 'CW',
+      shallowEnabled: false,
+      shallowFromSlope: 0.0,
+      shallowToSlope: 35.0,
+      steepEnabled: false,
+      steepFromSlope: 35.0,
+      steepToSlope: 90.0,
+      transitionType: 'broken',
+      maxGapDistance: 10.0
+    }),
+    ...(operation?.radialParams || {})
+  }));
+
+  // Auto-compute center point and outer radius from detected surfaces if autoCenter is active
+  useEffect(() => {
+    if (isRadial && (!operation?.radialParams?.centerPoint || radialParams.autoCenter)) {
+      if (detectedSurfaces.length > 0) {
+        const box = new THREE.Box3();
+        detectedSurfaces.forEach((s) => {
+          if (s.box && !s.box.isEmpty()) box.union(s.box);
+        });
+        if (!box.isEmpty()) {
+          const cx = Number(((box.min.x + box.max.x) / 2).toFixed(3));
+          const cy = Number(((box.min.y + box.max.y) / 2).toFixed(3));
+          const cz = Number(((box.min.z + box.max.z) / 2).toFixed(3));
+          const rMax = Number(Math.max(
+            Math.hypot(box.max.x - cx, box.max.z - cz),
+            Math.hypot(box.min.x - cx, box.min.z - cz),
+            10.0
+          ).toFixed(2));
+          setRadialParams((prev) => {
+            if (prev.centerPoint?.x === cx && prev.centerPoint?.y === cz && prev.endRadius === rMax) {
+              return prev;
+            }
+            return {
+              ...prev,
+              centerPoint: { x: cx, y: cz, z: cy },
+              endRadius: prev.endRadius > 0 && !prev.autoCenter ? prev.endRadius : rMax
+            };
+          });
+        }
+      }
+    }
+  }, [isRadial, detectedSurfaces]);
 
   // Tool table UI state (view mode, sort order, right-click menu, active sub-dialog)
   const [toolViewMode, setToolViewMode] = useState('details'); // details | large | small
@@ -448,7 +510,9 @@ function SurfaceFinishContourModalInner({
               ? 'Surface Finish Parallel'
               : isPencil
                 ? 'Surface Finish Pencil'
-                : 'Surface Finish Contour';
+                : isRadial
+                  ? 'Surface Finish Radial'
+                  : 'Surface Finish Contour';
     const rapidHeight = surfaceParams.clearanceEnabled && surfaceParams.clearanceMode === 'abs'
       ? Number(surfaceParams.clearance)
       : (Number(surfaceParams.retract) || 25.0);
@@ -461,15 +525,15 @@ function SurfaceFinishContourModalInner({
     const updatedOp = {
       ...(operation || {}),
       name: operation?.name || opTitle,
-      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : 'surface_finish_contour',
-      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : 'surface_finish_contour',
-      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : 'contour',
-      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallelSteep ? 'PS' : isParallel ? 'PA' : isPencil ? 'PC' : 'SC',
+      type: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : 'surface_finish_contour',
+      strategyKey: isFlowline ? 'surface_finish_flowline' : isPocket ? 'surface_finish_pocket' : isShallow ? 'surface_finish_shallow' : isParallelSteep ? 'surface_finish_parallel_steep' : isParallel ? 'surface_finish_parallel' : isPencil ? 'surface_finish_pencil' : isRadial ? 'surface_finish_radial' : 'surface_finish_contour',
+      badgeClass: isFlowline ? 'flowline' : isPocket ? 'pocket' : isShallow ? 'shallow' : isParallelSteep ? 'parallel_steep' : isParallel ? 'parallel' : isPencil ? 'pencil' : isRadial ? 'radial' : 'contour',
+      badgeText: isFlowline ? 'SF' : isPocket ? 'SP' : isShallow ? 'SS' : isParallelSteep ? 'PS' : isParallel ? 'PA' : isPencil ? 'PC' : isRadial ? 'RD' : 'SC',
       machiningAngle: Number(contourParams.machiningAngle ?? 90.0),
       steepFromSlope: Number(contourParams.steepFromSlope ?? 35.0),
       steepToSlope: Number(contourParams.steepToSlope ?? 90.0),
-      stepover: Number(isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
-      cuttingMethod: isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
+      stepover: Number(isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
+      cuttingMethod: isRadial ? (radialParams.cuttingMethod || 'zigzag').toLowerCase() : isPencil ? (pencilParams.cuttingMethod || 'zigzag').toLowerCase() : (contourParams.openContourDirection || 'zigzag'),
       toolId: activeTool?.id || toolParams.toolId || 1,
       toolName: toolParams.toolName,
       toolNumber: Number(toolParams.toolNumber) || 1,
@@ -482,7 +546,7 @@ function SurfaceFinishContourModalInner({
       plungeFeedRate: Number(toolParams.plungeRate) || 150,
       retractRate: Number(toolParams.retractRate) || 250,
       rapidHeight,
-      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : isPencil ? pencilParams.stepover : contourParams.maxStepdown) || 0.5,
+      stepdown: Number(isFlowline ? flowlineParams.stepoverDistance : isPocket ? pocketParams.maxStepdown : isPencil ? pencilParams.stepover : isRadial ? (radialParams.stepoverMode === 'angular' ? radialParams.angularIncrement : radialParams.maxStepover) : contourParams.maxStepdown) || 0.5,
       stockToLeaveXY: Number(surfaceParams.stockToLeaveDrive) || 0.0,
       stockToLeaveZ: Number(surfaceParams.stockToLeaveDrive) || 0.0,
       cuttingDirection: isPocket ? pocketParams.machiningDirection : isPencil ? pencilParams.machiningDirection : contourParams.direction,
@@ -491,8 +555,10 @@ function SurfaceFinishContourModalInner({
         ? String(flowlineParams.cuttingMethod || 'Zigzag').toLowerCase()
         : isPencil
           ? String(pencilParams.cuttingMethod || 'Zigzag').toLowerCase()
-          : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
-      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : isPencil ? pencilParams.stepover : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
+          : isRadial
+            ? String(radialParams.cuttingMethod || 'Zigzag').toLowerCase()
+            : (pocketParams.cuttingMethod?.toLowerCase() || 'constant_overlap'),
+      stepoverPct: Math.max(5, Math.min(95, Math.round((Number((isFlowline ? flowlineParams.stepoverDistance : isPencil ? pencilParams.stepover : isRadial ? radialParams.maxStepover : pocketParams.stepover) || 5) / Math.max(1, Number(toolParams.toolDiameter))) * 100))),
       biTangencyRadius: Number(pencilParams.biTangencyRadius) || 3.0,
       numberOfPasses: Number(pencilParams.numberOfPasses) || 1,
       driveSurfaceIds: selectedSurfaceIds,
@@ -514,7 +580,8 @@ function SurfaceFinishContourModalInner({
       pocketParams: { ...pocketParams },
       flowlineData: { ...flowlineData },
       flowlineParams: { ...flowlineParams },
-      pencilParams: { ...pencilParams }
+      pencilParams: { ...pencilParams },
+      radialParams: { ...radialParams }
     };
 
     onSaveOperation?.(updatedOp);
@@ -584,7 +651,9 @@ function SurfaceFinishContourModalInner({
                         ? 'Surface Finish Parallel'
                         : isPencil
                           ? 'Surface Finish Pencil'
-                          : 'Surface Finish Contour'}
+                          : isRadial
+                            ? 'Surface Finish Radial'
+                            : 'Surface Finish Contour'}
             </span>
             <span
               style={{
@@ -931,6 +1000,83 @@ function SurfaceFinishContourModalInner({
           </div>
         )}
 
+        {/* Radial Tutorial Quick Helper Banner */}
+        {isRadial && (
+          <div
+            style={{
+              background: '#ecfeff',
+              borderBottom: '1px solid #a5f3fc',
+              padding: '6px 12px',
+              fontSize: '11px',
+              color: '#0e7490',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px'
+            }}
+          >
+            <div>
+              <strong>Surface Finish Radial:</strong> 1. Select Ball/Bull Nose &rarr; 2. Surface Parameters (Clearance 25mm Abs) &rarr; 3. Radial Parameters (Center, Stepover/Angle, Sector) &rarr; Click <strong>Green Checkmark (OK)</strong>.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const ballTool = tools.find((t) => t.type === 'ball' || /ball/i.test(t.name)) || tools[0];
+                if (ballTool) {
+                  setSelectedToolId(ballTool.id);
+                  setToolParams((prev) => buildToolStateFromRecord(ballTool, caps, prev));
+                }
+                setSurfaceParams((p) => ({
+                  ...p,
+                  clearanceEnabled: true,
+                  clearance: 25.0,
+                  clearanceMode: 'abs',
+                  retractEnabled: true,
+                  retract: 2.5,
+                  retractMode: 'inc',
+                  feedPlane: 2.5,
+                  feedPlaneMode: 'inc',
+                  stockToLeaveDrive: 0.0,
+                  containmentMode: 'center'
+                }));
+                if (detectedSurfaces.length > 0) {
+                  const box = new THREE.Box3();
+                  detectedSurfaces.forEach((s) => { if (s.box && !s.box.isEmpty()) box.union(s.box); });
+                  if (!box.isEmpty()) {
+                    const cx = Number(((box.min.x + box.max.x) / 2).toFixed(3));
+                    const cy = Number(((box.min.y + box.max.y) / 2).toFixed(3));
+                    const cz = Number(((box.min.z + box.max.z) / 2).toFixed(3));
+                    const rMax = Number(Math.max(Math.hypot(box.max.x - cx, box.max.z - cz), 10.0).toFixed(2));
+                    setRadialParams((p) => ({
+                      ...p,
+                      centerPoint: { x: cx, y: cz, z: cy },
+                      endRadius: rMax,
+                      autoCenter: true,
+                      maxStepover: 1.0,
+                      angularIncrement: Number(((1.0 / rMax) * (180 / Math.PI)).toFixed(2)),
+                      sweepAngle: 360.0
+                    }));
+                  }
+                }
+                onNotify?.('Loaded recommended Radial values & auto-centered on drive surfaces', 'success');
+              }}
+              style={{
+                background: '#0891b2',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '3px 8px',
+                fontSize: '10.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⚡ Load Recommended Radial Values
+            </button>
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', background: '#f0f0f0', padding: '5px 8px 0 8px', borderBottom: '1px solid #d1d5db' }}>
           {[
@@ -950,7 +1096,9 @@ function SurfaceFinishContourModalInner({
                         ? 'Finish parallel parameters'
                         : isPencil
                           ? 'Finish pencil parameters'
-                          : 'Finish contour parameters'
+                          : isRadial
+                            ? 'Finish radial parameters'
+                            : 'Finish contour parameters'
             }
           ].map((tab) => {
             const active = activeTab === tab.id;
@@ -1570,7 +1718,7 @@ function SurfaceFinishContourModalInner({
           )}
 
           {/* ==================== TAB 3A: FINISH CONTOUR PARAMETERS (IMAGE 5 VERBATIM) ==================== */}
-          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && !isParallelSteep && !isPencil && (
+          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && !isParallelSteep && !isPencil && !isRadial && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '246px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
                 {/* LEFT COLUMN */}
@@ -2720,6 +2868,383 @@ function SurfaceFinishContourModalInner({
               </div>
             </div>
           )}
+
+          {/* ==================== TAB 3H: FINISH RADIAL PARAMETERS (MASTERCAM VERBATIM) ==================== */}
+          {activeTab === 'finish_contour_params' && isRadial && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
+                {/* LEFT COLUMN: Tolerances, Stepover Mode, Sector Angles, Radii Limits */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', minWidth: 0 }}>
+                  {/* Total tolerance */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '146px minmax(0, 1fr)', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <button type="button" onClick={() => setActiveSubDialog('total_tolerance')} style={{ ...MC_BUTTON, width: '100%', borderColor: '#3b82f6' }}>
+                      Total tolerance...
+                    </button>
+                    <input
+                      type="number"
+                      step="0.005"
+                      value={radialParams.totalTolerance ?? 0.025}
+                      onChange={(e) => setRadialParams((p) => ({ ...p, totalTolerance: Number(e.target.value) }))}
+                      style={CLASSIC_YELLOW}
+                    />
+                  </div>
+
+                  {/* Stepover & Angular Increment Mode */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Stepover & Resolution</legend>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input
+                            type="radio"
+                            name="radialStepMode"
+                            checked={radialParams.stepoverMode === 'max_stepover'}
+                            onChange={() => setRadialParams((p) => ({ ...p, stepoverMode: 'max_stepover' }))}
+                          />
+                          <span style={{ fontWeight: radialParams.stepoverMode === 'max_stepover' ? 600 : 400 }}>Max stepover (mm)</span>
+                        </div>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.05"
+                          value={radialParams.maxStepover ?? 1.0}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            const rEnd = radialParams.endRadius > 0 ? radialParams.endRadius : 50;
+                            const deg = Number(((val / rEnd) * (180 / Math.PI)).toFixed(2));
+                            setRadialParams((p) => ({ ...p, maxStepover: val, angularIncrement: deg }));
+                          }}
+                          disabled={radialParams.stepoverMode !== 'max_stepover'}
+                          style={{ ...CLASSIC_YELLOW, opacity: radialParams.stepoverMode === 'max_stepover' ? 1 : 0.6 }}
+                        />
+                      </label>
+
+                      <label style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input
+                            type="radio"
+                            name="radialStepMode"
+                            checked={radialParams.stepoverMode === 'angular'}
+                            onChange={() => setRadialParams((p) => ({ ...p, stepoverMode: 'angular' }))}
+                          />
+                          <span style={{ fontWeight: radialParams.stepoverMode === 'angular' ? 600 : 400 }}>Angular step (deg)</span>
+                        </div>
+                        <input
+                          type="number"
+                          step="0.2"
+                          min="0.1"
+                          max="30"
+                          value={radialParams.angularIncrement ?? 2.0}
+                          onChange={(e) => {
+                            const deg = Number(e.target.value);
+                            const rEnd = radialParams.endRadius > 0 ? radialParams.endRadius : 50;
+                            const step = Number(((deg * Math.PI / 180) * rEnd).toFixed(2));
+                            setRadialParams((p) => ({ ...p, angularIncrement: deg, maxStepover: step }));
+                          }}
+                          disabled={radialParams.stepoverMode !== 'angular'}
+                          style={{ ...CLASSIC_YELLOW, opacity: radialParams.stepoverMode === 'angular' ? 1 : 0.6 }}
+                        />
+                      </label>
+
+                      {/* Computed Scallop Height at outer radius */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr)', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ color: '#64748b' }}>Scallop height (rim)</span>
+                        <div style={{ ...CLASSIC_YELLOW, background: '#f8fafc', color: '#0369a1', display: 'flex', alignItems: 'center', fontWeight: 600, padding: '0 6px' }}>
+                          {(() => {
+                            const r = Math.max(0.5, (Number(toolParams.toolDiameter) || 6) / 2);
+                            const s = Math.max(0.01, Number(radialParams.maxStepover) || 1.0);
+                            const scallop = r - Math.sqrt(Math.max(0, r * r - (s / 2) * (s / 2)));
+                            return `${(scallop || 0.005).toFixed(4)} mm`;
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </fieldset>
+
+                  {/* Sector Angles */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Angular Sector Bounds</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '6px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Start Angle (deg)</span>
+                        <input
+                          type="number"
+                          step="5"
+                          value={radialParams.startAngle ?? 0.0}
+                          onChange={(e) => setRadialParams((p) => ({ ...p, startAngle: Number(e.target.value) }))}
+                          style={CLASSIC_YELLOW}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Sweep Angle (deg)</span>
+                        <input
+                          type="number"
+                          step="5"
+                          min="1"
+                          max="360"
+                          value={radialParams.sweepAngle ?? 360.0}
+                          onChange={(e) => setRadialParams((p) => ({ ...p, sweepAngle: Number(e.target.value) }))}
+                          style={CLASSIC_YELLOW}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+                      {[
+                        { label: '360° Full', sweep: 360 },
+                        { label: '180° Half', sweep: 180 },
+                        { label: '90° Quadrant', sweep: 90 }
+                      ].map((btn) => (
+                        <button
+                          key={btn.sweep}
+                          type="button"
+                          onClick={() => setRadialParams((p) => ({ ...p, sweepAngle: btn.sweep }))}
+                          style={{
+                            ...MC_BUTTON,
+                            background: Number(radialParams.sweepAngle) === btn.sweep ? '#e0f2fe' : '#ffffff',
+                            borderColor: Number(radialParams.sweepAngle) === btn.sweep ? '#0284c7' : '#9ca3af',
+                            color: Number(radialParams.sweepAngle) === btn.sweep ? '#0369a1' : '#0f172a',
+                            fontWeight: Number(radialParams.sweepAngle) === btn.sweep ? 600 : 400,
+                            padding: '3px 2px',
+                            fontSize: '10.5px'
+                          }}
+                        >
+                          {btn.label}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  {/* Radial Range (Start & End Radius) */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Radial Limits (mm)</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Start Radius (Inner)</span>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={radialParams.startRadius ?? 0.0}
+                          onChange={(e) => setRadialParams((p) => ({ ...p, startRadius: Number(e.target.value) }))}
+                          style={CLASSIC_YELLOW}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>End Radius (Outer)</span>
+                        <input
+                          type="number"
+                          step="1"
+                          min="1"
+                          value={radialParams.endRadius ?? 50.0}
+                          onChange={(e) => {
+                            const r = Number(e.target.value);
+                            setRadialParams((p) => ({
+                              ...p,
+                              endRadius: r,
+                              maxStepover: p.stepoverMode === 'angular' ? Number(((p.angularIncrement * Math.PI / 180) * r).toFixed(2)) : p.maxStepover
+                            }));
+                          }}
+                          style={CLASSIC_YELLOW}
+                        />
+                      </div>
+                    </div>
+                  </fieldset>
+                </div>
+
+                {/* RIGHT COLUMN: Center Point, Cut Direction, Cutting Method, Graphic */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 }}>
+                  {/* Center Point */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Center Point (Spoke Origin)</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '6px' }}>
+                      <div>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Center X</span>
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={radialParams.centerPoint?.x ?? 0.0}
+                          onChange={(e) => setRadialParams((p) => ({ ...p, autoCenter: false, centerPoint: { ...(p.centerPoint || {}), x: Number(e.target.value) } }))}
+                          style={CLASSIC_YELLOW}
+                        />
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Center Y</span>
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={radialParams.centerPoint?.y ?? 0.0}
+                          onChange={(e) => setRadialParams((p) => ({ ...p, autoCenter: false, centerPoint: { ...(p.centerPoint || {}), y: Number(e.target.value) } }))}
+                          style={CLASSIC_YELLOW}
+                        />
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Center Z</span>
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={radialParams.centerPoint?.z ?? 0.0}
+                          onChange={(e) => setRadialParams((p) => ({ ...p, autoCenter: false, centerPoint: { ...(p.centerPoint || {}), z: Number(e.target.value) } }))}
+                          style={CLASSIC_YELLOW}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (detectedSurfaces.length > 0) {
+                            const box = new THREE.Box3();
+                            detectedSurfaces.forEach((s) => { if (s.box && !s.box.isEmpty()) box.union(s.box); });
+                            if (!box.isEmpty()) {
+                              const cx = Number(((box.min.x + box.max.x) / 2).toFixed(3));
+                              const cy = Number(((box.min.y + box.max.y) / 2).toFixed(3));
+                              const cz = Number(((box.min.z + box.max.z) / 2).toFixed(3));
+                              const rMax = Number(Math.max(Math.hypot(box.max.x - cx, box.max.z - cz), 10.0).toFixed(2));
+                              setRadialParams((p) => ({ ...p, autoCenter: true, centerPoint: { x: cx, y: cz, z: cy }, endRadius: rMax }));
+                              onNotify?.('Center point and outer radius calculated from drive surfaces', 'success');
+                            }
+                          }
+                        }}
+                        style={{ ...MC_BUTTON, flex: 1, borderColor: '#0284c7', color: '#0369a1' }}
+                      >
+                        Auto Center from Surfaces
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRadialParams((p) => ({ ...p, autoCenter: false, centerPoint: { x: 0, y: 0, z: 0 } }))}
+                        style={{ ...MC_BUTTON, width: '130px' }}
+                      >
+                        Set WCS (0,0)
+                      </button>
+                    </div>
+                  </fieldset>
+
+                  {/* Cut Direction & Rotation */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                      <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Cut Direction</legend>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {[
+                          { id: 'inside_to_outside', label: 'Inside to Outside' },
+                          { id: 'outside_to_inside', label: 'Outside to Inside' }
+                        ].map((d) => (
+                          <label key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="radialCutDir"
+                              checked={(radialParams.cutDirection || 'inside_to_outside') === d.id}
+                              onChange={() => setRadialParams((p) => ({ ...p, cutDirection: d.id }))}
+                            />
+                            <span>{d.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+
+                    <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                      <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Angular Progression</legend>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {[
+                          { id: 'CW', label: 'Clockwise (CW)' },
+                          { id: 'CCW', label: 'Counter-Clockwise (CCW)' }
+                        ].map((r) => (
+                          <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="radialRotDir"
+                              checked={(radialParams.rotationDirection || 'CW') === r.id}
+                              onChange={() => setRadialParams((p) => ({ ...p, rotationDirection: r.id }))}
+                            />
+                            <span>{r.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  </div>
+
+                  {/* Cutting Method */}
+                  <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '2px' }}>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Cutting Method</legend>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                      {[
+                        { id: 'Zigzag', label: 'Zigzag (Bi-dir)', desc: 'Continuous spokes' },
+                        { id: 'One way', label: 'One Way', desc: 'Retract to center/rim' },
+                        { id: 'Spiral', label: 'Spiral', desc: 'Continuous archimedean' }
+                      ].map((m) => {
+                        const active = (radialParams.cuttingMethod || 'Zigzag').toLowerCase() === m.id.toLowerCase();
+                        return (
+                          <div
+                            key={m.id}
+                            onClick={() => setRadialParams((p) => ({ ...p, cuttingMethod: m.id }))}
+                            style={{
+                              border: active ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                              background: active ? '#f0f9ff' : '#ffffff',
+                              padding: '8px 6px',
+                              borderRadius: '2px',
+                              cursor: 'pointer',
+                              textAlign: 'center'
+                            }}
+                          >
+                            <div style={{ fontWeight: active ? 600 : 500, color: active ? '#0369a1' : '#1e293b', fontSize: '11px' }}>
+                              {m.label}
+                            </div>
+                            <div style={{ fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>{m.desc}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  {/* Mastercam Schematic Graphic */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '3px', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ fontSize: '10.5px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                      Radial Finish Topology ({radialParams.cuttingMethod || 'Zigzag'} • Step: {radialParams.stepoverMode === 'angular' ? `${radialParams.angularIncrement ?? 2}°` : `${radialParams.maxStepover ?? 1}mm`} • Sweep: {radialParams.sweepAngle ?? 360}°)
+                    </div>
+                    <svg width="280" height="100" viewBox="0 0 280 100">
+                      {/* Center concentric circles */}
+                      <circle cx="140" cy="50" r="42" fill="none" stroke="#94a3b8" strokeWidth="1" strokeDasharray="3,3" />
+                      <circle cx="140" cy="50" r="28" fill="none" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="2,2" />
+                      <circle cx="140" cy="50" r="12" fill="none" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="2,2" />
+                      {/* Center Origin Mark */}
+                      <circle cx="140" cy="50" r="3" fill="#dc2626" />
+                      <line x1="134" y1="50" x2="146" y2="50" stroke="#dc2626" strokeWidth="1" />
+                      <line x1="140" y1="44" x2="140" y2="56" stroke="#dc2626" strokeWidth="1" />
+                      {/* Radial Spokes */}
+                      {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, idx) => {
+                        const rad = (deg * Math.PI) / 180;
+                        const r1 = Math.max(6, Number(radialParams.startRadius) || 6);
+                        const r2 = 42;
+                        const x1 = 140 + r1 * Math.cos(rad);
+                        const y1 = 50 + r1 * Math.sin(rad);
+                        const x2 = 140 + r2 * Math.cos(rad);
+                        const y2 = 50 + r2 * Math.sin(rad);
+                        const isEven = idx % 2 === 0;
+                        return (
+                          <g key={deg}>
+                            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#0284c7" strokeWidth="1.6" />
+                            <circle cx={x2} cy={y2} r="2" fill="#0284c7" />
+                            {/* Arc transition for zigzag */}
+                            {(radialParams.cuttingMethod || 'Zigzag').toLowerCase() === 'zigzag' && isEven && (
+                              <path
+                                d={`M ${x2} ${y2} A 42 42 0 0 1 ${140 + r2 * Math.cos(rad + Math.PI / 6)} ${50 + r2 * Math.sin(rad + Math.PI / 6)}`}
+                                fill="none"
+                                stroke="#10b981"
+                                strokeWidth="1.2"
+                                strokeDasharray="2,2"
+                              />
+                            )}
+                          </g>
+                        );
+                      })}
+                      <text x="140" y="96" textAnchor="middle" fontSize="9" fill="#0f172a" fontWeight="600">
+                        Center ({radialParams.centerPoint?.x ?? 0}, {radialParams.centerPoint?.y ?? 0}) • R_in: {radialParams.startRadius ?? 0}mm • R_out: {radialParams.endRadius ?? 50}mm
+                      </text>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer Strip (OK / Cancel / Help + Machine Status) */}
@@ -2779,7 +3304,7 @@ function SurfaceFinishContourModalInner({
               type="button"
               onClick={() =>
                 onNotify?.(
-                  `${isFlowline ? 'Surface Finish Flowline' : isPocket ? 'Surface Finish Pocket' : isShallow ? 'Surface Finish Shallow' : 'Surface Finish Contour'} (${caps.machineName} - ${caps.axesCount}-Axis)`,
+                  `${isFlowline ? 'Surface Finish Flowline' : isPocket ? 'Surface Finish Pocket' : isShallow ? 'Surface Finish Shallow' : isParallelSteep ? 'Surface Finish Parallel Steep' : isParallel ? 'Surface Finish Parallel' : isPencil ? 'Surface Finish Pencil' : isRadial ? 'Surface Finish Radial' : 'Surface Finish Contour'} (${caps.machineName} - ${caps.axesCount}-Axis)`,
                   'info'
                 )
               }

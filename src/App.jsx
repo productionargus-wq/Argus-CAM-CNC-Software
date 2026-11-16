@@ -1943,6 +1943,8 @@ export default function App() {
       op?.badgeClass === 'parallel_steep' ||
       op?.strategyKey === 'surface_finish_pencil' ||
       op?.badgeClass === 'pencil' ||
+      op?.strategyKey === 'surface_finish_radial' ||
+      op?.badgeClass === 'radial' ||
       op?.usesCustomSurfaces
     ) {
       const mode =
@@ -1958,7 +1960,9 @@ export default function App() {
                   ? 'parallel'
                   : op.strategyKey === 'surface_finish_pencil' || op.badgeClass === 'pencil'
                     ? 'pencil'
-                    : 'contour';
+                    : op.strategyKey === 'surface_finish_radial' || op.badgeClass === 'radial'
+                      ? 'radial'
+                      : 'contour';
       if (mode === 'flowline') {
         setSurfaceSelectionDraft({
           mode: 'flowline',
@@ -2193,6 +2197,9 @@ export default function App() {
       return;
     } else if (s === 'pencil' || s === 'surface_finish_pencil' || s === '3d_pencil') {
       openSurfaceFinishModal('pencil', null);
+      return;
+    } else if (s === 'radial' || s === 'surface_finish_radial' || s === '3d_radial') {
+      openSurfaceFinishModal('radial', null);
       return;
     } else if (s === 'swarf' || s === '5axis_swarf') {
       newOp = {
@@ -3340,7 +3347,9 @@ export default function App() {
                 ? 'Surface Finish Parallel'
               : updatedOp.strategyKey === 'surface_finish_pencil'
                 ? 'Surface Finish Pencil'
-                : 'Surface Finish Contour';
+                : updatedOp.strategyKey === 'surface_finish_radial'
+                  ? 'Surface Finish Radial'
+                  : 'Surface Finish Contour';
     const finalOp = {
       ...updatedOp,
       id: nextId,
@@ -3526,6 +3535,10 @@ export default function App() {
       case 'surface_finish_pencil':
       case 'pencil':
         openSurfaceFinishModal('pencil', null);
+        break;
+      case 'surface_finish_radial':
+      case 'radial':
+        openSurfaceFinishModal('radial', null);
         break;
       case 'verify_solid':
         setIsSolidVerifyModalOpen(true);
@@ -5962,6 +5975,7 @@ export default function App() {
         onOpenSurfaceFinishParallel={() => openSurfaceFinishModal('parallel', null)}
         onOpenSurfaceFinishParallelSteep={() => openSurfaceFinishModal('parallel_steep', null)}
         onOpenSurfaceFinishPencil={() => openSurfaceFinishModal('pencil', null)}
+        onOpenSurfaceFinishRadial={() => openSurfaceFinishModal('radial', null)}
         onCopyViewportImage={handleCopyViewportImage}
         onPasteOp={handlePasteOp}
         onCutOp={handleCutOp}
@@ -6213,6 +6227,7 @@ export default function App() {
           onOpenSurfaceFinishParallel={() => openSurfaceFinishModal('parallel', null)}
           onOpenSurfaceFinishParallelSteep={() => openSurfaceFinishModal('parallel_steep', null)}
           onOpenSurfaceFinishPencil={() => openSurfaceFinishModal('pencil', null)}
+          onOpenSurfaceFinishRadial={() => openSurfaceFinishModal('radial', null)}
           onEditOpGeometry={handleOpenFlowlineGeometryEdit}
           onExportStockSTL={handleExportStockSTL}
           activeDrawingTool={activeDrawingTool}

@@ -224,9 +224,9 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         id: '3d_radial',
         label: 'Radial',
         icon: 'Tp3dRadial',
-        action: 'tp_3d_radial',
-        opType: 'waterline',
-        tooltip: 'Radial Pattern Surface Finishing'
+        action: 'tp_3d_finish_radial',
+        opType: 'surface_finish_radial',
+        tooltip: 'Surface Finish Radial Pattern around Center Point across 3D CAD Surfaces'
       },
       {
         id: '3d_pencil',

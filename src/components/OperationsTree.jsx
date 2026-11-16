@@ -82,7 +82,9 @@ export default function OperationsTree({
   onOpenSurfaceFinishFlowline,
   onOpenSurfaceFinishShallow,
   onOpenSurfaceFinishParallel,
+  onOpenSurfaceFinishParallelSteep,
   onOpenSurfaceFinishPencil,
+  onOpenSurfaceFinishRadial,
   onEditOpGeometry,
   onExportStockSTL,
   activeDrawingTool = null,
@@ -1818,7 +1820,9 @@ export default function OperationsTree({
           onOpenSurfaceFinishFlowline={onOpenSurfaceFinishFlowline}
           onOpenSurfaceFinishShallow={onOpenSurfaceFinishShallow}
           onOpenSurfaceFinishParallel={onOpenSurfaceFinishParallel}
+          onOpenSurfaceFinishParallelSteep={onOpenSurfaceFinishParallelSteep}
           onOpenSurfaceFinishPencil={onOpenSurfaceFinishPencil}
+          onOpenSurfaceFinishRadial={onOpenSurfaceFinishRadial}
           onExportStockSTL={onExportStockSTL}
           onToggleLockOp={onToggleLockOp}
           onToggleGhostOp={onToggleGhostOp}
