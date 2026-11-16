@@ -780,6 +780,8 @@ function SurfaceFinishContourModalInner({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        padding: '16px',
+        boxSizing: 'border-box',
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
         userSelect: 'none'
       }}
@@ -794,6 +796,7 @@ function SurfaceFinishContourModalInner({
         style={{
           width: '820px',
           maxWidth: '96vw',
+          maxHeight: 'min(94vh, 880px)',
           background: '#f0f0f0',
           border: '1px solid #64748b',
           boxShadow: '0 22px 48px rgba(0, 0, 0, 0.42)',
@@ -808,6 +811,7 @@ function SurfaceFinishContourModalInner({
         <div
           style={{
             height: '29px',
+            flexShrink: 0,
             background: '#ffffff',
             borderBottom: '1px solid #cbd5e1',
             display: 'flex',
@@ -864,6 +868,8 @@ function SurfaceFinishContourModalInner({
           </button>
         </div>
 
+        {/* Helper Banners Container */}
+        <div style={{ flexShrink: 0 }}>
         {/* Flowline Tutorial Quick Helper Banner */}
         {isFlowline && (
           <div
@@ -1526,9 +1532,10 @@ function SurfaceFinishContourModalInner({
             </button>
           </div>
         )}
+        </div>
 
         {/* Navigation Tabs */}
-        <div style={{ display: 'flex', background: '#f0f0f0', padding: '5px 8px 0 8px', borderBottom: '1px solid #d1d5db' }}>
+        <div style={{ display: 'flex', flexShrink: 0, background: '#f0f0f0', padding: '5px 8px 0 8px', borderBottom: '1px solid #d1d5db' }}>
           {[
             { id: 'toolpath_params', label: 'Toolpath parameters' },
             { id: 'surface_params', label: 'Surface parameters' },
@@ -1586,7 +1593,18 @@ function SurfaceFinishContourModalInner({
         </div>
 
         {/* Main White-Backed Tab Workspace */}
-        <div style={{ background: '#ffffff', margin: '0 8px 0 8px', border: '1px solid #cbd5e1', borderTop: 'none', padding: '12px', minHeight: '365px' }}>
+        <div
+          style={{
+            background: '#ffffff',
+            margin: '0 8px 0 8px',
+            border: '1px solid #cbd5e1',
+            borderTop: 'none',
+            padding: '12px',
+            minHeight: '320px',
+            flex: '1 1 auto',
+            overflowY: 'auto'
+          }}
+        >
           {/* ==================== TAB 1: TOOLPATH PARAMETERS (IMAGE 1) ==================== */}
           {activeTab === 'toolpath_params' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0 }}>
@@ -2176,7 +2194,7 @@ function SurfaceFinishContourModalInner({
           )}
 
           {/* ==================== TAB 3A: FINISH CONTOUR PARAMETERS (IMAGE 5 VERBATIM) ==================== */}
-          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && !isParallelSteep && !isPencil && !isRadial && !isProject && !isLeftover && !isScallop && (
+          {activeTab === 'finish_contour_params' && !isPocket && !isFlowline && !isParallel && !isParallelSteep && !isPencil && !isRadial && !isProject && !isLeftover && !isScallop && !isBlend && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px', minWidth: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '246px minmax(0, 1fr)', gap: '16px', alignItems: 'start', minWidth: 0 }}>
                 {/* LEFT COLUMN */}
@@ -5375,7 +5393,9 @@ function SurfaceFinishContourModalInner({
         <div
           style={{
             height: '44px',
+            flexShrink: 0,
             background: '#f0f0f0',
+            borderTop: '1px solid #cbd5e1',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
