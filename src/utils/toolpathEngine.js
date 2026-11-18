@@ -5,6 +5,7 @@ import { segmentObjectIntoSolidFaces } from './solidFaceSelectionEngine.js';
 import { generateSurfaceFlowlineToolpath } from './flowlineToolpathEngine.js';
 import { generateOptiRoughToolpath, generateOptiRoughGCode } from './optiRoughToolpathEngine.js';
 import { generatePocketRoughToolpath, generatePocketRoughGCode } from './pocketRoughToolpathEngine.js';
+import { generateParallelRoughToolpath, generateParallelRoughGCode } from './parallelRoughToolpathEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -50,7 +51,9 @@ export {
   generateOptiRoughToolpath,
   generateOptiRoughGCode,
   generatePocketRoughToolpath,
-  generatePocketRoughGCode
+  generatePocketRoughGCode,
+  generateParallelRoughToolpath,
+  generateParallelRoughGCode
 };
 
 /**
@@ -4013,6 +4016,39 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
       depthOfCut: op.stepdown || 1.0,
       rapidHeight: op.rapidHeight || 15.0
     });
+  }
+  if (
+    strategy === 'surface_rough_parallel' ||
+    strategy === 'parallel_rough' ||
+    op.strategyKey === 'surface_rough_parallel' ||
+    op.strategyKey === 'parallel_rough' ||
+    op.badgeClass === 'rough_parallel'
+  ) {
+    return generateParallelRoughToolpath(opBounds, assignedTool, {
+      ...op,
+      cutParameters: op.cutParameters || {
+        stepoverPct: op.stepoverPct || 65,
+        stepdownMm: op.stepdown || 2.0
+      },
+      parallelParameters: op.parallelParameters || {
+        machiningAngle: op.machiningAngle || 0.0,
+        cuttingMethod: op.cuttingMethod || 'zigzag',
+        crossHatch: op.crossHatch || false,
+        cleanBoundaries: op.cleanBoundaries ?? true
+      },
+      modelGeometry: op.modelGeometry || {
+        wallStock: op.wallStock ?? 0.5,
+        floorStock: op.floorStock ?? 0.5
+      },
+      transitions: op.transitions || {
+        entryMethod: op.entryMethod || 'helical_ramp',
+        helicalRadius: op.helicalRadius || 4.0,
+        rampPitch: op.rampPitch || 2.0
+      },
+      linkingParameters: op.linkingParameters || {
+        clearancePlane: op.rapidHeight || 25.0
+      }
+    }, effectiveModel);
   }
   if (
     strategy === 'surface_rough_pocket' ||

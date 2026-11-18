@@ -40,6 +40,7 @@ export default function RibbonBar({
   onOpenAdaptiveModal,
   onOpenOptiRoughModal,
   onOpenSurfaceRoughPocketModal,
+  onOpenSurfaceRoughParallelModal,
   onOpenLeadInOutModal,
   onOpenFiveAxisStudio,
   onOpenSolidVerifyModal,
@@ -1737,6 +1738,12 @@ export default function RibbonBar({
                 if (action === 'tp_3d_pocket' || action === 'tp_3d_rough_pocket') {
                   if (onOpenSurfaceRoughPocketModal) {
                     onOpenSurfaceRoughPocketModal();
+                    return;
+                  }
+                }
+                if (action === 'tp_3d_rough_parallel' || action === 'tp_3d_parallel_rough') {
+                  if (onOpenSurfaceRoughParallelModal) {
+                    onOpenSurfaceRoughParallelModal();
                     return;
                   }
                 }

@@ -48,6 +48,7 @@ import ProbingStudioModal from './components/ProbingStudioModal';
 import AFRModal from './components/AFRModal';
 import SurfaceRoughOptiRoughModal from './components/SurfaceRoughOptiRoughModal';
 import SurfaceRoughPocketModal from './components/SurfaceRoughPocketModal';
+import SurfaceRoughParallelModal from './components/SurfaceRoughParallelModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
@@ -356,6 +357,8 @@ export default function App() {
   const [editingOptiRoughOp, setEditingOptiRoughOp] = useState(null);
   const [isPocketRoughModalOpen, setIsPocketRoughModalOpen] = useState(false);
   const [editingPocketRoughOp, setEditingPocketRoughOp] = useState(null);
+  const [isParallelRoughModalOpen, setIsParallelRoughModalOpen] = useState(false);
+  const [editingParallelRoughOp, setEditingParallelRoughOp] = useState(null);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
@@ -1961,6 +1964,18 @@ export default function App() {
     }
 
     if (
+      op?.strategyKey === 'surface_rough_parallel' ||
+      op?.strategyKey === 'parallel_rough' ||
+      op?.badgeClass === 'rough_parallel' ||
+      (op?.opType === 'parallel' && (op?.parallelParameters || op?.cutParameters?.stepdownMm)) ||
+      op?.name?.toLowerCase()?.includes('surface rough parallel')
+    ) {
+      setEditingParallelRoughOp(op);
+      setIsParallelRoughModalOpen(true);
+      return;
+    }
+
+    if (
       op?.strategyKey === 'surface_finish_flowline' ||
       op?.badgeClass === 'flowline' ||
       op?.strategyKey === 'surface_finish_contour' ||
@@ -2280,6 +2295,10 @@ export default function App() {
     } else if (s === 'surface_rough_pocket' || s === 'pocket_rough' || s === 'rough_pocket') {
       setEditingPocketRoughOp(null);
       setIsPocketRoughModalOpen(true);
+      return;
+    } else if (s === 'surface_rough_parallel' || s === 'parallel_rough' || s === 'rough_parallel') {
+      setEditingParallelRoughOp(null);
+      setIsParallelRoughModalOpen(true);
       return;
     } else if (s === 'adaptive' || s === 'dynamic_mill') {
       newOp = {
@@ -2645,6 +2664,49 @@ export default function App() {
     }
     setIsPocketRoughModalOpen(false);
     setEditingPocketRoughOp(null);
+  };
+
+  const handleSaveParallelRoughOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => o.id === savedOp.id);
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.tool?.id || savedOp.toolId)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 1, number: 1, type: 'bull', diameter: 10, name: '10mm Bull Endmill' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: savedOp.id || (prevOps.length > 0 ? Math.max(...prevOps.map((o) => Number(o.id) || 0)) + 1 : 1),
+      name: savedOp.name || 'Surface Rough Parallel',
+      strategyKey: 'surface_rough_parallel',
+      badgeClass: 'rough_parallel',
+      opType: 'parallel',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 5000,
+      feedRate: savedOp.tool?.feedRate || 1800,
+      plungeRate: savedOp.tool?.plungeRate || 450,
+      stepdown: savedOp.parallelParameters?.stepdownMm || savedOp.cutParameters?.stepdownMm || 2.0,
+      stepoverPct: savedOp.parallelParameters?.stepoverPct || savedOp.cutParameters?.stepoverPct || 65.0,
+      machiningAngle: savedOp.parallelParameters?.machiningAngle ?? 0.0,
+      crossHatch: savedOp.parallelParameters?.crossHatch ?? false,
+      cleanBoundaries: savedOp.parallelParameters?.cleanBoundaries ?? true,
+      rapidHeight: savedOp.linkingParameters?.clearancePlane || 25.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (o.id === formattedOp.id ? formattedOp : o)));
+      showToast('Surface Rough Parallel parameters updated and toolpath regenerated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('Surface Rough Parallel operation generated', 'success');
+    }
+    setIsParallelRoughModalOpen(false);
+    setEditingParallelRoughOp(null);
   };
 
   const handleSelectSampleModel = async (type) => {
@@ -3815,6 +3877,13 @@ export default function App() {
       case 'tp_3d_pocket':
         setEditingPocketRoughOp(null);
         setIsPocketRoughModalOpen(true);
+        break;
+      case 'surface_rough_parallel':
+      case 'parallel_rough':
+      case 'rough_parallel':
+      case 'tp_3d_rough_parallel':
+        setEditingParallelRoughOp(null);
+        setIsParallelRoughModalOpen(true);
         break;
       case 'chaining':
       case 'chain':
@@ -6351,6 +6420,10 @@ export default function App() {
           setEditingPocketRoughOp(null);
           setIsPocketRoughModalOpen(true);
         }}
+        onOpenSurfaceRoughParallelModal={() => {
+          setEditingParallelRoughOp(null);
+          setIsParallelRoughModalOpen(true);
+        }}
         onOpenAdaptiveModal={() => {
           setEditingOptiRoughOp(null);
           setIsOptiRoughModalOpen(true);
@@ -6512,6 +6585,10 @@ export default function App() {
           onOpenSurfaceRoughPocketModal={() => {
             setEditingPocketRoughOp(null);
             setIsPocketRoughModalOpen(true);
+          }}
+          onOpenSurfaceRoughParallelModal={() => {
+            setEditingParallelRoughOp(null);
+            setIsParallelRoughModalOpen(true);
           }}
           onOpenSurfaceFinishContour={() => openSurfaceFinishSelection('contour', null)}
           onOpenSurfaceFinishPocket={() => openSurfaceFinishSelection('pocket', null)}
@@ -7322,6 +7399,26 @@ export default function App() {
         stockConfig={stockConfig}
         currentModel={currentModel}
         onSaveOperation={handleSavePocketRoughOp}
+        onNotify={showToast}
+        onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
+      />
+
+      {/* Mastercam 3D Surface Rough Parallel Modal */}
+      <SurfaceRoughParallelModal
+        isOpen={isParallelRoughModalOpen}
+        onClose={() => {
+          setIsParallelRoughModalOpen(false);
+          setEditingParallelRoughOp(null);
+        }}
+        operation={editingParallelRoughOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        machines={machines}
+        onSelectMachine={handleSelectMachine}
+        lastDefinedTool={lastDefinedToolState}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        onSaveOperation={handleSaveParallelRoughOp}
         onNotify={showToast}
         onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
       />
