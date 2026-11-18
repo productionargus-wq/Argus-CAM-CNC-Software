@@ -205,6 +205,22 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         tooltip: 'Surface Finish Scallop - Constant Scallop Height Finishing across Steep and Shallow Surfaces'
       },
       {
+        id: '3d_rough_parallel',
+        label: 'Parallel Rough',
+        icon: 'Tp3dParallel',
+        action: 'tp_3d_rough_parallel',
+        opType: 'surface_rough_parallel',
+        tooltip: '3D Surface Rough Parallel - Linear Planar Slicing Roughing'
+      },
+      {
+        id: '3d_rough_waterline',
+        label: 'Waterline Rough',
+        icon: 'Tp3dWaterline',
+        action: 'tp_3d_rough_waterline',
+        opType: 'surface_rough_waterline',
+        tooltip: '3D Surface Rough Waterline - Constant-Z Multi-Ring Volumetric Cavity Clearing'
+      },
+      {
         id: '3d_waterline',
         label: 'Waterline',
         icon: 'Tp3dWaterline',

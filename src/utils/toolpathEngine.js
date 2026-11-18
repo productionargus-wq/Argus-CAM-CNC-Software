@@ -6,6 +6,7 @@ import { generateSurfaceFlowlineToolpath } from './flowlineToolpathEngine.js';
 import { generateOptiRoughToolpath, generateOptiRoughGCode } from './optiRoughToolpathEngine.js';
 import { generatePocketRoughToolpath, generatePocketRoughGCode } from './pocketRoughToolpathEngine.js';
 import { generateParallelRoughToolpath, generateParallelRoughGCode } from './parallelRoughToolpathEngine.js';
+import { generateWaterlineRoughToolpath, generateWaterlineRoughGCode } from './waterlineRoughToolpathEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -53,7 +54,9 @@ export {
   generatePocketRoughToolpath,
   generatePocketRoughGCode,
   generateParallelRoughToolpath,
-  generateParallelRoughGCode
+  generateParallelRoughGCode,
+  generateWaterlineRoughToolpath,
+  generateWaterlineRoughGCode
 };
 
 /**
@@ -4035,6 +4038,41 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
         cuttingMethod: op.cuttingMethod || 'zigzag',
         crossHatch: op.crossHatch || false,
         cleanBoundaries: op.cleanBoundaries ?? true
+      },
+      modelGeometry: op.modelGeometry || {
+        wallStock: op.wallStock ?? 0.5,
+        floorStock: op.floorStock ?? 0.5
+      },
+      transitions: op.transitions || {
+        entryMethod: op.entryMethod || 'helical_ramp',
+        helicalRadius: op.helicalRadius || 4.0,
+        rampPitch: op.rampPitch || 2.0
+      },
+      linkingParameters: op.linkingParameters || {
+        clearancePlane: op.rapidHeight || 25.0
+      }
+    }, effectiveModel);
+  }
+  if (
+    strategy === 'surface_rough_waterline' ||
+    strategy === 'waterline_rough' ||
+    op.strategyKey === 'surface_rough_waterline' ||
+    op.strategyKey === 'waterline_rough' ||
+    op.badgeClass === 'rough_waterline'
+  ) {
+    return generateWaterlineRoughToolpath(opBounds, assignedTool, {
+      ...op,
+      cutParameters: op.cutParameters || {
+        stepoverPct: op.stepoverPct || 60,
+        stepdownMm: op.stepdown || 2.0,
+        cuttingMethod: op.cuttingMethod || 'climb',
+        cutDirection: op.cutDirection || 'inside_out'
+      },
+      waterlineParameters: op.waterlineParameters || {
+        criticalDepths: op.criticalDepths ?? true,
+        flatAreaDetection: op.flatAreaDetection ?? true,
+        wallCleanup: op.wallCleanup ?? true,
+        cornerSmoothingRadius: op.cornerSmoothingRadius || 1.5
       },
       modelGeometry: op.modelGeometry || {
         wallStock: op.wallStock ?? 0.5,

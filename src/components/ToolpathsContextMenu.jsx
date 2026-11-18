@@ -129,6 +129,7 @@ export default function ToolpathsContextMenu({
   onOpenOptiRoughModal,
   onOpenSurfaceRoughPocketModal,
   onOpenSurfaceRoughParallelModal,
+  onOpenSurfaceRoughWaterlineModal,
   onOpenSurfaceFinishShallow,
   onOpenSurfaceFinishParallel,
   onOpenSurfaceFinishParallelSteep,
@@ -295,7 +296,7 @@ export default function ToolpathsContextMenu({
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenOptiRoughModal ? onOpenOptiRoughModal() : onAddOperation?.('surface_rough_optirough'))}>OptiRough</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceRoughPocketModal ? onOpenSurfaceRoughPocketModal() : onAddOperation?.('surface_rough_pocket'))}>Pocket Rough</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceRoughParallelModal ? onOpenSurfaceRoughParallelModal() : onAddOperation?.('surface_rough_parallel'))}>Parallel Rough</div>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('waterline'))}>Waterline Rough</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSurfaceRoughWaterlineModal ? onOpenSurfaceRoughWaterlineModal() : onAddOperation?.('surface_rough_waterline'))}>Waterline Rough</div>
                 </div>
               )}
             </div>

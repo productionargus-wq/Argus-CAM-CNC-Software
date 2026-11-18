@@ -41,6 +41,7 @@ export default function RibbonBar({
   onOpenOptiRoughModal,
   onOpenSurfaceRoughPocketModal,
   onOpenSurfaceRoughParallelModal,
+  onOpenSurfaceRoughWaterlineModal,
   onOpenLeadInOutModal,
   onOpenFiveAxisStudio,
   onOpenSolidVerifyModal,
@@ -1744,6 +1745,12 @@ export default function RibbonBar({
                 if (action === 'tp_3d_rough_parallel' || action === 'tp_3d_parallel_rough') {
                   if (onOpenSurfaceRoughParallelModal) {
                     onOpenSurfaceRoughParallelModal();
+                    return;
+                  }
+                }
+                if (action === 'tp_3d_rough_waterline' || action === 'tp_3d_waterline_rough' || action === 'tp_3d_waterline') {
+                  if (onOpenSurfaceRoughWaterlineModal) {
+                    onOpenSurfaceRoughWaterlineModal();
                     return;
                   }
                 }

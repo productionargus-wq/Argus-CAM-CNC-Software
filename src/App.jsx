@@ -49,6 +49,7 @@ import AFRModal from './components/AFRModal';
 import SurfaceRoughOptiRoughModal from './components/SurfaceRoughOptiRoughModal';
 import SurfaceRoughPocketModal from './components/SurfaceRoughPocketModal';
 import SurfaceRoughParallelModal from './components/SurfaceRoughParallelModal';
+import SurfaceRoughWaterlineModal from './components/SurfaceRoughWaterlineModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
@@ -359,6 +360,8 @@ export default function App() {
   const [editingPocketRoughOp, setEditingPocketRoughOp] = useState(null);
   const [isParallelRoughModalOpen, setIsParallelRoughModalOpen] = useState(false);
   const [editingParallelRoughOp, setEditingParallelRoughOp] = useState(null);
+  const [isWaterlineRoughModalOpen, setIsWaterlineRoughModalOpen] = useState(false);
+  const [editingWaterlineRoughOp, setEditingWaterlineRoughOp] = useState(null);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
@@ -1993,6 +1996,18 @@ export default function App() {
     }
 
     if (
+      op?.strategyKey === 'surface_rough_waterline' ||
+      op?.strategyKey === 'waterline_rough' ||
+      op?.badgeClass === 'rough_waterline' ||
+      (op?.opType === 'waterline' && (op?.waterlineParameters || op?.cutParameters?.stepdownMm)) ||
+      op?.name?.toLowerCase()?.includes('surface rough waterline')
+    ) {
+      setEditingWaterlineRoughOp(op);
+      setIsWaterlineRoughModalOpen(true);
+      return;
+    }
+
+    if (
       op?.strategyKey === 'surface_finish_flowline' ||
       op?.badgeClass === 'flowline' ||
       op?.strategyKey === 'surface_finish_contour' ||
@@ -2317,6 +2332,10 @@ export default function App() {
     } else if (s === 'surface_rough_parallel' || s === 'parallel_rough' || s === 'rough_parallel') {
       setEditingParallelRoughOp(null);
       setIsParallelRoughModalOpen(true);
+      return;
+    } else if (s === 'surface_rough_waterline' || s === 'waterline_rough' || s === 'rough_waterline') {
+      setEditingWaterlineRoughOp(null);
+      setIsWaterlineRoughModalOpen(true);
       return;
     } else if (s === 'adaptive' || s === 'dynamic_mill') {
       newOp = {
@@ -2745,6 +2764,56 @@ export default function App() {
     setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setIsParallelRoughModalOpen(false);
     setEditingParallelRoughOp(null);
+  };
+
+  const handleSaveWaterlineRoughOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : ((savedOp.id != null && Number.isFinite(Number(savedOp.id))) ? Number(savedOp.id) : nextId);
+
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.tool?.id || savedOp.toolId)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 1, number: 1, type: 'bull', diameter: 10, name: '10mm Bull Endmill' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: finalId,
+      name: savedOp.name || 'Surface Rough Waterline',
+      strategyKey: 'surface_rough_waterline',
+      badgeClass: 'rough_waterline',
+      opType: 'waterline',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 5000,
+      feedRate: savedOp.tool?.feedRate || 1800,
+      plungeRate: savedOp.tool?.plungeRate || 450,
+      stepdown: savedOp.waterlineParameters?.stepdownMm || savedOp.cutParameters?.stepdownMm || 2.0,
+      stepoverPct: savedOp.waterlineParameters?.stepoverPct || savedOp.cutParameters?.stepoverPct || 60.0,
+      cuttingMethod: savedOp.cutParameters?.cuttingMethod || 'climb',
+      cutDirection: savedOp.cutParameters?.cutDirection || 'inside_out',
+      wallStock: savedOp.modelGeometry?.wallStock ?? 0.5,
+      floorStock: savedOp.modelGeometry?.floorStock ?? 0.5,
+      rapidHeight: savedOp.linkingParameters?.clearancePlane || 25.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
+      showToast('Surface Rough Waterline parameters updated and toolpath regenerated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('Surface Rough Waterline operation generated', 'success');
+    }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+    setIsWaterlineRoughModalOpen(false);
+    setEditingWaterlineRoughOp(null);
   };
 
   const handleSelectSampleModel = async (type) => {
@@ -3922,6 +3991,14 @@ export default function App() {
       case 'tp_3d_rough_parallel':
         setEditingParallelRoughOp(null);
         setIsParallelRoughModalOpen(true);
+        break;
+      case 'surface_rough_waterline':
+      case 'waterline_rough':
+      case 'rough_waterline':
+      case 'tp_3d_rough_waterline':
+      case 'tp_3d_waterline_rough':
+        setEditingWaterlineRoughOp(null);
+        setIsWaterlineRoughModalOpen(true);
         break;
       case 'chaining':
       case 'chain':
@@ -6467,6 +6544,10 @@ export default function App() {
           setEditingParallelRoughOp(null);
           setIsParallelRoughModalOpen(true);
         }}
+        onOpenSurfaceRoughWaterlineModal={() => {
+          setEditingWaterlineRoughOp(null);
+          setIsWaterlineRoughModalOpen(true);
+        }}
         onOpenAdaptiveModal={() => {
           setEditingOptiRoughOp(null);
           setIsOptiRoughModalOpen(true);
@@ -6632,6 +6713,10 @@ export default function App() {
           onOpenSurfaceRoughParallelModal={() => {
             setEditingParallelRoughOp(null);
             setIsParallelRoughModalOpen(true);
+          }}
+          onOpenSurfaceRoughWaterlineModal={() => {
+            setEditingWaterlineRoughOp(null);
+            setIsWaterlineRoughModalOpen(true);
           }}
           onOpenSurfaceFinishContour={() => openSurfaceFinishSelection('contour', null)}
           onOpenSurfaceFinishPocket={() => openSurfaceFinishSelection('pocket', null)}
@@ -7462,6 +7547,26 @@ export default function App() {
         stockConfig={stockConfig}
         currentModel={currentModel}
         onSaveOperation={handleSaveParallelRoughOp}
+        onNotify={showToast}
+        onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
+      />
+
+      {/* Mastercam 3D Surface Rough Waterline Modal */}
+      <SurfaceRoughWaterlineModal
+        isOpen={isWaterlineRoughModalOpen}
+        onClose={() => {
+          setIsWaterlineRoughModalOpen(false);
+          setEditingWaterlineRoughOp(null);
+        }}
+        operation={editingWaterlineRoughOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        machines={machines}
+        onSelectMachine={handleSelectMachine}
+        lastDefinedTool={lastDefinedToolState}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        onSaveOperation={handleSaveWaterlineRoughOp}
         onNotify={showToast}
         onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
       />

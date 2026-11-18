@@ -2725,6 +2725,7 @@ export default function Viewport3D({
         parallel: 0xd946ef,
         surface: 0xd946ef,
         rough_parallel: 0xf59e0b,
+        rough_waterline: 0x06b6d4,
         rough_pocket: 0x10b981,
         rough_optirough: 0x06b6d4,
         flowline: 0x10b981,
