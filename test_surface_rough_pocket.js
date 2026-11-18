@@ -4,7 +4,8 @@ import {
   POCKET_ROUGH_PRESETS,
   resolvePocketRoughMachineCapabilities,
   calculatePocketRoughPhysics,
-  createDefaultPocketRoughState
+  createDefaultPocketRoughState,
+  resolveDefaultRoughingTool
 } from './src/config/pocketRoughSchema.js';
 import {
   generatePocketRoughToolpath,
@@ -38,6 +39,23 @@ assert.strictEqual(defaultState.linkingParameters.clearancePlane, 25.0);
 assert.strictEqual(defaultState.arcFilterTolerance.totalTolerance, 0.025);
 assert.strictEqual(defaultState.coolant.mode, 'flood');
 console.log('✓ Test 1 Passed: Mastercam defaults and 15 pages verified.');
+
+// TEST 1B: Smart Default Tool Resolution (Endmill preference over 50mm Face Mill)
+console.log('\n[Test 1B] Smart Tool Resolution (Endmill preference over 50mm Face Mill)...');
+const mockTools = [
+  { id: 1, number: 1, name: '50mm Face Mill (Shell Mill)', type: 'face', diameter: 50 },
+  { id: 2, number: 2, name: '12mm Flat Endmill (Carbide Rougher)', type: 'flat', diameter: 12 },
+  { id: 3, number: 3, name: '10mm 4-Flute Flat Endmill (Finisher)', type: 'flat', diameter: 10 }
+];
+const chosenTool = resolveDefaultRoughingTool(mockTools);
+assert.ok(chosenTool, 'Should resolve a valid cutter');
+assert.strictEqual(chosenTool.id, 2, 'Should pick Tool #2 (12mm Flat Endmill) instead of Tool #1 (50mm Face Mill)');
+assert.strictEqual(chosenTool.diameter, 12);
+
+const roughStateWithTools = createDefaultPocketRoughState({ tools: mockTools });
+assert.strictEqual(roughStateWithTools.tool.diameter, 12, 'Default state with tools should have 12mm cutter');
+assert.ok(roughStateWithTools.tool.name.includes('12mm'), 'Default tool name should include 12mm');
+console.log('✓ Test 1B Passed: Smart Tool Selection verified (12mm Endmill picked over 50mm Face Mill).');
 
 // TEST 2: Machining Physics Calculations (MRR, Force, Power, Torque, Chip Load)
 console.log('\n[Test 2] Machining Physics Calculations...');

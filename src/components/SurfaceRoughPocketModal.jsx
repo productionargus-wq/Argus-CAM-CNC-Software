@@ -9,7 +9,8 @@ import {
   POCKET_ROUGH_PRESETS,
   resolvePocketRoughMachineCapabilities,
   calculatePocketRoughPhysics,
-  createDefaultPocketRoughState
+  createDefaultPocketRoughState,
+  resolveDefaultRoughingTool
 } from '../config/pocketRoughSchema.js';
 
 const CLASSIC_YELLOW = {
@@ -226,6 +227,9 @@ export default function SurfaceRoughPocketModal({
   onNotify,
   currentModel = null,
   activeMachine = null,
+  machines = [],
+  onSelectMachine = null,
+  lastDefinedTool = null,
   stockConfig = null,
   tools = [],
   operation = null,
@@ -253,53 +257,65 @@ export default function SurfaceRoughPocketModal({
   ], []);
 
   const [activePage, setActivePage] = useState('model_geometry');
-  const [formData, setFormData] = useState(() => createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }));
+  const [filterActive, setFilterActive] = useState(false);
+  const initialRoughTool = useMemo(() => resolveDefaultRoughingTool(tools), [tools]);
+  const [formData, setFormData] = useState(() =>
+    createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: initialRoughTool, tools })
+  );
 
   // Synchronize state when opening or when operation changes
   useEffect(() => {
     if (isOpen) {
+      const defaultState = createDefaultPocketRoughState({
+        activeMachine,
+        stockConfig,
+        currentModel,
+        tool: initialRoughTool,
+        tools
+      });
+
       if (operation) {
         setFormData({
-          ...createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }),
+          ...defaultState,
           ...operation,
           modelGeometry: {
-            ...createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }).modelGeometry,
+            ...defaultState.modelGeometry,
             ...(operation.modelGeometry || {})
           },
           toolpathControl: {
-            ...createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }).toolpathControl,
+            ...defaultState.toolpathControl,
             ...(operation.toolpathControl || {})
           },
           cutParameters: {
-            ...createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }).cutParameters,
+            ...defaultState.cutParameters,
             ...(operation.cutParameters || {})
           },
           pocketParameters: {
-            ...createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }).pocketParameters,
+            ...defaultState.pocketParameters,
             ...(operation.pocketParameters || {})
           },
           transitions: {
-            ...createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }).transitions,
+            ...defaultState.transitions,
             ...(operation.transitions || {})
           },
           steepShallow: {
-            ...createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }).steepShallow,
+            ...defaultState.steepShallow,
             ...(operation.steepShallow || {})
           },
           linkingParameters: {
-            ...createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }).linkingParameters,
+            ...defaultState.linkingParameters,
             ...(operation.linkingParameters || {})
           },
           tool: {
-            ...createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }).tool,
+            ...defaultState.tool,
             ...(operation.tool || {})
           }
         });
       } else {
-        setFormData(createDefaultPocketRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }));
+        setFormData(defaultState);
       }
     }
-  }, [isOpen, operation, activeMachine, stockConfig, currentModel, tools]);
+  }, [isOpen, operation, activeMachine, stockConfig, currentModel, initialRoughTool]);
 
   // Real-Time Physics Calculation
   const physics = useMemo(() => {
@@ -314,6 +330,79 @@ export default function SurfaceRoughPocketModal({
   const machineCaps = useMemo(() => {
     return resolvePocketRoughMachineCapabilities(activeMachine);
   }, [activeMachine]);
+
+  // Filtered tools list for interactive table
+  const displayedTools = useMemo(() => {
+    if (!tools || !tools.length) return [];
+    if (!filterActive) return tools;
+    return tools.filter(
+      (t) =>
+        t.type === 'flat' ||
+        t.type === 'bull' ||
+        t.type === 'endmill' ||
+        (Number(t.diameter) <= 25 && t.type !== 'face')
+    );
+  }, [tools, filterActive]);
+
+  // Interactive tool selection handler
+  const handleSelectTool = (selectedTool) => {
+    if (!selectedTool) return;
+    const d = Number(selectedTool.diameter || 10);
+    const cr = Number(selectedTool.cornerRadius ?? selectedTool.cornerRad ?? 0);
+    const maxR = machineCaps.maxRpm || 12000;
+    const rpm = Math.min(maxR, Number(selectedTool.spindleSpeed || selectedTool.rpm || 5000));
+    const feed = Number(selectedTool.feedRate || 1800);
+    const plunge = Number(selectedTool.plungeRate || Math.round(feed * 0.25));
+    const retract = Number(selectedTool.retractRate || Math.max(2500, feed * 1.5));
+    const num = selectedTool.number || selectedTool.id || 1;
+
+    setFormData((prev) => {
+      const currentStepoverPct = Number(prev.cutParameters.stepoverPct || 60);
+      const newStepoverMm = Number(((d * currentStepoverPct) / 100).toFixed(2));
+      return {
+        ...prev,
+        tool: {
+          ...prev.tool,
+          id: selectedTool.id,
+          number: num,
+          name: selectedTool.name || `${d}mm Flat Endmill`,
+          diameter: d,
+          cornerRadius: cr,
+          lengthOffset: selectedTool.lengthOffset ?? num,
+          diameterOffset: selectedTool.diameterOffset ?? num,
+          spindleSpeed: rpm,
+          feedRate: feed,
+          plungeRate: plunge,
+          retractRate: retract,
+          flutes: selectedTool.flutes || 4,
+          type: selectedTool.type || 'flat'
+        },
+        cutParameters: {
+          ...prev.cutParameters,
+          stepoverMm: newStepoverMm
+        }
+      };
+    });
+    onNotify?.(`Selected Tool #${num}: ${selectedTool.name}`, 'info');
+  };
+
+  // Cycle to next available library tool
+  const handleCycleLibraryTool = () => {
+    if (!tools || !tools.length) {
+      onOpenToolLibrary?.();
+      return;
+    }
+    const currIndex = tools.findIndex((t) => t.id === formData.tool.id || t.number === formData.tool.number);
+    const nextIndex = (currIndex + 1) % tools.length;
+    handleSelectTool(tools[nextIndex]);
+  };
+
+  // Handle dynamically defined tool from DefineToolModal
+  useEffect(() => {
+    if (lastDefinedTool?.tool && isOpen) {
+      handleSelectTool(lastDefinedTool.tool);
+    }
+  }, [lastDefinedTool]);
 
   // Early return after all hooks are evaluated
   if (!isOpen) return null;
@@ -356,9 +445,17 @@ export default function SurfaceRoughPocketModal({
   const handleToolParamChange = (field, value) => {
     setFormData((prev) => {
       const nextTool = { ...prev.tool, [field]: value };
-      const d = Math.max(1, Number(field === 'diameter' ? value : nextTool.diameter || 10.0));
+      const d = Math.max(0.1, Number(field === 'diameter' ? value : nextTool.diameter || 10.0));
       const rpm = Math.max(100, Number(field === 'spindleSpeed' ? value : nextTool.spindleSpeed || 5000));
       const feed = Math.max(50, Number(field === 'feedRate' ? value : nextTool.feedRate || 1800));
+
+      if (field === 'diameter') {
+        const dVal = parseFloat(value) || 10;
+        // Auto-update tool name if user modifies diameter
+        if (!nextTool.name || nextTool.name.includes('mm') || nextTool.name.includes('Face Mill')) {
+          nextTool.name = `${dVal}mm Flat Endmill`;
+        }
+      }
 
       if (field === 'spindleSpeed' || field === 'diameter') {
         nextTool.sfm = Number(((Math.PI * d * rpm) / 1000 * 3.28084).toFixed(1));
@@ -688,11 +785,30 @@ export default function SurfaceRoughPocketModal({
             <select
               value={formData.selectedPresetId || 'alu_high_speed_pocket'}
               onChange={(e) => handleApplyPreset(e.target.value)}
-              style={{ ...CLASSIC_YELLOW, width: '220px', height: '22px' }}
+              style={{ ...CLASSIC_YELLOW, width: '190px', height: '22px' }}
             >
               {POCKET_ROUGH_PRESETS.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
+                </option>
+              ))}
+            </select>
+
+            <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '4px' }}>Machine:</span>
+            <select
+              value={activeMachine?.id || (machineCaps.isFanuc ? 'fanuc_robodrill' : 'mill_3x_default')}
+              onChange={(e) => onSelectMachine && onSelectMachine(e.target.value)}
+              style={{ ...CLASSIC_YELLOW, width: '160px', height: '22px' }}
+              title="Select CNC Machine Kinematics and Controller Dialect"
+            >
+              {(machines && machines.length > 0 ? machines : [
+                { id: 'fanuc_robodrill', name: 'Fanuc Robodrill D21' },
+                { id: 'haas_vf2', name: 'Haas VF-2 (3-Axis)' },
+                { id: 'dmu50', name: 'DMU 50 (5-Axis RTCP)' },
+                { id: 'siemens_840d', name: 'Siemens Sinumerik 840D' }
+              ]).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name || m.id}
                 </option>
               ))}
             </select>
@@ -1160,10 +1276,103 @@ export default function SurfaceRoughPocketModal({
             {activePage === 'tool' && (
               <div>
                 <fieldset style={MC_GROUPBOX}>
-                  <legend style={MC_LEGEND}>Tool Definition & Coupled Feeds / Speeds</legend>
+                  <legend style={MC_LEGEND}>Tool Selection & Coupled Feeds / Speeds</legend>
                   <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '16px' }}>
+                    {/* Left Column: Tool Library Table */}
                     <div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        Tool Selection Table:
+                      </div>
+                      <div style={{ border: '1px solid #cbd5e1', maxHeight: '180px', overflowY: 'auto', background: '#ffffff', marginBottom: '8px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                          <thead>
+                            <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1', color: '#475569', position: 'sticky', top: 0, zIndex: 1 }}>
+                              <th style={{ width: '28px', padding: '3px 2px' }}>#</th>
+                              <th style={{ textAlign: 'left', padding: '3px 4px' }}>Tool Name</th>
+                              <th style={{ textAlign: 'center', padding: '3px 4px', width: '38px' }}>Dia</th>
+                              <th style={{ textAlign: 'center', padding: '3px 4px', width: '38px' }}>Rad</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {displayedTools.map((t) => {
+                              const isSelected =
+                                formData.tool.id === t.id ||
+                                (t.number != null && formData.tool.number === t.number);
+                              return (
+                                <tr
+                                  key={t.id || t.number}
+                                  onClick={() => handleSelectTool(t)}
+                                  style={{
+                                    background: isSelected ? '#0078d7' : 'transparent',
+                                    color: isSelected ? '#ffffff' : '#1e293b',
+                                    cursor: 'pointer',
+                                    borderBottom: '1px solid #f1f5f9'
+                                  }}
+                                >
+                                  <td style={{ textAlign: 'center', padding: '3px 2px', fontWeight: isSelected ? 600 : 400 }}>
+                                    {t.number || t.id}
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: '3px 4px',
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      maxWidth: '140px'
+                                    }}
+                                    title={t.name}
+                                  >
+                                    {t.name || `${t.diameter}mm Endmill`}
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '3px 4px' }}>{t.diameter}</td>
+                                  <td style={{ textAlign: 'center', padding: '3px 4px' }}>
+                                    {t.cornerRadius ?? t.cornerRad ?? 0}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <button
+                          onClick={handleCycleLibraryTool}
+                          style={MC_BUTTON}
+                          title="Cycle to next available tool in library"
+                        >
+                          Select library tool...
+                        </button>
+                        <label
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            color: '#334155'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filterActive}
+                            onChange={(e) => setFilterActive(e.target.checked)}
+                          />
+                          Filter Active
+                        </label>
+                        <button
+                          onClick={() => onOpenToolLibrary && onOpenToolLibrary()}
+                          style={MC_BUTTON}
+                          title="Create or define a new cutting tool"
+                        >
+                          + Define Tool...
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Active Tool Parameters */}
+                    <div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '11px', color: '#475569' }}>Tool name:</span>
                         <input
                           type="text"
@@ -1173,7 +1382,7 @@ export default function SurfaceRoughPocketModal({
                         />
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '110px 100px 30px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '100px 100px 30px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '11px', color: '#475569' }}>Tool diameter:</span>
                         <input
                           type="number"
@@ -1185,7 +1394,7 @@ export default function SurfaceRoughPocketModal({
                         <span style={{ fontSize: '11px', color: '#64748b' }}>mm</span>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '110px 100px 30px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '100px 100px 30px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '11px', color: '#475569' }}>Corner radius:</span>
                         <input
                           type="number"
@@ -1197,7 +1406,7 @@ export default function SurfaceRoughPocketModal({
                         <span style={{ fontSize: '11px', color: '#64748b' }}>mm</span>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '110px 100px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '100px 100px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '11px', color: '#475569' }}>Tool number:</span>
                         <input
                           type="number"
@@ -1207,7 +1416,7 @@ export default function SurfaceRoughPocketModal({
                         />
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '110px 100px', gap: '6px', alignItems: 'center' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '100px 100px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '11px', color: '#475569' }}>Length offset:</span>
                         <input
                           type="number"
@@ -1216,10 +1425,8 @@ export default function SurfaceRoughPocketModal({
                           style={CLASSIC_YELLOW}
                         />
                       </div>
-                    </div>
 
-                    <div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '110px 100px 45px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '100px 100px 45px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '11px', color: '#475569' }}>Spindle speed:</span>
                         <input
                           type="number"
@@ -1230,7 +1437,7 @@ export default function SurfaceRoughPocketModal({
                         <span style={{ fontSize: '11px', color: '#64748b' }}>RPM</span>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '110px 100px 45px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '100px 100px 45px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '11px', color: '#475569' }}>Feed rate:</span>
                         <input
                           type="number"
@@ -1241,7 +1448,7 @@ export default function SurfaceRoughPocketModal({
                         <span style={{ fontSize: '11px', color: '#64748b' }}>mm/min</span>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '110px 100px 45px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '100px 100px 45px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '11px', color: '#475569' }}>Plunge rate:</span>
                         <input
                           type="number"
@@ -1252,7 +1459,7 @@ export default function SurfaceRoughPocketModal({
                         <span style={{ fontSize: '11px', color: '#64748b' }}>mm/min</span>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '110px 100px 45px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '100px 100px 45px', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
                         <span style={{ fontSize: '11px', color: '#475569' }}>Retract rate:</span>
                         <input
                           type="number"
@@ -1263,7 +1470,7 @@ export default function SurfaceRoughPocketModal({
                         <span style={{ fontSize: '11px', color: '#64748b' }}>mm/min</span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
                         <input
                           type="checkbox"
                           id="rapidRetract"
@@ -1275,18 +1482,6 @@ export default function SurfaceRoughPocketModal({
                         </label>
                       </div>
                     </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                    <button
-                      style={MC_BUTTON}
-                      onClick={() => onOpenToolLibrary && onOpenToolLibrary()}
-                    >
-                      Select library tool...
-                    </button>
-                    <button style={MC_BUTTON} onClick={() => alert('Filter active.')}>
-                      Filter Active
-                    </button>
                   </div>
                 </fieldset>
               </div>
@@ -1914,20 +2109,39 @@ export default function SurfaceRoughPocketModal({
             {activePage === 'planes' && (
               <div>
                 <fieldset style={MC_GROUPBOX}>
-                  <legend style={MC_LEGEND}>Coordinate Planes (WCS & Tool Plane)</legend>
-                  <div style={{ display: 'grid', gridTemplateColumns: '100px 140px', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+                  <legend style={MC_LEGEND}>Coordinate Planes & Machine Kinematics</legend>
+                  <div style={{ display: 'grid', gridTemplateColumns: '110px 180px', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '11px', color: '#475569' }}>Machine Definition:</span>
+                    <select
+                      value={activeMachine?.id || (machineCaps.isFanuc ? 'fanuc_robodrill' : 'mill_3x_default')}
+                      onChange={(e) => onSelectMachine && onSelectMachine(e.target.value)}
+                      style={CLASSIC_YELLOW}
+                    >
+                      {(machines && machines.length > 0 ? machines : [
+                        { id: 'fanuc_robodrill', name: 'Fanuc Robodrill D21' },
+                        { id: 'haas_vf2', name: 'Haas VF-2 (3-Axis)' },
+                        { id: 'dmu50', name: 'DMU 50 (5-Axis RTCP)' },
+                        { id: 'siemens_840d', name: 'Siemens Sinumerik 840D' }
+                      ]).map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name || m.id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '110px 180px', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
                     <span style={{ fontSize: '11px', color: '#475569' }}>WCS:</span>
                     <select value={formData.planes.wcs} style={CLASSIC_YELLOW} readOnly>
                       <option value="Top">Top (G54 X0 Y0 Z0)</option>
                     </select>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '100px 140px', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '110px 180px', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
                     <span style={{ fontSize: '11px', color: '#475569' }}>Tool Plane:</span>
                     <select value={formData.planes.toolPlane} style={CLASSIC_YELLOW} readOnly>
                       <option value="Top">Top</option>
                     </select>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '100px 140px', gap: '8px', alignItems: 'center' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '110px 180px', gap: '8px', alignItems: 'center' }}>
                     <span style={{ fontSize: '11px', color: '#475569' }}>Comp Plane:</span>
                     <select value={formData.planes.compPlane} style={CLASSIC_YELLOW} readOnly>
                       <option value="Top">Top</option>

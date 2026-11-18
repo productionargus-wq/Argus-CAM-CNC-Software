@@ -5,6 +5,29 @@
  * Pure ES module (safe in both Vite browser runtime and Node unit tests).
  */
 
+/**
+ * Intelligently resolve the most appropriate default roughing cutter from available tools.
+ * Avoids picking large face mills (e.g. 50mm shell mills) for 3D pocket cavity milling.
+ */
+export function resolveDefaultRoughingTool(tools = []) {
+  if (!Array.isArray(tools) || tools.length === 0) return null;
+  // 1. Prefer flat or bull endmill with diameter <= 20mm
+  const bestRougher = tools.find(
+    (t) => (t.type === 'flat' || t.type === 'bull' || t.type === 'endmill') && Number(t.diameter) <= 20
+  );
+  if (bestRougher) return bestRougher;
+
+  // 2. Any flat or bull endmill
+  const anyEndmill = tools.find((t) => t.type === 'flat' || t.type === 'bull' || t.type === 'endmill');
+  if (anyEndmill) return anyEndmill;
+
+  // 3. Any non-face tool <= 25mm
+  const smallCutter = tools.find((t) => t.type !== 'face' && Number(t.diameter) <= 25);
+  if (smallCutter) return smallCutter;
+
+  return tools[0];
+}
+
 export const POCKET_ROUGH_MATERIALS = {
   ALU_6061: {
     id: 'alu_6061',
@@ -236,24 +259,47 @@ export function createDefaultPocketRoughState(context = {}) {
     activeMachine = null,
     currentModel = null,
     stockConfig = null,
-    tool = null
+    tool = null,
+    tools = []
   } = context;
 
   const caps = resolvePocketRoughMachineCapabilities(activeMachine);
-  const defaultTool = tool || {
-    id: 361,
-    number: 361,
-    name: '10mm 4-Flute Bull Endmill R1.0',
-    diameter: 10.0,
-    cornerRadius: 1.0,
-    flutes: 4,
-    spindleSpeed: 5000,
-    feedRate: 1800,
-    plungeRate: 450,
-    retractRate: 2500,
-    fpt: 0.09,
-    sfm: 515
-  };
+  const candidateTool = tool || resolveDefaultRoughingTool(tools);
+  const defaultTool = candidateTool
+    ? {
+        id: candidateTool.id || candidateTool.number || 2,
+        number: candidateTool.number || candidateTool.id || 2,
+        name: candidateTool.name || `${candidateTool.diameter || 12}mm Flat Endmill`,
+        diameter: Number(candidateTool.diameter || 12.0),
+        cornerRadius: Number(candidateTool.cornerRadius ?? candidateTool.cornerRad ?? 0.0),
+        flutes: Number(candidateTool.flutes || 4),
+        spindleSpeed: Math.min(caps.maxRpm, Number(candidateTool.spindleSpeed || candidateTool.rpm || 5000)),
+        feedRate: Number(candidateTool.feedRate || 1800),
+        plungeRate: Number(candidateTool.plungeRate || 450),
+        retractRate: Number(candidateTool.retractRate || 2500),
+        lengthOffset: candidateTool.lengthOffset ?? candidateTool.number ?? 2,
+        diameterOffset: candidateTool.diameterOffset ?? candidateTool.number ?? 2,
+        rapidRetract: true,
+        fpt: candidateTool.feedPerTooth ? Number(candidateTool.feedPerTooth) : 0.09,
+        sfm: candidateTool.cuttingSpeedVc ? Number(candidateTool.cuttingSpeedVc) : 515
+      }
+    : {
+        id: 361,
+        number: 361,
+        name: '10mm 4-Flute Bull Endmill R1.0',
+        diameter: 10.0,
+        cornerRadius: 1.0,
+        flutes: 4,
+        spindleSpeed: 5000,
+        feedRate: 1800,
+        plungeRate: 450,
+        retractRate: 2500,
+        lengthOffset: 361,
+        diameterOffset: 361,
+        rapidRetract: true,
+        fpt: 0.09,
+        sfm: 515
+      };
 
   const toolDiam = Number(defaultTool.diameter || 10.0);
   const recStepoverPct = 60.0;

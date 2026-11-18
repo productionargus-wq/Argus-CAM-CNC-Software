@@ -3,6 +3,23 @@
  * Authoritative taxonomy, defaults, and physical calculations matching Mastercam 2025 Chapter 10.
  */
 
+/**
+ * Intelligently resolve the most appropriate default roughing cutter from available tools.
+ * Avoids picking large face mills (e.g. 50mm shell mills) for 3D high-speed roughing.
+ */
+export function resolveDefaultRoughingTool(tools = []) {
+  if (!Array.isArray(tools) || tools.length === 0) return null;
+  const bestRougher = tools.find(
+    (t) => (t.type === 'flat' || t.type === 'bull' || t.type === 'endmill') && Number(t.diameter) <= 20
+  );
+  if (bestRougher) return bestRougher;
+  const anyEndmill = tools.find((t) => t.type === 'flat' || t.type === 'bull' || t.type === 'endmill');
+  if (anyEndmill) return anyEndmill;
+  const smallCutter = tools.find((t) => t.type !== 'face' && Number(t.diameter) <= 25);
+  if (smallCutter) return smallCutter;
+  return tools[0];
+}
+
 export const OPTIROUGH_MATERIALS = {
   ALU_6061: {
     id: 'alu_6061',
@@ -224,21 +241,36 @@ export function calculateOptiRoughPhysics(tool = {}, params = {}, materialKey = 
  * Creates Mastercam-authentic initial state for 3D High Speed Dynamic OptiRough
  */
 export function createDefaultOptiRoughState(options = {}) {
-  const { activeMachine, stockConfig, currentModel, tool } = options;
+  const { activeMachine, stockConfig, currentModel, tool, tools = [] } = options;
   const caps = resolveOptiRoughMachineCapabilities(activeMachine);
-  const defaultTool = tool || {
-    id: 1,
-    number: 1,
-    name: '10mm 4-Flute Endmill (Dynamic Rougher)',
-    type: 'flat',
-    diameter: 10,
-    cornerRadius: 0,
-    flutes: 4,
-    spindleSpeed: 5395,
-    feedRate: 2870,
-    plungeRate: 450,
-    retractRate: 2500
-  };
+  const candidate = tool || resolveDefaultRoughingTool(tools);
+  const defaultTool = candidate
+    ? {
+        id: candidate.id || candidate.number || 1,
+        number: candidate.number || candidate.id || 1,
+        name: candidate.name || `${candidate.diameter || 10}mm 4-Flute Endmill`,
+        type: candidate.type || 'flat',
+        diameter: Number(candidate.diameter || 10),
+        cornerRadius: Number(candidate.cornerRadius ?? candidate.cornerRad ?? 0),
+        flutes: Number(candidate.flutes || 4),
+        spindleSpeed: Math.min(caps.maxRpm, Number(candidate.spindleSpeed || candidate.rpm || 5395)),
+        feedRate: Number(candidate.feedRate || 2870),
+        plungeRate: Number(candidate.plungeRate || 450),
+        retractRate: Number(candidate.retractRate || 2500)
+      }
+    : {
+        id: 1,
+        number: 1,
+        name: '10mm 4-Flute Endmill (Dynamic Rougher)',
+        type: 'flat',
+        diameter: 10,
+        cornerRadius: 0,
+        flutes: 4,
+        spindleSpeed: 5395,
+        feedRate: 2870,
+        plungeRate: 450,
+        retractRate: 2500
+      };
 
   const toolDiam = Number(defaultTool.diameter || 10);
   const initStepoverPct = 15.0; // 15% D

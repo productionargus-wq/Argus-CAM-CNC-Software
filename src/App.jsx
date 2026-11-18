@@ -7297,6 +7297,9 @@ export default function App() {
         operation={editingOptiRoughOp}
         tools={tools}
         activeMachine={activeMachine}
+        machines={machines}
+        onSelectMachine={handleSelectMachine}
+        lastDefinedTool={lastDefinedToolState}
         stockConfig={stockConfig}
         currentModel={currentModel}
         onSaveOperation={handleSaveOptiRoughOp}
@@ -7313,6 +7316,9 @@ export default function App() {
         operation={editingPocketRoughOp}
         tools={tools}
         activeMachine={activeMachine}
+        machines={machines}
+        onSelectMachine={handleSelectMachine}
+        lastDefinedTool={lastDefinedToolState}
         stockConfig={stockConfig}
         currentModel={currentModel}
         onSaveOperation={handleSavePocketRoughOp}

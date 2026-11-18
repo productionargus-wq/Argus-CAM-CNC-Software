@@ -9,7 +9,8 @@ import {
   OPTIROUGH_PRESETS,
   resolveOptiRoughMachineCapabilities,
   calculateOptiRoughPhysics,
-  createDefaultOptiRoughState
+  createDefaultOptiRoughState,
+  resolveDefaultRoughingTool
 } from '../config/optiRoughSchema.js';
 
 const CLASSIC_YELLOW = {
@@ -184,6 +185,9 @@ export default function SurfaceRoughOptiRoughModal({
   operation = null,
   tools = [],
   activeMachine = {},
+  machines = [],
+  onSelectMachine = null,
+  lastDefinedTool = null,
   stockConfig = {},
   currentModel = null,
   onSaveOperation,
@@ -212,7 +216,10 @@ export default function SurfaceRoughOptiRoughModal({
   ];
 
   const [activePage, setActivePage] = useState('model_geometry');
-  const [formData, setFormData] = useState(() => createDefaultOptiRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }));
+  const initialRoughTool = useMemo(() => resolveDefaultRoughingTool(tools), [tools]);
+  const [formData, setFormData] = useState(() =>
+    createDefaultOptiRoughState({ activeMachine, stockConfig, currentModel, tool: initialRoughTool, tools })
+  );
 
   // Synchronize state when opening or when operation changes
   useEffect(() => {
@@ -230,10 +237,17 @@ export default function SurfaceRoughOptiRoughModal({
           arcFilterTolerance: { ...prev.arcFilterTolerance, ...(operation.arcFilterTolerance || {}) }
         }));
       } else {
-        setFormData(createDefaultOptiRoughState({ activeMachine, stockConfig, currentModel, tool: tools[0] }));
+        setFormData(createDefaultOptiRoughState({ activeMachine, stockConfig, currentModel, tool: initialRoughTool, tools }));
       }
     }
-  }, [isOpen, operation, activeMachine, stockConfig, currentModel, tools]);
+  }, [isOpen, operation, activeMachine, stockConfig, currentModel, initialRoughTool]);
+
+  // Handle dynamically defined tool from DefineToolModal
+  useEffect(() => {
+    if (lastDefinedTool?.tool && isOpen) {
+      handleSelectTool(lastDefinedTool.tool);
+    }
+  }, [lastDefinedTool]);
 
   // Real-time Physics Calculations
   const physics = useMemo(() => {
@@ -961,6 +975,26 @@ export default function SurfaceRoughOptiRoughModal({
             );
           })}
           <div style={{ flex: 1 }} />
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginRight: '8px' }}>
+            <span style={{ fontSize: '11px', color: '#475569', fontWeight: 600 }}>Machine:</span>
+            <select
+              value={activeMachine?.id || 'fanuc_robodrill'}
+              onChange={(e) => onSelectMachine && onSelectMachine(e.target.value)}
+              style={{ ...CLASSIC_YELLOW, height: '21px', width: 'auto', minWidth: '150px' }}
+              title="Select CNC Machine Kinematics and Controller Dialect"
+            >
+              {(machines && machines.length > 0 ? machines : [
+                { id: 'fanuc_robodrill', name: 'Fanuc Robodrill D21' },
+                { id: 'haas_vf2', name: 'Haas VF-2 (3-Axis)' },
+                { id: 'dmu50', name: 'DMU 50 (5-Axis RTCP)' },
+                { id: 'siemens_840d', name: 'Siemens Sinumerik 840D' }
+              ]).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name || m.id}
+                </option>
+              ))}
+            </select>
+          </div>
           <span style={{ fontSize: '11px', color: '#0369a1', fontWeight: 600 }}>
             MRR: {physics.mrrCm3Min} cm³/min &bull; Power: {physics.powerKw} kW &bull; Constant θ: {physics.engagementDeg}°
           </span>
