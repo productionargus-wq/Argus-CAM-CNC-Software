@@ -244,7 +244,21 @@ export default function SurfaceRoughOptiRoughModal({
     );
   }, [formData.tool, formData.cutParameters, formData.selectedMaterialKey]);
 
-  if (!isOpen) return null;
+// Computed live Total Offset Distance
+  const computedTotalOffset = useMemo(() => {
+    const baseOffset = Number(formData.toolpathControl.offsetDistance || 0);
+    const toolRad = Number(formData.tool.diameter || 10) / 2;
+    return formData.toolpathControl.includeToolRadius ? (baseOffset + toolRad) : baseOffset;
+  }, [formData.toolpathControl.offsetDistance, formData.toolpathControl.includeToolRadius, formData.tool.diameter]);
+
+  // Tool Tab State & Handlers
+  const [filterActive, setFilterActive] = useState(false);
+
+  const displayedTools = useMemo(() => {
+    if (!filterActive) return tools;
+    return tools.filter((t) => Number(t.diameter || 10) <= 25);
+  }, [tools, filterActive]);
+
 
   // Handlers for nested state updates
   const updateNested = (section, field, value) => {
@@ -605,20 +619,6 @@ export default function SurfaceRoughOptiRoughModal({
     });
   };
 
-  // Computed live Total Offset Distance
-  const computedTotalOffset = useMemo(() => {
-    const baseOffset = Number(formData.toolpathControl.offsetDistance || 0);
-    const toolRad = Number(formData.tool.diameter || 10) / 2;
-    return formData.toolpathControl.includeToolRadius ? (baseOffset + toolRad) : baseOffset;
-  }, [formData.toolpathControl.offsetDistance, formData.toolpathControl.includeToolRadius, formData.tool.diameter]);
-
-  // Tool Tab State & Handlers
-  const [filterActive, setFilterActive] = useState(false);
-
-  const displayedTools = useMemo(() => {
-    if (!filterActive) return tools;
-    return tools.filter((t) => Number(t.diameter || 10) <= 25);
-  }, [tools, filterActive]);
 
   const handleCycleLibraryTool = () => {
     if (!tools.length) return;
@@ -817,6 +817,8 @@ export default function SurfaceRoughOptiRoughModal({
     onSaveOperation?.(finalOp);
     onClose?.();
   };
+
+  if (!isOpen) return null;
 
   return (
     <div
