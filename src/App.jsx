@@ -6505,6 +6505,14 @@ export default function App() {
           onOpenNestingStudio={() => setIsNestingStudioOpen(true)}
           onOpenProbingStudio={() => setIsSelectProbeOpen(true)}
           onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
+          onOpenOptiRoughModal={() => {
+            setEditingOptiRoughOp(null);
+            setIsOptiRoughModalOpen(true);
+          }}
+          onOpenSurfaceRoughPocketModal={() => {
+            setEditingPocketRoughOp(null);
+            setIsPocketRoughModalOpen(true);
+          }}
           onOpenSurfaceFinishContour={() => openSurfaceFinishSelection('contour', null)}
           onOpenSurfaceFinishPocket={() => openSurfaceFinishSelection('pocket', null)}
           onOpenSurfaceFinishFlowline={() => openSurfaceFinishSelection('flowline', null)}

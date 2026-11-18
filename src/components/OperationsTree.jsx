@@ -87,6 +87,8 @@ export default function OperationsTree({
   onOpenNestingStudio,
   onOpenProbingStudio,
   onOpenSetupSheet,
+  onOpenOptiRoughModal,
+  onOpenSurfaceRoughPocketModal,
   onOpenSurfaceFinishContour,
   onOpenSurfaceFinishPocket,
   onOpenSurfaceFinishFlowline,
@@ -1839,6 +1841,8 @@ export default function OperationsTree({
           onOpenNestingStudio={onOpenNestingStudio}
           onOpenProbingStudio={onOpenProbingStudio}
           onOpenHSMFilter={onOpenHSMFilter}
+          onOpenOptiRoughModal={onOpenOptiRoughModal}
+          onOpenSurfaceRoughPocketModal={onOpenSurfaceRoughPocketModal}
           onOpenSurfaceFinishContour={onOpenSurfaceFinishContour}
           onOpenSurfaceFinishPocket={onOpenSurfaceFinishPocket}
           onOpenSurfaceFinishFlowline={onOpenSurfaceFinishFlowline}
