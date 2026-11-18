@@ -160,6 +160,22 @@ function MastercamTipCompIcon() {
 }
 
 /**
+ * Helical Ramp Entry Diagram (Transitions Tab)
+ */
+function HelicalRampDiagramSvg() {
+  return (
+    <svg width="180" height="90" viewBox="0 0 180 90" style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '3px' }}>
+      <ellipse cx="90" cy="20" rx="35" ry="10" fill="none" stroke="#94a3b8" strokeWidth="1.2" strokeDasharray="3,2" />
+      <path d="M 55 20 C 55 35, 125 35, 125 45 C 125 55, 55 55, 55 65 C 55 75, 125 75, 125 82" fill="none" stroke="#2563eb" strokeWidth="2" />
+      <polygon points="125,85 122,78 128,78" fill="#2563eb" />
+      <text x="10" y="35" fill="#1e293b" fontSize="9.5" fontWeight="bold">Helical Ramp</text>
+      <text x="10" y="48" fill="#64748b" fontSize="8.5">Radius: 5mm</text>
+      <text x="10" y="60" fill="#64748b" fontSize="8.5">Angle: 2.0°</text>
+    </svg>
+  );
+}
+
+/**
  * Authentic Mastercam 3D High Speed Toolpaths - Dynamic OptiRough Modal
  */
 export default function SurfaceRoughOptiRoughModal({
