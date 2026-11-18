@@ -470,6 +470,98 @@ export default function SurfaceRoughPocketModal({
     }));
   };
 
+  // Mastercam Recommended Values Handler
+  const handleApplyRecommended = () => {
+    const toolDiam = Number(formData.tool.diameter || 10.0);
+    const recStepdown = 2.0;
+    const recStepoverPct = 60.0;
+    const recStepoverMm = Number(((toolDiam * recStepoverPct) / 100).toFixed(2));
+    const recHelicalRadius = Math.max(1.5, Math.min(toolDiam * 0.45, 4.0));
+
+    let top = 0.0;
+    let bottom = -25.0;
+    if (currentModel?.box) {
+      top = Number(currentModel.box.max.z.toFixed(2));
+      bottom = Number(currentModel.box.min.z.toFixed(2));
+    } else if (stockConfig?.height) {
+      top = 0.0;
+      bottom = -Number(stockConfig.height);
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      selectedPresetId: 'alu_high_speed_pocket',
+      selectedMaterialKey: 'ALU_6061',
+      modelGeometry: {
+        ...prev.modelGeometry,
+        sameWallAndFloorStock: true,
+        wallStock: 0.5,
+        floorStock: 0.5
+      },
+      toolpathControl: {
+        ...prev.toolpathControl,
+        strategy: 'stay_inside',
+        compensateTo: 'center'
+      },
+      cutParameters: {
+        ...prev.cutParameters,
+        cuttingMethod: 'climb',
+        stepdownMm: recStepdown,
+        stepoverPct: recStepoverPct,
+        stepoverMm: recStepoverMm,
+        cutOrder: 'by_depth',
+        roughingAngle: 0.0,
+        cornerRoundingRadius: 0.5
+      },
+      pocketParameters: {
+        ...prev.pocketParameters,
+        cuttingStyle: 'constant_overlap_spiral',
+        spiralDirection: 'inside_out',
+        islandAvoidance: true,
+        cleanCorners: true,
+        finishPassEnabled: true,
+        finishPassWidth: 0.35,
+        finishFeedRate: 1200
+      },
+      transitions: {
+        ...prev.transitions,
+        entryMethod: 'helical_ramp',
+        helicalRadiusMin: 2.5,
+        helicalRadiusMax: recHelicalRadius,
+        rampPitch: 2.0,
+        rampAngle: 3.0,
+        plungeClearance: 2.0,
+        entryFeedRate: 450
+      },
+      steepShallow: {
+        ...prev.steepShallow,
+        useZDepths: true,
+        minimumDepth: top,
+        maximumDepth: bottom
+      },
+      linkingParameters: {
+        ...prev.linkingParameters,
+        clearancePlane: 25.0,
+        clearanceType: 'absolute',
+        retractPlane: 5.0,
+        retractType: 'incremental',
+        feedPlane: 2.5,
+        topOfStock: top,
+        depth: bottom
+      },
+      tool: {
+        ...prev.tool,
+        spindleSpeed: 5000,
+        feedRate: 1800,
+        plungeRate: 450,
+        retractRate: 2500,
+        rapidRetract: true
+      }
+    }));
+
+    onNotify?.('Loaded Mastercam Recommended Surface Rough Pocket Values (2.0mm Stepdown, 60% Stepover, Constant Overlap Spiral, 0.5mm Stock)', 'success');
+  };
+
   const handleApply = (closeAfter = true) => {
     if (onSaveOperation) {
       onSaveOperation(formData);
@@ -574,6 +666,24 @@ export default function SurfaceRoughPocketModal({
           </button>
 
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={handleApplyRecommended}
+              style={{
+                ...MC_BUTTON,
+                height: '22px',
+                fontSize: '11px',
+                fontWeight: 700,
+                background: 'linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%)',
+                borderColor: '#10b981',
+                color: '#047857',
+                marginRight: '6px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                cursor: 'pointer'
+              }}
+              title="One-Click Mastercam Recommended Values (2.0mm Stepdown, 60% Stepover, Constant Overlap Spiral, 0.5mm Stock)"
+            >
+              ⭐ Recommended Values
+            </button>
             <span style={{ fontSize: '11px', color: '#64748b' }}>Roughing Preset:</span>
             <select
               value={formData.selectedPresetId || 'alu_high_speed_pocket'}
