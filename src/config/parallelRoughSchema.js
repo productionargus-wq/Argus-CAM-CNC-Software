@@ -332,7 +332,7 @@ export function createDefaultParallelRoughState(context = {}) {
   }
 
   return {
-    id: `parallel_rough_${Date.now()}`,
+    id: null,
     name: 'Surface Rough Parallel',
     strategyKey: 'surface_rough_parallel',
     badgeClass: 'rough_parallel',

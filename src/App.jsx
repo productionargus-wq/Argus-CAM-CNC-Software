@@ -1777,27 +1777,42 @@ export default function App() {
   };
 
   const handleDeleteOpById = (id) => {
-    const curOps = operationsRef.current || operations;
-    if (curOps.length <= 1) {
-      showToast("At least one operation must remain in the operations tree.", "warning");
-      return;
-    }
-    const updated = curOps.filter((op) => op.id !== id);
+    const curOps = operationsRef.current || operations || [];
+    if (curOps.length === 0) return;
+
+    // Filter out the operation matching id (handling string, number, and corrupt NaN)
+    const updated = curOps.filter((op) => {
+      if (id == null || Number.isNaN(id) || id === 'NaN') {
+        return !Number.isNaN(op.id) && op.id != null && op.id !== 'NaN';
+      }
+      if (Number.isNaN(op.id) || op.id === 'NaN') {
+        return false;
+      }
+      return String(op.id) !== String(id);
+    });
+
     operationsRef.current = updated;
     setOperations(updated);
     pushSnapshot({ operations: updated });
-    if (activeOpId === id) {
-      if (updated.length > 0) setActiveOpId(updated[0].id);
+
+    if (String(activeOpId) === String(id) || Number.isNaN(activeOpId) || activeOpId == null) {
+      setActiveOpId(updated.length > 0 ? updated[0].id : null);
     }
     showToast("Operation deleted from tree", "info");
   };
 
   const handleDeleteActiveOp = () => {
+    if (activeManagerTab === 'Toolpaths' && activeOpId != null) {
+      handleDeleteOpById(activeOpId);
+      return;
+    }
     if (selectedEntityIds.length > 0) {
       handleDeleteSelectedEntities(selectedEntityIds);
       return;
     }
-    handleDeleteOpById(activeOpId);
+    if (activeOpId != null) {
+      handleDeleteOpById(activeOpId);
+    }
   };
 
   const handleMoveOp = (opId, direction) => {
@@ -2092,7 +2107,8 @@ export default function App() {
   };
 
   const handleQuickAddOp = (strategy) => {
-    const nextId = operations.length > 0 ? Math.max(...operations.map((o) => o.id)) + 1 : 1;
+    const numericIds = (operations || []).map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
     let newOp;
 
     const s = String(strategy || 'pocket').toLowerCase();
@@ -2588,7 +2604,11 @@ export default function App() {
   const handleSaveOptiRoughOp = (savedOp) => {
     if (!savedOp) return;
     const prevOps = operationsRef.current || operations || [];
-    const exists = prevOps.some((o) => o.id === savedOp.id);
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : ((savedOp.id != null && Number.isFinite(Number(savedOp.id))) ? Number(savedOp.id) : nextId);
+
     const assignedTool =
       tools.find((t) => String(t.id) === String(savedOp.tool?.id || savedOp.toolId)) ||
       tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
@@ -2597,7 +2617,7 @@ export default function App() {
 
     const formattedOp = {
       ...savedOp,
-      id: savedOp.id || (prevOps.length > 0 ? Math.max(...prevOps.map((o) => Number(o.id) || 0)) + 1 : 1),
+      id: finalId,
       name: savedOp.name || '3D High Speed Dynamic OptiRough',
       strategyKey: 'surface_rough_optirough',
       badgeClass: 'adaptive',
@@ -2615,7 +2635,7 @@ export default function App() {
     };
 
     if (exists) {
-      setOperations((prev) => prev.map((o) => (o.id === formattedOp.id ? formattedOp : o)));
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
       showToast('3D Dynamic OptiRough parameters updated and toolpath regenerated', 'success');
     } else {
       setOperations((prev) => [...prev, formattedOp]);
@@ -2629,7 +2649,11 @@ export default function App() {
   const handleSavePocketRoughOp = (savedOp) => {
     if (!savedOp) return;
     const prevOps = operationsRef.current || operations || [];
-    const exists = prevOps.some((o) => o.id === savedOp.id);
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : ((savedOp.id != null && Number.isFinite(Number(savedOp.id))) ? Number(savedOp.id) : nextId);
+
     const assignedTool =
       tools.find((t) => String(t.id) === String(savedOp.tool?.id || savedOp.toolId)) ||
       tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
@@ -2638,7 +2662,7 @@ export default function App() {
 
     const formattedOp = {
       ...savedOp,
-      id: savedOp.id || (prevOps.length > 0 ? Math.max(...prevOps.map((o) => Number(o.id) || 0)) + 1 : 1),
+      id: finalId,
       name: savedOp.name || 'Surface Rough Pocket',
       strategyKey: 'surface_rough_pocket',
       badgeClass: 'rough_pocket',
@@ -2655,7 +2679,7 @@ export default function App() {
     };
 
     if (exists) {
-      setOperations((prev) => prev.map((o) => (o.id === formattedOp.id ? formattedOp : o)));
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
       showToast('Surface Rough Pocket parameters updated and toolpath regenerated', 'success');
     } else {
       setOperations((prev) => [...prev, formattedOp]);
@@ -2669,7 +2693,11 @@ export default function App() {
   const handleSaveParallelRoughOp = (savedOp) => {
     if (!savedOp) return;
     const prevOps = operationsRef.current || operations || [];
-    const exists = prevOps.some((o) => o.id === savedOp.id);
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : ((savedOp.id != null && Number.isFinite(Number(savedOp.id))) ? Number(savedOp.id) : nextId);
+
     const assignedTool =
       tools.find((t) => String(t.id) === String(savedOp.tool?.id || savedOp.toolId)) ||
       tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
@@ -2678,7 +2706,7 @@ export default function App() {
 
     const formattedOp = {
       ...savedOp,
-      id: savedOp.id || (prevOps.length > 0 ? Math.max(...prevOps.map((o) => Number(o.id) || 0)) + 1 : 1),
+      id: finalId,
       name: savedOp.name || 'Surface Rough Parallel',
       strategyKey: 'surface_rough_parallel',
       badgeClass: 'rough_parallel',
@@ -2698,7 +2726,7 @@ export default function App() {
     };
 
     if (exists) {
-      setOperations((prev) => prev.map((o) => (o.id === formattedOp.id ? formattedOp : o)));
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
       showToast('Surface Rough Parallel parameters updated and toolpath regenerated', 'success');
     } else {
       setOperations((prev) => [...prev, formattedOp]);

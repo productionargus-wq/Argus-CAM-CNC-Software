@@ -332,14 +332,14 @@ export default function OperationsTree({
   const handleContextMenu = (e, op = null) => {
     e.preventDefault();
     e.stopPropagation();
-    if (op && op.id) {
+    if (op) {
       onSelectOp(op.id);
     }
     setContextMenu({
       visible: true,
       x: e.clientX,
       y: e.clientY,
-      targetOp: op || operations.find((o) => o.id === activeOpId) || null
+      targetOp: op || operations.find((o) => String(o.id) === String(activeOpId)) || operations[0] || null
     });
   };
 
@@ -977,7 +977,12 @@ export default function OperationsTree({
 
             {/* 12. Delete Op */}
             <button
-              onClick={() => onDeleteOp?.(activeOpId)}
+              onClick={() => {
+                const idToDelete = (activeOpId != null && activeOpId !== 'all') ? activeOpId : operations[0]?.id;
+                if (idToDelete != null || (operations && operations.length > 0)) {
+                  onDeleteOp?.(idToDelete ?? operations[0]?.id);
+                }
+              }}
               style={{ width: '22px', height: '22px', background: 'transparent', border: '1px solid transparent', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               title="Delete selected operation (Delete)"
             >
@@ -1810,7 +1815,8 @@ export default function OperationsTree({
             closeContextMenu();
           }}
           onDeleteOp={(opId) => {
-            if (onDeleteOp && opId) onDeleteOp(opId);
+            const resolvedId = (opId !== undefined) ? opId : ((activeOpId !== 'all' ? activeOpId : null) ?? operations[0]?.id);
+            if (onDeleteOp && resolvedId !== undefined) onDeleteOp(resolvedId);
             closeContextMenu();
           }}
           onCopyOp={(op) => {

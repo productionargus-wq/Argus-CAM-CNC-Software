@@ -318,7 +318,7 @@ export function createDefaultPocketRoughState(context = {}) {
   }
 
   return {
-    id: `pocket_rough_${Date.now()}`,
+    id: null,
     name: 'Surface Rough Pocket',
     strategyKey: 'surface_rough_pocket',
     badgeClass: 'rough_pocket',

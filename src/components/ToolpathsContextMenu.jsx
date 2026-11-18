@@ -501,7 +501,9 @@ export default function ToolpathsContextMenu({
 
       <div
         className={`mcam-ctx-item ${!targetOp ? 'is-disabled' : ''}`}
-        onClick={() => { if (targetOp) handleAction(() => onDeleteOp?.(targetOp.id)); }}
+        onClick={() => {
+          handleAction(() => onDeleteOp?.(targetOp ? targetOp.id : undefined));
+        }}
       >
         <span>Delete</span>
         <span className="mcam-ctx-shortcut">Del</span>
