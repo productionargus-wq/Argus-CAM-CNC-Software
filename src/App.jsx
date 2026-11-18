@@ -1759,6 +1759,7 @@ export default function App() {
 
   // ================= Handlers =================
   const handleToggleOp = (id) => {
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     if (id === 'all' || id === null) {
       setOperations((prev) => {
         const anyVisible = prev.some((op) => op.visible !== false);
@@ -1767,11 +1768,12 @@ export default function App() {
       return;
     }
     setOperations((prev) =>
-      prev.map((op) => (op.id === id ? { ...op, visible: !op.visible } : op))
+      prev.map((op) => (String(op.id) === String(id) ? { ...op, visible: op.visible === false ? true : false } : op))
     );
   };
 
   const handleRegenerateAll = () => {
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setOperations((prev) => prev.map((op) => ({ ...op, visible: true })));
     showToast("All toolpaths regenerated with real 3D mesh slicing", "success");
   };
@@ -2407,6 +2409,8 @@ export default function App() {
     if (newOp) {
       setOperations((prev) => [...prev, newOp]);
       setActiveOpId(newOp.id);
+      setActiveManagerTab('Toolpaths');
+      setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
       setEditingOperation(newOp);
       isNewOperationRef.current = true;
       setIsNewOperation(true);
@@ -2642,6 +2646,8 @@ export default function App() {
       setActiveOpId(formattedOp.id);
       showToast('3D High Speed Dynamic OptiRough operation generated', 'success');
     }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setIsOptiRoughModalOpen(false);
     setEditingOptiRoughOp(null);
   };
@@ -2686,6 +2692,8 @@ export default function App() {
       setActiveOpId(formattedOp.id);
       showToast('Surface Rough Pocket operation generated', 'success');
     }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setIsPocketRoughModalOpen(false);
     setEditingPocketRoughOp(null);
   };
@@ -2733,6 +2741,8 @@ export default function App() {
       setActiveOpId(formattedOp.id);
       showToast('Surface Rough Parallel operation generated', 'success');
     }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setIsParallelRoughModalOpen(false);
     setEditingParallelRoughOp(null);
   };
@@ -3318,7 +3328,7 @@ export default function App() {
     solidsListRef.current = newSolids;
     setSolidsList(newSolids);
 
-    // 4. Configure clean CAD view: solid part model visible, no toolpaths, no fixture or stock obstruction
+    // 4. Configure clean CAD view: solid part model visible, toolpaths layer ready for new ops
     const cleanLayers = {
       part: true,
       wireframe: true,
@@ -3326,8 +3336,8 @@ export default function App() {
       fixture: false,
       bed: false,
       stock: false,
-      toolpaths: false,
-      rapids: false,
+      toolpaths: true,
+      rapids: true,
       wcs: true,
       dimensions: false
     };
@@ -6332,7 +6342,12 @@ export default function App() {
       {/* 2. Ribbon Bar with Dynamic Context-Aware Toolbars */}
       <RibbonBar
         activeTab={activeRibbonTab}
-        onSelectTab={setActiveRibbonTab}
+        onSelectTab={(tab) => {
+          setActiveRibbonTab(tab);
+          if (tab === 'Toolpaths') {
+            setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+          }
+        }}
         onOpenFileBackstage={() => setIsFileBackstageOpen(true)}
         onOpenDefineToolModal={() => setIsDefineToolModalOpen(true)}
         onOpenSurfaceFinishContour={() => openSurfaceFinishSelection('contour', null)}

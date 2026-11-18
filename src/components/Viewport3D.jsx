@@ -2401,13 +2401,19 @@ export default function Viewport3D({
       const showRapids = layerVisibility.rapids !== false;
       toolpathGroupRef.current.traverse((child) => {
         if (child.name.startsWith('op_cut_')) {
-          child.visible = showCuts;
+          const opId = child.name.replace('op_cut_', '');
+          const op = operations.find((o) => String(o.id) === String(opId));
+          const isOpVis = op ? (op.visible !== false) : true;
+          child.visible = showCuts && isOpVis;
         } else if (child.name.startsWith('op_rapid_')) {
-          child.visible = showRapids;
+          const opId = child.name.replace('op_rapid_', '');
+          const op = operations.find((o) => String(o.id) === String(opId));
+          const isOpVis = op ? (op.visible !== false) : true;
+          child.visible = showRapids && isOpVis;
         }
       });
     }
-  }, [layerVisibility, currentModel]);
+  }, [layerVisibility, currentModel, operations]);
 
   // 7b. Update Dynamic Workholding Fixture Mesh
   useEffect(() => {
@@ -2729,7 +2735,11 @@ export default function Viewport3D({
       };
 
     operations.forEach((op) => {
-      const assignedTool = tools.find((t) => t.id === op.toolId) || tools[0] || { diameter: 10 };
+      const assignedTool =
+        tools.find((t) => String(t.id) === String(op.toolId)) ||
+        tools.find((t) => Number(t.number) === Number(op.tool?.number || op.toolNumber)) ||
+        tools[0] ||
+        { diameter: 10 };
       const effectiveModel = buildEffectiveDriveModel(currentModel, customGeometry, op);
       const opBounds = resolveOperationDriveBounds(effectiveModel, op, bounds);
       const toolpathData = generateToolpathForOperation(op, opBounds, assignedTool, effectiveModel, stockConfig);
@@ -2759,7 +2769,7 @@ export default function Viewport3D({
           const cutMesh = new THREE.LineSegments(cutGeo, cutMat);
           cutMesh.name = `op_cut_${op.id}`;
           cutMesh.position.set(visualXOffset, visualYOffset, visualZOffset);
-          cutMesh.visible = op.visible && (layerVisibility.toolpaths !== false);
+          cutMesh.visible = (op.visible !== false) && (layerVisibility.toolpaths !== false);
           group.add(cutMesh);
         }
 
@@ -2775,7 +2785,7 @@ export default function Viewport3D({
           rapidMesh.computeLineDistances();
           rapidMesh.name = `op_rapid_${op.id}`;
           rapidMesh.position.set(visualXOffset, visualYOffset, visualZOffset);
-          rapidMesh.visible = op.visible && (layerVisibility.rapids !== false);
+          rapidMesh.visible = (op.visible !== false) && (layerVisibility.rapids !== false);
           group.add(rapidMesh);
         }
       }

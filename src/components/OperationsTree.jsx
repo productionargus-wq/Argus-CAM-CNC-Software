@@ -89,6 +89,7 @@ export default function OperationsTree({
   onOpenSetupSheet,
   onOpenOptiRoughModal,
   onOpenSurfaceRoughPocketModal,
+  onOpenSurfaceRoughParallelModal,
   onOpenSurfaceFinishContour,
   onOpenSurfaceFinishPocket,
   onOpenSurfaceFinishFlowline,
@@ -1849,6 +1850,7 @@ export default function OperationsTree({
           onOpenHSMFilter={onOpenHSMFilter}
           onOpenOptiRoughModal={onOpenOptiRoughModal}
           onOpenSurfaceRoughPocketModal={onOpenSurfaceRoughPocketModal}
+          onOpenSurfaceRoughParallelModal={onOpenSurfaceRoughParallelModal}
           onOpenSurfaceFinishContour={onOpenSurfaceFinishContour}
           onOpenSurfaceFinishPocket={onOpenSurfaceFinishPocket}
           onOpenSurfaceFinishFlowline={onOpenSurfaceFinishFlowline}
