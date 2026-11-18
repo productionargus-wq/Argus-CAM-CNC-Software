@@ -2741,9 +2741,11 @@ export default function Viewport3D({
             .map((s) => [s.p1, s.p2]);
         }
         const { cutGeo, rapidGeo } = buildToolpathMeshes(toolpathData, linkedRapidLines);
-        // CAD entities sit inside customGeoGroup at Y = 49; align CAD/surface toolpaths to that height
-        const usesCadSpace = !!op.chain || !!op.usesCustomSurfaces || !!(op.driveSurfaceIds?.length) || !!(op.driveFaceIds?.length) || op.badgeClass === 'flowline' || !currentModel;
-        const visualYOffset = usesCadSpace ? 49 : 0;
+        // Workpiece geometry (both partHolderGroup and customGeoGroup) sits at Y = 49 + partTransform.y.
+        // Align all toolpath wireframes directly to the workpiece height.
+        const visualYOffset = 49 + (partTransform?.position?.y || 0);
+        const visualXOffset = partTransform?.position?.x || 0;
+        const visualZOffset = partTransform?.position?.z || 0;
 
         // Feed cut line segments
         if (cutGeo.attributes.position && cutGeo.attributes.position.count > 0) {
@@ -2753,7 +2755,7 @@ export default function Viewport3D({
           });
           const cutMesh = new THREE.LineSegments(cutGeo, cutMat);
           cutMesh.name = `op_cut_${op.id}`;
-          cutMesh.position.y = visualYOffset;
+          cutMesh.position.set(visualXOffset, visualYOffset, visualZOffset);
           cutMesh.visible = op.visible && (layerVisibility.toolpaths !== false);
           group.add(cutMesh);
         }
@@ -2769,7 +2771,7 @@ export default function Viewport3D({
           const rapidMesh = new THREE.LineSegments(rapidGeo, rapidMat);
           rapidMesh.computeLineDistances();
           rapidMesh.name = `op_rapid_${op.id}`;
-          rapidMesh.position.y = visualYOffset;
+          rapidMesh.position.set(visualXOffset, visualYOffset, visualZOffset);
           rapidMesh.visible = op.visible && (layerVisibility.rapids !== false);
           group.add(rapidMesh);
         }
@@ -3122,7 +3124,8 @@ export default function Viewport3D({
       ? null
       : Number(backplotSelectedOpFilter);
 
-    const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, effectiveOpId, 49, customGeometry, stockConfig);
+    const worldYOffset = 49 + (partTransform?.position?.y || 0);
+    const trajectory = compileBackplotTrajectory(operations, tools, bounds, currentModel, effectiveOpId, worldYOffset, customGeometry, stockConfig);
     waypointsRef.current = trajectory.waypoints;
     lastVerifyProgressRef.current = -1;
 

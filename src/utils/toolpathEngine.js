@@ -4369,8 +4369,7 @@ export function compileBackplotTrajectory(
     const opSafeBounds = resolveOperationDriveBounds(effectiveModel, op, safeBounds);
     const opZOffset = opSafeBounds.max.y;
     const toCncPos = (threePt) => new THREE.Vector3(threePt.x, -threePt.z, threePt.y - opZOffset);
-    const usesCadSpace = !!op.chain || !!op.usesCustomSurfaces || !!(op.driveSurfaceIds?.length) || !!(op.driveFaceIds?.length) || op.badgeClass === 'flowline' || !model;
-    const visualYOffset = (cadWorldYOffset && usesCadSpace) ? cadWorldYOffset : 0;
+    const visualYOffset = cadWorldYOffset || 0;
 
     const data = generateToolpathForOperation(op, opSafeBounds, assignedTool, effectiveModel, stockConfig);
     if (!data) return;
