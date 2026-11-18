@@ -62,34 +62,35 @@ const MC_BUTTON = {
  */
 function OptiRoughStepupDiagramSvg({ stepdown = 15, stepup = 1 }) {
   return (
-    <svg width="220" height="130" viewBox="0 0 220 130" style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '3px' }}>
+    <svg width="220" height="135" viewBox="0 0 220 135" style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '3px' }}>
       {/* Mold Cavity Sidewall & Floor */}
-      <path d="M 15 15 L 75 15 L 115 105 L 205 105" fill="none" stroke="#64748b" strokeWidth="2.5" />
-      <polygon points="15,15 75,15 115,105 205,105 205,120 15,120" fill="#e2e8f0" opacity="0.6" />
+      <path d="M 15 15 L 65 15 L 105 110 L 205 110" fill="none" stroke="#64748b" strokeWidth="2.5" />
+      <polygon points="15,15 65,15 105,110 205,110 205,128 15,128" fill="#e2e8f0" opacity="0.6" />
 
       {/* Deep Stepdown Major Cut */}
-      <line x1="60" y1="65" x2="195" y2="65" stroke="#0284c7" strokeWidth="2" strokeDasharray="3,2" />
-      <text x="120" y="60" fill="#0284c7" fontSize="9.5" fontWeight="bold">Stepdown 1: {stepdown}mm</text>
+      <line x1="50" y1="65" x2="195" y2="65" stroke="#0284c7" strokeWidth="1.8" strokeDasharray="3,2" />
+      <text x="110" y="58" fill="#0284c7" fontSize="9" fontWeight="bold">Stepdown 1: {stepdown}mm</text>
 
-      <line x1="105" y1="105" x2="195" y2="105" stroke="#0284c7" strokeWidth="2" />
-      <text x="120" y="100" fill="#0284c7" fontSize="9.5" fontWeight="bold">Stepdown 2 (Floor)</text>
+      {/* Deep Stepdown Floor Cut */}
+      <line x1="105" y1="110" x2="195" y2="110" stroke="#0284c7" strokeWidth="2" />
+      <text x="110" y="124" fill="#0284c7" fontSize="9" fontWeight="bold">Stepdown 2 (Floor)</text>
 
       {/* Upward Stepup Rest Roughing Passes */}
-      <line x1="100" y1="95" x2="140" y2="95" stroke="#ea580c" strokeWidth="1.5" />
-      <polygon points="144,95 139,92.5 139,97.5" fill="#ea580c" />
+      <line x1="95" y1="98" x2="135" y2="98" stroke="#ea580c" strokeWidth="1.4" />
+      <polygon points="139,98 134,95.5 134,100.5" fill="#ea580c" />
 
-      <line x1="93" y1="85" x2="135" y2="85" stroke="#ea580c" strokeWidth="1.5" />
-      <polygon points="139,85 134,82.5 134,87.5" fill="#ea580c" />
+      <line x1="87" y1="86" x2="130" y2="86" stroke="#ea580c" strokeWidth="1.4" />
+      <polygon points="134,86 129,83.5 129,88.5" fill="#ea580c" />
 
-      <line x1="86" y1="75" x2="130" y2="75" stroke="#ea580c" strokeWidth="1.5" />
-      <polygon points="134,75 129,72.5 129,77.5" fill="#ea580c" />
+      <line x1="79" y1="74" x2="125" y2="74" stroke="#ea580c" strokeWidth="1.4" />
+      <polygon points="129,74 124,71.5 124,76.5" fill="#ea580c" />
 
-      <text x="145" y="88" fill="#ea580c" fontSize="9" fontWeight="bold">Stepup: {stepup}mm</text>
-      <text x="145" y="99" fill="#ea580c" fontSize="8">(Up-Milling)</text>
+      <text x="144" y="85" fill="#ea580c" fontSize="9" fontWeight="bold">Stepup: {stepup}mm</text>
+      <text x="144" y="96" fill="#ea580c" fontSize="8">(Up-Milling)</text>
 
       {/* Wall Stock Offset Line */}
-      <path d="M 72 15 L 111 103" fill="none" stroke="#16a34a" strokeWidth="1.2" strokeDasharray="2,2" />
-      <text x="25" y="45" fill="#16a34a" fontSize="8.5" fontWeight="bold">Stock: 1.0mm</text>
+      <path d="M 62 15 L 101 108" fill="none" stroke="#16a34a" strokeWidth="1.2" strokeDasharray="2,2" />
+      <text x="20" y="45" fill="#16a34a" fontSize="8.5" fontWeight="bold">Stock: 1.0mm</text>
     </svg>
   );
 }
@@ -228,6 +229,7 @@ export default function SurfaceRoughOptiRoughModal({
 
     setFormData((prev) => ({
       ...prev,
+      selectedPresetId: preset.id,
       selectedMaterialKey: preset.materialKey,
       cutParameters: {
         ...prev.cutParameters,
@@ -368,23 +370,27 @@ export default function SurfaceRoughOptiRoughModal({
           }}
         >
           <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Quick Presets:</span>
-          {OPTIROUGH_PRESETS.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => handleApplyPreset(p)}
-              style={{
-                ...MC_BUTTON,
-                height: '21px',
-                fontSize: '10.5px',
-                background: formData.selectedMaterialKey === p.materialKey ? '#bae6fd' : '#ffffff',
-                borderColor: formData.selectedMaterialKey === p.materialKey ? '#0284c7' : '#cbd5e1',
-                color: formData.selectedMaterialKey === p.materialKey ? '#0369a1' : '#1e293b'
-              }}
-              title={p.desc}
-            >
-              {p.label}
-            </button>
-          ))}
+          {OPTIROUGH_PRESETS.map((p) => {
+            const isSelected = (formData.selectedPresetId || 'alu_high_speed') === p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() => handleApplyPreset(p)}
+                style={{
+                  ...MC_BUTTON,
+                  height: '21px',
+                  fontSize: '10.5px',
+                  background: isSelected ? '#bae6fd' : '#ffffff',
+                  borderColor: isSelected ? '#0284c7' : '#cbd5e1',
+                  color: isSelected ? '#0369a1' : '#1e293b',
+                  fontWeight: isSelected ? 700 : 500
+                }}
+                title={p.desc}
+              >
+                {p.label}
+              </button>
+            );
+          })}
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: '11px', color: '#0369a1', fontWeight: 600 }}>
             MRR: {physics.mrrCm3Min} cm³/min &bull; Power: {physics.powerKw} kW &bull; Constant θ: {physics.engagementDeg}°

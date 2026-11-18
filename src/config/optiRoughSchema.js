@@ -257,6 +257,7 @@ export function createDefaultOptiRoughState(options = {}) {
     activeTreePage: 'cut_parameters',
 
     // Material & Physics
+    selectedPresetId: 'alu_high_speed',
     selectedMaterialKey: 'ALU_6061',
 
     // 1. Toolpath Type Page
