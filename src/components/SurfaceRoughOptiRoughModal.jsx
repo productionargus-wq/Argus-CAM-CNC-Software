@@ -251,6 +251,67 @@ export default function SurfaceRoughOptiRoughModal({
     onNotify?.(`Loaded OptiRough Preset: ${preset.label}`, 'success');
   };
 
+  // Mastercam Recommended Values Handler
+  const handleApplyRecommended = () => {
+    const toolDiam = Number(formData.tool.diameter || 10);
+    const newStepdown = Number((toolDiam * 1.5).toFixed(1));
+    const newStepover = Number(((toolDiam * 15.0) / 100).toFixed(2));
+    const newStepup = Number((toolDiam * 0.1).toFixed(1));
+
+    setFormData((prev) => ({
+      ...prev,
+      selectedPresetId: 'alu_high_speed',
+      selectedMaterialKey: 'ALU_6061',
+      modelGeometry: {
+        ...prev.modelGeometry,
+        sameWallAndFloorStock: true,
+        wallStock: 1.0,
+        floorStock: 1.0
+      },
+      toolpathControl: {
+        ...prev.toolpathControl,
+        strategy: 'stay_inside',
+        compensateTo: 'center'
+      },
+      cutParameters: {
+        ...prev.cutParameters,
+        cuttingMethod: 'climb',
+        optimizeStepups: 'by_depth',
+        optimizeStepdowns: 'material',
+        stepoverPct: 15.0,
+        stepoverMm: newStepover,
+        stepdownPct: 150.0,
+        stepdownMm: newStepdown,
+        stepupEnabled: true,
+        stepupPct: 10.0,
+        stepupMm: newStepup,
+        millVerticalWalls: true
+      },
+      transitions: {
+        ...prev.transitions,
+        entryMethod: 'helical_ramp',
+        rampAngle: 2.0,
+        helicalRadius: 5.0,
+        plungeClearance: 2.0
+      },
+      linkingParameters: {
+        ...prev.linkingParameters,
+        clearancePlane: 50.0,
+        partClearance: 2.5,
+        microLiftRetract: 'always',
+        microLiftDistance: 0.25,
+        backFeedRate: 2500.0
+      },
+      arcFilterTolerance: {
+        ...prev.arcFilterTolerance,
+        totalTolerance: 0.025,
+        filterRatio: 0.5,
+        highSpeedCornerRounding: true
+      }
+    }));
+    onNotify?.('Loaded Mastercam Recommended OptiRough Values (15mm Stepdown, 1mm Stepup, 1.0mm Stock)', 'success');
+  };
+
   // Submit / Save
   const handleConfirm = () => {
     const finalOp = {
@@ -369,6 +430,23 @@ export default function SurfaceRoughOptiRoughModal({
             flexWrap: 'wrap'
           }}
         >
+          <button
+            onClick={handleApplyRecommended}
+            style={{
+              ...MC_BUTTON,
+              height: '22px',
+              fontSize: '11px',
+              fontWeight: 700,
+              background: 'linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%)',
+              borderColor: '#10b981',
+              color: '#047857',
+              marginRight: '6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+            title="One-Click Mastercam Recommended Values (15mm Stepdown, 1mm Stepup, 15% Stepover, 1.0mm Stock)"
+          >
+            ⭐ Recommended Values
+          </button>
           <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569' }}>Quick Presets:</span>
           {OPTIROUGH_PRESETS.map((p) => {
             const isSelected = (formData.selectedPresetId || 'alu_high_speed') === p.id;
@@ -767,6 +845,17 @@ export default function SurfaceRoughOptiRoughModal({
             {/* 5. CUT PARAMETERS PAGE (The Core of OptiRough!) */}
             {activePage === 'cut_parameters' && (
               <div>
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px', padding: '6px 10px', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '11px', color: '#166534' }}>
+                    <b>One-Click Setup:</b> Click <b>⭐ Recommended Values</b> &rarr; Click <b>OK (✓)</b> &rarr; Click <b>Post (G1)</b> for production G-Code.
+                  </div>
+                  <button
+                    onClick={handleApplyRecommended}
+                    style={{ ...MC_BUTTON, height: '21px', fontSize: '10.5px', background: '#dcfce7', borderColor: '#86efac', color: '#15803d', fontWeight: 700 }}
+                  >
+                    ⭐ Recommended Values
+                  </button>
+                </div>
                 <div style={{ display: 'flex', gap: '16px' }}>
                   {/* Left Parameter Column */}
                   <div style={{ flex: 1 }}>
