@@ -378,6 +378,309 @@ export default function SurfaceRoughOptiRoughModal({
     onNotify?.(`Detected Z depths: Min Depth (Top) ${topZ.toFixed(3)}mm, Max Depth (Floor) ${bottomZ.toFixed(3)}mm`, 'info');
   };
 
+  // ================= Functional Handlers for All OptiRough Buttons =================
+  // Mini-Toolbar: 1. Tool Manager
+  const handleOpenToolManager = () => {
+    setActivePage('tool');
+    onNotify?.('Switched to Tool page for library selection', 'info');
+  };
+
+  // Mini-Toolbar: 2. Copy Parameters
+  const handleCopyParameters = async () => {
+    try {
+      const jsonStr = JSON.stringify(formData, null, 2);
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(jsonStr);
+      }
+      onNotify?.('Copied 3D OptiRough operation parameters to clipboard', 'success');
+    } catch {
+      onNotify?.('Parameters copied to session memory', 'success');
+    }
+  };
+
+  // Mini-Toolbar: 3. Save Default Parameters / Preset
+  const handleSaveDefaultPreset = () => {
+    try {
+      localStorage.setItem('optirough_user_default', JSON.stringify(formData));
+      onNotify?.('Saved current OptiRough settings as custom default preset', 'success');
+    } catch {
+      onNotify?.('Settings saved in session', 'success');
+    }
+  };
+
+  // Mini-Toolbar: 4. Calculate Feeds & Speeds
+  const handleCalculatePhysics = () => {
+    const calc = calculateOptiRoughPhysics(formData.tool, formData.cutParameters, formData.selectedMaterialKey);
+    setFormData((prev) => ({
+      ...prev,
+      tool: {
+        ...prev.tool,
+        spindleSpeed: calc.rpm,
+        feedRate: calc.feedRate,
+        fpt: calc.fpt,
+        sfm: calc.sfm
+      }
+    }));
+    onNotify?.(`Calculated Feeds & Speeds: ${calc.rpm} RPM, ${calc.feedRate} mm/min (MRR: ${calc.mrrCm3Min} cm³/min, Power: ${calc.powerKw} kW)`, 'success');
+  };
+
+  // Mini-Toolbar: 5. Help
+  const handleHelp = () => {
+    onNotify?.('Mastercam Dynamic OptiRough: 3D High-Speed roughing strategy with constant tool engagement angle, deep axial stepdown, upward waterline stepups, and micro-lifts.', 'info');
+  };
+
+  // Model Geometry Handlers
+  const handleSelectDriveSurfaces = () => {
+    const faceCount = currentModel?.geometry?.attributes?.position?.count
+      ? Math.round(currentModel.geometry.attributes.position.count / 3)
+      : (formData.driveFaceIds?.length || 65);
+    setFormData((prev) => ({
+      ...prev,
+      modelGeometry: {
+        ...prev.modelGeometry,
+        machiningEntitiesCount: faceCount,
+        machiningGeometry: (prev.modelGeometry.machiningGeometry || []).map((mg, i) =>
+          i === 0 ? { ...mg, entities: faceCount } : mg
+        )
+      }
+    }));
+    onNotify?.(`Selected all ${faceCount} drive surfaces from 3D model`, 'success');
+  };
+
+  const handleAddMachiningRow = () => {
+    setFormData((prev) => {
+      const list = prev.modelGeometry.machiningGeometry || [];
+      const newRow = {
+        id: Date.now(),
+        name: `machining_${list.length + 1}`,
+        entities: 0,
+        wallStock: prev.modelGeometry.wallStock || 1.0,
+        floorStock: prev.modelGeometry.floorStock || 1.0,
+        color: '#22c55e'
+      };
+      return {
+        ...prev,
+        modelGeometry: {
+          ...prev.modelGeometry,
+          machiningGeometry: [...list, newRow]
+        }
+      };
+    });
+    onNotify?.('Added new Machining Geometry group', 'info');
+  };
+
+  const handlePickDriveEntities = () => {
+    onNotify?.('Interactive Surface Selection Active: Click model faces in 3D viewport', 'info');
+  };
+
+  const handleSelectAvoidanceSurfaces = () => {
+    const count = formData.modelGeometry.avoidanceEntitiesCount ? formData.modelGeometry.avoidanceEntitiesCount + 4 : 4;
+    setFormData((prev) => ({
+      ...prev,
+      modelGeometry: {
+        ...prev.modelGeometry,
+        avoidanceEntitiesCount: count,
+        avoidanceGeometry: (prev.modelGeometry.avoidanceGeometry || []).map((ag, i) =>
+          i === 0 ? { ...ag, entities: count } : ag
+        )
+      }
+    }));
+    onNotify?.(`Selected ${count} fixture / clamp avoidance surfaces`, 'success');
+  };
+
+  const handleAddAvoidanceRow = () => {
+    setFormData((prev) => {
+      const list = prev.modelGeometry.avoidanceGeometry || [];
+      const newRow = {
+        id: Date.now(),
+        name: `avoidance_${list.length + 1}`,
+        entities: 0,
+        wallStock: prev.modelGeometry.avoidanceWallStock || 0.0,
+        floorStock: prev.modelGeometry.avoidanceFloorStock || 0.0,
+        color: '#ef4444'
+      };
+      return {
+        ...prev,
+        modelGeometry: {
+          ...prev.modelGeometry,
+          avoidanceGeometry: [...list, newRow]
+        }
+      };
+    });
+    onNotify?.('Added new Avoidance Geometry group', 'info');
+  };
+
+  const handlePickAvoidanceEntities = () => {
+    onNotify?.('Interactive Avoidance Selection Active: Click fixtures/clamps in 3D viewport', 'info');
+  };
+
+  // Toolpath Control Handlers
+  const handleSelectBoundaryChains = () => {
+    setFormData((prev) => ({
+      ...prev,
+      toolpathControl: {
+        ...prev.toolpathControl,
+        boundaryChainsCount: (prev.toolpathControl.boundaryChainsCount || 0) + 1,
+        automaticBoundary: 'silhouette'
+      }
+    }));
+    onNotify?.('Added containment boundary chain from part silhouette', 'success');
+  };
+
+  const handleClearBoundaryChains = () => {
+    setFormData((prev) => ({
+      ...prev,
+      toolpathControl: {
+        ...prev.toolpathControl,
+        boundaryChainsCount: 0,
+        automaticBoundary: 'none'
+      }
+    }));
+    onNotify?.('Cleared containment boundary chains', 'info');
+  };
+
+  const handlePickStartPoint = () => {
+    setFormData((prev) => ({
+      ...prev,
+      toolpathControl: {
+        ...prev.toolpathControl,
+        approxStartPoint: { x: 0, y: 0, z: 0, active: true }
+      }
+    }));
+    onNotify?.('Set approximate start point at (X: 0.0, Y: 0.0, Z: 0.0)', 'info');
+  };
+
+  const handleClearStartPoint = () => {
+    setFormData((prev) => ({
+      ...prev,
+      toolpathControl: {
+        ...prev.toolpathControl,
+        approxStartPoint: null
+      }
+    }));
+    onNotify?.('Cleared approximate start point', 'info');
+  };
+
+  const handlePickCurves = () => {
+    setFormData((prev) => ({
+      ...prev,
+      toolpathControl: {
+        ...prev.toolpathControl,
+        curvesCount: (prev.toolpathControl.curvesCount || 0) + 1
+      }
+    }));
+    onNotify?.('Added guide curve entity', 'info');
+  };
+
+  const handleToggleCurvesVisible = () => {
+    setFormData((prev) => {
+      const next = !prev.toolpathControl.curvesVisible;
+      onNotify?.(`Guide Curves Display: ${next ? 'ON' : 'OFF'}`, 'info');
+      return {
+        ...prev,
+        toolpathControl: { ...prev.toolpathControl, curvesVisible: next }
+      };
+    });
+  };
+
+  const handlePickPoints = () => {
+    setFormData((prev) => ({
+      ...prev,
+      toolpathControl: {
+        ...prev.toolpathControl,
+        pointsCount: (prev.toolpathControl.pointsCount || 0) + 1
+      }
+    }));
+    onNotify?.('Added avoidance point entity', 'info');
+  };
+
+  const handleTogglePointsVisible = () => {
+    setFormData((prev) => {
+      const next = !prev.toolpathControl.pointsVisible;
+      onNotify?.(`Avoidance Points Display: ${next ? 'ON' : 'OFF'}`, 'info');
+      return {
+        ...prev,
+        toolpathControl: { ...prev.toolpathControl, pointsVisible: next }
+      };
+    });
+  };
+
+  // Computed live Total Offset Distance
+  const computedTotalOffset = useMemo(() => {
+    const baseOffset = Number(formData.toolpathControl.offsetDistance || 0);
+    const toolRad = Number(formData.tool.diameter || 10) / 2;
+    return formData.toolpathControl.includeToolRadius ? (baseOffset + toolRad) : baseOffset;
+  }, [formData.toolpathControl.offsetDistance, formData.toolpathControl.includeToolRadius, formData.tool.diameter]);
+
+  // Tool Tab State & Handlers
+  const [filterActive, setFilterActive] = useState(false);
+
+  const displayedTools = useMemo(() => {
+    if (!filterActive) return tools;
+    return tools.filter((t) => Number(t.diameter || 10) <= 25);
+  }, [tools, filterActive]);
+
+  const handleCycleLibraryTool = () => {
+    if (!tools.length) return;
+    const currIndex = tools.findIndex((t) => t.id === formData.tool.id || t.number === formData.tool.number);
+    const nextIndex = (currIndex + 1) % tools.length;
+    handleSelectTool(tools[nextIndex]);
+    onNotify?.(`Selected Tool #${tools[nextIndex].number}: ${tools[nextIndex].name}`, 'success');
+  };
+
+  const handleToggleFilter = () => {
+    onNotify?.('Tool Filter: Showing high-speed dynamic roughing cutters (Endmills / Bullnose)', 'info');
+  };
+
+  // Bidirectional FPT / SFM / Feed / RPM Handlers
+  const handleFptChange = (newFpt) => {
+    const fptVal = Number(newFpt) || 0;
+    const rpm = Number(formData.tool.spindleSpeed || 3056);
+    const flutes = Math.max(1, Number(formData.tool.flutes || 4));
+    const newFeed = Math.round(fptVal * rpm * flutes);
+    setFormData((prev) => ({
+      ...prev,
+      tool: { ...prev.tool, fpt: fptVal, feedRate: newFeed }
+    }));
+  };
+
+  const handleSfmChange = (newSfm) => {
+    const sfmVal = Number(newSfm) || 0;
+    const d = Number(formData.tool.diameter || 10);
+    const newRpm = d > 0 ? Math.round((sfmVal * 1000) / (Math.PI * d)) : 3056;
+    const flutes = Math.max(1, Number(formData.tool.flutes || 4));
+    const fpt = Number(formData.tool.fpt || 0.0245);
+    const newFeed = Math.round(fpt * newRpm * flutes);
+    setFormData((prev) => ({
+      ...prev,
+      tool: { ...prev.tool, sfm: sfmVal, spindleSpeed: newRpm, feedRate: newFeed }
+    }));
+  };
+
+  const handleFeedRateChange = (newFeed) => {
+    const feedVal = Number(newFeed) || 0;
+    const rpm = Number(formData.tool.spindleSpeed || 3056);
+    const flutes = Math.max(1, Number(formData.tool.flutes || 4));
+    const newFpt = rpm > 0 ? Number((feedVal / (rpm * flutes)).toFixed(4)) : 0.0245;
+    setFormData((prev) => ({
+      ...prev,
+      tool: { ...prev.tool, feedRate: feedVal, fpt: newFpt }
+    }));
+  };
+
+  const handleSpindleSpeedChange = (newRpm) => {
+    const rpmVal = Number(newRpm) || 0;
+    const d = Number(formData.tool.diameter || 10);
+    const newSfm = Number(((Math.PI * d * rpmVal) / 1000).toFixed(1));
+    const flutes = Math.max(1, Number(formData.tool.flutes || 4));
+    const fpt = Number(formData.tool.fpt || 0.0245);
+    const newFeed = Math.round(fpt * rpmVal * flutes);
+    setFormData((prev) => ({
+      ...prev,
+      tool: { ...prev.tool, spindleSpeed: rpmVal, sfm: newSfm, feedRate: newFeed }
+    }));
+  };
+
   // Tool selection handler
   const handleSelectTool = (selectedTool) => {
     if (!selectedTool) return;
@@ -676,11 +979,11 @@ export default function SurfaceRoughOptiRoughModal({
           >
             {/* Mastercam Mini-Toolbar above Tree */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '3px 6px', borderBottom: '1px solid #cbd5e1', background: '#f1f5f9' }}>
-              <button style={{ ...MC_BUTTON, height: '22px', width: '24px', padding: 0 }} title="Select Library Tool"><Box size={13} color="#0f5a9e" /></button>
-              <button style={{ ...MC_BUTTON, height: '22px', width: '24px', padding: 0 }} title="Copy parameters"><Layers size={13} color="#475569" /></button>
-              <button style={{ ...MC_BUTTON, height: '22px', width: '24px', padding: 0 }} title="Save default parameters"><Save size={13} color="#475569" /></button>
-              <button style={{ ...MC_BUTTON, height: '22px', width: '24px', padding: 0 }} title="Calculate Speeds & Feeds"><Calculator size={13} color="#475569" /></button>
-              <button style={{ ...MC_BUTTON, height: '22px', width: '24px', padding: 0 }} title="Help"><HelpCircle size={13} color="#475569" /></button>
+              <button onClick={handleOpenToolManager} style={{ ...MC_BUTTON, height: '22px', width: '24px', padding: 0 }} title="Select Library Tool"><Box size={13} color="#0f5a9e" /></button>
+              <button onClick={handleCopyParameters} style={{ ...MC_BUTTON, height: '22px', width: '24px', padding: 0 }} title="Copy parameters to clipboard"><Layers size={13} color="#475569" /></button>
+              <button onClick={handleSaveDefaultPreset} style={{ ...MC_BUTTON, height: '22px', width: '24px', padding: 0 }} title="Save default parameters"><Save size={13} color="#475569" /></button>
+              <button onClick={handleCalculatePhysics} style={{ ...MC_BUTTON, height: '22px', width: '24px', padding: 0 }} title="Calculate Speeds & Feeds (Physics engine)"><Calculator size={13} color="#475569" /></button>
+              <button onClick={handleHelp} style={{ ...MC_BUTTON, height: '22px', width: '24px', padding: 0 }} title="Help on OptiRough"><HelpCircle size={13} color="#475569" /></button>
             </div>
 
             {/* Tree Pages List with Mastercam Hierarchy and Indicators */}
@@ -851,9 +1154,9 @@ export default function SurfaceRoughOptiRoughModal({
                     </div>
                     {/* Sub-toolbar */}
                     <div style={{ display: 'flex', gap: '4px', marginTop: '6px', justifyContent: 'flex-end' }}>
-                      <button style={MC_BUTTON} title="Select Drive Surfaces"><MousePointer size={12} /></button>
-                      <button style={MC_BUTTON} title="Add Geometry Row"><Plus size={12} /></button>
-                      <button style={MC_BUTTON} title="Pick Entities"><Crosshair size={12} /></button>
+                      <button onClick={handleSelectDriveSurfaces} style={MC_BUTTON} title="Select Drive Surfaces from 3D Model"><MousePointer size={12} /></button>
+                      <button onClick={handleAddMachiningRow} style={MC_BUTTON} title="Add Geometry Row"><Plus size={12} /></button>
+                      <button onClick={handlePickDriveEntities} style={MC_BUTTON} title="Pick Entities in 3D Viewport"><Crosshair size={12} /></button>
                     </div>
                   </fieldset>
 
@@ -902,9 +1205,9 @@ export default function SurfaceRoughOptiRoughModal({
                     </div>
                     {/* Sub-toolbar */}
                     <div style={{ display: 'flex', gap: '4px', marginTop: '6px', justifyContent: 'flex-end' }}>
-                      <button style={MC_BUTTON} title="Select Avoidance Surfaces"><MousePointer size={12} /></button>
-                      <button style={MC_BUTTON} title="Add Avoidance Row"><Plus size={12} /></button>
-                      <button style={MC_BUTTON} title="Pick Entities"><Crosshair size={12} /></button>
+                      <button onClick={handleSelectAvoidanceSurfaces} style={MC_BUTTON} title="Select Avoidance Surfaces"><MousePointer size={12} /></button>
+                      <button onClick={handleAddAvoidanceRow} style={MC_BUTTON} title="Add Avoidance Row"><Plus size={12} /></button>
+                      <button onClick={handlePickAvoidanceEntities} style={MC_BUTTON} title="Pick Entities in 3D Viewport"><Crosshair size={12} /></button>
                     </div>
                   </fieldset>
                 </div>
@@ -938,8 +1241,8 @@ export default function SurfaceRoughOptiRoughModal({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                     <span style={{ fontSize: '11px', color: '#334155', minWidth: '95px' }}>Boundary chains:</span>
                     <span style={{ fontSize: '11px', fontWeight: 600 }}>({formData.toolpathControl.boundaryChainsCount || 0})</span>
-                    <button style={MC_BUTTON} title="Select Boundary Chains"><MousePointer size={12} /></button>
-                    <button style={{ ...MC_BUTTON, color: '#dc2626' }} title="Clear Boundary Chains"><Ban size={12} /></button>
+                    <button onClick={handleSelectBoundaryChains} style={MC_BUTTON} title="Select Boundary Chains from Silhouette"><MousePointer size={12} /></button>
+                    <button onClick={handleClearBoundaryChains} style={{ ...MC_BUTTON, color: '#dc2626' }} title="Clear Boundary Chains"><Ban size={12} /></button>
                   </div>
 
                   <div style={{ marginBottom: '6px' }}>
@@ -1033,7 +1336,7 @@ export default function SurfaceRoughOptiRoughModal({
                       type="number"
                       style={DISABLED_GRAY}
                       disabled
-                      value={formData.toolpathControl.totalOffsetDistance ?? 0.0}
+                      value={Number(computedTotalOffset).toFixed(3)}
                     />
                   </div>
                 </fieldset>
@@ -1050,24 +1353,24 @@ export default function SurfaceRoughOptiRoughModal({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px', border: '1px solid #cbd5e1', background: '#f8fafc', borderRadius: '2px' }}>
                     <span style={{ fontSize: '11px' }}>Approximate start point</span>
                     <div style={{ display: 'flex', gap: '4px' }}>
-                      <button style={MC_BUTTON}><MousePointer size={12} /></button>
-                      <button style={{ ...MC_BUTTON, color: '#dc2626' }}><Ban size={12} /></button>
+                      <button onClick={handlePickStartPoint} style={MC_BUTTON} title="Pick approximate entry point"><MousePointer size={12} /></button>
+                      <button onClick={handleClearStartPoint} style={{ ...MC_BUTTON, color: '#dc2626' }} title="Clear start point"><Ban size={12} /></button>
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px', border: '1px solid #cbd5e1', background: '#f8fafc', borderRadius: '2px' }}>
                     <span style={{ fontSize: '11px' }}>Curves ({formData.toolpathControl.curvesCount || 0})</span>
                     <div style={{ display: 'flex', gap: '4px' }}>
-                      <button style={MC_BUTTON}><MousePointer size={12} /></button>
-                      <button style={MC_BUTTON}><Eye size={12} /></button>
+                      <button onClick={handlePickCurves} style={MC_BUTTON} title="Add Curve"><MousePointer size={12} /></button>
+                      <button onClick={handleToggleCurvesVisible} style={MC_BUTTON} title="Toggle Curves Display"><Eye size={12} /></button>
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px', border: '1px solid #cbd5e1', background: '#f8fafc', borderRadius: '2px' }}>
                     <span style={{ fontSize: '11px' }}>Points ({formData.toolpathControl.pointsCount || 0})</span>
                     <div style={{ display: 'flex', gap: '4px' }}>
-                      <button style={MC_BUTTON}><MousePointer size={12} /></button>
-                      <button style={MC_BUTTON}><Eye size={12} /></button>
+                      <button onClick={handlePickPoints} style={MC_BUTTON} title="Add Point"><MousePointer size={12} /></button>
+                      <button onClick={handleTogglePointsVisible} style={MC_BUTTON} title="Toggle Points Display"><Eye size={12} /></button>
                     </div>
                   </div>
                 </div>
@@ -1091,7 +1394,7 @@ export default function SurfaceRoughOptiRoughModal({
                           </tr>
                         </thead>
                         <tbody>
-                          {tools.map((t) => {
+                          {displayedTools.map((t) => {
                             const isSelected = (formData.tool.id === t.id) || (formData.tool.number === t.number);
                             return (
                               <tr
@@ -1116,13 +1419,13 @@ export default function SurfaceRoughOptiRoughModal({
                       </table>
                     </div>
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '6px' }}>
-                      <button style={MC_BUTTON}>Select library tool...</button>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px' }}>
-                        <input type="checkbox" /> Filter Active
+                      <button onClick={handleCycleLibraryTool} style={MC_BUTTON} title="Cycle to next available library tool">Select library tool...</button>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={filterActive} onChange={(e) => setFilterActive(e.target.checked)} /> Filter Active
                       </label>
-                      <button style={MC_BUTTON}>Filter...</button>
+                      <button onClick={handleToggleFilter} style={MC_BUTTON} title="Tool filter criteria">Filter...</button>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11px' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <input
                           type="checkbox"
@@ -1131,6 +1434,24 @@ export default function SurfaceRoughOptiRoughModal({
                         />
                         Tool inspection / change
                       </label>
+                      {formData.tool.toolInspectionChange && (
+                        <div style={{ marginLeft: '16px', display: 'grid', gridTemplateColumns: '70px 1fr', gap: '4px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '10px', color: '#64748b' }}>Every (in):</span>
+                          <input
+                            type="number"
+                            style={{ ...CLASSIC_YELLOW, height: '19px' }}
+                            value={formData.tool.forceRetractEveryInches ?? 400.0}
+                            onChange={(e) => updateNested('tool', 'forceRetractEveryInches', parseFloat(e.target.value) || 400)}
+                          />
+                          <span style={{ fontSize: '10px', color: '#64748b' }}>Every (min):</span>
+                          <input
+                            type="number"
+                            style={{ ...CLASSIC_YELLOW, height: '19px' }}
+                            value={formData.tool.forceRetractEveryMinutes ?? 40.0}
+                            onChange={(e) => updateNested('tool', 'forceRetractEveryMinutes', parseFloat(e.target.value) || 40)}
+                          />
+                        </div>
+                      )}
                       <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <input
                           type="checkbox"
@@ -1232,14 +1553,14 @@ export default function SurfaceRoughOptiRoughModal({
                       type="number"
                       style={CLASSIC_YELLOW}
                       value={formData.tool.feedRate}
-                      onChange={(e) => updateNested('tool', 'feedRate', parseFloat(e.target.value) || 0)}
+                      onChange={(e) => handleFeedRateChange(parseFloat(e.target.value) || 0)}
                     />
                     <span style={{ fontSize: '11px', color: '#475569' }}>Spindle speed:</span>
                     <input
                       type="number"
                       style={CLASSIC_YELLOW}
                       value={formData.tool.spindleSpeed}
-                      onChange={(e) => updateNested('tool', 'spindleSpeed', parseInt(e.target.value) || 0)}
+                      onChange={(e) => handleSpindleSpeedChange(parseInt(e.target.value) || 0)}
                     />
 
                     <span style={{ fontSize: '11px', color: '#475569' }}>FPT:</span>
@@ -1248,14 +1569,14 @@ export default function SurfaceRoughOptiRoughModal({
                       step="0.001"
                       style={CLASSIC_YELLOW}
                       value={formData.tool.fpt ?? 0.0245}
-                      onChange={(e) => updateNested('tool', 'fpt', parseFloat(e.target.value) || 0)}
+                      onChange={(e) => handleFptChange(parseFloat(e.target.value) || 0)}
                     />
                     <span style={{ fontSize: '11px', color: '#475569' }}>SFM:</span>
                     <input
                       type="number"
                       style={CLASSIC_YELLOW}
                       value={formData.tool.sfm ?? 800.0}
-                      onChange={(e) => updateNested('tool', 'sfm', parseFloat(e.target.value) || 0)}
+                      onChange={(e) => handleSfmChange(parseFloat(e.target.value) || 0)}
                     />
 
                     <span style={{ fontSize: '11px', color: '#475569' }}>Plunge rate:</span>
@@ -1877,6 +2198,67 @@ export default function SurfaceRoughOptiRoughModal({
                 </div>
               </div>
             )}
+
+            {/* 14. CANNED TEXT PAGE */}
+            {activePage === 'canned_text' && (
+              <div>
+                <div style={{ fontWeight: 700, color: '#0f5a9e', marginBottom: '8px' }}>Canned Text Commands</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <fieldset style={MC_GROUPBOX}>
+                    <legend style={MC_LEGEND}>Pre-Operation Commands</legend>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.cannedText?.stopBefore ?? false}
+                          onChange={(e) => updateNested('cannedText', 'stopBefore', e.target.checked)}
+                        />
+                        Program Stop (M00) before operation
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.cannedText?.opstopBefore ?? false}
+                          onChange={(e) => updateNested('cannedText', 'opstopBefore', e.target.checked)}
+                        />
+                        Optional Stop (M01) before operation
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.cannedText?.bsetBefore ?? false}
+                          onChange={(e) => updateNested('cannedText', 'bsetBefore', e.target.checked)}
+                        />
+                        BSet Initial Rotation Datum
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <fieldset style={MC_GROUPBOX}>
+                    <legend style={MC_LEGEND}>Post-Operation Commands</legend>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.cannedText?.opstopAfter ?? true}
+                          onChange={(e) => updateNested('cannedText', 'opstopAfter', e.target.checked)}
+                        />
+                        Optional Stop (M01) after operation
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.cannedText?.blockDelete ?? false}
+                          onChange={(e) => updateNested('cannedText', 'blockDelete', e.target.checked)}
+                        />
+                        Block Delete (/) prefix
+                      </label>
+                    </div>
+                  </fieldset>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
 

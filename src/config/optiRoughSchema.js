@@ -459,6 +459,15 @@ export function createDefaultOptiRoughState(options = {}) {
       throughSpindle: false
     },
 
+    // 14. Canned Text Page
+    cannedText: {
+      stopBefore: false,
+      opstopBefore: false,
+      bsetBefore: false,
+      opstopAfter: true,
+      blockDelete: false
+    },
+
     // Execution Flag
     generateToolpath: true
   };
