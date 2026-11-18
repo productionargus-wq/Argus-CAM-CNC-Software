@@ -274,20 +274,31 @@ export function createDefaultOptiRoughState(options = {}) {
       floorStock: 1.0,
       avoidanceWallStock: 0.0,
       avoidanceFloorStock: 0.0,
-      machiningEntitiesCount: 23,
+      machiningEntitiesCount: 65,
       avoidanceEntitiesCount: 0,
       workholdingEntitiesCount: 0,
-      displayRemainingEntities: true
+      displayRemainder: true,
+      displayRemainderValue: 15,
+      machiningGeometry: [
+        { id: 1, name: 'machining', entities: 65, wallStock: 1.0, floorStock: 1.0, color: '#22c55e' }
+      ],
+      avoidanceGeometry: [
+        { id: 1, name: 'avoidance', entities: 0, wallStock: 0.0, floorStock: 0.0, color: '#ef4444' }
+      ]
     },
 
     // 3. Toolpath Control Page
     toolpathControl: {
+      boundaryChainsCount: 0,
       strategy: 'stay_inside', // 'stay_inside' (pocket/cavity) | 'from_outside' (core/boss)
       contain: 'tool_tip', // 'tool_tip' | 'tool_contact_point'
       compensateTo: 'center', // 'inside' | 'center' | 'outside'
-      offsetDistance: 0.0,
+      offsetDistance: 4.0,
       includeToolRadius: true,
       totalOffsetDistance: 0.0,
+      approxStartPoint: null,
+      curvesCount: 0,
+      pointsCount: 0,
       automaticBoundary: 'none', // 'none' | 'silhouette' | 'stock'
       skipPockets: false,
       skipPocketsOption: 'smaller_than', // 'all' | 'smaller_than'
@@ -297,24 +308,31 @@ export function createDefaultOptiRoughState(options = {}) {
 
     // 4. Tool Page
     tool: {
-      id: defaultTool.id || 1,
-      number: defaultTool.number || 1,
-      name: defaultTool.name || '10mm Flat Endmill',
+      id: defaultTool.id || 501,
+      number: defaultTool.number || 501,
+      name: defaultTool.name || '1 INCH High Feed Mill',
       diameter: toolDiam,
-      cornerRadius: Number(defaultTool.cornerRadius || 0),
-      headNumber: -1,
-      lengthOffset: defaultTool.lengthOffset ?? defaultTool.number ?? 1,
-      diameterOffset: defaultTool.diameterOffset ?? defaultTool.number ?? 1,
-      spindleSpeed: defaultTool.spindleSpeed || 5395,
-      cs: Math.round((Math.PI * toolDiam * (defaultTool.spindleSpeed || 5395)) / 1000),
+      cornerRadius: Number(defaultTool.cornerRadius || 0.063585),
+      headNumber: 0,
+      lengthOffset: defaultTool.lengthOffset ?? defaultTool.number ?? 501,
+      diameterOffset: defaultTool.diameterOffset ?? defaultTool.number ?? 501,
+      rctf: false,
+      spindleDirection: 'CW',
       feedRate: defaultTool.feedRate || 2870,
-      fpt: Number(((defaultTool.feedRate || 2870) / ((defaultTool.spindleSpeed || 5395) * Math.max(1, defaultTool.flutes || 4))).toFixed(4)),
+      spindleSpeed: defaultTool.spindleSpeed || 5395,
+      fpt: Number(defaultTool.fpt || 0.0245),
+      sfm: Number(defaultTool.sfm || 800.0),
       plungeRate: defaultTool.plungeRate || 450,
       retractRate: defaultTool.retractRate || 2500,
-      coolant: 'flood', // 'flood' | 'mist' | 'thru' | 'off'
-      spindleDirection: 'CW',
       forceToolChange: false,
-      rapidRetract: true
+      rapidRetract: true,
+      toolInspectionChange: false,
+      forceRetractEveryInches: 400.0,
+      forceRetractEveryMinutes: 40.0,
+      toBatch: false,
+      comment: '',
+      coolant: 'off', // 'flood' | 'mist' | 'thru' | 'off'
+      cs: Math.round((Math.PI * toolDiam * (defaultTool.spindleSpeed || 5395)) / 1000)
     },
 
     // 5. Holder Page
@@ -345,12 +363,13 @@ export function createDefaultOptiRoughState(options = {}) {
     // 7. Cut Parameters Page (The core of OptiRough!)
     cutParameters: {
       cuttingMethod: 'climb', // 'climb' | 'conventional'
+      conventionalFeedRate: 59.592,
       conventionalFeedRatePct: 100.0,
       tipCompensation: 'tip', // 'tip' | 'center'
       optimizeStepups: 'by_depth', // 'by_depth' | 'next_closest' | 'by_pocket'
       optimizeStepdowns: 'material', // 'material' | 'air' | 'none'
-      stepoverPct: initStepoverPct,
-      stepoverMm: Number(((toolDiam * initStepoverPct) / 100).toFixed(2)),
+      stepoverPct: 15.0,
+      stepoverMm: Number(((toolDiam * 0.15)).toFixed(3)),
       stepoverAngle: 90.0,
       maximizeEngagement: false,
       stepdownPct: 150.0,
@@ -359,15 +378,22 @@ export function createDefaultOptiRoughState(options = {}) {
       stepupPct: 10.0,
       stepupMm: initStepup,
       millVerticalWalls: true,
-      minToolpathRadiusPct: 10.0,
-      minToolpathRadiusMm: Number(((toolDiam * 0.1)).toFixed(2))
+      minToolpathRadiusPct: 7.5,
+      minToolpathRadiusMm: Number(((toolDiam * 0.075)).toFixed(3)),
+      microLiftDistance: 0.25,
+      backFeedrate: 2500.0,
+      motionGapSizeRetract: 'never', // 'never' | 'broken' | 'always'
+      gapSizeMode: 'pct_tool_dia', // 'distance' | 'pct_tool_dia'
+      gapSizeDistance: 5.0,
+      gapSizePctToolDia: 500.0
     },
 
     // 8. Steep / Shallow Page
     steepShallow: {
+      useZDepths: true,
       limitCutDepths: true,
       zTop: 0.0,
-      zBottom: -25.0,
+      zBottom: -2.250001,
       detectStockLimits: true,
       shallowAngle: 0.0,
       steepAngle: 90.0
