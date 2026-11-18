@@ -309,8 +309,9 @@ export function createDefaultPocketRoughState(context = {}) {
   let modelZMax = 0.0;
   let modelZMin = -25.0;
   if (currentModel?.box) {
-    modelZMax = Number(currentModel.box.max.z.toFixed(2));
-    modelZMin = Number(currentModel.box.min.z.toFixed(2));
+    modelZMax = 0.0;
+    const depth = currentModel.box.max.y - currentModel.box.min.y;
+    modelZMin = -Number(depth.toFixed(2));
   } else if (stockConfig?.height) {
     modelZMax = 0.0;
     modelZMin = -Number(stockConfig.height);

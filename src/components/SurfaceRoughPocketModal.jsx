@@ -540,13 +540,14 @@ export default function SurfaceRoughPocketModal({
     }));
   };
 
-  // Detect Z Limits from 3D Model Bounding Box
+  // Detect Z Limits from 3D Model Bounding Box (Spindle axis is Three.js Y, CNC Z=0 at top)
   const handleDetectLimits = () => {
     let top = 0.0;
     let bottom = -25.0;
     if (currentModel?.box) {
-      top = Number(currentModel.box.max.z.toFixed(2));
-      bottom = Number(currentModel.box.min.z.toFixed(2));
+      top = 0.0;
+      const depth = currentModel.box.max.y - currentModel.box.min.y;
+      bottom = -Number(depth.toFixed(2));
     } else if (stockConfig?.height) {
       top = 0.0;
       bottom = -Number(stockConfig.height);
@@ -578,8 +579,9 @@ export default function SurfaceRoughPocketModal({
     let top = 0.0;
     let bottom = -25.0;
     if (currentModel?.box) {
-      top = Number(currentModel.box.max.z.toFixed(2));
-      bottom = Number(currentModel.box.min.z.toFixed(2));
+      top = 0.0;
+      const depth = currentModel.box.max.y - currentModel.box.min.y;
+      bottom = -Number(depth.toFixed(2));
     } else if (stockConfig?.height) {
       top = 0.0;
       bottom = -Number(stockConfig.height);

@@ -127,108 +127,123 @@ export function generatePocketRoughToolpath(boundsInput, tool = {}, params = {},
   const effectiveOffset = toolRadius + wallStock;
   const minX = bounds.min.x + effectiveOffset;
   const maxX = bounds.max.x - effectiveOffset;
-  const minY = bounds.min.y + effectiveOffset;
-  const maxY = bounds.max.y - effectiveOffset;
+  const minZ = bounds.min.z + effectiveOffset;
+  const maxZ = bounds.max.z - effectiveOffset;
 
   const width = Math.max(1.0, maxX - minX);
-  const height = Math.max(1.0, maxY - minY);
+  const length = Math.max(1.0, maxZ - minZ);
 
-  const topZ = Number(pSteep.minimumDepth ?? bounds.max.z ?? 0.0);
-  const bottomZ = Number(pSteep.maximumDepth ?? bounds.min.z ?? -25.0) + floorStock;
+  // Spindle vertical axis: Three.js Y
+  // Part top in Three.js is bounds.max.y (corresponds to CNC WCS Z=0)
+  const topY = bounds.max.y;
+  const totalModelHeight = Math.max(5.0, bounds.max.y - bounds.min.y);
 
-  // 1. Calculate Planar Constant-Z Slicing Levels
-  const stepdownLevels = [];
-  for (let z = topZ - stepdown; z > bottomZ; z -= stepdown) {
-    stepdownLevels.push(Number(z.toFixed(3)));
+  let depthLimit = totalModelHeight;
+  if (pSteep.maximumDepth != null && Math.abs(pSteep.maximumDepth) > 0.001) {
+    depthLimit = Math.abs(Number(pSteep.maximumDepth));
+  } else if (pLink.depth != null && Math.abs(pLink.depth) > 0.001) {
+    depthLimit = Math.abs(Number(pLink.depth));
   }
-  stepdownLevels.push(Number(bottomZ.toFixed(3)));
+  const bottomY = Math.max(bounds.min.y + floorStock, topY - depthLimit + floorStock);
+
+  let startY = topY;
+  if (pSteep.minimumDepth != null && pSteep.minimumDepth < -0.001) {
+    startY = topY + Number(pSteep.minimumDepth);
+  }
+
+  // 1. Calculate Planar Constant-Z (Three.js Y) Slicing Levels
+  const stepdownLevels = [];
+  for (let y = startY - stepdown; y > bottomY; y -= stepdown) {
+    stepdownLevels.push(Number(y.toFixed(3)));
+  }
+  stepdownLevels.push(Number(bottomY.toFixed(3)));
 
   const centerX = (minX + maxX) / 2;
-  const centerY = (minY + maxY) / 2;
+  const centerZ = (minZ + maxZ) / 2;
 
   // Initial Rapid Approach to Clearance Plane
-  const initialRapidStart = new THREE.Vector3(centerX, centerY, topZ + clearancePlane);
-  const initialFeedTop = new THREE.Vector3(centerX, centerY, topZ + partClearance);
+  const initialRapidStart = new THREE.Vector3(centerX, topY + clearancePlane, centerZ);
+  const initialFeedTop = new THREE.Vector3(centerX, topY + partClearance, centerZ);
   addCutSegment(initialRapidStart, initialFeedTop, true, 'Rapid Approach to Part Clearance');
 
-  let previousLevelZ = topZ;
+  let previousLevelY = topY;
 
   // Process each major constant-Z depth slice
-  stepdownLevels.forEach((currentZ, levelIndex) => {
-    const feedPlaneZ = previousLevelZ + partClearance;
+  stepdownLevels.forEach((currentY, levelIndex) => {
+    const feedPlaneY = previousLevelY + partClearance;
 
     // -------------------------------------------------------------
     // A. Entry Transition into Pocket at current Z level
     // -------------------------------------------------------------
     if (entryMethod === 'helical_ramp') {
-      const rampEntryTop = new THREE.Vector3(centerX + helicalRadius, centerY, feedPlaneZ);
-      addCutSegment(new THREE.Vector3(centerX, centerY, feedPlaneZ), rampEntryTop, true, 'Rapid to Helical Entry Start');
+      const rampEntryTop = new THREE.Vector3(centerX + helicalRadius, feedPlaneY, centerZ);
+      addCutSegment(new THREE.Vector3(centerX, feedPlaneY, centerZ), rampEntryTop, true, 'Rapid to Helical Entry Start');
 
-      let currRampZ = feedPlaneZ;
+      let currRampY = feedPlaneY;
       let prevHelicalPt = rampEntryTop.clone();
       const segmentsPerTurn = 16;
       const pitchPerTurn = Math.max(0.5, rampPitch);
 
-      while (currRampZ > currentZ) {
-        currRampZ = Math.max(currentZ, currRampZ - pitchPerTurn / segmentsPerTurn);
-        const angle = ((feedPlaneZ - currRampZ) / pitchPerTurn) * Math.PI * 2;
+      while (currRampY > currentY) {
+        currRampY = Math.max(currentY, currRampY - pitchPerTurn / segmentsPerTurn);
+        const angle = ((feedPlaneY - currRampY) / pitchPerTurn) * Math.PI * 2;
         const hx = centerX + Math.cos(angle) * helicalRadius;
-        const hy = centerY + Math.sin(angle) * helicalRadius;
-        const currHelicalPt = new THREE.Vector3(hx, hy, currRampZ);
+        const hz = centerZ + Math.sin(angle) * helicalRadius;
+        const currHelicalPt = new THREE.Vector3(hx, currRampY, hz);
         addCutSegment(prevHelicalPt, currHelicalPt, false, 'Helical Ramp Entry');
         prevHelicalPt = currHelicalPt;
       }
     } else if (entryMethod === 'linear_ramp') {
       const rampLength = Math.min(width * 0.4, toolDiameter * 2.5);
-      const startRampPt = new THREE.Vector3(centerX - rampLength / 2, centerY, feedPlaneZ);
-      addCutSegment(new THREE.Vector3(centerX, centerY, feedPlaneZ), startRampPt, true, 'Rapid to Ramp Start');
+      const startRampPt = new THREE.Vector3(centerX - rampLength / 2, feedPlaneY, centerZ);
+      addCutSegment(new THREE.Vector3(centerX, feedPlaneY, centerZ), startRampPt, true, 'Rapid to Ramp Start');
 
-      let currRampZ = feedPlaneZ;
+      let currRampY = feedPlaneY;
       let rampDir = 1;
       let prevPt = startRampPt.clone();
-      const zDropPerPass = Math.max(0.5, stepdown * 0.5);
+      const yDropPerPass = Math.max(0.5, stepdown * 0.5);
 
-      while (currRampZ > currentZ) {
-        currRampZ = Math.max(currentZ, currRampZ - zDropPerPass);
+      while (currRampY > currentY) {
+        currRampY = Math.max(currentY, currRampY - yDropPerPass);
         const nextX = centerX + (rampDir * rampLength) / 2;
-        const currPt = new THREE.Vector3(nextX, centerY, currRampZ);
+        const currPt = new THREE.Vector3(nextX, currRampY, centerZ);
         addCutSegment(prevPt, currPt, false, 'Linear Ramp Entry');
         prevPt = currPt;
         rampDir *= -1;
       }
     } else {
       // Direct Plunge
-      const plungeStart = new THREE.Vector3(centerX, centerY, feedPlaneZ);
-      const plungeEnd = new THREE.Vector3(centerX, centerY, currentZ);
+      const plungeStart = new THREE.Vector3(centerX, feedPlaneY, centerZ);
+      const plungeEnd = new THREE.Vector3(centerX, currentY, centerZ);
       addCutSegment(plungeStart, plungeEnd, false, 'Plunge Feed Entry');
     }
 
     // -------------------------------------------------------------
     // B. Pocket Clearing Strategy
     // -------------------------------------------------------------
-    let lastCuttingPt = new THREE.Vector3(centerX, centerY, currentZ);
+    let lastCuttingPt = new THREE.Vector3(centerX, currentY, centerZ);
 
     if (cuttingStyle === 'zigzag' || cuttingStyle === 'one_way') {
-      // Parallel Raster Passes
+      // Parallel Raster Passes across X and Z
       const isOneWay = cuttingStyle === 'one_way';
       let sweepDir = 1;
 
-      for (let y = minY; y <= maxY; y += stepover) {
+      for (let z = minZ; z <= maxZ; z += stepover) {
         const startX = sweepDir === 1 ? minX : maxX;
         const endX = sweepDir === 1 ? maxX : minX;
 
-        const p1 = new THREE.Vector3(startX, y, currentZ);
-        const p2 = new THREE.Vector3(endX, y, currentZ);
+        const p1 = new THREE.Vector3(startX, currentY, z);
+        const p2 = new THREE.Vector3(endX, currentY, z);
 
         if (isOneWay) {
           // Rapid repositioning back to startX
-          const retractPt = new THREE.Vector3(lastCuttingPt.x, lastCuttingPt.y, currentZ + retractPlane);
-          const approachPt = new THREE.Vector3(minX, y, currentZ + retractPlane);
+          const retractPt = new THREE.Vector3(lastCuttingPt.x, currentY + retractPlane, lastCuttingPt.z);
+          const approachPt = new THREE.Vector3(minX, currentY + retractPlane, z);
           addCutSegment(lastCuttingPt, retractPt, true, 'Retract between One-Way passes');
           addCutSegment(retractPt, approachPt, true, 'Reposition Rapid');
-          addCutSegment(approachPt, new THREE.Vector3(minX, y, currentZ), false, 'Plunge to Cut');
-          addCutSegment(new THREE.Vector3(minX, y, currentZ), new THREE.Vector3(maxX, y, currentZ), false, 'One-Way Rough Pass');
-          lastCuttingPt = new THREE.Vector3(maxX, y, currentZ);
+          addCutSegment(approachPt, new THREE.Vector3(minX, currentY, z), false, 'Plunge to Cut');
+          addCutSegment(new THREE.Vector3(minX, currentY, z), new THREE.Vector3(maxX, currentY, z), false, 'One-Way Rough Pass');
+          lastCuttingPt = new THREE.Vector3(maxX, currentY, z);
         } else {
           // Bi-directional zigzag
           addCutSegment(lastCuttingPt, p1, false, 'Zigzag Link Move');
@@ -239,25 +254,25 @@ export function generatePocketRoughToolpath(boundsInput, tool = {}, params = {},
       }
     } else if (cuttingStyle === 'true_spiral') {
       // True Archimedean Spiral expanding outward from center
-      const maxRadius = Math.max(width, height) / 2;
+      const maxRadius = Math.max(width, length) / 2;
       const numTurns = Math.max(3, Math.ceil(maxRadius / stepover));
       const segmentsPerTurn = 24;
       const totalSegments = numTurns * segmentsPerTurn;
 
-      let prevSpiralPt = new THREE.Vector3(centerX, centerY, currentZ);
+      let prevSpiralPt = new THREE.Vector3(centerX, currentY, centerZ);
       for (let s = 1; s <= totalSegments; s++) {
         const progress = s / totalSegments;
         const currentRadius = progress * maxRadius;
         const theta = progress * (numTurns * Math.PI * 2);
 
         const rawX = centerX + Math.cos(theta) * currentRadius;
-        const rawY = centerY + Math.sin(theta) * currentRadius;
+        const rawZ = centerZ + Math.sin(theta) * currentRadius;
 
         // Clip to rectangular pocket boundaries
         const clampedX = Math.max(minX, Math.min(maxX, rawX));
-        const clampedY = Math.max(minY, Math.min(maxY, rawY));
+        const clampedZ = Math.max(minZ, Math.min(maxZ, rawZ));
 
-        const currSpiralPt = new THREE.Vector3(clampedX, clampedY, currentZ);
+        const currSpiralPt = new THREE.Vector3(clampedX, currentY, clampedZ);
         if (currSpiralPt.distanceTo(prevSpiralPt) > 0.3) {
           addCutSegment(prevSpiralPt, currSpiralPt, false, 'TrueSpiral Roughing Pass');
           prevSpiralPt = currSpiralPt;
@@ -266,20 +281,20 @@ export function generatePocketRoughToolpath(boundsInput, tool = {}, params = {},
       }
     } else if (cuttingStyle === 'morph_spiral') {
       // Morph Spiral: smooth interpolation between center point and outer rectangular perimeter
-      const ringsCount = Math.max(2, Math.ceil(Math.min(width, height) / (2 * stepover)));
-      let prevPt = new THREE.Vector3(centerX, centerY, currentZ);
+      const ringsCount = Math.max(2, Math.ceil(Math.min(width, length) / (2 * stepover)));
+      let prevPt = new THREE.Vector3(centerX, currentY, centerZ);
 
       for (let r = 1; r <= ringsCount; r++) {
         const factor = r / ringsCount;
         const ringHalfW = (width / 2) * factor;
-        const ringHalfH = (height / 2) * factor;
+        const ringHalfL = (length / 2) * factor;
 
         const corners = [
-          new THREE.Vector3(centerX - ringHalfW, centerY - ringHalfH, currentZ),
-          new THREE.Vector3(centerX + ringHalfW, centerY - ringHalfH, currentZ),
-          new THREE.Vector3(centerX + ringHalfW, centerY + ringHalfH, currentZ),
-          new THREE.Vector3(centerX - ringHalfW, centerY + ringHalfH, currentZ),
-          new THREE.Vector3(centerX - ringHalfW, centerY - ringHalfH, currentZ)
+          new THREE.Vector3(centerX - ringHalfW, currentY, centerZ - ringHalfL),
+          new THREE.Vector3(centerX + ringHalfW, currentY, centerZ - ringHalfL),
+          new THREE.Vector3(centerX + ringHalfW, currentY, centerZ + ringHalfL),
+          new THREE.Vector3(centerX - ringHalfW, currentY, centerZ + ringHalfL),
+          new THREE.Vector3(centerX - ringHalfW, currentY, centerZ - ringHalfL)
         ];
 
         corners.forEach((c) => {
@@ -291,24 +306,24 @@ export function generatePocketRoughToolpath(boundsInput, tool = {}, params = {},
     } else {
       // Mastercam Default: Constant Overlap Spiral / Parallel Spiral
       // Concentric rectangular loops expanding outward or shrinking inward
-      const ringsCount = Math.max(2, Math.ceil(Math.min(width, height) / (2 * stepover)));
-      let prevPt = new THREE.Vector3(centerX, centerY, currentZ);
+      const ringsCount = Math.max(2, Math.ceil(Math.min(width, length) / (2 * stepover)));
+      let prevPt = new THREE.Vector3(centerX, currentY, centerZ);
 
       for (let r = 1; r <= ringsCount; r++) {
         const insetX = (ringsCount - r) * stepover;
-        const insetY = (ringsCount - r) * stepover;
+        const insetZ = (ringsCount - r) * stepover;
 
         const curMinX = Math.min(centerX - 0.5, minX + insetX);
         const curMaxX = Math.max(centerX + 0.5, maxX - insetX);
-        const curMinY = Math.min(centerY - 0.5, minY + insetY);
-        const curMaxY = Math.max(centerY + 0.5, maxY - insetY);
+        const curMinZ = Math.min(centerZ - 0.5, minZ + insetZ);
+        const curMaxZ = Math.max(centerZ + 0.5, maxZ - insetZ);
 
         const corners = [
-          new THREE.Vector3(curMinX, curMinY, currentZ),
-          new THREE.Vector3(curMaxX, curMinY, currentZ),
-          new THREE.Vector3(curMaxX, curMaxY, currentZ),
-          new THREE.Vector3(curMinX, curMaxY, currentZ),
-          new THREE.Vector3(curMinX, curMinY, currentZ)
+          new THREE.Vector3(curMinX, currentY, curMinZ),
+          new THREE.Vector3(curMaxX, currentY, curMinZ),
+          new THREE.Vector3(curMaxX, currentY, curMaxZ),
+          new THREE.Vector3(curMinX, currentY, curMaxZ),
+          new THREE.Vector3(curMinX, currentY, curMinZ)
         ];
 
         corners.forEach((c) => {
@@ -324,11 +339,11 @@ export function generatePocketRoughToolpath(boundsInput, tool = {}, params = {},
     // -------------------------------------------------------------
     if (finishPassEnabled) {
       const perimeterCorners = [
-        new THREE.Vector3(minX, minY, currentZ),
-        new THREE.Vector3(maxX, minY, currentZ),
-        new THREE.Vector3(maxX, maxY, currentZ),
-        new THREE.Vector3(minX, maxY, currentZ),
-        new THREE.Vector3(minX, minY, currentZ)
+        new THREE.Vector3(minX, currentY, minZ),
+        new THREE.Vector3(maxX, currentY, minZ),
+        new THREE.Vector3(maxX, currentY, maxZ),
+        new THREE.Vector3(minX, currentY, maxZ),
+        new THREE.Vector3(minX, currentY, minZ)
       ];
 
       addCutSegment(lastCuttingPt, perimeterCorners[0], false, 'Lead-In to Wall Finish Pass', true);
@@ -342,16 +357,16 @@ export function generatePocketRoughToolpath(boundsInput, tool = {}, params = {},
 
     // Retract above level for transition to next depth slice
     if (levelIndex < stepdownLevels.length - 1) {
-      const stepRetract = new THREE.Vector3(lastCuttingPt.x, lastCuttingPt.y, currentZ + retractPlane);
+      const stepRetract = new THREE.Vector3(lastCuttingPt.x, currentY + retractPlane, lastCuttingPt.z);
       addCutSegment(lastCuttingPt, stepRetract, true, 'Inter-Level Retract');
     }
 
-    previousLevelZ = currentZ;
+    previousLevelY = currentY;
   });
 
   // Final Retract to Clearance Plane at end of operation
   const lastWp = waypoints[waypoints.length - 1]?.pos || initialFeedTop;
-  const finalRetract = new THREE.Vector3(lastWp.x, lastWp.y, topZ + clearancePlane);
+  const finalRetract = new THREE.Vector3(lastWp.x, topY + clearancePlane, lastWp.z);
   addCutSegment(lastWp, finalRetract, true, 'Final Retract to Clearance Plane');
 
   // Calculate Machining Physics
@@ -362,6 +377,8 @@ export function generatePocketRoughToolpath(boundsInput, tool = {}, params = {},
     cuttingLines,
     rapidLines,
     waypoints,
+    bounds,
+    topY,
     totalDistanceMm: Number(totalDist.toFixed(1)),
     cuttingDistanceMm: Number(cuttingDist.toFixed(1)),
     stepdownLevelsCount: stepdownLevels.length,
@@ -441,24 +458,29 @@ export function generatePocketRoughGCode(toolpath, tool = {}, params = {}, activ
   }
 
   const waypoints = toolpath?.waypoints || [];
+  const topY = toolpath?.topY ?? toolpath?.bounds?.max?.y ?? params.currentModel?.box?.max?.y ?? 0;
+  const toCncX = (pt) => (Math.abs(pt.x) < 0.0005 ? 0 : pt.x).toFixed(3);
+  const toCncY = (pt) => (Math.abs(pt.z) < 0.0005 ? 0 : -pt.z).toFixed(3);
+  const toCncZ = (pt) => (Math.abs(pt.y - topY) < 0.0005 ? 0 : pt.y - topY).toFixed(3);
+
   if (waypoints.length > 0) {
     const firstWp = waypoints[0];
-    lines.push(`${nextN()} G00 X${firstWp.pos.x.toFixed(3)} Y${firstWp.pos.y.toFixed(3)}`);
+    lines.push(`${nextN()} G00 X${toCncX(firstWp.pos)} Y${toCncY(firstWp.pos)}`);
     const coolantCode = coolantMode === 'thru' ? 'M07' : coolantMode !== 'off' ? 'M08' : '';
-    lines.push(`${nextN()} G00 G43 H${tool.lengthOffset || toolNum} Z${firstWp.pos.z.toFixed(3)}${coolantCode ? ' ' + coolantCode : ''}`);
+    lines.push(`${nextN()} G00 G43 H${tool.lengthOffset || toolNum} Z${toCncZ(firstWp.pos)}${coolantCode ? ' ' + coolantCode : ''}`);
   }
 
   let prevPos = null;
   let prevIsRapid = null;
 
   waypoints.slice(1).forEach((wp) => {
-    const x = wp.pos.x.toFixed(3);
-    const y = wp.pos.y.toFixed(3);
-    const z = wp.pos.z.toFixed(3);
+    const x = toCncX(wp.pos);
+    const y = toCncY(wp.pos);
+    const z = toCncZ(wp.pos);
 
     const isRapid = Boolean(wp.isRapid);
     const note = wp.note || '';
-    const isPlunge = note.includes('Plunge') || note.includes('Ramp') || (prevPos && wp.pos.z < prevPos.z && Math.abs(wp.pos.x - prevPos.x) < 0.001);
+    const isPlunge = note.includes('Plunge') || note.includes('Ramp') || (prevPos && wp.pos.y < prevPos.y && Math.hypot(wp.pos.x - prevPos.x, wp.pos.z - prevPos.z) < 0.001);
     const currentFeed = isPlunge ? plungeFeed : wp.isFinish ? (pPocket.finishFeedRate || 1200) : feed;
 
     if (isRapid) {

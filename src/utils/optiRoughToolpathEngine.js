@@ -120,48 +120,64 @@ export function generateOptiRoughToolpath(boundsInput, tool = {}, params = {}, m
   const effectiveOffset = toolRadius + wallStock;
   const minX = bounds.min.x + effectiveOffset;
   const maxX = bounds.max.x - effectiveOffset;
-  const minY = bounds.min.y + effectiveOffset;
-  const maxY = bounds.max.y - effectiveOffset;
+  const minZ = bounds.min.z + effectiveOffset;
+  const maxZ = bounds.max.z - effectiveOffset;
 
-  const topZ = Number(pSteep.zTop ?? bounds.max.z ?? 0.0);
-  const bottomZ = Number(pSteep.zBottom ?? bounds.min.z ?? -25.0) + floorStock;
+  const width = Math.max(1.0, maxX - minX);
+  const length = Math.max(1.0, maxZ - minZ);
 
-  const totalDepth = Math.max(1.0, topZ - bottomZ);
+  // Spindle vertical axis: Three.js Y
+  // Part top in Three.js is bounds.max.y (corresponds to CNC WCS Z=0)
+  const topY = bounds.max.y;
+  const totalModelHeight = Math.max(5.0, bounds.max.y - bounds.min.y);
 
-  // 1. Calculate Major Axial Stepdown Levels (Cutting Deep Passes)
-  const stepdownLevels = [];
-  for (let z = topZ - stepdown; z > bottomZ; z -= stepdown) {
-    stepdownLevels.push(Number(z.toFixed(3)));
+  let depthLimit = totalModelHeight;
+  if (pSteep.zBottom != null && Math.abs(pSteep.zBottom) > 0.001) {
+    depthLimit = Math.abs(Number(pSteep.zBottom));
+  } else if (pLink.depth != null && Math.abs(pLink.depth) > 0.001) {
+    depthLimit = Math.abs(Number(pLink.depth));
   }
-  stepdownLevels.push(Number(bottomZ.toFixed(3)));
+  const bottomY = Math.max(bounds.min.y + floorStock, topY - depthLimit + floorStock);
+
+  let startY = topY;
+  if (pSteep.zTop != null && pSteep.zTop < -0.001) {
+    startY = topY + Number(pSteep.zTop);
+  }
+
+  // 1. Calculate Major Axial Stepdown Levels (Cutting Deep Passes along Three.js Y)
+  const stepdownLevels = [];
+  for (let y = startY - stepdown; y > bottomY; y -= stepdown) {
+    stepdownLevels.push(Number(y.toFixed(3)));
+  }
+  stepdownLevels.push(Number(bottomY.toFixed(3)));
 
   const centerX = (minX + maxX) / 2;
-  const centerY = (minY + maxY) / 2;
+  const centerZ = (minZ + maxZ) / 2;
 
   // Initial Rapid Approach to Clearance Plane
-  const initialRapidStart = new THREE.Vector3(centerX, centerY, topZ + clearancePlane);
-  const initialRampTop = new THREE.Vector3(centerX + helicalRadius, centerY, topZ + partClearance);
+  const initialRapidStart = new THREE.Vector3(centerX, topY + clearancePlane, centerZ);
+  const initialRampTop = new THREE.Vector3(centerX + helicalRadius, topY + partClearance, centerZ);
   addCutSegment(initialRapidStart, initialRampTop, true, 'Rapid Approach to Part Clearance');
 
-  let previousLevelZ = topZ;
+  let previousLevelY = topY;
 
   // Process each major Stepdown slice
-  stepdownLevels.forEach((currentStepdownZ, levelIndex) => {
+  stepdownLevels.forEach((currentStepdownY, levelIndex) => {
     // -------------------------------------------------------------
     // A. Helical Ramp Plunge Entry at Center of Cavity
     // -------------------------------------------------------------
-    const rampEntryTop = new THREE.Vector3(centerX + helicalRadius, centerY, previousLevelZ + partClearance);
-    let currRampZ = previousLevelZ + partClearance;
+    const rampEntryTop = new THREE.Vector3(centerX + helicalRadius, previousLevelY + partClearance, centerZ);
+    let currRampY = previousLevelY + partClearance;
     let prevHelicalPt = rampEntryTop.clone();
 
-    // 12 segments per full 360-degree helical circle
+    // 16 segments per full 360-degree helical circle
     const segmentsPerTurn = 16;
-    while (currRampZ > currentStepdownZ) {
-      currRampZ = Math.max(currentStepdownZ, currRampZ - helicalPitch / segmentsPerTurn);
-      const angle = ((previousLevelZ + partClearance - currRampZ) / helicalPitch) * Math.PI * 2;
+    while (currRampY > currentStepdownY) {
+      currRampY = Math.max(currentStepdownY, currRampY - helicalPitch / segmentsPerTurn);
+      const angle = ((previousLevelY + partClearance - currRampY) / helicalPitch) * Math.PI * 2;
       const hx = centerX + Math.cos(angle) * helicalRadius;
-      const hy = centerY + Math.sin(angle) * helicalRadius;
-      const currHelicalPt = new THREE.Vector3(hx, hy, currRampZ);
+      const hz = centerZ + Math.sin(angle) * helicalRadius;
+      const currHelicalPt = new THREE.Vector3(hx, currRampY, hz);
       addCutSegment(prevHelicalPt, currHelicalPt, false, 'Helical Ramp Plunge Entry');
       prevHelicalPt = currHelicalPt;
     }
@@ -173,22 +189,22 @@ export function generateOptiRoughToolpath(boundsInput, tool = {}, params = {}, m
     const advancePerLoop = Math.max(0.5, stepover);
 
     let sweepDir = 1;
-    for (let y = minY; y <= maxY; y += stepover * 2.2) {
+    for (let z = minZ; z <= maxZ; z += stepover * 2.2) {
       const startX = sweepDir === 1 ? minX : maxX;
       const endX = sweepDir === 1 ? maxX : minX;
       const passDist = Math.abs(endX - startX);
       const numLoops = Math.max(3, Math.floor(passDist / advancePerLoop));
 
       const dirVec = new THREE.Vector3(sweepDir, 0, 0);
-      const perpVec = new THREE.Vector3(0, 1, 0);
+      const perpVec = new THREE.Vector3(0, 0, 1);
 
-      let prevLoopPt = new THREE.Vector3(startX, y, currentStepdownZ);
+      let prevLoopPt = new THREE.Vector3(startX, currentStepdownY, z);
 
       for (let l = 0; l < numLoops; l++) {
         const loopCenter = new THREE.Vector3(
           startX + sweepDir * (l * advancePerLoop),
-          y,
-          currentStepdownZ
+          currentStepdownY,
+          z
         );
 
         // 16 chordal segments per 360-degree trochoid
@@ -198,15 +214,15 @@ export function generateOptiRoughToolpath(boundsInput, tool = {}, params = {}, m
           const isForwardCut = theta <= Math.PI;
 
           // Micro-lift: elevate cutter by microLift mm on non-cutting backtrack to prevent floor rubbing
-          const cutZ = isForwardCut ? currentStepdownZ : currentStepdownZ + microLift;
+          const cutY = isForwardCut ? currentStepdownY : currentStepdownY + microLift;
 
           const offsetX = dirVec.x * Math.sin(theta) * loopRadius;
-          const offsetY = perpVec.y * Math.cos(theta) * loopRadius;
+          const offsetZ = perpVec.z * Math.cos(theta) * loopRadius;
 
           const currLoopPt = new THREE.Vector3(
             loopCenter.x + offsetX,
-            loopCenter.y + offsetY,
-            cutZ
+            cutY,
+            loopCenter.z + offsetZ
           );
 
           addCutSegment(
@@ -227,15 +243,15 @@ export function generateOptiRoughToolpath(boundsInput, tool = {}, params = {}, m
     // -------------------------------------------------------------
     if (stepupEnabled && levelIndex > 0) {
       // Step upward from current deep floor back toward previous level
-      const upwardTargetZ = previousLevelZ;
-      for (let upZ = currentStepdownZ + stepup; upZ < upwardTargetZ; upZ += stepup) {
+      const upwardTargetY = previousLevelY;
+      for (let upY = currentStepdownY + stepup; upY < upwardTargetY; upY += stepup) {
         // Generate upward step-up perimeter pass along 3D drive surface
         const stepupPoints = [
-          new THREE.Vector3(minX, minY, upZ),
-          new THREE.Vector3(maxX, minY, upZ),
-          new THREE.Vector3(maxX, maxY, upZ),
-          new THREE.Vector3(minX, maxY, upZ),
-          new THREE.Vector3(minX, minY, upZ)
+          new THREE.Vector3(minX, upY, minZ),
+          new THREE.Vector3(maxX, upY, minZ),
+          new THREE.Vector3(maxX, upY, maxZ),
+          new THREE.Vector3(minX, upY, maxZ),
+          new THREE.Vector3(minX, upY, minZ)
         ];
 
         for (let i = 1; i < stepupPoints.length; i++) {
@@ -248,23 +264,23 @@ export function generateOptiRoughToolpath(boundsInput, tool = {}, params = {}, m
     // D. Perimeter Wall Cleanout Pass (Waterline at Stepdown Floor)
     // -------------------------------------------------------------
     const wallContour = [
-      new THREE.Vector3(minX, minY, currentStepdownZ),
-      new THREE.Vector3(maxX, minY, currentStepdownZ),
-      new THREE.Vector3(maxX, maxY, currentStepdownZ),
-      new THREE.Vector3(minX, maxY, currentStepdownZ),
-      new THREE.Vector3(minX, minY, currentStepdownZ)
+      new THREE.Vector3(minX, currentStepdownY, minZ),
+      new THREE.Vector3(maxX, currentStepdownY, minZ),
+      new THREE.Vector3(maxX, currentStepdownY, maxZ),
+      new THREE.Vector3(minX, currentStepdownY, maxZ),
+      new THREE.Vector3(minX, currentStepdownY, minZ)
     ];
 
     for (let i = 1; i < wallContour.length; i++) {
       addCutSegment(wallContour[i - 1], wallContour[i], false, 'Wall Cleanout Waterline Pass');
     }
 
-    previousLevelZ = currentStepdownZ;
+    previousLevelY = currentStepdownY;
   });
 
   // Final Retract to Clearance Plane
-  const lastPoint = waypoints[waypoints.length - 1]?.pos || new THREE.Vector3(minX, minY, previousLevelZ);
-  const finalRetract = new THREE.Vector3(lastPoint.x, lastPoint.y, topZ + clearancePlane);
+  const lastPoint = waypoints[waypoints.length - 1]?.pos || new THREE.Vector3(minX, previousLevelY, minZ);
+  const finalRetract = new THREE.Vector3(lastPoint.x, topY + clearancePlane, lastPoint.z);
   addCutSegment(lastPoint, finalRetract, true, 'Final Z Clearance Retract');
 
   // Compute real-time physics summary
@@ -274,6 +290,8 @@ export function generateOptiRoughToolpath(boundsInput, tool = {}, params = {}, m
     cuttingLines,
     rapidLines,
     waypoints,
+    bounds,
+    topY,
     totalDistance: Number(totalDist.toFixed(2)),
     cuttingDistance: Number(cuttingDist.toFixed(2)),
     microLiftDistance: Number(microLiftDist.toFixed(2)),

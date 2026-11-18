@@ -392,8 +392,17 @@ export default function SurfaceRoughOptiRoughModal({
 
   // Auto Detect Z Limits from stockConfig and model bounding box
   const handleDetectLimits = () => {
-    const topZ = Number(stockConfig?.stockZMax ?? currentModel?.boundingBox?.max?.z ?? 0.0);
-    const bottomZ = Number(stockConfig?.stockZMin ?? currentModel?.boundingBox?.min?.z ?? -2.25);
+    const topZ = 0.0;
+    let bottomZ = -25.0;
+    const box = currentModel?.box || currentModel?.boundingBox;
+    if (box) {
+      const depth = box.max.y - box.min.y;
+      bottomZ = -Number(depth.toFixed(2));
+    } else if (stockConfig?.height) {
+      bottomZ = -Number(stockConfig.height);
+    } else if (stockConfig?.stockZMin != null) {
+      bottomZ = Number(stockConfig.stockZMin);
+    }
     setFormData((prev) => ({
       ...prev,
       steepShallow: {
