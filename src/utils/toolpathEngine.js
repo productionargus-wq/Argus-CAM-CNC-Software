@@ -4,6 +4,7 @@ import { isDriveSurfaceEntity } from '../config/surfaceFinishSchema.js';
 import { segmentObjectIntoSolidFaces } from './solidFaceSelectionEngine.js';
 import { generateSurfaceFlowlineToolpath } from './flowlineToolpathEngine.js';
 import { generateOptiRoughToolpath, generateOptiRoughGCode } from './optiRoughToolpathEngine.js';
+import { generatePocketRoughToolpath, generatePocketRoughGCode } from './pocketRoughToolpathEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -47,7 +48,9 @@ export {
   MACHINE_KINEMATICS,
   TCPM_MODES,
   generateOptiRoughToolpath,
-  generateOptiRoughGCode
+  generateOptiRoughGCode,
+  generatePocketRoughToolpath,
+  generatePocketRoughGCode
 };
 
 /**
@@ -4010,6 +4013,36 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
       depthOfCut: op.stepdown || 1.0,
       rapidHeight: op.rapidHeight || 15.0
     });
+  }
+  if (
+    strategy === 'surface_rough_pocket' ||
+    strategy === 'pocket_rough' ||
+    op.strategyKey === 'surface_rough_pocket' ||
+    op.strategyKey === 'pocket_rough' ||
+    op.badgeClass === 'rough_pocket'
+  ) {
+    return generatePocketRoughToolpath(opBounds, assignedTool, {
+      ...op,
+      cutParameters: op.cutParameters || {
+        stepoverPct: op.stepoverPct || 60,
+        stepdownMm: op.stepdown || 2.0
+      },
+      pocketParameters: op.pocketParameters || {
+        cuttingStyle: op.cuttingStyle || 'constant_overlap_spiral'
+      },
+      modelGeometry: op.modelGeometry || {
+        wallStock: op.wallStock ?? 0.5,
+        floorStock: op.floorStock ?? 0.5
+      },
+      transitions: op.transitions || {
+        entryMethod: op.entryMethod || 'helical_ramp',
+        helicalRadius: op.helicalRadius || 4.0,
+        rampPitch: op.rampPitch || 2.0
+      },
+      linkingParameters: op.linkingParameters || {
+        clearancePlane: op.rapidHeight || 25.0
+      }
+    }, effectiveModel);
   }
   if (strategy === 'pocket' || strategy === 'surface_pocket') {
     return generateSurfacePocketToolpath(opBounds, assignedTool, buildPocketParamsFromOp(op), effectiveModel);

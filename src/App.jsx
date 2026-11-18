@@ -47,6 +47,7 @@ import CAMOperationsWizardModal from './components/CAMOperationsWizardModal';
 import ProbingStudioModal from './components/ProbingStudioModal';
 import AFRModal from './components/AFRModal';
 import SurfaceRoughOptiRoughModal from './components/SurfaceRoughOptiRoughModal';
+import SurfaceRoughPocketModal from './components/SurfaceRoughPocketModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
@@ -353,6 +354,8 @@ export default function App() {
   const [isAFRModalOpen, setIsAFRModalOpen] = useState(false);
   const [isOptiRoughModalOpen, setIsOptiRoughModalOpen] = useState(false);
   const [editingOptiRoughOp, setEditingOptiRoughOp] = useState(null);
+  const [isPocketRoughModalOpen, setIsPocketRoughModalOpen] = useState(false);
+  const [editingPocketRoughOp, setEditingPocketRoughOp] = useState(null);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
@@ -1946,6 +1949,18 @@ export default function App() {
     }
 
     if (
+      op?.strategyKey === 'surface_rough_pocket' ||
+      op?.strategyKey === 'pocket_rough' ||
+      op?.badgeClass === 'rough_pocket' ||
+      (op?.opType === 'pocket' && op?.cutParameters) ||
+      op?.name?.toLowerCase()?.includes('surface rough pocket')
+    ) {
+      setEditingPocketRoughOp(op);
+      setIsPocketRoughModalOpen(true);
+      return;
+    }
+
+    if (
       op?.strategyKey === 'surface_finish_flowline' ||
       op?.badgeClass === 'flowline' ||
       op?.strategyKey === 'surface_finish_contour' ||
@@ -2261,6 +2276,10 @@ export default function App() {
     } else if (s === 'optirough' || s === 'surface_rough_optirough') {
       setEditingOptiRoughOp(null);
       setIsOptiRoughModalOpen(true);
+      return;
+    } else if (s === 'surface_rough_pocket' || s === 'pocket_rough' || s === 'rough_pocket') {
+      setEditingPocketRoughOp(null);
+      setIsPocketRoughModalOpen(true);
       return;
     } else if (s === 'adaptive' || s === 'dynamic_mill') {
       newOp = {
@@ -2586,6 +2605,46 @@ export default function App() {
     }
     setIsOptiRoughModalOpen(false);
     setEditingOptiRoughOp(null);
+  };
+
+  const handleSavePocketRoughOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => o.id === savedOp.id);
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.tool?.id || savedOp.toolId)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 1, number: 1, type: 'bull', diameter: 10, name: '10mm Bull Endmill' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: savedOp.id || (prevOps.length > 0 ? Math.max(...prevOps.map((o) => Number(o.id) || 0)) + 1 : 1),
+      name: savedOp.name || 'Surface Rough Pocket',
+      strategyKey: 'surface_rough_pocket',
+      badgeClass: 'rough_pocket',
+      opType: 'pocket',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 5000,
+      feedRate: savedOp.tool?.feedRate || 1800,
+      plungeRate: savedOp.tool?.plungeRate || 450,
+      stepdown: savedOp.cutParameters?.stepdownMm || 2.0,
+      stepoverPct: savedOp.cutParameters?.stepoverPct || 60.0,
+      rapidHeight: savedOp.linkingParameters?.clearancePlane || 25.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (o.id === formattedOp.id ? formattedOp : o)));
+      showToast('Surface Rough Pocket parameters updated and toolpath regenerated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('Surface Rough Pocket operation generated', 'success');
+    }
+    setIsPocketRoughModalOpen(false);
+    setEditingPocketRoughOp(null);
   };
 
   const handleSelectSampleModel = async (type) => {
@@ -3749,6 +3808,13 @@ export default function App() {
       case 'surface_rough_optirough':
         setEditingOptiRoughOp(null);
         setIsOptiRoughModalOpen(true);
+        break;
+      case 'surface_rough_pocket':
+      case 'pocket_rough':
+      case 'rough_pocket':
+      case 'tp_3d_pocket':
+        setEditingPocketRoughOp(null);
+        setIsPocketRoughModalOpen(true);
         break;
       case 'chaining':
       case 'chain':
@@ -6281,6 +6347,10 @@ export default function App() {
           setEditingOptiRoughOp(null);
           setIsOptiRoughModalOpen(true);
         }}
+        onOpenSurfaceRoughPocketModal={() => {
+          setEditingPocketRoughOp(null);
+          setIsPocketRoughModalOpen(true);
+        }}
         onOpenAdaptiveModal={() => {
           setEditingOptiRoughOp(null);
           setIsOptiRoughModalOpen(true);
@@ -7223,6 +7293,23 @@ export default function App() {
         currentModel={currentModel}
         onSaveOperation={handleSaveOptiRoughOp}
         onNotify={showToast}
+      />
+
+      {/* Mastercam 3D Surface Rough Pocket Modal */}
+      <SurfaceRoughPocketModal
+        isOpen={isPocketRoughModalOpen}
+        onClose={() => {
+          setIsPocketRoughModalOpen(false);
+          setEditingPocketRoughOp(null);
+        }}
+        operation={editingPocketRoughOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        onSaveOperation={handleSavePocketRoughOp}
+        onNotify={showToast}
+        onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
       />
 
       {/* Adaptive Trochoidal High-Speed Roughing Studio (Dynamic Motion) */}
