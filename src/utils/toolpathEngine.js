@@ -3,6 +3,7 @@ import { offsetContour2D } from './cadGeometry.js';
 import { isDriveSurfaceEntity } from '../config/surfaceFinishSchema.js';
 import { segmentObjectIntoSolidFaces } from './solidFaceSelectionEngine.js';
 import { generateSurfaceFlowlineToolpath } from './flowlineToolpathEngine.js';
+import { generateOptiRoughToolpath, generateOptiRoughGCode } from './optiRoughToolpathEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -44,7 +45,9 @@ export {
   audit5AxisKinematics,
   FIVE_AXIS_STRATEGIES,
   MACHINE_KINEMATICS,
-  TCPM_MODES
+  TCPM_MODES,
+  generateOptiRoughToolpath,
+  generateOptiRoughGCode
 };
 
 /**
@@ -4050,13 +4053,38 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
       rapidHeight: op.rapidHeight || 10.0
     }, effectiveModel);
   }
-  if (strategy === 'adaptive' || strategy === 'dynamic') {
-    return generateAdaptiveRoughingToolpath(opBounds, assignedTool, {
-      stepoverPct: op.stepoverPct || 25,
-      stepdown: op.stepdown || 6.0,
-      totalDepth: op.totalDepth || 18.0,
-      rapidHeight: op.rapidHeight || 15.0
-    });
+  if (
+    strategy === 'adaptive' ||
+    strategy === 'optirough' ||
+    strategy === 'dynamic_optirough' ||
+    strategy === 'surface_rough_optirough' ||
+    strategy === 'dynamic' ||
+    op.strategyKey === 'surface_rough_optirough' ||
+    op.strategyKey === 'optirough' ||
+    op.strategyKey === 'adaptive'
+  ) {
+    return generateOptiRoughToolpath(opBounds, assignedTool, {
+      ...op,
+      cutParameters: op.cutParameters || {
+        stepoverPct: op.stepoverPct || 15,
+        stepdownMm: op.stepdown || 15.0,
+        stepupEnabled: op.stepupEnabled ?? true,
+        stepupMm: op.stepup || 1.0
+      },
+      modelGeometry: op.modelGeometry || {
+        wallStock: op.wallStock ?? 1.0,
+        floorStock: op.floorStock ?? 1.0
+      },
+      transitions: op.transitions || {
+        helicalRadius: op.helicalRadius || 5.0,
+        helicalPitch: op.helicalPitch || 2.0
+      },
+      linkingParameters: op.linkingParameters || {
+        microLiftDistance: op.microLift || 0.25,
+        backFeedRate: op.backFeedRate || 2500,
+        clearancePlane: op.rapidHeight || 25.0
+      }
+    }, effectiveModel);
   }
   if (strategy === 'chamfer') {
     return generateChamferToolpath(opBounds, assignedTool, {

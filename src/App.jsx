@@ -46,6 +46,7 @@ import ViewStudioModal from './components/ViewStudioModal';
 import CAMOperationsWizardModal from './components/CAMOperationsWizardModal';
 import ProbingStudioModal from './components/ProbingStudioModal';
 import AFRModal from './components/AFRModal';
+import SurfaceRoughOptiRoughModal from './components/SurfaceRoughOptiRoughModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
@@ -350,6 +351,8 @@ export default function App() {
   const [activeProbingCycle, setActiveProbingCycle] = useState('bore_boss');
   const [probingPickedFeature, setProbingPickedFeature] = useState(null);
   const [isAFRModalOpen, setIsAFRModalOpen] = useState(false);
+  const [isOptiRoughModalOpen, setIsOptiRoughModalOpen] = useState(false);
+  const [editingOptiRoughOp, setEditingOptiRoughOp] = useState(null);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
@@ -1931,6 +1934,18 @@ export default function App() {
 
   const handleEditOp = (op) => {
     if (
+      op?.strategyKey === 'surface_rough_optirough' ||
+      op?.strategyKey === 'optirough' ||
+      op?.badgeClass === 'optirough' ||
+      (op?.badgeClass === 'adaptive' && op?.cutParameters) ||
+      op?.name?.toLowerCase()?.includes('optirough')
+    ) {
+      setEditingOptiRoughOp(op);
+      setIsOptiRoughModalOpen(true);
+      return;
+    }
+
+    if (
       op?.strategyKey === 'surface_finish_flowline' ||
       op?.badgeClass === 'flowline' ||
       op?.strategyKey === 'surface_finish_contour' ||
@@ -2243,7 +2258,11 @@ export default function App() {
         stockToLeaveZ: 0.0,
         rapidHeight: 20.0
       };
-    } else if (s === 'adaptive' || s === 'optirough' || s === 'dynamic_mill') {
+    } else if (s === 'optirough' || s === 'surface_rough_optirough') {
+      setEditingOptiRoughOp(null);
+      setIsOptiRoughModalOpen(true);
+      return;
+    } else if (s === 'adaptive' || s === 'dynamic_mill') {
       newOp = {
         id: nextId,
         name: `Adaptive OptiRough Pass ${nextId}`,
@@ -2526,6 +2545,47 @@ export default function App() {
     if (!newOp) return;
     setOperations((prev) => [...prev, newOp]);
     setActiveOpId(newOp.id);
+  };
+
+  const handleSaveOptiRoughOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => o.id === savedOp.id);
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.tool?.id || savedOp.toolId)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 1, number: 1, type: 'flat', diameter: 10, name: '10mm Endmill' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: savedOp.id || (prevOps.length > 0 ? Math.max(...prevOps.map((o) => Number(o.id) || 0)) + 1 : 1),
+      name: savedOp.name || '3D High Speed Dynamic OptiRough',
+      strategyKey: 'surface_rough_optirough',
+      badgeClass: 'adaptive',
+      opType: 'adaptive',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 5395,
+      feedRate: savedOp.tool?.feedRate || 2870,
+      plungeRate: savedOp.tool?.plungeRate || 450,
+      stepdown: savedOp.cutParameters?.stepdownMm || 15.0,
+      stepup: savedOp.cutParameters?.stepupMm || 1.0,
+      stepoverPct: savedOp.cutParameters?.stepoverPct || 15.0,
+      rapidHeight: savedOp.linkingParameters?.clearancePlane || 25.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (o.id === formattedOp.id ? formattedOp : o)));
+      showToast('3D Dynamic OptiRough parameters updated and toolpath regenerated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('3D High Speed Dynamic OptiRough operation generated', 'success');
+    }
+    setIsOptiRoughModalOpen(false);
+    setEditingOptiRoughOp(null);
   };
 
   const handleSelectSampleModel = async (type) => {
@@ -3686,7 +3746,9 @@ export default function App() {
         setIsSolidVerifyModalOpen(true);
         break;
       case 'optirough':
-        setIsAdaptiveModalOpen(true);
+      case 'surface_rough_optirough':
+        setEditingOptiRoughOp(null);
+        setIsOptiRoughModalOpen(true);
         break;
       case 'chaining':
       case 'chain':
@@ -6215,7 +6277,14 @@ export default function App() {
         onOpenExportCADModal={() => setIsExportCADModalOpen(true)}
         onOpenProbingStudio={() => setIsSelectProbeOpen(true)}
         onOpenAFRModal={() => setIsAFRModalOpen(true)}
-        onOpenAdaptiveModal={() => setIsAdaptiveModalOpen(true)}
+        onOpenOptiRoughModal={() => {
+          setEditingOptiRoughOp(null);
+          setIsOptiRoughModalOpen(true);
+        }}
+        onOpenAdaptiveModal={() => {
+          setEditingOptiRoughOp(null);
+          setIsOptiRoughModalOpen(true);
+        }}
         onOpenLeadInOutModal={() => setIsLeadInOutModalOpen(true)}
         onOpenFiveAxisStudio={() => setIsFiveAxisModalOpen(true)}
         onOpenSolidVerifyModal={() => setIsSolidVerifyModalOpen(true)}
@@ -7138,6 +7207,22 @@ export default function App() {
         operations={operations}
         activeOpId={activeOpId}
         onUpdateOperations={(updatedOps) => setOperations(updatedOps)}
+      />
+
+      {/* Mastercam 3D High Speed Dynamic OptiRough Modal */}
+      <SurfaceRoughOptiRoughModal
+        isOpen={isOptiRoughModalOpen}
+        onClose={() => {
+          setIsOptiRoughModalOpen(false);
+          setEditingOptiRoughOp(null);
+        }}
+        operation={editingOptiRoughOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        onSaveOperation={handleSaveOptiRoughOp}
+        onNotify={showToast}
       />
 
       {/* Adaptive Trochoidal High-Speed Roughing Studio (Dynamic Motion) */}

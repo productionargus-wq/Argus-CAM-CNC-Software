@@ -289,7 +289,7 @@ export default function ToolpathsContextMenu({
               </div>
               {activeLevel3 === 'surface_rough' && (
                 <div className="mcam-ctx-sub" style={{ ...subStyle, minWidth: '170px' }}>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('adaptive'))}>OptiRough</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('optirough'))}>OptiRough</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('pocket'))}>Pocket Rough</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('parallel'))}>Parallel Rough</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onAddOperation?.('waterline'))}>Waterline Rough</div>

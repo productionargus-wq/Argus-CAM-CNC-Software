@@ -38,6 +38,7 @@ export default function RibbonBar({
   onOpenProbingStudio,
   onOpenAFRModal,
   onOpenAdaptiveModal,
+  onOpenOptiRoughModal,
   onOpenLeadInOutModal,
   onOpenFiveAxisStudio,
   onOpenSolidVerifyModal,
@@ -1722,9 +1723,15 @@ export default function RibbonBar({
 
               // 3D Toolpaths
               if (action.startsWith('tp_3d_')) {
-                if (action === 'tp_3d_optirough' && onOpenAdaptiveModal) {
-                  onOpenAdaptiveModal();
-                  return;
+                if (action === 'tp_3d_optirough') {
+                  if (onOpenOptiRoughModal) {
+                    onOpenOptiRoughModal();
+                    return;
+                  }
+                  if (onOpenAdaptiveModal) {
+                    onOpenAdaptiveModal();
+                    return;
+                  }
                 }
                 if (action === 'tp_3d_finish_flowline' && onOpenSurfaceFinishFlowline) {
                   onOpenSurfaceFinishFlowline();

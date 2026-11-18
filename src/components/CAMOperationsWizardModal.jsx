@@ -111,13 +111,13 @@ export default function CAMOperationsWizardModal({
     },
     {
       id: 'adaptive',
-      name: 'Adaptive Roughing',
-      badge: 'AD',
+      name: '3D Dynamic OptiRough',
+      badge: 'OR',
       color: '#06b6d4',
-      desc: 'Constant tool engagement trochoidal milling for deep cavities',
-      defaultStepover: 25,
-      defaultStepdown: 8.0,
-      defaultDepth: 24.0,
+      desc: 'Mastercam constant tool engagement dynamic roughing with upward stepup passes',
+      defaultStepover: 15,
+      defaultStepdown: 15.0,
+      defaultDepth: 25.0,
       badgeClass: 'adaptive'
     },
     {
