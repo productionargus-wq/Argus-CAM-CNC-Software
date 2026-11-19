@@ -156,7 +156,14 @@ export function generateNCProgram({
     let pendingIsoControlComp = false;
 
     // Tool Change & Spindle Start
-    const is5AxisOp = op.badgeClass === 'swarf' || op.badgeClass === 'multi_morph' || op.strategyKey === 'multiaxis_morph' || op.strategyKey === '5axis_morph' || op.strategy === 'multiaxis_morph';
+    const is5AxisOp =
+      op.badgeClass === 'swarf' ||
+      op.badgeClass === 'multi_morph' ||
+      op.strategyKey === 'multiaxis_morph' ||
+      op.strategyKey === '5axis_morph' ||
+      op.strategy === 'multiaxis_morph' ||
+      op.strategyKey === '5axis_swarf' ||
+      op.strategy === '5axis_swarf';
 
     if (useHeidenhain) {
       lines.push(`${nextN()} TOOL CALL ${tool.number} Z S${effRpm} DL+0.00 DR+0.00`);

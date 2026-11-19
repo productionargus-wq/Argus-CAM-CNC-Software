@@ -8,6 +8,7 @@ import { generatePocketRoughToolpath, generatePocketRoughGCode } from './pocketR
 import { generateParallelRoughToolpath, generateParallelRoughGCode } from './parallelRoughToolpathEngine.js';
 import { generateWaterlineRoughToolpath, generateWaterlineRoughGCode } from './waterlineRoughToolpathEngine.js';
 import { generateMultiaxisMorphToolpath, generateMultiaxisMorphGCode } from './multiaxisMorphEngine.js';
+import { generateMastercamSwarfToolpath, generateSwarfMillingGCode } from './swarfMillingEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -59,7 +60,9 @@ export {
   generateWaterlineRoughToolpath,
   generateWaterlineRoughGCode,
   generateMultiaxisMorphToolpath,
-  generateMultiaxisMorphGCode
+  generateMultiaxisMorphGCode,
+  generateMastercamSwarfToolpath,
+  generateSwarfMillingGCode
 };
 
 /**
@@ -1117,7 +1120,7 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
  * Generates 5-Axis Simultaneous Swarf Contour Toolpath (XYZ plus Tool Orientation Vectors)
  */
 export function generateSwarfToolpath(bounds, tool, params = {}, model = null) {
-  return generate5AxisSwarfToolpath(resolveSafeBounds(bounds), tool, params);
+  return generateMastercamSwarfToolpath(resolveSafeBounds(bounds), tool, params);
 }
 
 /**
@@ -4144,11 +4147,18 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
   if (strategy === 'contour' || strategy === 'waterline') {
     return generateWaterlineToolpath(opBounds, assignedTool, buildContourParamsFromOp(op), effectiveModel);
   }
-  if (strategy === 'swarf') {
-    return generateSwarfToolpath(opBounds, assignedTool, {
-      tiltAngleDeg: 15.0,
-      passes: op.passes || 3
-    }, effectiveModel);
+  if (
+    strategy === 'swarf' ||
+    strategy === '5axis_swarf' ||
+    op.strategyKey === '5axis_swarf' ||
+    op.badgeClass === 'swarf'
+  ) {
+    return generateMastercamSwarfToolpath(opBounds, assignedTool, {
+      ...op,
+      wallHeightMm: op.wallHeightMm || 22.0,
+      feedRate: op.feedRate || 2800,
+      spindleRpm: op.spindleRpm || 12000
+    });
   }
   if (
     strategy === 'multiaxis_morph' ||
@@ -4435,7 +4445,7 @@ export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds
       segFeed = idx % 6 === 0 ? Math.round(effFeed * minPct) : Math.round(effFeed * rctf);
     }
     const tp = toolpathData.trajectoryPoints?.[idx];
-    pushMove(p2, 'cut', segFeed, tp?.vector, tp?.angles);
+    pushMove(p2, 'cut', segFeed, tp?.toolVector || tp?.vector, tp?.angles);
   });
 
   const finalRetractY = Math.max(clearanceY, curPos.y + 1.0);

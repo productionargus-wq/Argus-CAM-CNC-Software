@@ -92,6 +92,7 @@ export default function OperationsTree({
   onOpenSurfaceRoughParallelModal,
   onOpenSurfaceRoughWaterlineModal,
   onOpenMultiaxisMorphModal,
+  onOpenSwarfMillingModal,
   onOpenSurfaceFinishContour,
   onOpenSurfaceFinishPocket,
   onOpenSurfaceFinishFlowline,
@@ -1855,6 +1856,7 @@ export default function OperationsTree({
           onOpenSurfaceRoughParallelModal={onOpenSurfaceRoughParallelModal}
           onOpenSurfaceRoughWaterlineModal={onOpenSurfaceRoughWaterlineModal}
           onOpenMultiaxisMorphModal={onOpenMultiaxisMorphModal}
+          onOpenSwarfMillingModal={onOpenSwarfMillingModal}
           onOpenSurfaceFinishContour={onOpenSurfaceFinishContour}
           onOpenSurfaceFinishPocket={onOpenSurfaceFinishPocket}
           onOpenSurfaceFinishFlowline={onOpenSurfaceFinishFlowline}
