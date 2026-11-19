@@ -4625,15 +4625,21 @@ export function compileBackplotTrajectory(
 
     if (segments.length === 0) return;
 
+    const isRotaryOp = op.badgeClass === 'rotary_4axis' || op.strategyKey === 'rotary_4axis';
+    const cylRadius = Number(op.cutPattern?.cylinderDiameter || 60.0) / 2.0;
+
     const pushWaypoint = (rawPt, seg) => {
       const worldPt = rawPt.clone();
       if (visualYOffset) worldPt.y += visualYOffset;
       if (lastVisualPos) {
         totalDist += lastVisualPos.distanceTo(worldPt);
       }
+      const cncPosition = isRotaryOp && seg.machinePos
+        ? new THREE.Vector3(seg.machinePos.x, seg.machinePos.y, seg.machinePos.z - cylRadius)
+        : toCncPos(rawPt);
       waypoints.push({
         pos: worldPt,
-        cncPos: toCncPos(rawPt),
+        cncPos: cncPosition,
         isRapid: seg.isRapid,
         mode: seg.isRapid ? 'rapid' : 'cut',
         moveKind: seg.kind,
@@ -4643,8 +4649,8 @@ export function compileBackplotTrajectory(
         feedRate: seg.feedRate,
         spindleRpm: seg.rpm,
         cumulativeDist: totalDist,
-        toolVector: seg.toolVector ? seg.toolVector.clone() : new THREE.Vector3(0, 1, 0),
-        angles: seg.angles || null
+        toolVector: isRotaryOp ? new THREE.Vector3(0, 1, 0) : (seg.toolVector ? seg.toolVector.clone() : new THREE.Vector3(0, 1, 0)),
+        angles: seg.angles || (isRotaryOp && seg.machinePos ? { A: seg.machinePos.a, C: 0 } : null)
       });
       lastVisualPos = worldPt;
     };
