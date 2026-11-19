@@ -320,6 +320,7 @@ export function calculateMultiaxisMorphPhysics(tool = {}, cutParams = {}, materi
     effDiameterMm: Number(effectiveDiameter.toFixed(2)),
     surfaceSpeedMpm: Math.round(vc),
     effVcMMin: Math.round(vc),
+    effectiveCuttingSpeedMMin: Math.round(vc),
     feedPerToothMm: Number(fz.toFixed(4)),
     averageChipThicknessMm: Number(hm.toFixed(4)),
     mrrCm3Min: Number(mrr.toFixed(2)),
@@ -327,8 +328,10 @@ export function calculateMultiaxisMorphPhysics(tool = {}, cutParams = {}, materi
     cuttingForceN: Math.round(fc),
     forceN: Math.round(fc),
     powerKw: Number(powerKw.toFixed(2)),
+    cuttingPowerKw: Number(powerKw.toFixed(2)),
     torqueNm: Number(torqueNm.toFixed(2)),
     scallopMicrons,
+    scallopHeightUm: scallopMicrons,
     materialName: mat.name,
     kcBase: mat.kc
   };
