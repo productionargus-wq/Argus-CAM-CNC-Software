@@ -13,6 +13,7 @@ import {
 
 import {
   generateSampleSwarfRails,
+  extractRuledRailsFromModel,
   resampleCurveByArcLength,
   synchronizeSwarfRails,
   calculateSwarfToolVector,
@@ -171,8 +172,43 @@ const swarfOp = generateMastercamSwarfToolpath(
 
 assert(swarfOp.cuttingLines.length > 0, `Cutting line segments generated: ${swarfOp.cuttingLines.length}`);
 assert(swarfOp.rapidLines.length > 0, `Rapid line segments generated: ${swarfOp.rapidLines.length}`);
+assert(swarfOp.arcLines && swarfOp.arcLines.length > 0, `3D Roll-In/Out Arc line segments generated: ${swarfOp.arcLines.length}`);
+assert(swarfOp.vectorNeedles && swarfOp.vectorNeedles.length > 0, `5-Axis Tool Orientation Needles generated: ${swarfOp.vectorNeedles.length}`);
+assert(swarfOp.flankRibbonVertices && swarfOp.flankRibbonVertices.length > 0, `Flank Contact Ribbon Vertices generated: ${swarfOp.flankRibbonVertices.length / 3} vertices`);
 assert(swarfOp.trajectoryPoints.length > 0, `Trajectory waypoints generated: ${swarfOp.trajectoryPoints.length}`);
 assert(swarfOp.color === '#8b5cf6', 'Color matches Mastercam 5-Axis Violet (#8b5cf6)');
+
+// TEST 6b: CAD Model Ruled Rail Extractor
+console.log('\n--- Test Group 6b: Intelligent CAD Model Ruled Rail Extractor ---');
+const mockModelGroup = new THREE.Group();
+const mockWallGeom = new THREE.BufferGeometry();
+const mockVerts = [];
+for (let i = 0; i <= 30; i++) {
+  const x = -40 + i * (80 / 30);
+  const zBot = 15 + Math.sin(i * 0.2) * 5;
+  const zTop = zBot + 8;
+  // bottom vertex at y = 12, top vertex at y = 42
+  mockVerts.push(x, 12, zBot);
+  mockVerts.push(x, 42, zTop);
+}
+mockWallGeom.setAttribute('position', new THREE.Float32BufferAttribute(mockVerts, 3));
+const mockWallMesh = new THREE.Mesh(mockWallGeom);
+mockModelGroup.add(mockWallMesh);
+
+const extractedRails = extractRuledRailsFromModel(mockModelGroup);
+assert(extractedRails !== null, 'CAD Ruled Rails extracted successfully from mock mesh');
+assert(extractedRails && extractedRails.lowerRail.length > 8, `Extracted lower rail has ${extractedRails?.lowerRail?.length} points`);
+assert(extractedRails && extractedRails.upperRail.length > 8, `Extracted upper rail has ${extractedRails?.upperRail?.length} points`);
+assert(extractedRails && Math.abs(extractedRails.wallHeight - 30.0) < 1.0, `Extracted wall height matches geometry: ${extractedRails?.wallHeight} mm`);
+
+// Generate toolpath using extracted CAD rails
+const cadSwarfOp = generateMastercamSwarfToolpath(
+  bounds,
+  { id: 3, diameter: 10, flutes: 4 },
+  { model: mockModelGroup, feedRate: 2800, spindleRpm: 12000 }
+);
+assert(cadSwarfOp.cuttingLines.length > 0, `CAD-driven swarf toolpath generated ${cadSwarfOp.cuttingLines.length} cuts`);
+assert(cadSwarfOp.stats.wallHeightMm === extractedRails.wallHeight, `Toolpath automatically adopted extracted wall height: ${cadSwarfOp.stats.wallHeightMm} mm`);
 
 // Verify that all cuttingLines have valid pairs [p1, p2]
 let allValidPairs = true;

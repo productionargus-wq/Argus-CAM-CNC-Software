@@ -1120,7 +1120,7 @@ export function generateWaterlineToolpath(bounds, tool, params = {}, model = nul
  * Generates 5-Axis Simultaneous Swarf Contour Toolpath (XYZ plus Tool Orientation Vectors)
  */
 export function generateSwarfToolpath(bounds, tool, params = {}, model = null) {
-  return generateMastercamSwarfToolpath(resolveSafeBounds(bounds), tool, params);
+  return generateMastercamSwarfToolpath(resolveSafeBounds(bounds), tool, { ...params, model });
 }
 
 /**
@@ -4155,6 +4155,7 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
   ) {
     return generateMastercamSwarfToolpath(opBounds, assignedTool, {
       ...op,
+      model: effectiveModel,
       wallHeightMm: op.wallHeightMm || 22.0,
       feedRate: op.feedRate || 2800,
       spindleRpm: op.spindleRpm || 12000
@@ -4369,6 +4370,35 @@ export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds
   const topStockLocal = Number(op.topOfStock) || 0;
   const feedPlaneVal = Number(op.feedPlane) || 2.5;
   const feedPlaneAbsY = topY + (op.feedPlaneMode === 'absolute' ? feedPlaneVal : topStockLocal + feedPlaneVal);
+
+  // For 5-Axis Swarf Milling, trajectoryPoints contain exact 5X orientations and 3D roll-in/out motions
+  if (
+    (op.badgeClass === 'swarf' || op.strategyKey === '5axis_swarf' || toolpathData.strategy === '5axis_swarf') &&
+    toolpathData.trajectoryPoints &&
+    toolpathData.trajectoryPoints.length > 1
+  ) {
+    const swarfSegments = [];
+    let curPt = prevRawPos ? prevRawPos.clone() : toolpathData.trajectoryPoints[0].point.clone();
+
+    for (let i = 0; i < toolpathData.trajectoryPoints.length; i++) {
+      const wp = toolpathData.trajectoryPoints[i];
+      const nextPt = wp.point.clone();
+      if (curPt.distanceTo(nextPt) > 1e-4) {
+        swarfSegments.push({
+          p1: curPt.clone(),
+          p2: nextPt.clone(),
+          kind: wp.type || 'cut',
+          isRapid: wp.type === 'rapid',
+          feedRate: wp.feedRate || (wp.type === 'rapid' ? rapidFeed : effFeed),
+          rpm: opRpm,
+          toolVector: wp.toolVector ? wp.toolVector.clone() : new THREE.Vector3(0, 1, 0),
+          angles: wp.angles || null
+        });
+        curPt = nextPt;
+      }
+    }
+    return { segments: swarfSegments, finalPos: curPt.clone() };
+  }
 
   const segments = [];
   const firstEntry = cuttingLines[0][0].clone();

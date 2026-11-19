@@ -2748,7 +2748,7 @@ export default function Viewport3D({
       const toolpathData = generateToolpathForOperation(op, opBounds, assignedTool, effectiveModel, stockConfig);
 
       if (toolpathData) {
-        const keepGeneratorRapids = ['drill', 'spotdrill', 'tap', 'probe'].includes(op.badgeClass);
+        const keepGeneratorRapids = ['drill', 'spotdrill', 'tap', 'probe', 'swarf'].includes(op.badgeClass);
         let linkedRapidLines = null;
         if (!keepGeneratorRapids && toolpathData.cuttingLines?.length > 0) {
           const { segments } = buildLinkedOperationSegments(toolpathData, op, opBounds, assignedTool);
@@ -2811,6 +2811,46 @@ export default function Viewport3D({
           needleMesh.position.set(visualXOffset, visualYOffset, visualZOffset);
           needleMesh.visible = (op.visible !== false) && (layerVisibility.toolpaths !== false);
           group.add(needleMesh);
+        }
+
+        // 5-Axis Flank Contact Ribbon (Mastercam Shaded Ruled Flute Engagement Surface)
+        if (toolpathData.flankRibbonVertices && toolpathData.flankRibbonVertices.length > 0) {
+          const ribbonGeo = new THREE.BufferGeometry();
+          ribbonGeo.setAttribute('position', new THREE.Float32BufferAttribute(toolpathData.flankRibbonVertices, 3));
+          ribbonGeo.computeVertexNormals();
+          const ribbonMat = new THREE.MeshStandardMaterial({
+            color: 0x8b5cf6, // Violet Flank Ribbon
+            roughness: 0.35,
+            metalness: 0.2,
+            transparent: true,
+            opacity: 0.38,
+            side: THREE.DoubleSide,
+            depthWrite: false
+          });
+          const ribbonMesh = new THREE.Mesh(ribbonGeo, ribbonMat);
+          ribbonMesh.name = `op_ribbon_${op.id}`;
+          ribbonMesh.position.set(visualXOffset, visualYOffset, visualZOffset);
+          ribbonMesh.visible = (op.visible !== false) && (layerVisibility.toolpaths !== false);
+          group.add(ribbonMesh);
+        }
+
+        // 3D Lead-In / Lead-Out Arcs in Distinct Cyan
+        if (toolpathData.arcLines && toolpathData.arcLines.length > 0) {
+          const arcPositions = [];
+          toolpathData.arcLines.forEach(([p1, p2]) => {
+            arcPositions.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
+          });
+          const arcGeo = new THREE.BufferGeometry();
+          arcGeo.setAttribute('position', new THREE.Float32BufferAttribute(arcPositions, 3));
+          const arcMat = new THREE.LineBasicMaterial({
+            color: 0x06b6d4, // Cyan for smooth 3D roll-in / roll-out arcs
+            linewidth: 2.5
+          });
+          const arcMesh = new THREE.LineSegments(arcGeo, arcMat);
+          arcMesh.name = `op_arcs_${op.id}`;
+          arcMesh.position.set(visualXOffset, visualYOffset, visualZOffset);
+          arcMesh.visible = (op.visible !== false) && (layerVisibility.toolpaths !== false);
+          group.add(arcMesh);
         }
       }
     });

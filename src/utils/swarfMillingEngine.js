@@ -20,24 +20,28 @@ function toVector3(pt, defaultVal = [0, 0, 0]) {
  * Generates sample upper and lower rail curves for realistic 5-axis swarf milling
  * Creates a ruled wall with draft angle, progressive curvature, and variable flank slope.
  */
-export function generateSampleSwarfRails(bounds = null, wallHeight = 22.0, draftAngleDeg = 12.0) {
+export function generateSampleSwarfRails(bounds = null, wallHeight = 22.0, draftAngleDeg = 14.0) {
   const b = bounds || {
-    min: { x: -45, y: -2, z: -25 },
-    max: { x: 45, y: 20, z: 25 }
+    min: { x: -45, y: 0, z: -25 },
+    max: { x: 45, y: 35, z: 25 }
   };
 
-  const xMin = b.min.x + 5;
-  const xMax = b.max.x - 5;
-  const yBot = b.min.y + 1.0;
-  const yTop = yBot + wallHeight;
-  const zBase = (b.min.z + b.max.z) / 2;
+  const totalH = Math.max(10, b.max.y - b.min.y);
+  const xMin = b.min.x + (b.max.x - b.min.x) * 0.08;
+  const xMax = b.max.x - (b.max.x - b.min.x) * 0.08;
+
+  // Anchor lower rail above base flange
+  const yBot = b.min.y + Math.max(1.0, totalH * 0.25);
+  const effWallHeight = Math.max(8.0, Math.min(wallHeight, b.max.y - yBot));
+  const yTop = yBot + effWallHeight;
+  const zBase = (b.min.z + b.max.z) / 2 + (b.max.z - b.min.z) * 0.15;
 
   const numPoints = 60;
   const lowerRail = [];
   const upperRail = [];
 
   const draftRad = (draftAngleDeg * Math.PI) / 180;
-  const draftOffsetZ = wallHeight * Math.tan(draftRad);
+  const draftOffsetZ = effWallHeight * Math.tan(draftRad);
 
   for (let i = 0; i < numPoints; i++) {
     const u = i / (numPoints - 1);
@@ -57,7 +61,90 @@ export function generateSampleSwarfRails(bounds = null, wallHeight = 22.0, draft
     upperRail.push(new THREE.Vector3(x, yTop, zUpper));
   }
 
-  return { lowerRail, upperRail, wallHeight };
+  return { lowerRail, upperRail, wallHeight: effWallHeight };
+}
+
+/**
+ * Intelligently extracts lower and upper ruled guide rails directly from active CAD model geometry.
+ * Detects ruled blade walls, aerodynamic vanes, or tall drafted features.
+ */
+export function extractRuledRailsFromModel(model, bounds = null, options = {}) {
+  if (!model) return null;
+
+  const allVertices = [];
+  model.traverse((child) => {
+    if (child.isMesh && child.geometry && child.geometry.attributes?.position) {
+      child.updateMatrixWorld(true);
+      const pos = child.geometry.attributes.position;
+      const v = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i);
+        v.applyMatrix4(child.matrixWorld);
+        allVertices.push(v.clone());
+      }
+    }
+  });
+
+  if (allVertices.length < 20) return null;
+
+  let maxY = -Infinity;
+  for (const p of allVertices) {
+    if (p.y > maxY) maxY = p.y;
+  }
+
+  // Identify the tallest feature crest (vertices within 4.5mm of maxY)
+  const crestPts = allVertices.filter((p) => p.y >= maxY - 4.5);
+  if (crestPts.length === 0) return null;
+
+  const crestCenterZ = crestPts.reduce((acc, p) => acc + p.z, 0) / crestPts.length;
+
+  // Filter vertices that belong to this ruled wall feature in the primary horizontal plane (e.g. Z strip)
+  const wallPts = allVertices.filter((p) => Math.abs(p.z - crestCenterZ) <= 35.0);
+  if (wallPts.length < 16) return null;
+
+  // Determine horizontal span along X from crest and bin
+  let crestMinX = Infinity, crestMaxX = -Infinity;
+  for (const p of crestPts) {
+    if (p.x < crestMinX) crestMinX = p.x;
+    if (p.x > crestMaxX) crestMaxX = p.x;
+  }
+
+  const spanX = crestMaxX - crestMinX;
+  if (spanX < 10.0) return null;
+
+  const numBins = Math.min(50, Math.max(20, Math.floor(wallPts.length / 15)));
+  const binWidth = spanX / numBins;
+  const rawLower = [];
+  const rawUpper = [];
+
+  for (let b = 0; b < numBins; b++) {
+    const binCenter = crestMinX + (b + 0.5) * binWidth;
+    const pts = wallPts.filter((p) => Math.abs(p.x - binCenter) <= binWidth * 0.85);
+    if (pts.length >= 2) {
+      let lowest = pts[0];
+      let highest = pts[0];
+      for (const p of pts) {
+        if (p.y < lowest.y) lowest = p;
+        if (p.y > highest.y) highest = p;
+      }
+      if (highest.y - lowest.y >= 3.0) {
+        rawLower.push(lowest.clone());
+        rawUpper.push(highest.clone());
+      }
+    }
+  }
+
+  if (rawLower.length < 6 || rawUpper.length < 6) return null;
+
+  // Calculate measured wall height
+  const measuredHeight =
+    rawUpper.reduce((acc, p, i) => acc + (p.y - rawLower[i].y), 0) / rawUpper.length;
+
+  return {
+    lowerRail: rawLower,
+    upperRail: rawUpper,
+    wallHeight: Math.max(5.0, Number(measuredHeight.toFixed(2)))
+  };
 }
 
 /**
@@ -306,12 +393,24 @@ export function generateMastercamSwarfToolpath(bounds, tool = {}, config = {}) {
   const dia = Math.max(1, Number(tool?.diameter) || 10);
   const toolRadius = dia / 2;
 
-  // Resolve Rails Geometry
-  const wallHeight = Number(config.wallHeightMm) || 22.0;
-  const railsData =
-    config.lowerRail && config.upperRail
-      ? { lowerRail: config.lowerRail, upperRail: config.upperRail, wallHeight }
-      : generateSampleSwarfRails(bounds, wallHeight, 12.0);
+  // Resolve Rails Geometry: CAD extraction -> Explicit rails -> High-fidelity sample rails
+  let railsData = null;
+  if (config.lowerRail && config.upperRail) {
+    railsData = {
+      lowerRail: config.lowerRail,
+      upperRail: config.upperRail,
+      wallHeight: Number(config.wallHeightMm) || 22.0
+    };
+  } else if (config.model) {
+    railsData = extractRuledRailsFromModel(config.model, bounds, config);
+  }
+
+  const defaultWallHeight = Number(config.wallHeightMm) || 22.0;
+  if (!railsData) {
+    railsData = generateSampleSwarfRails(bounds, defaultWallHeight, 14.0);
+  }
+
+  const wallHeight = Number(config.wallHeightMm) || railsData.wallHeight || defaultWallHeight;
 
   const syncMode = config.syncMode || 'arclength';
   const numStations = Math.max(30, Number(config.stationsCount) || 50);
@@ -355,6 +454,9 @@ export function generateMastercamSwarfToolpath(bounds, tool = {}, config = {}) {
   const trajectoryPoints = [];
   const cuttingLines = [];
   const rapidLines = [];
+  const arcLines = [];
+  const vectorNeedles = [];
+  const flankRibbonVertices = [];
 
   let lastPosition = null;
 
@@ -404,8 +506,13 @@ export function generateMastercamSwarfToolpath(bounds, tool = {}, config = {}) {
           pRuling.y += floorClearance;
         }
 
-        // Cutter center path: offset along normal
-        const cutterCenter = pRuling.clone().addScaledVector(normal, sideSign * totalOffset);
+        // Cutter center path: offset horizontally along surface normal to preserve exact cutting height
+        const horizNormal = new THREE.Vector3(normal.x, 0, normal.z);
+        if (horizNormal.lengthSq() > 0.001) horizNormal.normalize();
+        else horizNormal.set(0, 0, 1);
+
+        const cutterCenter = pRuling.clone().addScaledVector(horizNormal, sideSign * totalOffset);
+        cutterCenter.y = Math.max(pBot.y + floorClearance, cutterCenter.y);
 
         const angles = solveSwarfMachineAngles(toolVector, kinematicsId);
 
@@ -421,6 +528,34 @@ export function generateMastercamSwarfToolpath(bounds, tool = {}, config = {}) {
           passIndex: rIdx,
           sliceIndex: aIdx
         });
+
+        // Generate 5-Axis Tool Orientation Vectors (Needles) every 3rd station
+        if (s % 3 === 0) {
+          const needleStart = cutterCenter.clone();
+          const needleLen = Math.min(25.0, Math.max(12.0, wallHeight * 0.7));
+          const needleEnd = cutterCenter.clone().addScaledVector(toolVector, needleLen);
+          vectorNeedles.push([needleStart, needleEnd]);
+        }
+
+        // Generate Flank Contact Ribbon (Mastercam Shaded Swept Flute Engagement Surface)
+        if (rIdx === numRadialPasses - 1 && s > 0) {
+          const prevIdx = stationIndices[s - 1];
+          const currIdx = stationIndices[s];
+          const pL0 = lowerStations[prevIdx];
+          const pU0 = upperStations[prevIdx];
+          const pL1 = lowerStations[currIdx];
+          const pU1 = upperStations[currIdx];
+
+          flankRibbonVertices.push(
+            pL0.x, pL0.y, pL0.z,
+            pU0.x, pU0.y, pU0.z,
+            pU1.x, pU1.y, pU1.z,
+
+            pL0.x, pL0.y, pL0.z,
+            pU1.x, pU1.y, pU1.z,
+            pL1.x, pL1.y, pL1.z
+          );
+        }
       }
 
       if (passWaypoints.length < 2) continue;
@@ -466,15 +601,39 @@ export function generateMastercamSwarfToolpath(bounds, tool = {}, config = {}) {
       // Rapid to Clearance
       if (!lastPosition) {
         rapidLines.push([safeClearancePt.clone(), safeClearancePt.clone()]);
+        trajectoryPoints.push({
+          point: safeClearancePt.clone(),
+          toolVector: firstPassPt.toolVector.clone(),
+          vector: firstPassPt.toolVector.clone(),
+          angles: { ...firstPassPt.angles },
+          feedRate: 5000,
+          type: 'rapid'
+        });
       } else {
         const safeRetract = lastPosition.clone();
         safeRetract.y = Math.max(safeRetract.y + retractZ, safeClearancePt.y);
         rapidLines.push([lastPosition.clone(), safeRetract.clone()]);
         rapidLines.push([safeRetract.clone(), safeClearancePt.clone()]);
+        trajectoryPoints.push({
+          point: safeRetract.clone(),
+          toolVector: firstPassPt.toolVector.clone(),
+          vector: firstPassPt.toolVector.clone(),
+          angles: { ...firstPassPt.angles },
+          feedRate: 5000,
+          type: 'rapid'
+        });
       }
 
       // Rapid to Feed Plane
       rapidLines.push([safeClearancePt.clone(), feedPlanePt.clone()]);
+      trajectoryPoints.push({
+        point: feedPlanePt.clone(),
+        toolVector: firstPassPt.toolVector.clone(),
+        vector: firstPassPt.toolVector.clone(),
+        angles: { ...firstPassPt.angles },
+        feedRate: 5000,
+        type: 'rapid'
+      });
 
       // Plunge to Roll-In Entry
       cuttingLines.push([feedPlanePt.clone(), entryPt.clone()]);
@@ -491,7 +650,10 @@ export function generateMastercamSwarfToolpath(bounds, tool = {}, config = {}) {
       for (let i = 0; i < rollInWaypoints.length; i++) {
         const curr = rollInWaypoints[i];
         if (i > 0) {
-          cuttingLines.push([rollInWaypoints[i - 1].point.clone(), curr.point.clone()]);
+          const p0 = rollInWaypoints[i - 1].point.clone();
+          const p1 = curr.point.clone();
+          cuttingLines.push([p0, p1]);
+          arcLines.push([p0, p1]);
         }
         trajectoryPoints.push(curr);
       }
@@ -511,9 +673,15 @@ export function generateMastercamSwarfToolpath(bounds, tool = {}, config = {}) {
       for (let i = 0; i < rollOutWaypoints.length; i++) {
         const curr = rollOutWaypoints[i];
         if (i === 0) {
-          cuttingLines.push([lastPassPt.point.clone(), curr.point.clone()]);
+          const p0 = lastPassPt.point.clone();
+          const p1 = curr.point.clone();
+          cuttingLines.push([p0, p1]);
+          arcLines.push([p0, p1]);
         } else {
-          cuttingLines.push([rollOutWaypoints[i - 1].point.clone(), curr.point.clone()]);
+          const p0 = rollOutWaypoints[i - 1].point.clone();
+          const p1 = curr.point.clone();
+          cuttingLines.push([p0, p1]);
+          arcLines.push([p0, p1]);
         }
         trajectoryPoints.push(curr);
       }
@@ -528,6 +696,15 @@ export function generateMastercamSwarfToolpath(bounds, tool = {}, config = {}) {
     const finalRetract = lastPosition.clone();
     finalRetract.y += clearanceZ;
     rapidLines.push([lastPosition.clone(), finalRetract.clone()]);
+    const lastWp = trajectoryPoints[trajectoryPoints.length - 1];
+    trajectoryPoints.push({
+      point: finalRetract.clone(),
+      toolVector: lastWp?.toolVector ? lastWp.toolVector.clone() : new THREE.Vector3(0, 1, 0),
+      vector: lastWp?.toolVector ? lastWp.toolVector.clone() : new THREE.Vector3(0, 1, 0),
+      angles: lastWp?.angles ? { ...lastWp.angles } : null,
+      feedRate: 5000,
+      type: 'rapid'
+    });
   }
 
   // Physics & Deflection Metrics Calculation
@@ -552,6 +729,9 @@ export function generateMastercamSwarfToolpath(bounds, tool = {}, config = {}) {
     color: '#8b5cf6', // Mastercam 5-Axis Violet
     cuttingLines,
     rapidLines,
+    arcLines,
+    vectorNeedles,
+    flankRibbonVertices,
     trajectoryPoints,
     physics,
     stats: {
