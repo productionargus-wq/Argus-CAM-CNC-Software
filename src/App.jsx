@@ -55,6 +55,9 @@ import SwarfMillingModal from './components/SwarfMillingModal';
 import MultiaxisParallelModal from './components/MultiaxisParallelModal';
 import Rotary4AxisModal from './components/Rotary4AxisModal';
 import MultiaxisDrillModal from './components/MultiaxisDrillModal';
+import MultiaxisCurveModal from './components/MultiaxisCurveModal';
+import MultiaxisPortModal from './components/MultiaxisPortModal';
+import MultiaxisBladeModal from './components/MultiaxisBladeModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
@@ -377,6 +380,12 @@ export default function App() {
   const [editingRotary4AxisOp, setEditingRotary4AxisOp] = useState(null);
   const [isMultiaxisDrillModalOpen, setIsMultiaxisDrillModalOpen] = useState(false);
   const [editingMultiaxisDrillOp, setEditingMultiaxisDrillOp] = useState(null);
+  const [isMultiaxisCurveModalOpen, setIsMultiaxisCurveModalOpen] = useState(false);
+  const [editingMultiaxisCurveOp, setEditingMultiaxisCurveOp] = useState(null);
+  const [isPortExpertModalOpen, setIsPortExpertModalOpen] = useState(false);
+  const [editingPortExpertOp, setEditingPortExpertOp] = useState(null);
+  const [isBladeExpertModalOpen, setIsBladeExpertModalOpen] = useState(false);
+  const [editingBladeExpertOp, setEditingBladeExpertOp] = useState(null);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
@@ -2088,6 +2097,39 @@ export default function App() {
     }
 
     if (
+      op?.strategyKey === '5axis_curve' ||
+      op?.strategy === '5axis_curve' ||
+      op?.badgeClass === '5axis_curve' ||
+      op?.name?.toLowerCase()?.includes('curve')
+    ) {
+      setEditingMultiaxisCurveOp(op);
+      setIsMultiaxisCurveModalOpen(true);
+      return;
+    }
+
+    if (
+      op?.strategyKey === '5axis_port' ||
+      op?.strategy === '5axis_port' ||
+      op?.badgeClass === '5axis_port' ||
+      op?.name?.toLowerCase()?.includes('port')
+    ) {
+      setEditingPortExpertOp(op);
+      setIsPortExpertModalOpen(true);
+      return;
+    }
+
+    if (
+      op?.strategyKey === '5axis_blade' ||
+      op?.strategy === '5axis_blade' ||
+      op?.badgeClass === '5axis_blade' ||
+      op?.name?.toLowerCase()?.includes('blade')
+    ) {
+      setEditingBladeExpertOp(op);
+      setIsBladeExpertModalOpen(true);
+      return;
+    }
+
+    if (
       op?.strategyKey === 'surface_finish_flowline' ||
       op?.badgeClass === 'flowline' ||
       op?.strategyKey === 'surface_finish_contour' ||
@@ -2385,22 +2427,6 @@ export default function App() {
     } else if (s === 'blend' || s === 'surface_finish_blend' || s === '3d_blend' || s === '3d_finish_blend') {
       openSurfaceFinishSelection('blend', null);
       return;
-    } else if (s === 'swarf' || s === '5axis_swarf') {
-      newOp = {
-        id: nextId,
-        name: `5-Axis Swarf Pass ${nextId}`,
-        toolId: 4,
-        toolName: 'T4 - 6mm Bullnose R1',
-        badgeClass: 'swarf',
-        badgeText: '5X',
-        visible: true,
-        stepoverPct: 35,
-        stepdown: 3.0,
-        totalDepth: 18.0,
-        stockToLeaveXY: 0.0,
-        stockToLeaveZ: 0.0,
-        rapidHeight: 20.0
-      };
     } else if (s === 'optirough' || s === 'surface_rough_optirough') {
       setEditingOptiRoughOp(null);
       setIsOptiRoughModalOpen(true);
@@ -2436,6 +2462,18 @@ export default function App() {
     } else if (s === 'multiaxis_drill' || s === '5axis_drill' || s === 'multi_drill') {
       setEditingMultiaxisDrillOp(null);
       setIsMultiaxisDrillModalOpen(true);
+      return;
+    } else if (s === '5axis_curve' || s === 'curve_5x' || s === 'multi_curve') {
+      setEditingMultiaxisCurveOp(null);
+      setIsMultiaxisCurveModalOpen(true);
+      return;
+    } else if (s === '5axis_port' || s === 'port_expert' || s === 'multi_port') {
+      setEditingPortExpertOp(null);
+      setIsPortExpertModalOpen(true);
+      return;
+    } else if (s === '5axis_blade' || s === 'blade_expert' || s === 'multi_blade') {
+      setEditingBladeExpertOp(null);
+      setIsBladeExpertModalOpen(true);
       return;
     } else if (s === 'adaptive' || s === 'dynamic_mill') {
       newOp = {
@@ -3180,6 +3218,150 @@ export default function App() {
     setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setIsMultiaxisDrillModalOpen(false);
     setEditingMultiaxisDrillOp(null);
+  };
+
+  const handleSaveMultiaxisCurveOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : (savedOp.id != null && Number.isFinite(Number(savedOp.id)) ? Number(savedOp.id) : nextId);
+
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.toolId || savedOp.tool?.id)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 1, number: 1, type: 'flat', diameter: 10.0, name: '10mm Carbide Endmill' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: finalId,
+      name: savedOp.name || '5-Axis Curve Contouring',
+      strategy: '5axis_curve',
+      strategyKey: '5axis_curve',
+      badgeClass: '5axis_curve',
+      badgeText: '5X-CURVE',
+      color: '#ec4899',
+      opType: 'multiaxis',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      tool: assignedTool,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 11140,
+      spindleRpm: savedOp.tool?.spindleSpeed || 11140,
+      feedRate: savedOp.tool?.feedRate || 3565,
+      rapidHeight: savedOp.linkingParameters?.clearancePlaneZ || 25.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
+      showToast('5-Axis Curve parameters updated and toolpath regenerated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('5-Axis Curve operation generated', 'success');
+    }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+    setIsMultiaxisCurveModalOpen(false);
+    setEditingMultiaxisCurveOp(null);
+  };
+
+  const handleSavePortExpertOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : (savedOp.id != null && Number.isFinite(Number(savedOp.id)) ? Number(savedOp.id) : nextId);
+
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.toolId || savedOp.tool?.id)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 4, number: 4, type: 'lollipop', diameter: 12.0, name: '12mm Spherical Lollipop' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: finalId,
+      name: savedOp.name || '5-Axis Port Expert (Cylinder Head Runners)',
+      strategy: '5axis_port',
+      strategyKey: '5axis_port',
+      badgeClass: '5axis_port',
+      badgeText: '5X-PORT',
+      color: '#8b5cf6',
+      opType: 'multiaxis',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      tool: assignedTool,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 12000,
+      spindleRpm: savedOp.tool?.spindleSpeed || 12000,
+      feedRate: savedOp.tool?.feedRate || 2500,
+      rapidHeight: 25.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
+      showToast('5-Axis Port Expert parameters updated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('5-Axis Port Expert operation generated', 'success');
+    }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+    setIsPortExpertModalOpen(false);
+    setEditingPortExpertOp(null);
+  };
+
+  const handleSaveBladeExpertOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : (savedOp.id != null && Number.isFinite(Number(savedOp.id)) ? Number(savedOp.id) : nextId);
+
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.toolId || savedOp.tool?.id)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 4, number: 4, type: 'tapered_ball', diameter: 8.0, name: '8mm Tapered Ball Mill' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: finalId,
+      name: savedOp.name || '5-Axis Blade Expert (Impeller / Blisk)',
+      strategy: '5axis_blade',
+      strategyKey: '5axis_blade',
+      badgeClass: '5axis_blade',
+      badgeText: '5X-BLADE',
+      color: '#0284c7',
+      opType: 'multiaxis',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      tool: assignedTool,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 14000,
+      spindleRpm: savedOp.tool?.spindleSpeed || 14000,
+      feedRate: savedOp.tool?.feedRate || 3200,
+      rapidHeight: 25.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
+      showToast('5-Axis Blade Expert parameters updated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('5-Axis Blade Expert operation generated', 'success');
+    }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+    setIsBladeExpertModalOpen(false);
+    setEditingBladeExpertOp(null);
   };
 
   const handleSelectSampleModel = async (type) => {
@@ -4423,6 +4605,25 @@ export default function App() {
       case 'tp_multi_drill':
         setEditingMultiaxisDrillOp(null);
         setIsMultiaxisDrillModalOpen(true);
+        break;
+      case '5axis_curve':
+      case 'multiaxis_curve':
+      case 'curve_5x':
+      case 'tp_multi_curve':
+        setEditingMultiaxisCurveOp(null);
+        setIsMultiaxisCurveModalOpen(true);
+        break;
+      case '5axis_port':
+      case 'port_expert':
+      case 'tp_multi_port':
+        setEditingPortExpertOp(null);
+        setIsPortExpertModalOpen(true);
+        break;
+      case '5axis_blade':
+      case 'blade_expert':
+      case 'tp_multi_blade':
+        setEditingBladeExpertOp(null);
+        setIsBladeExpertModalOpen(true);
         break;
       case 'chaining':
       case 'chain':
@@ -6992,6 +7193,18 @@ export default function App() {
           setEditingMultiaxisDrillOp(null);
           setIsMultiaxisDrillModalOpen(true);
         }}
+        onOpenMultiaxisCurveModal={() => {
+          setEditingMultiaxisCurveOp(null);
+          setIsMultiaxisCurveModalOpen(true);
+        }}
+        onOpenPortExpertModal={() => {
+          setEditingPortExpertOp(null);
+          setIsPortExpertModalOpen(true);
+        }}
+        onOpenBladeExpertModal={() => {
+          setEditingBladeExpertOp(null);
+          setIsBladeExpertModalOpen(true);
+        }}
         onOpenAdaptiveModal={() => {
           setEditingOptiRoughOp(null);
           setIsOptiRoughModalOpen(true);
@@ -7181,6 +7394,18 @@ export default function App() {
           onOpenMultiaxisDrillModal={() => {
             setEditingMultiaxisDrillOp(null);
             setIsMultiaxisDrillModalOpen(true);
+          }}
+          onOpenMultiaxisCurveModal={() => {
+            setEditingMultiaxisCurveOp(null);
+            setIsMultiaxisCurveModalOpen(true);
+          }}
+          onOpenPortExpertModal={() => {
+            setEditingPortExpertOp(null);
+            setIsPortExpertModalOpen(true);
+          }}
+          onOpenBladeExpertModal={() => {
+            setEditingBladeExpertOp(null);
+            setIsBladeExpertModalOpen(true);
           }}
           onOpenSurfaceFinishContour={() => openSurfaceFinishSelection('contour', null)}
           onOpenSurfaceFinishPocket={() => openSurfaceFinishSelection('pocket', null)}
@@ -8131,6 +8356,56 @@ export default function App() {
         onSaveOperation={handleSaveMultiaxisDrillOp}
         onNotify={showToast}
         onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
+      />
+
+      {/* Mastercam 5-Axis Curve Machining Studio Modal */}
+      <MultiaxisCurveModal
+        isOpen={isMultiaxisCurveModalOpen}
+        onClose={() => {
+          setIsMultiaxisCurveModalOpen(false);
+          setEditingMultiaxisCurveOp(null);
+        }}
+        operation={editingMultiaxisCurveOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        machines={machines}
+        onSelectMachine={handleSelectMachine}
+        lastDefinedTool={lastDefinedToolState}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        onSaveOperation={handleSaveMultiaxisCurveOp}
+        onNotify={showToast}
+        onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
+      />
+
+      {/* Mastercam 5-Axis Port Expert Studio Modal */}
+      <MultiaxisPortModal
+        isOpen={isPortExpertModalOpen}
+        onClose={() => {
+          setIsPortExpertModalOpen(false);
+          setEditingPortExpertOp(null);
+        }}
+        operation={editingPortExpertOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        currentModel={currentModel}
+        onSaveOperation={handleSavePortExpertOp}
+        onNotify={showToast}
+      />
+
+      {/* Mastercam 5-Axis Blade Expert Studio Modal */}
+      <MultiaxisBladeModal
+        isOpen={isBladeExpertModalOpen}
+        onClose={() => {
+          setIsBladeExpertModalOpen(false);
+          setEditingBladeExpertOp(null);
+        }}
+        operation={editingBladeExpertOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        currentModel={currentModel}
+        onSaveOperation={handleSaveBladeExpertOp}
+        onNotify={showToast}
       />
 
       {/* Adaptive Trochoidal High-Speed Roughing Studio (Dynamic Motion) */}

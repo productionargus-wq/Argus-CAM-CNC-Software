@@ -47,6 +47,9 @@ export default function RibbonBar({
   onOpenMultiaxisParallelModal,
   onOpenRotary4AxisModal,
   onOpenMultiaxisDrillModal,
+  onOpenMultiaxisCurveModal,
+  onOpenPortExpertModal,
+  onOpenBladeExpertModal,
   onOpenLeadInOutModal,
   onOpenFiveAxisStudio,
   onOpenSolidVerifyModal,
@@ -1821,8 +1824,20 @@ export default function RibbonBar({
 
               // Multiaxis Toolpaths
               if (action.startsWith('tp_multi_')) {
-                if (action === 'tp_multi_morph' && onOpenMultiaxisMorphModal) {
-                  onOpenMultiaxisMorphModal();
+                if (action === 'tp_multi_curve') {
+                  if (onOpenMultiaxisCurveModal) {
+                    onOpenMultiaxisCurveModal();
+                  } else if (onOpenFiveAxisStudio) {
+                    onOpenFiveAxisStudio();
+                  }
+                  return;
+                }
+                if (action === 'tp_multi_morph') {
+                  if (onOpenMultiaxisMorphModal) {
+                    onOpenMultiaxisMorphModal();
+                  } else if (onOpenFiveAxisStudio) {
+                    onOpenFiveAxisStudio();
+                  }
                   return;
                 }
                 if (action === 'tp_multi_swarf') {
@@ -1857,9 +1872,23 @@ export default function RibbonBar({
                   }
                   return;
                 }
-                if (opType && onQuickAddOp) {
-                  onQuickAddOp(opType);
-                } else if (onOpenFiveAxisStudio) {
+                if (action === 'tp_multi_port') {
+                  if (onOpenPortExpertModal) {
+                    onOpenPortExpertModal();
+                  } else if (onOpenFiveAxisStudio) {
+                    onOpenFiveAxisStudio();
+                  }
+                  return;
+                }
+                if (action === 'tp_multi_blade') {
+                  if (onOpenBladeExpertModal) {
+                    onOpenBladeExpertModal();
+                  } else if (onOpenFiveAxisStudio) {
+                    onOpenFiveAxisStudio();
+                  }
+                  return;
+                }
+                if (onOpenFiveAxisStudio) {
                   onOpenFiveAxisStudio();
                 }
                 return;

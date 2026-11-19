@@ -290,7 +290,7 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         label: 'Curve',
         icon: 'TpMultiCurve',
         action: 'tp_multi_curve',
-        opType: 'pencil',
+        opType: '5axis_curve',
         tooltip: '5-Axis Curve Machining along Surface Normals'
       },
       {
@@ -298,7 +298,7 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         label: 'Swarf Milli...',
         icon: 'TpMultiSwarf',
         action: 'tp_multi_swarf',
-        opType: 'swarf',
+        opType: '5axis_swarf',
         tooltip: '5-Axis Swarf Flank Wall Milling'
       },
       {
@@ -306,7 +306,7 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         label: 'Parallel',
         icon: 'TpMultiParallel',
         action: 'tp_multi_parallel',
-        opType: 'waterline',
+        opType: '5axis_parallel',
         tooltip: '5-Axis Parallel Surface Finishing'
       },
       {
@@ -314,7 +314,7 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         label: 'Drill',
         icon: 'TpMultiDrill',
         action: 'tp_multi_drill',
-        opType: 'drilling',
+        opType: 'multiaxis_drill',
         tooltip: '5-Axis Radial & Compound Angled Drilling'
       }
     ],
@@ -332,7 +332,7 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         label: 'Port Expert',
         icon: 'TpMultiPort',
         action: 'tp_multi_port',
-        opType: 'swarf',
+        opType: '5axis_port',
         tooltip: '5-Axis Engine Cylinder Head Port Machining'
       },
       {
@@ -340,7 +340,7 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         label: 'Blade Expert',
         icon: 'TpMultiBlade',
         action: 'tp_multi_blade',
-        opType: 'swarf',
+        opType: '5axis_blade',
         tooltip: '5-Axis Impeller & Blisk Blade Milling'
       },
       {
@@ -348,7 +348,7 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         label: 'Rotary Advanced',
         icon: 'TpMultiRotary',
         action: 'tp_multi_rotary',
-        opType: 'swarf',
+        opType: 'rotary_4axis',
         tooltip: '4-Axis Simultaneous Rotary Cylinder Machining'
       }
     ]

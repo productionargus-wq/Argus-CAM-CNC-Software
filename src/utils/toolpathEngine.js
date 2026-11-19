@@ -12,6 +12,7 @@ import { generateMastercamSwarfToolpath, generateSwarfMillingGCode } from './swa
 import { generateMultiaxisParallelToolpath, generateMultiaxisParallelGCode } from './multiaxisParallelEngine.js';
 import { generateRotary4AxisToolpath, generateRotary4AxisGCode } from './rotary4AxisEngine.js';
 import { generateMultiaxisDrillToolpath, generateMultiaxisDrillGCode } from './multiaxisDrillEngine.js';
+import { generateMultiaxisCurveToolpath, generateMultiaxisCurveGCode } from './multiaxisCurveEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -69,7 +70,9 @@ export {
   generateRotary4AxisToolpath,
   generateRotary4AxisGCode,
   generateMultiaxisDrillToolpath,
-  generateMultiaxisDrillGCode
+  generateMultiaxisDrillGCode,
+  generateMultiaxisCurveToolpath,
+  generateMultiaxisCurveGCode
 };
 
 /**
@@ -4314,6 +4317,37 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
       spindleSpeed: op.spindleSpeed || assignedTool.spindleSpeed || 6000
     }, effectiveModel);
   }
+  if (
+    strategy === '5axis_curve' ||
+    strategy === 'multiaxis_curve' ||
+    strategy === 'curve_5x' ||
+    op.strategyKey === '5axis_curve' ||
+    op.strategyKey === 'multiaxis_curve' ||
+    op.badgeClass === '5axis_curve'
+  ) {
+    return generateMultiaxisCurveToolpath({
+      ...op,
+      toolAxisControl: op.toolAxisControl || {
+        axisMode: op.axisMode || 'surface_normal',
+        leadAngleDeg: op.leadAngleDeg || 0.0,
+        tiltAngleDeg: op.tiltAngleDeg || 0.0
+      },
+      cutParameters: op.cutParameters || {
+        cutterCompensation: op.cutterCompensation || 'left',
+        sideOffsetMm: op.sideOffsetMm || 0.0,
+        axialStepdownMm: op.stepdown || op.axialStepdownMm || 2.0,
+        totalDepthMm: op.totalDepth || op.totalDepthMm || 6.0
+      },
+      linkingParameters: op.linkingParameters || {
+        clearancePlaneZ: op.rapidHeight || 25.0,
+        leadInRadiusMm: op.leadInRadius || 5.0
+      },
+      machineKinematics: op.machineKinematics || {
+        kinematicsId: op.kinematicsId || 'table_table_ac',
+        postDialect: op.postDialect || 'fanuc_tcpm'
+      }
+    }, assignedTool, effectiveModel);
+  }
   if (strategy === 'drill') {
     return generateDrillingToolpath(opBounds, assignedTool, {
       drillDepth: op.totalDepth || 25.0,
@@ -4499,6 +4533,7 @@ export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds
     (op.badgeClass === 'swarf' || op.strategyKey === '5axis_swarf' || toolpathData.strategy === '5axis_swarf' ||
      op.badgeClass === 'multi_parallel' || op.strategyKey === '5axis_parallel' || toolpathData.strategy === '5axis_parallel' ||
      op.badgeClass === 'multi_morph' || op.strategyKey === '5axis_morph' || toolpathData.strategy === 'multiaxis_morph' ||
+     op.badgeClass === '5axis_curve' || op.strategyKey === '5axis_curve' || toolpathData.strategy === '5axis_curve' ||
      op.badgeClass === 'multiaxis_drill' || op.strategyKey === 'multiaxis_drill' || toolpathData.strategy === 'multiaxis_drill' ||
      op.badgeClass === 'rotary_4axis' || op.badgeClass === '4axis_rotary' || op.badgeClass === 'multi_rotary' ||
      op.strategyKey === 'rotary_4axis' || toolpathData.strategy === 'rotary_4axis') &&
