@@ -4450,10 +4450,13 @@ export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds
   const feedPlaneVal = Number(op.feedPlane) || 2.5;
   const feedPlaneAbsY = topY + (op.feedPlaneMode === 'absolute' ? feedPlaneVal : topStockLocal + feedPlaneVal);
 
-  // For 5-Axis Multiaxis (Swarf Milling & Parallel Finishing), trajectoryPoints contain exact 5X orientations, tool vectors & 3D blend arcs
+  // For 5-Axis Multiaxis (Swarf, Parallel, Morph) and 4-Axis Rotary, trajectoryPoints contain exact multi-axis orientations, tool vectors & 3D blend arcs
   if (
     (op.badgeClass === 'swarf' || op.strategyKey === '5axis_swarf' || toolpathData.strategy === '5axis_swarf' ||
-     op.badgeClass === 'multi_parallel' || op.strategyKey === '5axis_parallel' || toolpathData.strategy === '5axis_parallel') &&
+     op.badgeClass === 'multi_parallel' || op.strategyKey === '5axis_parallel' || toolpathData.strategy === '5axis_parallel' ||
+     op.badgeClass === 'multi_morph' || op.strategyKey === '5axis_morph' || toolpathData.strategy === 'multiaxis_morph' ||
+     op.badgeClass === 'rotary_4axis' || op.badgeClass === '4axis_rotary' || op.badgeClass === 'multi_rotary' ||
+     op.strategyKey === 'rotary_4axis' || toolpathData.strategy === 'rotary_4axis') &&
     toolpathData.trajectoryPoints &&
     toolpathData.trajectoryPoints.length > 1
   ) {
@@ -4464,12 +4467,13 @@ export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds
       const wp = toolpathData.trajectoryPoints[i];
       const nextPt = wp.point.clone();
       if (curPt.distanceTo(nextPt) > 1e-4) {
+        const isRapid = wp.isRapid || wp.type === 'rapid';
         swarfSegments.push({
           p1: curPt.clone(),
           p2: nextPt.clone(),
-          kind: wp.type || 'cut',
-          isRapid: wp.type === 'rapid',
-          feedRate: wp.feedRate || (wp.type === 'rapid' ? rapidFeed : effFeed),
+          kind: wp.type || (isRapid ? 'rapid' : 'cut'),
+          isRapid,
+          feedRate: wp.feedRate || (isRapid ? rapidFeed : effFeed),
           rpm: opRpm,
           toolVector: wp.toolVector ? wp.toolVector.clone() : new THREE.Vector3(0, 1, 0),
           angles: wp.angles || null

@@ -242,11 +242,11 @@ export function generateRotary4AxisToolpath(params = {}, model = null) {
 
       // Add orientation vector needle
       if (i % 3 === 0) {
-        vectorNeedles.push({
-          origin: [wrapped.partPos.x, wrapped.partPos.y, wrapped.partPos.z],
-          vector: [wrapped.normal.x, wrapped.normal.y, wrapped.normal.z],
-          length: 12.0
-        });
+        const needleStart = new THREE.Vector3(wrapped.partPos.x, wrapped.partPos.y, wrapped.partPos.z);
+        const needleEnd = needleStart.clone().add(
+          new THREE.Vector3(wrapped.normal.x, wrapped.normal.y, wrapped.normal.z).multiplyScalar(12.0)
+        );
+        vectorNeedles.push([needleStart, needleEnd]);
       }
 
       // Add swept ribbon vertices
@@ -311,11 +311,11 @@ export function generateRotary4AxisToolpath(params = {}, model = null) {
       // Vector needles
       passPoints.forEach((pt, idx) => {
         if (idx % 6 === 0) {
-          vectorNeedles.push({
-            origin: [pt.x, pt.y, pt.z],
-            vector: [pt.normal.x, pt.normal.y, pt.normal.z],
-            length: 12.0
-          });
+          const needleStart = new THREE.Vector3(pt.x, pt.y, pt.z);
+          const needleEnd = needleStart.clone().add(
+            new THREE.Vector3(pt.normal.x, pt.normal.y, pt.normal.z).multiplyScalar(12.0)
+          );
+          vectorNeedles.push([needleStart, needleEnd]);
         }
       });
     }
@@ -362,11 +362,11 @@ export function generateRotary4AxisToolpath(params = {}, model = null) {
       toolpathPoints.push(pt);
 
       if (i % 8 === 0) {
-        vectorNeedles.push({
-          origin: [pt.x, pt.y, pt.z],
-          vector: [pt.normal.x, pt.normal.y, pt.normal.z],
-          length: 12.0
-        });
+        const needleStart = new THREE.Vector3(pt.x, pt.y, pt.z);
+        const needleEnd = needleStart.clone().add(
+          new THREE.Vector3(pt.normal.x, pt.normal.y, pt.normal.z).multiplyScalar(12.0)
+        );
+        vectorNeedles.push([needleStart, needleEnd]);
       }
 
       contactRibbonVertices.push(

@@ -2753,7 +2753,14 @@ export default function Viewport3D({
       const toolpathData = generateToolpathForOperation(op, opBounds, assignedTool, effectiveModel, stockConfig);
 
       if (toolpathData) {
-        const keepGeneratorRapids = ['drill', 'spotdrill', 'tap', 'probe', 'swarf', 'multi_parallel', '5axis_parallel'].includes(op.badgeClass);
+        const keepGeneratorRapids = [
+          'drill', 'spotdrill', 'tap', 'probe',
+          'swarf', 'multi_parallel', '5axis_parallel',
+          'multi_morph', '5axis_morph', 'multiaxis_morph',
+          'rotary_4axis', '4axis_rotary', 'multi_rotary'
+        ].includes(op.badgeClass) || [
+          '5axis_swarf', '5axis_parallel', '5axis_morph', 'rotary_4axis', 'multiaxis_morph'
+        ].includes(op.strategyKey);
         let linkedRapidLines = null;
         if (!keepGeneratorRapids && toolpathData.cuttingLines?.length > 0) {
           const { segments } = buildLinkedOperationSegments(toolpathData, op, opBounds, assignedTool);
@@ -2800,22 +2807,52 @@ export default function Viewport3D({
         // 5-Axis Tool Orientation Vectors (Needles) in purple/magenta
         if (toolpathData.vectorNeedles && toolpathData.vectorNeedles.length > 0) {
           const needlePositions = [];
-          toolpathData.vectorNeedles.forEach(([p1, p2]) => {
-            needlePositions.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
+          toolpathData.vectorNeedles.forEach((needle) => {
+            if (!needle) return;
+            if (Array.isArray(needle) && needle.length >= 2) {
+              const p1 = needle[0];
+              const p2 = needle[1];
+              if (p1 && p2) {
+                needlePositions.push(
+                  p1.x ?? p1[0] ?? 0,
+                  p1.y ?? p1[1] ?? 0,
+                  p1.z ?? p1[2] ?? 0,
+                  p2.x ?? p2[0] ?? 0,
+                  p2.y ?? p2[1] ?? 0,
+                  p2.z ?? p2[2] ?? 0
+                );
+              }
+            } else if (needle.origin && needle.vector) {
+              const ox = Array.isArray(needle.origin) ? needle.origin[0] : (needle.origin.x ?? 0);
+              const oy = Array.isArray(needle.origin) ? needle.origin[1] : (needle.origin.y ?? 0);
+              const oz = Array.isArray(needle.origin) ? needle.origin[2] : (needle.origin.z ?? 0);
+              const vx = Array.isArray(needle.vector) ? needle.vector[0] : (needle.vector.x ?? 0);
+              const vy = Array.isArray(needle.vector) ? needle.vector[1] : (needle.vector.y ?? 0);
+              const vz = Array.isArray(needle.vector) ? needle.vector[2] : (needle.vector.z ?? 0);
+              const len = needle.length || 10;
+              needlePositions.push(ox, oy, oz, ox + vx * len, oy + vy * len, oz + vz * len);
+            } else if (needle.p1 && needle.p2) {
+              needlePositions.push(
+                needle.p1.x ?? 0, needle.p1.y ?? 0, needle.p1.z ?? 0,
+                needle.p2.x ?? 0, needle.p2.y ?? 0, needle.p2.z ?? 0
+              );
+            }
           });
-          const needleGeo = new THREE.BufferGeometry();
-          needleGeo.setAttribute('position', new THREE.Float32BufferAttribute(needlePositions, 3));
-          const needleMat = new THREE.LineBasicMaterial({
-            color: 0xc084fc,
-            linewidth: 1,
-            transparent: true,
-            opacity: 0.75
-          });
-          const needleMesh = new THREE.LineSegments(needleGeo, needleMat);
-          needleMesh.name = `op_needles_${op.id}`;
-          needleMesh.position.set(visualXOffset, visualYOffset, visualZOffset);
-          needleMesh.visible = (op.visible !== false) && (layerVisibility.toolpaths !== false);
-          group.add(needleMesh);
+          if (needlePositions.length > 0) {
+            const needleGeo = new THREE.BufferGeometry();
+            needleGeo.setAttribute('position', new THREE.Float32BufferAttribute(needlePositions, 3));
+            const needleMat = new THREE.LineBasicMaterial({
+              color: 0xc084fc,
+              linewidth: 1,
+              transparent: true,
+              opacity: 0.75
+            });
+            const needleMesh = new THREE.LineSegments(needleGeo, needleMat);
+            needleMesh.name = `op_needles_${op.id}`;
+            needleMesh.position.set(visualXOffset, visualYOffset, visualZOffset);
+            needleMesh.visible = (op.visible !== false) && (layerVisibility.toolpaths !== false);
+            group.add(needleMesh);
+          }
         }
 
         // 5-Axis Flank Contact Ribbon (Mastercam Shaded Ruled Flute Engagement Surface)

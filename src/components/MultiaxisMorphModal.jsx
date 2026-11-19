@@ -80,10 +80,17 @@ export default function MultiaxisMorphModal({
     new Set(['cut_pattern', 'tool', 'tool_axis_control'])
   );
 
-  // Dragging state
+  // Dragging state with safe boundaries
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, posX: 0, posY: 0 });
+
+  // Reset position to center whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [isOpen]);
 
   const handleMouseDown = (e) => {
     if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
@@ -101,9 +108,20 @@ export default function MultiaxisMorphModal({
       if (!isDragging) return;
       const dx = e.clientX - dragRef.current.startX;
       const dy = e.clientY - dragRef.current.startY;
+      // Clamp drag boundaries so title bar can NEVER be dragged off-screen or behind top ribbon
+      const modalH = Math.min(680, window.innerHeight * 0.90);
+      const defaultTop = Math.max(10, (window.innerHeight - modalH) / 2);
+      const minDragY = 15 - defaultTop;
+      const maxDragY = window.innerHeight - 60 - defaultTop;
+
+      const modalW = 960;
+      const defaultLeft = Math.max(10, (window.innerWidth - modalW) / 2);
+      const minDragX = 20 - defaultLeft;
+      const maxDragX = window.innerWidth - 80 - defaultLeft;
+
       setPosition({
-        x: dragRef.current.posX + dx,
-        y: dragRef.current.posY + dy
+        x: Math.max(minDragX, Math.min(maxDragX, dragRef.current.posX + dx)),
+        y: Math.max(minDragY, Math.min(maxDragY, dragRef.current.posY + dy))
       });
     };
     const handleMouseUp = () => setIsDragging(false);
@@ -297,8 +315,8 @@ export default function MultiaxisMorphModal({
           transform: `translate(${position.x}px, ${position.y}px)`,
           width: '960px',
           maxWidth: '98vw',
-          height: '720px',
-          maxHeight: '94vh',
+          height: 'min(690px, 92vh)',
+          maxHeight: '92vh',
           backgroundColor: '#f0f2f5',
           border: '1px solid #717b87',
           borderRadius: '4px',
@@ -854,6 +872,69 @@ export default function MultiaxisMorphModal({
                           style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', fontSize: '11.5px', textAlign: 'right', boxSizing: 'border-box' }}
                         />
                         <span style={{ color: '#64748b', fontSize: '11px' }}>mm</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Visual Morph Flow & Scallop Cusp Geometry Diagram */}
+                <div style={{ border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: '#ffffff', padding: '12px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>
+                    <div style={{ fontWeight: 600, fontSize: '12px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Activity size={15} color="#8b5cf6" />
+                      <span>Dual Guide Morphing Flow &amp; Surface Scallop Preview</span>
+                    </div>
+                    <span style={{ fontSize: '10.5px', color: '#6d28d9', backgroundColor: '#f5f3ff', padding: '2px 8px', borderRadius: '3px', border: '1px solid #ddd6fe', fontWeight: 600 }}>
+                      {formState.cutPattern?.numberOfCuts || 25} Morphing Passes
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '14px', alignItems: 'center' }}>
+                    {/* SVG Morph Diagram */}
+                    <div style={{ backgroundColor: '#0f172a', borderRadius: '4px', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid #334155' }}>
+                      <svg width="280" height="75" viewBox="0 0 280 75" style={{ overflow: 'visible' }}>
+                        {/* Curve 1 (Inner Arch - Blue) */}
+                        <path d="M 15 65 Q 140 48 265 65" fill="none" stroke="#38bdf8" strokeWidth="2.5" />
+                        <text x="25" y="73" fill="#38bdf8" fontSize="8.5" fontWeight="600">Curve 1 (Blade Root)</text>
+
+                        {/* Intermediate Morph Passes */}
+                        <path d="M 15 53 Q 140 37 265 53" fill="none" stroke="#818cf8" strokeWidth="1" strokeDasharray="3,2" opacity="0.6" />
+                        <path d="M 15 41 Q 140 27 265 41" fill="none" stroke="#a78bfa" strokeWidth="1" opacity="0.75" />
+                        <path d="M 15 29 Q 140 18 265 29" fill="none" stroke="#c084fc" strokeWidth="1" strokeDasharray="3,2" opacity="0.8" />
+
+                        {/* Curve 2 (Outer Rail - Emerald) */}
+                        <path d="M 15 15 Q 140 7 265 15" fill="none" stroke="#34d399" strokeWidth="2.5" />
+                        <text x="25" y="11" fill="#34d399" fontSize="8.5" fontWeight="600">Curve 2 (Outer Rail)</text>
+
+                        {/* Lead Angle Indicator */}
+                        <line x1="140" y1="27" x2="152" y2="14" stroke="#f59e0b" strokeWidth="1.8" />
+                        <circle cx="140" cy="27" r="2.5" fill="#f59e0b" />
+                        <text x="156" y="19" fill="#fbbf24" fontSize="8" fontWeight="600">Lead &alpha;=10&deg;</text>
+                      </svg>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px', textAlign: 'center' }}>
+                        Cubic Hermite Blending: <span style={{ color: '#c084fc', fontFamily: 'monospace' }}>b(t) = t&sup2;(3 - 2t)</span>
+                      </div>
+                    </div>
+
+                    {/* Live Scallop & Cusp Telemetry */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <div style={{ padding: '5px 8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Scallop Cusp Height (h):</span>
+                        <strong style={{ fontSize: '11.5px', color: physics.scallopHeightUm <= 2.0 ? '#16a34a' : '#d97706' }}>
+                          {physics.scallopHeightUm.toFixed(2)} &mu;m
+                        </strong>
+                      </div>
+                      <div style={{ padding: '5px 8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Effective Cut Speed (V_eff):</span>
+                        <strong style={{ fontSize: '11.5px', color: '#2563eb' }}>
+                          {physics.effectiveCuttingSpeedMMin.toFixed(0)} m/min
+                        </strong>
+                      </div>
+                      <div style={{ padding: '5px 8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '10.5px', color: '#475569' }}>Spindle Power Draw:</span>
+                        <strong style={{ fontSize: '11.5px', color: '#0f172a' }}>
+                          {physics.cuttingPowerKw.toFixed(2)} kW
+                        </strong>
                       </div>
                     </div>
                   </div>

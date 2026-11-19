@@ -114,11 +114,19 @@ export default function Rotary4AxisModal({
       if (!isDragging) return;
       const dx = e.clientX - dragRef.current.startX;
       const dy = e.clientY - dragRef.current.startY;
-      // Clamp drag boundaries so title bar can NEVER be dragged off-screen
-      const maxDragY = Math.max(50, window.innerHeight / 2 - 60);
-      const minDragY = -Math.max(50, window.innerHeight / 2 - 60);
+      // Clamp drag boundaries so title bar can NEVER be dragged off-screen or behind top ribbon
+      const modalH = Math.min(700, window.innerHeight * 0.92);
+      const defaultTop = Math.max(10, (window.innerHeight - modalH) / 2);
+      const minDragY = 15 - defaultTop;
+      const maxDragY = window.innerHeight - 60 - defaultTop;
+
+      const modalW = 960;
+      const defaultLeft = Math.max(10, (window.innerWidth - modalW) / 2);
+      const minDragX = 20 - defaultLeft;
+      const maxDragX = window.innerWidth - 80 - defaultLeft;
+
       setPosition({
-        x: Math.max(-window.innerWidth / 2 + 100, Math.min(window.innerWidth / 2 - 100, dragRef.current.posX + dx)),
+        x: Math.max(minDragX, Math.min(maxDragX, dragRef.current.posX + dx)),
         y: Math.max(minDragY, Math.min(maxDragY, dragRef.current.posY + dy))
       });
     };
