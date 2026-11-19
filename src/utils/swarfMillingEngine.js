@@ -646,43 +646,29 @@ export function generateMastercamSwarfToolpath(bounds, tool = {}, config = {}) {
         type: 'plunge'
       });
 
-      // Execute Roll-In Arc
-      for (let i = 0; i < rollInWaypoints.length; i++) {
+      // Execute Roll-In Arc (starts at index 1 since entryPt is already pushed at index 0)
+      for (let i = 1; i < rollInWaypoints.length; i++) {
+        const prev = rollInWaypoints[i - 1];
         const curr = rollInWaypoints[i];
-        if (i > 0) {
-          const p0 = rollInWaypoints[i - 1].point.clone();
-          const p1 = curr.point.clone();
-          cuttingLines.push([p0, p1]);
-          arcLines.push([p0, p1]);
-        }
+        cuttingLines.push([prev.point.clone(), curr.point.clone()]);
+        arcLines.push([prev.point.clone(), curr.point.clone()]);
         trajectoryPoints.push(curr);
       }
 
-      // Execute Flank Cutting Pass
-      for (let i = 0; i < passWaypoints.length; i++) {
+      // Execute Flank Cutting Pass (starts at index 1 since passWaypoints[0] is identical to roll-in end)
+      for (let i = 1; i < passWaypoints.length; i++) {
+        const prev = passWaypoints[i - 1];
         const curr = passWaypoints[i];
-        if (i === 0) {
-          cuttingLines.push([rollInWaypoints[rollInWaypoints.length - 1].point.clone(), curr.point.clone()]);
-        } else {
-          cuttingLines.push([passWaypoints[i - 1].point.clone(), curr.point.clone()]);
-        }
+        cuttingLines.push([prev.point.clone(), curr.point.clone()]);
         trajectoryPoints.push(curr);
       }
 
-      // Execute Roll-Out Arc
-      for (let i = 0; i < rollOutWaypoints.length; i++) {
+      // Execute Roll-Out Arc (starts at index 1 since rollOutWaypoints[0] is identical to lastPassPt)
+      for (let i = 1; i < rollOutWaypoints.length; i++) {
+        const prev = rollOutWaypoints[i - 1];
         const curr = rollOutWaypoints[i];
-        if (i === 0) {
-          const p0 = lastPassPt.point.clone();
-          const p1 = curr.point.clone();
-          cuttingLines.push([p0, p1]);
-          arcLines.push([p0, p1]);
-        } else {
-          const p0 = rollOutWaypoints[i - 1].point.clone();
-          const p1 = curr.point.clone();
-          cuttingLines.push([p0, p1]);
-          arcLines.push([p0, p1]);
-        }
+        cuttingLines.push([prev.point.clone(), curr.point.clone()]);
+        arcLines.push([prev.point.clone(), curr.point.clone()]);
         trajectoryPoints.push(curr);
       }
 
