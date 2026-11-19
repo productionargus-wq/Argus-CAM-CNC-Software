@@ -7,6 +7,7 @@ import {
   SWARF_TCPM_DIALECTS,
   resolveDefaultSwarfTool,
   calculateSwarfPhysics,
+  calculateRecommendedSwarfSettings,
   DEFAULT_SWARF_CONFIG
 } from './src/config/swarfMillingSchema.js';
 
@@ -55,6 +56,28 @@ const mockTools = [
 ];
 const resolvedTool = resolveDefaultSwarfTool(mockTools);
 assert(resolvedTool && resolvedTool.id === 3, `Auto-resolved tool is 10mm Flat Endmill (id: ${resolvedTool?.id})`);
+
+// 2b: Recommended Values Auto-Calculator
+const recAlu = calculateRecommendedSwarfSettings({
+  materialId: 'alu_6061',
+  tool: resolvedTool,
+  tools: mockTools,
+  wallHeightMm: 22.0
+});
+assert(recAlu.spindleRpm > 5000, `Recommended Alu RPM: ${recAlu.spindleRpm}`);
+assert(recAlu.feedRate > 1000, `Recommended Alu Feed: ${recAlu.feedRate} mm/min`);
+assert(recAlu.leadAngleDeg === 0.0 || recAlu.leadAngleDeg === 0.5, `Recommended Lead Angle: ${recAlu.leadAngleDeg} deg`);
+assert(recAlu.machineKinematics === 'table_table_ac', 'Recommended Kinematics: Table-Table AC Trunnion');
+assert(recAlu.enableAxialSlices === false, 'Single pass finish (flute 25mm >= wall 22mm)');
+
+// Test tall wall triggers axial slices
+const recTall = calculateRecommendedSwarfSettings({
+  materialId: 'alu_6061',
+  tool: resolvedTool,
+  tools: mockTools,
+  wallHeightMm: 45.0
+});
+assert(recTall.enableAxialSlices === true, `Tall wall (45mm > 25mm) enables axial slices: ${recTall.axialSlices}`);
 
 // TEST 3: Physics & Cantilever Beam Deflection
 console.log('\n--- Test Group 3: Flank Physics & Cantilever Deflection ---');

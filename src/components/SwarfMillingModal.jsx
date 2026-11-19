@@ -15,6 +15,7 @@ import {
   SWARF_TCPM_DIALECTS,
   resolveDefaultSwarfTool,
   calculateSwarfPhysics,
+  calculateRecommendedSwarfSettings,
   DEFAULT_SWARF_CONFIG
 } from '../config/swarfMillingSchema.js';
 
@@ -54,6 +55,7 @@ export default function SwarfMillingModal({
   });
 
   const [activePage, setActivePage] = useState('cut_pattern');
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [editedPages, setEditedPages] = useState(
     new Set(['toolpath_type', 'cut_pattern', 'tool', 'tool_axis_control'])
   );
@@ -148,6 +150,28 @@ export default function SwarfMillingModal({
       rollInAngleDeg: preset.rollInAngleDeg
     }));
     onNotify?.(`Applied Preset: ${preset.name}`, 'info');
+  };
+
+  // Recommended Values 1-Click Optimization
+  const handleRecommendedValues = () => {
+    const recommended = calculateRecommendedSwarfSettings({
+      materialId: formState.materialId,
+      tool: selectedTool,
+      tools,
+      wallHeightMm: formState.wallHeightMm
+    });
+
+    setFormState((prev) => ({
+      ...prev,
+      ...recommended
+    }));
+
+    setEditedPages(new Set(Object.keys(SWARF_MILLING_PAGES)));
+
+    onNotify?.(
+      `Loaded Recommended 5-Axis Swarf Settings for ${material.name}! (RPM: ${recommended.spindleRpm}, Feed: ${recommended.feedRate} mm/min, Slices: ${recommended.axialSlices}, Passes: ${recommended.radialPasses})`,
+      'success'
+    );
   };
 
   // Commit and Save
@@ -322,7 +346,7 @@ export default function SwarfMillingModal({
             </div>
           </div>
 
-          {/* Preset Selector */}
+          {/* Action Tools: Preset + Recommended Values + Machinist Guide */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ color: '#64748b', fontWeight: 500 }}>Preset:</span>
             <select
@@ -344,8 +368,123 @@ export default function SwarfMillingModal({
                 </option>
               ))}
             </select>
+
+            <button
+              onClick={handleRecommendedValues}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 10px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: '#ffffff',
+                background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+                border: '1px solid #6d28d9',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                transition: 'filter 0.15s'
+              }}
+              title="Automatically calculate and load optimal tool, speeds, feeds, passes, lead angle, and kinematics"
+              onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.1)')}
+              onMouseLeave={(e) => (e.currentTarget.style.filter = 'none')}
+            >
+              <Sparkles size={13} color="#ffffff" />
+              <span>Recommended Values</span>
+            </button>
+
+            <button
+              onClick={() => setIsGuideOpen((prev) => !prev)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 10px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: isGuideOpen ? '#ffffff' : '#0369a1',
+                backgroundColor: isGuideOpen ? '#0284c7' : '#e0f2fe',
+                border: '1px solid #38bdf8',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.15s'
+              }}
+              title="Open step-by-step machinist guide on tools, machines, and swarf flank milling"
+            >
+              <HelpCircle size={13} color={isGuideOpen ? '#ffffff' : '#0284c7'} />
+              <span>{isGuideOpen ? 'Hide Guide' : 'Machinist Guide'}</span>
+            </button>
           </div>
         </div>
+
+        {/* Expandable Machinist Guide Banner */}
+        {isGuideOpen && (
+          <div
+            style={{
+              backgroundColor: '#eff6ff',
+              borderBottom: '1px solid #bfdbfe',
+              padding: '12px 16px',
+              fontSize: '11.5px',
+              color: '#1e3a8a',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              boxSizing: 'border-box'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Info size={16} color="#2563eb" />
+                <strong style={{ fontSize: '12.5px', color: '#1e40af' }}>
+                  5-Axis Swarf Milling Machinist Guide &amp; Setup Assistant
+                </strong>
+              </div>
+              <button
+                onClick={handleRecommendedValues}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '4px 12px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: '#ffffff',
+                  backgroundColor: '#2563eb',
+                  border: 'none',
+                  borderRadius: '3px',
+                  cursor: 'pointer'
+                }}
+              >
+                <Sparkles size={13} />
+                <span>Apply Recommended Setup Now</span>
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '4px' }}>
+              <div style={{ backgroundColor: '#ffffff', padding: '8px 10px', borderRadius: '4px', border: '1px solid #dbeafe' }}>
+                <div style={{ fontWeight: 700, color: '#1e40af', marginBottom: '3px' }}>1. Which Tool to Use?</div>
+                <div style={{ fontSize: '11px', color: '#334155', lineHeight: 1.45 }}>
+                  Use a <strong>10mm or 12mm 4-Flute Flat or Bullnose Endmill</strong>. Make sure the cutter <strong>Flute Length &ge; Wall Height</strong> ({formState.wallHeightMm}mm) so the flank cuts the entire wall in one continuous pass. If the wall is taller than the flute, the Recommended button automatically turns on Multi-Depth slices.
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#ffffff', padding: '8px 10px', borderRadius: '4px', border: '1px solid #dbeafe' }}>
+                <div style={{ fontWeight: 700, color: '#1e40af', marginBottom: '3px' }}>2. Which Machine to Use?</div>
+                <div style={{ fontSize: '11px', color: '#334155', lineHeight: 1.45 }}>
+                  Use a <strong>Table-Table AC Trunnion</strong> (e.g., Haas UMC-750, Fanuc Robodrill 5X, DMG MORI DMU 50). The A-axis cradle tilts the workpiece while the C-axis table rotates. The spindle stays rigid vertically, giving unmatched rigidity and chatter-free surface finish.
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#ffffff', padding: '8px 10px', borderRadius: '4px', border: '1px solid #dbeafe' }}>
+                <div style={{ fontWeight: 700, color: '#1e40af', marginBottom: '3px' }}>3. How Swarf Milling Works?</div>
+                <div style={{ fontSize: '11px', color: '#334155', lineHeight: 1.45 }}>
+                  The side (flank) of the cutter stays parallel to the wall, saving 90% cycle time compared to ball mills. <strong>Lead Angle (+0.5&deg;)</strong> tilts the tool slightly forward into the feed so the back edge never drags. <strong>Roll-In Arc (8mm)</strong> rolls into contact smoothly with zero dwell marks.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal Body: Mastercam 2-Column Layout */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>

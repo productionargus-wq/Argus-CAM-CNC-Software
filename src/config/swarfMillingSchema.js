@@ -387,6 +387,76 @@ export function calculateSwarfPhysics({
   };
 }
 
+/**
+ * Intelligent 1-Click Recommended Values Calculator for 5-Axis Swarf Milling.
+ * Automatically analyzes material, cutter geometry, wall height, and machine trunnion kinematics
+ * to set optimal speeds, feeds, passes, lead/lag, and roll-in arcs.
+ */
+export function calculateRecommendedSwarfSettings({
+  materialId = 'alu_6061',
+  tool = null,
+  tools = [],
+  wallHeightMm = 22.0
+}) {
+  const mat = SWARF_MILLING_MATERIALS[materialId?.toUpperCase()] || SWARF_MILLING_MATERIALS.ALU_6061;
+  const bestTool = tool || resolveDefaultSwarfTool(tools) || {
+    id: 1,
+    number: 1,
+    diameter: 10,
+    flutes: 4,
+    fluteLength: 25,
+    name: '10mm 4-Flute Flat Endmill',
+    type: 'flat'
+  };
+
+  const dia = Math.max(2, Number(bestTool.diameter) || 10);
+  const flutes = Math.max(2, Number(bestTool.flutes) || 4);
+  const fluteLen = Number(bestTool.fluteLength) || Number(bestTool.cuttingLength) || 25;
+
+  // RPM from material surface speed Vc (m/min)
+  const rawRpm = Math.round((mat.vc * 1000) / (Math.PI * dia));
+  const rpm = Math.min(15000, Math.max(1200, rawRpm));
+
+  // Feed from chip load fz (mm/tooth)
+  const rawFeed = Math.round(rpm * flutes * mat.fzNominal);
+  const feed = Math.min(6000, Math.max(200, rawFeed));
+  const plungeFeed = Math.round(feed * 0.2);
+
+  // Axial slices based on flute length vs wall height
+  const wallH = Number(wallHeightMm) || 22.0;
+  const needAxial = wallH > fluteLen;
+  const axialSlices = needAxial ? Math.max(2, Math.ceil(wallH / (fluteLen * 0.85))) : 1;
+
+  // Radial passes: 2 passes for finish to guarantee zero deflection taper
+  const radialPasses = mat.recommendedPasses || 2;
+  const radialStepover = mat.recommendedStepoverMm || 0.4;
+
+  return {
+    toolId: bestTool.id,
+    toolName: bestTool.name,
+    toolDiameter: dia,
+    spindleRpm: rpm,
+    feedRate: feed,
+    plungeFeed: plungeFeed,
+    enableAxialSlices: needAxial,
+    axialSlices,
+    enableRadialPasses: radialPasses > 1,
+    radialPasses,
+    radialStepover,
+    stockToLeaveWall: 0.0,
+    stockToLeaveFloor: 0.0,
+    leadAngleDeg: mat.recommendedLeadDeg !== undefined ? mat.recommendedLeadDeg : 0.5,
+    tiltOffsetDeg: 0.0,
+    rollInRadiusMm: Math.max(5.0, Math.min(12.0, dia * 0.8)),
+    rollInAngleDeg: 60.0,
+    machineKinematics: 'table_table_ac', // Haas UMC-750 / DMU 50 Trunnion
+    controllerDialect: 'fanuc',
+    clearanceZ: 50.0,
+    retractZ: 10.0,
+    feedPlaneZ: 2.5
+  };
+}
+
 export const DEFAULT_SWARF_CONFIG = {
   // Page 1: Toolpath Type
   strategy: '5axis_swarf',
