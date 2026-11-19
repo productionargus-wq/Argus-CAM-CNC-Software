@@ -132,6 +132,7 @@ export default function ToolpathsContextMenu({
   onOpenSurfaceRoughWaterlineModal,
   onOpenMultiaxisMorphModal,
   onOpenSwarfMillingModal,
+  onOpenMultiaxisParallelModal,
   onOpenSurfaceFinishShallow,
   onOpenSurfaceFinishParallel,
   onOpenSurfaceFinishParallelSteep,
@@ -345,7 +346,7 @@ export default function ToolpathsContextMenu({
                 <div className="mcam-ctx-sub" style={{ ...subStyle, minWidth: '170px' }}>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSwarfMillingModal ? onOpenSwarfMillingModal() : onAddOperation?.('swarf'))}>5-Axis Swarf Milling</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenMultiaxisMorphModal ? onOpenMultiaxisMorphModal() : onAddOperation?.('multiaxis_morph'))}>5-Axis Morph Between 2 Curves</div>
-                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenFiveAxisStudio?.())}>5-Axis Parallel</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenMultiaxisParallelModal ? onOpenMultiaxisParallelModal() : onAddOperation?.('5axis_parallel'))}>5-Axis Parallel</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenFiveAxisStudio?.())}>Rotary 4-Axis</div>
                 </div>
               )}
