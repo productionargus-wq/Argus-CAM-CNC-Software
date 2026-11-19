@@ -3302,8 +3302,15 @@ export default function Viewport3D({
         const sample = sampleTrajectoryAtT(waypointsRef.current, currentP);
         backplotToolRef.current.position.copy(sample.currentPos);
 
-        // Spin tool spindle
-        backplotToolRef.current.rotation.y += 0.35 * backplotSpeed;
+        // 5-Axis tool orientation: align tool spindle along sample.toolVector
+        if (sample.toolVector && Math.abs(sample.toolVector.y - 1.0) > 0.001) {
+          const up = new THREE.Vector3(0, 1, 0);
+          backplotToolRef.current.quaternion.setFromUnitVectors(up, sample.toolVector);
+          backplotToolRef.current.rotateY(0.35 * backplotSpeed);
+        } else {
+          backplotToolRef.current.quaternion.identity();
+          backplotToolRef.current.rotation.y += 0.35 * backplotSpeed;
+        }
 
         // Check for collet gouge
         const activeTool = sample.activeWaypoint?.tool || tools[0];
@@ -3314,7 +3321,10 @@ export default function Viewport3D({
         const currentDepth = sample.currentCncPos
           ? Math.max(0, -sample.currentCncPos.z)
           : (topY - sample.currentPos.y);
-        const isGouge = currentDepth > cutLen + 2.0;
+        const is5Axis = sample.toolVector && Math.abs(sample.toolVector.y - 1.0) > 0.001;
+        const isGouge = is5Axis
+          ? currentDepth > (activeTool?.overallLength || 75)
+          : currentDepth > cutLen + 2.0;
         setHolderCollisionAlert(isGouge);
 
         const collet = backplotToolRef.current.getObjectByName("tool_collet_mesh");

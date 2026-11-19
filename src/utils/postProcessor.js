@@ -156,10 +156,12 @@ export function generateNCProgram({
     let pendingIsoControlComp = false;
 
     // Tool Change & Spindle Start
+    const is5AxisOp = op.badgeClass === 'swarf' || op.badgeClass === 'multi_morph' || op.strategyKey === 'multiaxis_morph' || op.strategyKey === '5axis_morph' || op.strategy === 'multiaxis_morph';
+
     if (useHeidenhain) {
       lines.push(`${nextN()} TOOL CALL ${tool.number} Z S${effRpm} DL+0.00 DR+0.00`);
       lines.push(`${nextN()} M03${coolantIsoCode}`);
-      if (op.badgeClass === 'swarf') {
+      if (is5AxisOp) {
         lines.push(`${nextN()} PLANE SPATIAL SPA+15.00 SPB+0.00 SPC+0.00 TURN FMAX`);
         lines.push(`${nextN()} FUNCTION TCPM F CONT AXIS SPAT`);
       } else if (op.badgeClass === 'adaptive' || op.feedOptimization) {
@@ -170,7 +172,7 @@ export function generateNCProgram({
       lines.push(`${nextN()} T="T${tool.number}_${(tool.type || 'FLAT').toUpperCase()}" M6`);
       lines.push(`${nextN()} S${effRpm} M3`);
       lines.push(`${nextN()} D1${coolantIsoCode}`);
-      if (op.badgeClass === 'swarf') {
+      if (is5AxisOp) {
         lines.push(`${nextN()} TRAORI ; 5-AXIS TCP`);
       } else if (op.badgeClass === 'adaptive' || op.feedOptimization) {
         lines.push(`${nextN()} CYCLE832(0.02, 1, 1) ; HIGH SPEED TOLERANCE & LOOK-AHEAD`);
@@ -179,8 +181,14 @@ export function generateNCProgram({
       // Fanuc / Haas / GRBL / Mach3
       lines.push(`${nextN()} T${tool.number} M06 (${sanitizeIsoCommentText(tool.name)})`);
       lines.push(`${nextN()} S${effRpm} M03`);
-      if (op.badgeClass === 'swarf') {
-        lines.push(`${nextN()} G43.4 H${tool.number}${coolantIsoCode} ${formatInlineNote('5-AXIS TCPM ACTIVATION')}`);
+      if (is5AxisOp) {
+        if (controller === CONTROLLER_DIALECTS.HAAS) {
+          lines.push(`${nextN()} G234 H${tool.number}${coolantIsoCode} ${formatInlineNote('HAAS 5-AXIS TCPC ACTIVATION')}`);
+          lines.push(`${nextN()} G187 P2 ${formatInlineNote('HAAS HIGH SPEED MACHINING - MEDIUM')}`);
+        } else {
+          lines.push(`${nextN()} G43.4 H${tool.number}${coolantIsoCode} ${formatInlineNote('5-AXIS TCPM ACTIVATION')}`);
+          lines.push(`${nextN()} G05.1 Q1 ${formatInlineNote('HIGH SPEED AICC II LOOK-AHEAD ACCEL/DECEL')}`);
+        }
       } else {
         // Apply G43 H# and coolant together with initial Z clearance move after safe XY positioning
         pendingIsoHeightOffset = true;
@@ -318,17 +326,21 @@ export function generateNCProgram({
       const tp = toolpathData.trajectoryPoints?.[idx];
 
       if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
-        if (op.badgeClass === 'swarf' && tp?.angles) {
-          lines.push(`${nextN()} L X${cncX} Y${cncY} Z${cncZ} B${tp.angles.B >= 0 ? '+' : ''}${tp.angles.B.toFixed(3)} C${tp.angles.C >= 0 ? '+' : ''}${tp.angles.C.toFixed(3)} F${segFeed}`);
-        } else if (op.badgeClass === 'swarf') {
+        if (is5AxisOp && tp?.angles) {
+          const angB = tp.angles.B !== undefined ? tp.angles.B : (tp.angles.A || 0);
+          const angC = tp.angles.C !== undefined ? tp.angles.C : 0;
+          lines.push(`${nextN()} L X${cncX} Y${cncY} Z${cncZ} B${angB >= 0 ? '+' : ''}${angB.toFixed(3)} C${angC >= 0 ? '+' : ''}${angC.toFixed(3)} F${segFeed}`);
+        } else if (is5AxisOp) {
           lines.push(`${nextN()} L X${cncX} Y${cncY} Z${cncZ} B+15.000 C+45.300 F${segFeed}`);
         } else {
           lines.push(`${nextN()} L X${cncX} Y${cncY} Z${cncZ} F${segFeed}`);
         }
       } else if (controller === CONTROLLER_DIALECTS.SIEMENS) {
-        if (op.badgeClass === 'swarf' && tp?.angles) {
-          lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} B=${tp.angles.B.toFixed(2)} C=${tp.angles.C.toFixed(2)} F${segFeed}`);
-        } else if (op.badgeClass === 'swarf') {
+        if (is5AxisOp && tp?.angles) {
+          const angB = tp.angles.B !== undefined ? tp.angles.B : (tp.angles.A || 0);
+          const angC = tp.angles.C !== undefined ? tp.angles.C : 0;
+          lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} B=${angB.toFixed(2)} C=${angC.toFixed(2)} F${segFeed}`);
+        } else if (is5AxisOp) {
           lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} B=15.00 C=45.30 F${segFeed}`);
         } else {
           lines.push(`${nextN()} G01 X${cncX} Y${cncY} Z${cncZ} F${segFeed}`);
@@ -337,10 +349,14 @@ export function generateNCProgram({
         // Fanuc / Haas / GRBL / Mach3
         const compPrefix = pendingIsoControlComp ? `${compCode} D${tool.number} ` : '';
         pendingIsoControlComp = false;
-        if (op.badgeClass === 'swarf' && tp?.angles) {
-          lines.push(`${nextN()} G01 ${compPrefix}X${cncX} Y${cncY} Z${cncZ} A${tp.angles.A.toFixed(3)} C${tp.angles.C.toFixed(3)} F${segFeed}`);
-        } else if (op.badgeClass === 'swarf') {
-          lines.push(`${nextN()} G01 ${compPrefix}X${cncX} Y${cncY} Z${cncZ} B15.000 C45.300 F${segFeed}`);
+        if (is5AxisOp && tp?.angles) {
+          if (tp.angles.A !== undefined) {
+            lines.push(`${nextN()} G01 ${compPrefix}X${cncX} Y${cncY} Z${cncZ} A${tp.angles.A.toFixed(3)} C${tp.angles.C.toFixed(3)} F${segFeed}`);
+          } else {
+            lines.push(`${nextN()} G01 ${compPrefix}X${cncX} Y${cncY} Z${cncZ} B${tp.angles.B.toFixed(3)} C${tp.angles.C.toFixed(3)} F${segFeed}`);
+          }
+        } else if (is5AxisOp) {
+          lines.push(`${nextN()} G01 ${compPrefix}X${cncX} Y${cncY} Z${cncZ} A-15.000 C-10.000 F${segFeed}`);
         } else {
           lines.push(`${nextN()} G01 ${compPrefix}X${cncX} Y${cncY} Z${cncZ} F${segFeed}`);
         }
@@ -354,19 +370,22 @@ export function generateNCProgram({
       ? fmtNum(Math.max(clearanceZ, lastEndCncZ + 1.0))
       : fmtNum(Math.max(effectiveBounds.max.y + 40 - zOffset, lastEndCncZ + 1.0));
     if (useHeidenhain) {
-      if (op.badgeClass === 'swarf') {
+      if (is5AxisOp) {
         lines.push(`${nextN()} FUNCTION RESET TCPM`);
         lines.push(`${nextN()} PLANE RESET STAY`);
       }
       lines.push(`${nextN()} L Z+${finalRetractZ} FMAX M09`);
     } else if (useSiemens) {
-      if (op.badgeClass === 'swarf') {
+      if (is5AxisOp) {
         lines.push(`${nextN()} TRAFOOF ; TCP OFF`);
       }
       lines.push(`${nextN()} G00 Z${finalRetractZ} M09`);
     } else {
-      if (op.badgeClass === 'swarf') {
+      if (is5AxisOp) {
         lines.push(`${nextN()} G49 ${formatInlineNote('CANCEL 5-AXIS TCPM')}`);
+        if (controller === CONTROLLER_DIALECTS.FANUC) {
+          lines.push(`${nextN()} G05.1 Q0 ${formatInlineNote('AICC II OFF')}`);
+        }
       } else if (useControllerComp) {
         lines.push(`${nextN()} G40 ${formatInlineNote('CANCEL CUTTER RADIUS COMPENSATION')}`);
       }

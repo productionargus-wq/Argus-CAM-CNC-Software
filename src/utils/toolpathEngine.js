@@ -4366,7 +4366,7 @@ export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds
     ? prevRawPos.clone()
     : new THREE.Vector3(firstEntry.x, clearanceY, firstEntry.z);
 
-  const pushMove = (toPt, kind, feedRate) => {
+  const pushMove = (toPt, kind, feedRate, toolVector = null, angles = null) => {
     const target = toPt.clone();
     if (curPos.distanceTo(target) > 1e-4) {
       segments.push({
@@ -4375,7 +4375,9 @@ export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds
         kind,
         isRapid: kind === 'rapid',
         feedRate,
-        rpm: opRpm
+        rpm: opRpm,
+        toolVector: toolVector ? toolVector.clone() : new THREE.Vector3(0, 1, 0),
+        angles
       });
       curPos = target;
     }
@@ -4432,7 +4434,8 @@ export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds
       const minPct = (op.feedOptimization.minCornerFeedPct || 45) / 100;
       segFeed = idx % 6 === 0 ? Math.round(effFeed * minPct) : Math.round(effFeed * rctf);
     }
-    pushMove(p2, 'cut', segFeed);
+    const tp = toolpathData.trajectoryPoints?.[idx];
+    pushMove(p2, 'cut', segFeed, tp?.vector, tp?.angles);
   });
 
   const finalRetractY = Math.max(clearanceY, curPos.y + 1.0);
@@ -4512,7 +4515,9 @@ export function compileBackplotTrajectory(
         tool: assignedTool,
         feedRate: seg.feedRate,
         spindleRpm: seg.rpm,
-        cumulativeDist: totalDist
+        cumulativeDist: totalDist,
+        toolVector: seg.toolVector ? seg.toolVector.clone() : new THREE.Vector3(0, 1, 0),
+        angles: seg.angles || null
       });
       lastVisualPos = worldPt;
     };
@@ -4568,6 +4573,11 @@ export function sampleTrajectoryAtT(waypoints, t) {
   const currentCncPos = (wpA.cncPos && wpB.cncPos)
     ? new THREE.Vector3().lerpVectors(wpA.cncPos, wpB.cncPos, u)
     : new THREE.Vector3(currentPos.x, -currentPos.z, currentPos.y);
+
+  const vA = wpA.toolVector || new THREE.Vector3(0, 1, 0);
+  const vB = wpB.toolVector || new THREE.Vector3(0, 1, 0);
+  const toolVector = new THREE.Vector3().lerpVectors(vA, vB, u).normalize();
+
   const heading = new THREE.Vector3().subVectors(wpB.pos, wpA.pos).normalize();
   if (heading.lengthSq() < 0.001) heading.set(1, 0, 0);
 
@@ -4580,6 +4590,7 @@ export function sampleTrajectoryAtT(waypoints, t) {
   return {
     currentPos,
     currentCncPos,
+    toolVector,
     activeWaypoint: wpB,
     heading,
     traversedPoints,
