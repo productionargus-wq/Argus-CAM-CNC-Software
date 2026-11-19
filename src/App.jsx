@@ -2960,6 +2960,35 @@ export default function App() {
   };
 
   const handleSelectSampleModel = async (type) => {
+    if (type === 'multiaxis_benchmark' || type === 'step_multiaxis' || type === '5axis_step') {
+      try {
+        const resp = await fetch('/samples/Multiaxis_5X_Benchmark_Part.step');
+        let stepText = '';
+        if (resp.ok) {
+          stepText = await resp.text();
+        } else {
+          // Fallback if running outside HTTP server
+          stepText = generateSampleSTEPString('aerospace_bracket');
+        }
+        const group = await parseSTEPText(stepText);
+        setCurrentModel(group);
+        setCurrentProjectName('Multiaxis_5X_Benchmark_Part.step');
+        setActiveMachineId('dmu50');
+        setCadSource({
+          type: 'file',
+          filename: 'Multiaxis_5X_Benchmark_Part.step',
+          content: stepText,
+          isBinary: false,
+          format: 'STEP (ISO 10303-21)'
+        });
+        showToast('Loaded 5-Axis Multiaxis Benchmark STEP B-Rep Model', 'success');
+      } catch (err) {
+        showToast(`Failed to parse 5X STEP: ${err.message}`, 'danger');
+      }
+      handleResetTransform();
+      return;
+    }
+
     if (type === 'step_bracket') {
       try {
         const stepText = generateSampleSTEPString('aerospace_bracket');

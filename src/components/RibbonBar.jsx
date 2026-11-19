@@ -550,6 +550,10 @@ export default function RibbonBar({
                   <FileCode size={19} color="#3b82f6" />
                   <span className="btn-label" style={{ color: '#3b82f6', fontWeight: 600 }}>STEP B-Rep<br />Sample</span>
                 </button>
+                <button className="ribbon-btn-large" onClick={() => onSelectSampleModel('multiaxis_benchmark')} title="Load 5-Axis Multiaxis Benchmark STEP (ISO 10303-21) Part (Swarf Ruled Flange & Morph Saddle)">
+                  <Orbit size={19} color="#8b5cf6" />
+                  <span className="btn-label" style={{ color: '#8b5cf6', fontWeight: 600 }}>5X STEP<br />Benchmark</span>
+                </button>
                 <button className="ribbon-btn-large" onClick={() => onSelectSampleModel('impeller')} title="Load 5-Axis Impeller">
                   <Compass size={19} color="#a855f7" />
                   <span className="btn-label">5X Impeller<br />Sample</span>
