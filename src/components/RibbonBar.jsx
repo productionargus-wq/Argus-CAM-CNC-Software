@@ -42,6 +42,7 @@ export default function RibbonBar({
   onOpenSurfaceRoughPocketModal,
   onOpenSurfaceRoughParallelModal,
   onOpenSurfaceRoughWaterlineModal,
+  onOpenMultiaxisMorphModal,
   onOpenLeadInOutModal,
   onOpenFiveAxisStudio,
   onOpenSolidVerifyModal,
@@ -1812,6 +1813,10 @@ export default function RibbonBar({
 
               // Multiaxis Toolpaths
               if (action.startsWith('tp_multi_')) {
+                if (action === 'tp_multi_morph' && onOpenMultiaxisMorphModal) {
+                  onOpenMultiaxisMorphModal();
+                  return;
+                }
                 if (action === 'tp_multi_swarf' && onOpenFiveAxisStudio) {
                   onOpenFiveAxisStudio();
                   return;

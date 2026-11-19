@@ -2728,6 +2728,8 @@ export default function Viewport3D({
         rough_waterline: 0x06b6d4,
         rough_pocket: 0x10b981,
         rough_optirough: 0x06b6d4,
+        multi_morph: 0xa855f7,
+        multiaxis_morph: 0xa855f7,
         flowline: 0x10b981,
         rest: 0x14b8a6,
         rest_milling: 0x14b8a6,
@@ -2788,6 +2790,27 @@ export default function Viewport3D({
           rapidMesh.position.set(visualXOffset, visualYOffset, visualZOffset);
           rapidMesh.visible = (op.visible !== false) && (layerVisibility.rapids !== false);
           group.add(rapidMesh);
+        }
+
+        // 5-Axis Tool Orientation Vectors (Needles) in purple/magenta
+        if (toolpathData.vectorNeedles && toolpathData.vectorNeedles.length > 0) {
+          const needlePositions = [];
+          toolpathData.vectorNeedles.forEach(([p1, p2]) => {
+            needlePositions.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
+          });
+          const needleGeo = new THREE.BufferGeometry();
+          needleGeo.setAttribute('position', new THREE.Float32BufferAttribute(needlePositions, 3));
+          const needleMat = new THREE.LineBasicMaterial({
+            color: 0xc084fc,
+            linewidth: 1,
+            transparent: true,
+            opacity: 0.75
+          });
+          const needleMesh = new THREE.LineSegments(needleGeo, needleMat);
+          needleMesh.name = `op_needles_${op.id}`;
+          needleMesh.position.set(visualXOffset, visualYOffset, visualZOffset);
+          needleMesh.visible = (op.visible !== false) && (layerVisibility.toolpaths !== false);
+          group.add(needleMesh);
         }
       }
     });

@@ -7,6 +7,7 @@ import { generateOptiRoughToolpath, generateOptiRoughGCode } from './optiRoughTo
 import { generatePocketRoughToolpath, generatePocketRoughGCode } from './pocketRoughToolpathEngine.js';
 import { generateParallelRoughToolpath, generateParallelRoughGCode } from './parallelRoughToolpathEngine.js';
 import { generateWaterlineRoughToolpath, generateWaterlineRoughGCode } from './waterlineRoughToolpathEngine.js';
+import { generateMultiaxisMorphToolpath, generateMultiaxisMorphGCode } from './multiaxisMorphEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -56,7 +57,9 @@ export {
   generateParallelRoughToolpath,
   generateParallelRoughGCode,
   generateWaterlineRoughToolpath,
-  generateWaterlineRoughGCode
+  generateWaterlineRoughGCode,
+  generateMultiaxisMorphToolpath,
+  generateMultiaxisMorphGCode
 };
 
 /**
@@ -4145,6 +4148,36 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
     return generateSwarfToolpath(opBounds, assignedTool, {
       tiltAngleDeg: 15.0,
       passes: op.passes || 3
+    }, effectiveModel);
+  }
+  if (
+    strategy === 'multiaxis_morph' ||
+    strategy === '5axis_morph' ||
+    strategy === 'morph' ||
+    op.strategyKey === 'multiaxis_morph' ||
+    op.strategyKey === '5axis_morph' ||
+    op.badgeClass === 'multi_morph'
+  ) {
+    return generateMultiaxisMorphToolpath(opBounds, assignedTool, {
+      ...op,
+      cutPattern: op.cutPattern || {
+        numberOfCuts: op.passes || 25,
+        stepoverDistanceMm: op.stepoverMm || 1.5,
+        cuttingMethod: op.cuttingMethod || 'zigzag',
+        cutOrder: op.cutOrder || 'curve1_to_curve2'
+      },
+      toolAxisControl: op.toolAxisControl || {
+        leadAngleDeg: op.leadAngleDeg ?? 10.0,
+        tiltAngleDeg: op.tiltAngleDeg ?? 15.0
+      },
+      machineKinematics: op.machineKinematics || {
+        kinematicsId: op.kinematicsId || 'table_table_ac',
+        tcpmMode: op.tcpmMode || 'fanuc'
+      },
+      linkingParameters: op.linkingParameters || {
+        clearancePlaneZ: op.rapidHeight || 25.0,
+        retractDistanceMm: 5.0
+      }
     }, effectiveModel);
   }
   if (strategy === 'drill') {

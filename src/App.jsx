@@ -50,6 +50,7 @@ import SurfaceRoughOptiRoughModal from './components/SurfaceRoughOptiRoughModal'
 import SurfaceRoughPocketModal from './components/SurfaceRoughPocketModal';
 import SurfaceRoughParallelModal from './components/SurfaceRoughParallelModal';
 import SurfaceRoughWaterlineModal from './components/SurfaceRoughWaterlineModal';
+import MultiaxisMorphModal from './components/MultiaxisMorphModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
@@ -362,6 +363,8 @@ export default function App() {
   const [editingParallelRoughOp, setEditingParallelRoughOp] = useState(null);
   const [isWaterlineRoughModalOpen, setIsWaterlineRoughModalOpen] = useState(false);
   const [editingWaterlineRoughOp, setEditingWaterlineRoughOp] = useState(null);
+  const [isMultiaxisMorphModalOpen, setIsMultiaxisMorphModalOpen] = useState(false);
+  const [editingMultiaxisMorphOp, setEditingMultiaxisMorphOp] = useState(null);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
@@ -2008,6 +2011,17 @@ export default function App() {
     }
 
     if (
+      op?.strategyKey === 'multiaxis_morph' ||
+      op?.strategyKey === '5axis_morph' ||
+      op?.badgeClass === 'multi_morph' ||
+      op?.name?.toLowerCase()?.includes('morph')
+    ) {
+      setEditingMultiaxisMorphOp(op);
+      setIsMultiaxisMorphModalOpen(true);
+      return;
+    }
+
+    if (
       op?.strategyKey === 'surface_finish_flowline' ||
       op?.badgeClass === 'flowline' ||
       op?.strategyKey === 'surface_finish_contour' ||
@@ -2336,6 +2350,10 @@ export default function App() {
     } else if (s === 'surface_rough_waterline' || s === 'waterline_rough' || s === 'rough_waterline') {
       setEditingWaterlineRoughOp(null);
       setIsWaterlineRoughModalOpen(true);
+      return;
+    } else if (s === 'multiaxis_morph' || s === '5axis_morph' || s === 'multi_morph' || s === 'morph') {
+      setEditingMultiaxisMorphOp(null);
+      setIsMultiaxisMorphModalOpen(true);
       return;
     } else if (s === 'adaptive' || s === 'dynamic_mill') {
       newOp = {
@@ -2814,6 +2832,58 @@ export default function App() {
     setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setIsWaterlineRoughModalOpen(false);
     setEditingWaterlineRoughOp(null);
+  };
+
+  const handleSaveMultiaxisMorphOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : ((savedOp.id != null && Number.isFinite(Number(savedOp.id))) ? Number(savedOp.id) : nextId);
+
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.tool?.id || savedOp.toolId)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 3, number: 3, type: 'ball', diameter: 10, name: '10mm Ball Nose' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: finalId,
+      name: savedOp.name || '5-Axis Morph Between 2 Curves',
+      strategyKey: 'multiaxis_morph',
+      badgeClass: 'multi_morph',
+      opType: 'multiaxis',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 12000,
+      feedRate: savedOp.tool?.feedRate || 3000,
+      plungeRate: savedOp.tool?.plungeRate || 600,
+      passes: savedOp.cutPattern?.numberOfCuts || savedOp.passes || 25,
+      stepoverMm: savedOp.cutPattern?.stepoverDistanceMm || savedOp.stepoverMm || 1.5,
+      cuttingMethod: savedOp.cutPattern?.cuttingMethod || 'zigzag',
+      cutOrder: savedOp.cutPattern?.cutOrder || 'curve1_to_curve2',
+      leadAngleDeg: savedOp.toolAxisControl?.leadAngleDeg ?? 10.0,
+      tiltAngleDeg: savedOp.toolAxisControl?.tiltAngleDeg ?? 15.0,
+      kinematicsId: savedOp.machineKinematics?.kinematicsId || 'table_table_ac',
+      tcpmMode: savedOp.machineKinematics?.tcpmMode || 'fanuc',
+      rapidHeight: savedOp.linkingParameters?.clearancePlaneZ || 50.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
+      showToast('5-Axis Multiaxis Morph parameters updated and toolpath regenerated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('5-Axis Multiaxis Morph operation generated', 'success');
+    }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+    setIsMultiaxisMorphModalOpen(false);
+    setEditingMultiaxisMorphOp(null);
   };
 
   const handleSelectSampleModel = async (type) => {
@@ -3999,6 +4069,14 @@ export default function App() {
       case 'tp_3d_waterline_rough':
         setEditingWaterlineRoughOp(null);
         setIsWaterlineRoughModalOpen(true);
+        break;
+      case 'multiaxis_morph':
+      case '5axis_morph':
+      case 'multi_morph':
+      case 'tp_multi_morph':
+      case 'morph':
+        setEditingMultiaxisMorphOp(null);
+        setIsMultiaxisMorphModalOpen(true);
         break;
       case 'chaining':
       case 'chain':
@@ -6548,6 +6626,10 @@ export default function App() {
           setEditingWaterlineRoughOp(null);
           setIsWaterlineRoughModalOpen(true);
         }}
+        onOpenMultiaxisMorphModal={() => {
+          setEditingMultiaxisMorphOp(null);
+          setIsMultiaxisMorphModalOpen(true);
+        }}
         onOpenAdaptiveModal={() => {
           setEditingOptiRoughOp(null);
           setIsOptiRoughModalOpen(true);
@@ -6717,6 +6799,10 @@ export default function App() {
           onOpenSurfaceRoughWaterlineModal={() => {
             setEditingWaterlineRoughOp(null);
             setIsWaterlineRoughModalOpen(true);
+          }}
+          onOpenMultiaxisMorphModal={() => {
+            setEditingMultiaxisMorphOp(null);
+            setIsMultiaxisMorphModalOpen(true);
           }}
           onOpenSurfaceFinishContour={() => openSurfaceFinishSelection('contour', null)}
           onOpenSurfaceFinishPocket={() => openSurfaceFinishSelection('pocket', null)}
@@ -7567,6 +7653,26 @@ export default function App() {
         stockConfig={stockConfig}
         currentModel={currentModel}
         onSaveOperation={handleSaveWaterlineRoughOp}
+        onNotify={showToast}
+        onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
+      />
+
+      {/* Mastercam 5-Axis Multiaxis Morph (Between 2 Curves/Surfaces) Modal */}
+      <MultiaxisMorphModal
+        isOpen={isMultiaxisMorphModalOpen}
+        onClose={() => {
+          setIsMultiaxisMorphModalOpen(false);
+          setEditingMultiaxisMorphOp(null);
+        }}
+        operation={editingMultiaxisMorphOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        machines={machines}
+        onSelectMachine={handleSelectMachine}
+        lastDefinedTool={lastDefinedToolState}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        onSaveOperation={handleSaveMultiaxisMorphOp}
         onNotify={showToast}
         onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
       />

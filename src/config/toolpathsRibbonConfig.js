@@ -324,8 +324,8 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         label: 'Morph',
         icon: 'TpMultiMorph',
         action: 'tp_multi_morph',
-        opType: 'pencil',
-        tooltip: 'Morph between Two Curves / Surfaces'
+        opType: 'multiaxis_morph',
+        tooltip: '5-Axis Morph between Two Curves / Surfaces'
       },
       {
         id: 'multi_port',
