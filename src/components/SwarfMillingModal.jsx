@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   X, Check, AlertTriangle, ShieldCheck, Cpu, Sliders,
-  HelpCircle, Compass, Layers, RotateCw, Activity, Sparkles, Orbit
+  HelpCircle, Compass, Layers, RotateCw, Activity, Sparkles, Orbit,
+  CheckCircle2, Info
 } from 'lucide-react';
 
 import {
@@ -172,37 +173,207 @@ export default function SwarfMillingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="relative flex flex-col w-full max-w-5xl h-[88vh] bg-[#1e2430] border border-[#3b455b] rounded-lg shadow-2xl overflow-hidden text-slate-200">
-        {/* Mastercam Titlebar */}
-        <div className="flex items-center justify-between px-4 py-2 bg-[#171c26] border-b border-[#2d3748] select-none">
-          <div className="flex items-center gap-2">
-            <Orbit className="w-5 h-5 text-purple-400" />
-            <span className="font-semibold text-sm tracking-wide text-white">
-              5-Axis Swarf Milling (Flank Contouring) &mdash; Parameter Configuration
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded bg-purple-900/60 text-purple-300 border border-purple-700/50">
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(3px)',
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        boxSizing: 'border-box',
+        fontFamily: "'Segoe UI', Tahoma, Helvetica, sans-serif"
+      }}
+    >
+      <div
+        style={{
+          width: '950px',
+          maxWidth: '98vw',
+          height: '710px',
+          maxHeight: '94vh',
+          backgroundColor: '#f0f2f5',
+          border: '1px solid #717b87',
+          borderRadius: '4px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          fontSize: '12px',
+          color: '#1e293b',
+          userSelect: 'none'
+        }}
+      >
+        {/* Title Bar (Mastercam Classic Slate/Navy Header) */}
+        <div
+          style={{
+            height: '32px',
+            background: 'linear-gradient(90deg, #1e293b 0%, #334155 100%)',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 10px',
+            fontSize: '12.5px',
+            fontWeight: 600,
+            borderBottom: '1px solid #475569',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Orbit size={16} color="#a855f7" />
+            <span>5-Axis Swarf Milling (Flank Contouring) &mdash; Parameter Configuration</span>
+            <span
+              style={{
+                fontSize: '10px',
+                backgroundColor: 'rgba(168, 85, 247, 0.25)',
+                color: '#e9d5ff',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                border: '1px solid rgba(168, 85, 247, 0.4)',
+                fontWeight: 600
+              }}
+            >
               5X FLANK
             </span>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded transition-colors"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#cbd5e1',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              borderRadius: '3px',
+              transition: 'background 0.15s, color 0.15s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#dc2626';
+              e.currentTarget.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#cbd5e1';
+            }}
+            title="Close"
           >
-            <X className="w-4 h-4" />
+            <X size={15} />
           </button>
         </div>
 
-        {/* Modal Body: Mastercam 2-Column Layout */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left Navigation Tree */}
-          <div className="w-64 bg-[#141822] border-r border-[#2d3748] flex flex-col select-none">
-            <div className="p-3 border-b border-[#2d3748] bg-[#171c26]">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Parameter Pages
+        {/* Top Dynamics & Physics Quick HUD Bar */}
+        <div
+          style={{
+            backgroundColor: '#e2e8f0',
+            borderBottom: '1px solid #cbd5e1',
+            padding: '6px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            fontSize: '11px',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#ffffff',
+                padding: '3px 8px',
+                borderRadius: '3px',
+                border: '1px solid #cbd5e1'
+              }}
+            >
+              <Compass size={14} color="#7c3aed" />
+              <span style={{ color: '#64748b', fontWeight: 500 }}>Lead:</span>
+              <strong style={{ color: '#0f172a' }}>{formState.leadAngleDeg}&deg;</strong>
+              <span style={{ color: '#cbd5e1', margin: '0 2px' }}>|</span>
+              <span style={{ color: '#64748b', fontWeight: 500 }}>Tilt:</span>
+              <strong style={{ color: '#0f172a' }}>{formState.tiltOffsetDeg}&deg;</strong>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#334155' }}>
+              <span>
+                <span style={{ color: '#64748b' }}>MRR:</span>{' '}
+                <strong style={{ color: '#7c3aed' }}>{physics.mrr} cm&sup3;/min</strong>
+              </span>
+              <span>
+                <span style={{ color: '#64748b' }}>Force:</span>{' '}
+                <strong style={{ color: '#0f172a' }}>{physics.fc} N</strong>
+              </span>
+              <span>
+                <span style={{ color: '#64748b' }}>Deflection:</span>{' '}
+                <strong style={{ color: physics.ratingColor }}>
+                  {physics.deflectionMm} mm ({physics.deflectionMicrons} &mu;m)
+                </strong>
+              </span>
+              <span>
+                <span style={{ color: '#64748b' }}>Taper Err:</span>{' '}
+                <strong style={{ color: '#0f172a' }}>{physics.taperErrorDeg}&deg;</strong>
               </span>
             </div>
-            <div className="flex-1 overflow-y-auto py-2">
+          </div>
+
+          {/* Preset Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: '#64748b', fontWeight: 500 }}>Preset:</span>
+            <select
+              value={formState.presetId}
+              onChange={(e) => handleApplyPreset(e.target.value)}
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '3px',
+                padding: '3px 8px',
+                fontSize: '11px',
+                color: '#0f172a',
+                outline: 'none'
+              }}
+            >
+              {Object.entries(SWARF_MILLING_PRESETS).map(([k, p]) => (
+                <option key={k} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Modal Body: Mastercam 2-Column Layout */}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          {/* Left Navigation Tree */}
+          <div
+            style={{
+              width: '230px',
+              backgroundColor: '#ffffff',
+              borderRight: '1px solid #cbd5e1',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              overflowY: 'auto'
+            }}
+          >
+            <div style={{ padding: '6px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <div
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: '#94a3b8',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >
+                Swarf Parameters
+              </div>
               {Object.entries(SWARF_MILLING_PAGES).map(([pageKey, title]) => {
                 const isActive = activePage === pageKey;
                 const isEdited = editedPages.has(pageKey);
@@ -210,70 +381,116 @@ export default function SwarfMillingModal({
                   <button
                     key={pageKey}
                     onClick={() => setActivePage(pageKey)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left transition-colors border-l-2 ${
-                      isActive
-                        ? 'bg-purple-950/40 text-purple-200 border-purple-500 font-semibold'
-                        : 'text-slate-300 hover:bg-slate-800/60 border-transparent'
-                    }`}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '6px 10px',
+                      borderRadius: '3px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '11.5px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'background 0.1s',
+                      backgroundColor: isActive ? '#3b82f6' : 'transparent',
+                      color: isActive ? '#ffffff' : '#334155',
+                      fontWeight: isActive ? 600 : 400
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
-                    <span className="truncate">{title}</span>
-                    {isEdited && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 ml-2" />
-                    )}
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {title}
+                    </span>
+                    {isEdited && !isActive && <Check size={12} color="#10b981" />}
                   </button>
                 );
               })}
             </div>
 
             {/* Tool Information Snippet */}
-            <div className="p-3 border-t border-[#2d3748] bg-[#10141d] text-xs space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Active Cutter:</span>
-                <span className="font-semibold text-white truncate max-w-[120px]">
+            <div
+              style={{
+                margin: '8px',
+                padding: '10px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '4px',
+                fontSize: '11px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '5px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Active Cutter:</span>
+                <span style={{ fontWeight: 600, color: '#0f172a', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {selectedTool?.name}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-slate-400">
-                <span>Diameter:</span>
-                <span className="text-purple-300 font-mono">{selectedTool?.diameter} mm</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Diameter:</span>
+                <span style={{ fontWeight: 600, color: '#7c3aed' }}>{selectedTool?.diameter} mm</span>
               </div>
-              <div className="flex items-center justify-between text-slate-400">
-                <span>Flute Length:</span>
-                <span className="text-emerald-400 font-mono">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Flute Length:</span>
+                <span style={{ fontWeight: 600, color: '#16a34a' }}>
                   {selectedTool?.fluteLength || 25} mm
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Right Parameter Workspace */}
-          <div className="flex-1 flex flex-col overflow-y-auto p-5 bg-[#1a1f2c]">
+          {/* Right Parameter Workspace (Light Theme) */}
+          <div
+            style={{
+              flex: 1,
+              backgroundColor: '#f8fafc',
+              overflowY: 'auto',
+              padding: '16px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}
+          >
             {/* Page 1: Toolpath Type */}
             {activePage === 'toolpath_type' && (
-              <div className="space-y-5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <h3 className="text-base font-semibold text-white">5-Axis Swarf Milling Overview</h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Machining with the cylindrical flank of the tool tangential to ruled sidewalls and blade surfaces.
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>
+                    5-Axis Swarf Milling (Flank Contouring) Overview
+                  </h3>
+                  <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0 }}>
+                    Machining with the cylindrical/tapered flank of the tool tangential to ruled sidewalls and blade surfaces.
                   </p>
                 </div>
 
-                {/* Preset Application Cards */}
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-300">Industrial Presets</label>
-                  <div className="grid grid-cols-2 gap-3">
+                {/* Industrial Presets */}
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px' }}>
+                  <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
+                    Industrial Application Presets
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     {Object.entries(SWARF_MILLING_PRESETS).map(([key, p]) => (
                       <div
                         key={key}
                         onClick={() => handleApplyPreset(key)}
-                        className={`p-3 rounded border cursor-pointer transition-all ${
-                          formState.presetId === p.id
-                            ? 'bg-purple-950/40 border-purple-500 text-white'
-                            : 'bg-[#151924] border-[#2d3748] hover:border-slate-500 text-slate-300'
-                        }`}
+                        style={{
+                          padding: '10px',
+                          borderRadius: '4px',
+                          border: formState.presetId === p.id ? '2px solid #7c3aed' : '1px solid #e2e8f0',
+                          backgroundColor: formState.presetId === p.id ? '#ede9fe' : '#ffffff',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
                       >
-                        <div className="font-semibold text-xs text-purple-300">{p.name}</div>
-                        <div className="text-[11px] text-slate-400 mt-1">
+                        <div style={{ fontWeight: 600, fontSize: '11.5px', color: '#7c3aed' }}>{p.name}</div>
+                        <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '3px' }}>
                           Direction: {p.cutDirection.toUpperCase()} &bull; Slices: {p.axialSlices} &bull; Passes: {p.radialPasses}
                         </div>
                       </div>
@@ -282,13 +499,25 @@ export default function SwarfMillingModal({
                 </div>
 
                 {/* Operation Name */}
-                <div className="pt-2 border-t border-[#2d3748] space-y-2">
-                  <label className="text-xs font-semibold text-slate-300">Toolpath Name</label>
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                    Toolpath Name
+                  </label>
                   <input
                     type="text"
                     value={formState.name}
                     onChange={(e) => updateField('name', e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                    style={{
+                      width: '100%',
+                      padding: '5px 8px',
+                      fontSize: '11.5px',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #94a3b8',
+                      borderRadius: '3px',
+                      color: '#0f172a',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
                   />
                 </div>
               </div>
@@ -296,42 +525,60 @@ export default function SwarfMillingModal({
 
             {/* Page 2: Cut Pattern & Rail Guides */}
             {activePage === 'cut_pattern' && (
-              <div className="space-y-5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Cut Pattern & Rail Guides</h3>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>
+                    Cut Pattern &amp; Rail Guides
+                  </h3>
+                  <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0 }}>
                     Define ruled guide rails, curve synchronization, and multi-depth / multi-pass slicing.
                   </p>
                 </div>
 
-                {/* Drive Geometry Mode */}
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-300">Geometry Drive Mode</label>
-                  <div className="grid grid-cols-3 gap-3">
+                {/* Geometry Drive Mode */}
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
+                    Geometry Drive Mode
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                     {Object.values(SWARF_DRIVE_MODES).map((mode) => (
                       <div
                         key={mode.id}
                         onClick={() => updateField('driveMode', mode.id)}
-                        className={`p-3 rounded border cursor-pointer transition-all ${
-                          formState.driveMode === mode.id
-                            ? 'bg-purple-950/40 border-purple-500 text-white'
-                            : 'bg-[#151924] border-[#2d3748] hover:border-slate-500 text-slate-300'
-                        }`}
+                        style={{
+                          padding: '10px',
+                          borderRadius: '4px',
+                          border: formState.driveMode === mode.id ? '2px solid #7c3aed' : '1px solid #e2e8f0',
+                          backgroundColor: formState.driveMode === mode.id ? '#ede9fe' : '#ffffff',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
                       >
-                        <div className="text-xs font-semibold text-purple-300">{mode.name}</div>
-                        <div className="text-[10px] text-slate-400 mt-1">{mode.desc}</div>
+                        <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#7c3aed' }}>{mode.name}</div>
+                        <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>{mode.desc}</div>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Rail Synchronization */}
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-300">Rail Synchronization</label>
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                    Rail Synchronization
+                  </label>
                   <select
                     value={formState.syncMode}
                     onChange={(e) => updateField('syncMode', e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                    style={{
+                      width: '100%',
+                      padding: '5px 8px',
+                      fontSize: '11.5px',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #94a3b8',
+                      borderRadius: '3px',
+                      color: '#0f172a',
+                      outline: 'none'
+                    }}
                   >
                     {Object.values(SWARF_SYNC_MODES).map((s) => (
                       <option key={s.id} value={s.id}>
@@ -342,24 +589,46 @@ export default function SwarfMillingModal({
                 </div>
 
                 {/* Cutting Direction & Method */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Milling Direction</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Milling Direction
+                    </label>
                     <select
                       value={formState.cutDirection}
                       onChange={(e) => updateField('cutDirection', e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '5px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        outline: 'none'
+                      }}
                     >
                       <option value="climb">Climb Milling (Left of Guide Rail)</option>
                       <option value="conventional">Conventional Milling (Right of Guide Rail)</option>
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Cutting Motion</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Cutting Motion
+                    </label>
                     <select
                       value={formState.cuttingMethod}
                       onChange={(e) => updateField('cuttingMethod', e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '5px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        outline: 'none'
+                      }}
                     >
                       <option value="one_way">One Way (Consistent Climb Direction)</option>
                       <option value="zig_zag">Zig-Zag (Bi-directional Flank Pass)</option>
@@ -368,69 +637,85 @@ export default function SwarfMillingModal({
                 </div>
 
                 {/* Multi-Depth & Multi-Pass Slicing */}
-                <div className="grid grid-cols-2 gap-4 p-3 bg-[#141822] border border-[#2d3748] rounded">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 600, color: '#0f172a', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
-                        id="enableAxial"
                         checked={formState.enableAxialSlices}
                         onChange={(e) => updateField('enableAxialSlices', e.target.checked)}
-                        className="rounded border-[#2d3748] bg-[#121620] text-purple-600 focus:ring-0"
                       />
-                      <label htmlFor="enableAxial" className="text-xs font-semibold text-white cursor-pointer">
-                        Axial Multi-Depth Slices
-                      </label>
-                    </div>
+                      Axial Multi-Depth Slices
+                    </label>
                     {formState.enableAxialSlices && (
-                      <div className="pl-5 space-y-1.5">
-                        <label className="text-[11px] text-slate-400">Number of Axial Slices</label>
+                      <div style={{ paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <span style={{ fontSize: '10.5px', color: '#64748b' }}>Number of Axial Slices:</span>
                         <input
                           type="number"
                           min="1"
                           max="10"
                           value={formState.axialSlices}
                           onChange={(e) => updateField('axialSlices', Number(e.target.value))}
-                          className="w-24 px-2 py-1 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                          style={{
+                            width: '80px',
+                            padding: '3px 6px',
+                            fontSize: '11.5px',
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #94a3b8',
+                            borderRadius: '3px',
+                            color: '#0f172a'
+                          }}
                         />
                       </div>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 600, color: '#0f172a', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
-                        id="enableRadial"
                         checked={formState.enableRadialPasses}
                         onChange={(e) => updateField('enableRadialPasses', e.target.checked)}
-                        className="rounded border-[#2d3748] bg-[#121620] text-purple-600 focus:ring-0"
                       />
-                      <label htmlFor="enableRadial" className="text-xs font-semibold text-white cursor-pointer">
-                        Radial Multi-Pass (Stock Stepovers)
-                      </label>
-                    </div>
+                      Radial Multi-Pass (Stock Stepovers)
+                    </label>
                     {formState.enableRadialPasses && (
-                      <div className="pl-5 grid grid-cols-2 gap-2">
+                      <div style={{ paddingLeft: '18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                         <div>
-                          <label className="text-[11px] text-slate-400">Passes Count</label>
+                          <span style={{ fontSize: '10.5px', color: '#64748b', display: 'block' }}>Passes:</span>
                           <input
                             type="number"
                             min="1"
                             max="8"
                             value={formState.radialPasses}
                             onChange={(e) => updateField('radialPasses', Number(e.target.value))}
-                            className="w-full px-2 py-1 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                            style={{
+                              width: '100%',
+                              padding: '3px 6px',
+                              fontSize: '11.5px',
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #94a3b8',
+                              borderRadius: '3px',
+                              color: '#0f172a'
+                            }}
                           />
                         </div>
                         <div>
-                          <label className="text-[11px] text-slate-400">Stepover (mm)</label>
+                          <span style={{ fontSize: '10.5px', color: '#64748b', display: 'block' }}>Stepover (mm):</span>
                           <input
                             type="number"
                             step="0.05"
                             value={formState.radialStepover}
                             onChange={(e) => updateField('radialStepover', Number(e.target.value))}
-                            className="w-full px-2 py-1 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                            style={{
+                              width: '100%',
+                              padding: '3px 6px',
+                              fontSize: '11.5px',
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #94a3b8',
+                              borderRadius: '3px',
+                              color: '#0f172a'
+                            }}
                           />
                         </div>
                       </div>
@@ -439,25 +724,49 @@ export default function SwarfMillingModal({
                 </div>
 
                 {/* Stock to Leave */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Wall Stock to Leave (mm)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Wall Stock to Leave (mm)
+                    </label>
                     <input
                       type="number"
                       step="0.05"
                       value={formState.stockToLeaveWall}
                       onChange={(e) => updateField('stockToLeaveWall', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffd4',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Floor Stock to Leave (mm)</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Floor Stock to Leave (mm)
+                    </label>
                     <input
                       type="number"
                       step="0.05"
                       value={formState.stockToLeaveFloor}
                       onChange={(e) => updateField('stockToLeaveFloor', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffd4',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
                 </div>
@@ -466,29 +775,50 @@ export default function SwarfMillingModal({
 
             {/* Page 3: Tool Selection & Dynamics */}
             {activePage === 'tool' && (
-              <div className="space-y-5">
-                <div className="flex items-center justify-between">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <h3 className="text-base font-semibold text-white">Tool Selection & Dynamics</h3>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>
+                      Tool Selection &amp; Dynamics
+                    </h3>
+                    <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0 }}>
                       Choose cutting tool and configure spindle speeds and feeds.
                     </p>
                   </div>
                   <button
                     onClick={onOpenToolLibrary}
-                    className="px-3 py-1.5 text-xs font-semibold bg-purple-700 hover:bg-purple-600 text-white rounded transition-colors"
+                    style={{
+                      padding: '5px 12px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      backgroundColor: '#7c3aed',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '3px',
+                      cursor: 'pointer'
+                    }}
                   >
                     Tool Library...
                   </button>
                 </div>
 
-                {/* Tool Selector Dropdown */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Selected Tool</label>
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                    Selected Tool
+                  </label>
                   <select
                     value={formState.toolId}
                     onChange={(e) => updateField('toolId', Number(e.target.value))}
-                    className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                    style={{
+                      width: '100%',
+                      padding: '5px 8px',
+                      fontSize: '11.5px',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #94a3b8',
+                      borderRadius: '3px',
+                      color: '#0f172a',
+                      outline: 'none'
+                    }}
                   >
                     {tools.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -499,51 +829,120 @@ export default function SwarfMillingModal({
                 </div>
 
                 {/* Flute Length vs Wall Height Checker */}
-                <div className="p-3 bg-[#141822] border border-[#2d3748] rounded flex items-center justify-between">
+                <div
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '4px',
+                    padding: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
                   <div>
-                    <div className="text-xs font-semibold text-white">Tool Flute Contact Check</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">
+                    <div style={{ fontWeight: 600, fontSize: '11.5px', color: '#0f172a' }}>Tool Flute Contact Check</div>
+                    <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '2px' }}>
                       Flute Length: {selectedTool?.fluteLength || 25}mm &bull; Wall Height: {formState.wallHeightMm}mm
                     </div>
                   </div>
                   {(selectedTool?.fluteLength || 25) >= Number(formState.wallHeightMm) ? (
-                    <span className="text-xs px-2.5 py-1 rounded bg-emerald-950/60 border border-emerald-600/50 text-emerald-300 font-semibold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Full Depth Flank Covered
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        padding: '4px 10px',
+                        borderRadius: '3px',
+                        backgroundColor: '#dcfce7',
+                        border: '1px solid #86efac',
+                        color: '#15803d',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Check size={13} /> Full Depth Flank Covered
                     </span>
                   ) : (
-                    <span className="text-xs px-2.5 py-1 rounded bg-amber-950/60 border border-amber-600/50 text-amber-300 font-semibold flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5" /> Multi-Depth Required
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        padding: '4px 10px',
+                        borderRadius: '3px',
+                        backgroundColor: '#fef3c7',
+                        border: '1px solid #fde047',
+                        color: '#b45309',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <AlertTriangle size={13} /> Multi-Depth Required
                     </span>
                   )}
                 </div>
 
                 {/* Speeds and Feeds */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Spindle Speed (RPM)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      Spindle Speed (RPM)
+                    </label>
                     <input
                       type="number"
                       value={formState.spindleRpm}
                       onChange={(e) => updateField('spindleRpm', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 6px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Cutting Feed (mm/min)</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      Cutting Feed (mm/min)
+                    </label>
                     <input
                       type="number"
                       value={formState.feedRate}
                       onChange={(e) => updateField('feedRate', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 6px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Plunge Feed (mm/min)</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      Plunge Feed (mm/min)
+                    </label>
                     <input
                       type="number"
                       value={formState.plungeFeed}
                       onChange={(e) => updateField('plungeFeed', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 6px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
                 </div>
@@ -552,21 +951,33 @@ export default function SwarfMillingModal({
 
             {/* Page 4: Holder Definition & Clearance */}
             {activePage === 'holder' && (
-              <div className="space-y-5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Holder Definition & Clearance</h3>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>
+                    Holder Definition &amp; Clearance
+                  </h3>
+                  <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0 }}>
                     Manage tool stickout and holder collision envelopes.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Holder Spindle Taper</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Holder Spindle Taper
+                    </label>
                     <select
                       value={formState.holderType}
                       onChange={(e) => updateField('holderType', e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '5px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a'
+                      }}
                     >
                       <option value="hsk_a63">HSK-A63 High-Precision Hydraulic Chuck</option>
                       <option value="bt40">BT40 Shrink-Fit Thermal Chuck</option>
@@ -574,37 +985,70 @@ export default function SwarfMillingModal({
                       <option value="capto_c6">Coromant Capto C6 Modular</option>
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Tool Stickout (L_overhang mm)</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Tool Stickout (L_overhang mm)
+                    </label>
                     <input
                       type="number"
                       step="1"
                       value={formState.toolStickoutMm}
                       onChange={(e) => updateField('toolStickoutMm', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffd4',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Holder Clearance Buffer (mm)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Holder Clearance Buffer (mm)
+                    </label>
                     <input
                       type="number"
                       step="0.5"
                       value={formState.holderClearanceMm}
                       onChange={(e) => updateField('holderClearanceMm', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Shank Clearance Buffer (mm)</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Shank Clearance Buffer (mm)
+                    </label>
                     <input
                       type="number"
                       step="0.5"
                       value={formState.shankClearanceMm}
                       onChange={(e) => updateField('shankClearanceMm', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
                 </div>
@@ -613,17 +1057,21 @@ export default function SwarfMillingModal({
 
             {/* Page 5: Tool Axis Control (Lead / Tilt / Fanning) */}
             {activePage === 'tool_axis_control' && (
-              <div className="space-y-5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Tool Axis Control & Orientation</h3>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>
+                    Tool Axis Control &amp; Orientation
+                  </h3>
+                  <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0 }}>
                     Control primary flank contact, lead/lag forward tilt, and rotary motion smoothing.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Lead / Lag Angle (Degrees)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Lead / Lag Angle (Degrees)
+                    </label>
                     <input
                       type="number"
                       step="0.1"
@@ -631,14 +1079,25 @@ export default function SwarfMillingModal({
                       max="5"
                       value={formState.leadAngleDeg}
                       onChange={(e) => updateField('leadAngleDeg', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffd4',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
-                    <div className="text-[10px] text-slate-400">
+                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
                       Forward lean along feed direction (+0.5&deg; eliminates heel drag).
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Side Tilt Offset (Degrees)</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Side Tilt Offset (Degrees)
+                    </label>
                     <input
                       type="number"
                       step="0.1"
@@ -646,28 +1105,33 @@ export default function SwarfMillingModal({
                       max="10"
                       value={formState.tiltOffsetDeg}
                       onChange={(e) => updateField('tiltOffsetDeg', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffd4',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
-                    <div className="text-[10px] text-slate-400">
+                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
                       Transverse tilt relative to ruled surface normal.
                     </div>
                   </div>
                 </div>
 
-                <div className="p-3 bg-[#141822] border border-[#2d3748] rounded space-y-2">
-                  <div className="flex items-center gap-2">
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 600, color: '#0f172a', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
-                      id="smoothSing"
                       checked={formState.smoothSingularities}
                       onChange={(e) => updateField('smoothSingularities', e.target.checked)}
-                      className="rounded border-[#2d3748] bg-[#121620] text-purple-600 focus:ring-0"
                     />
-                    <label htmlFor="smoothSing" className="text-xs font-semibold text-white cursor-pointer">
-                      Automatic Singularity & Gimbal Lock Smoothing
-                    </label>
-                  </div>
-                  <p className="text-[11px] text-slate-400 pl-5">
+                    Automatic Singularity &amp; Gimbal Lock Smoothing
+                  </label>
+                  <p style={{ fontSize: '10.5px', color: '#64748b', margin: '4px 0 0 20px' }}>
                     Maintains smooth rotary acceleration near vertical pole transitions (A &approx; 0&deg;).
                   </p>
                 </div>
@@ -676,35 +1140,58 @@ export default function SwarfMillingModal({
 
             {/* Page 6: Collision Control & Gouge Protection */}
             {activePage === 'collision_control' && (
-              <div className="space-y-5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Collision Control & Gouge Protection</h3>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>
+                    Collision Control &amp; Gouge Protection
+                  </h3>
+                  <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0 }}>
                     Verify floor clearance and prevent tool body / holder collisions.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Floor Clearance Lift (mm)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Floor Clearance Lift (mm)
+                    </label>
                     <input
                       type="number"
                       step="0.1"
                       min="0"
                       value={formState.floorClearanceMm}
                       onChange={(e) => updateField('floorClearanceMm', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffd4',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
-                    <div className="text-[10px] text-slate-400">
+                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
                       Axial elevation above floor curve to prevent bottom corner gouging.
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Collision Avoidance Action</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Collision Avoidance Action
+                    </label>
                     <select
                       value={formState.collisionRetractMode}
                       onChange={(e) => updateField('collisionRetractMode', e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '5px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a'
+                      }}
                     >
                       <option value="retract_along_tool_axis">Retract Tool Along Orientation Vector</option>
                       <option value="tilt_away">Tilt Tool Flank Away From Interference</option>
@@ -717,63 +1204,120 @@ export default function SwarfMillingModal({
 
             {/* Page 7: Linking Parameters & Lead In/Out */}
             {activePage === 'linking_parameters' && (
-              <div className="space-y-5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Linking Parameters & Lead In/Out</h3>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>
+                    Linking Parameters &amp; Lead In/Out
+                  </h3>
+                  <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0 }}>
                     Tangential roll-in / roll-out 3D arcs and safe clearance heights.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Clearance Z (mm)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      Clearance Z (mm)
+                    </label>
                     <input
                       type="number"
                       value={formState.clearanceZ}
                       onChange={(e) => updateField('clearanceZ', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 6px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Retract Z (mm)</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      Retract Z (mm)
+                    </label>
                     <input
                       type="number"
                       value={formState.retractZ}
                       onChange={(e) => updateField('retractZ', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 6px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Feed Plane Z (mm)</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      Feed Plane Z (mm)
+                    </label>
                     <input
                       type="number"
                       value={formState.feedPlaneZ}
                       onChange={(e) => updateField('feedPlaneZ', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 6px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 p-3 bg-[#141822] border border-[#2d3748] rounded">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-purple-300">Roll-In Arc Radius (mm)</label>
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#7c3aed', marginBottom: '4px' }}>
+                      Roll-In Arc Radius (mm)
+                    </label>
                     <input
                       type="number"
                       step="1"
                       value={formState.rollInRadiusMm}
                       onChange={(e) => updateField('rollInRadiusMm', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffd4',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-purple-300">Roll-In Arc Sweep (Deg)</label>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#7c3aed', marginBottom: '4px' }}>
+                      Roll-In Arc Sweep (Deg)
+                    </label>
                     <input
                       type="number"
                       step="5"
                       value={formState.rollInAngleDeg}
                       onChange={(e) => updateField('rollInAngleDeg', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffd4',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
                 </div>
@@ -782,29 +1326,36 @@ export default function SwarfMillingModal({
 
             {/* Page 8: Machine Kinematics & Post Dialect */}
             {activePage === 'machine_kinematics' && (
-              <div className="space-y-5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Machine Kinematics & Post Dialect</h3>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>
+                    Machine Kinematics &amp; Post Dialect
+                  </h3>
+                  <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0 }}>
                     Select 5-axis machine kinematics solver and CNC controller post-processor dialect.
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-300">Machine Kinematic Architecture</label>
-                  <div className="grid grid-cols-2 gap-3">
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
+                    Machine Kinematic Architecture
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     {Object.values(SWARF_MACHINE_KINEMATICS).map((k) => (
                       <div
                         key={k.id}
                         onClick={() => updateField('machineKinematics', k.id)}
-                        className={`p-3 rounded border cursor-pointer transition-all ${
-                          formState.machineKinematics === k.id
-                            ? 'bg-purple-950/40 border-purple-500 text-white'
-                            : 'bg-[#151924] border-[#2d3748] hover:border-slate-500 text-slate-300'
-                        }`}
+                        style={{
+                          padding: '10px',
+                          borderRadius: '4px',
+                          border: formState.machineKinematics === k.id ? '2px solid #7c3aed' : '1px solid #e2e8f0',
+                          backgroundColor: formState.machineKinematics === k.id ? '#ede9fe' : '#ffffff',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
                       >
-                        <div className="text-xs font-semibold text-purple-300">{k.name}</div>
-                        <div className="text-[10px] text-slate-400 mt-1">
+                        <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#7c3aed' }}>{k.name}</div>
+                        <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>
                           Axes: {k.primaryAxis} &bull; {k.secondaryAxis}
                         </div>
                       </div>
@@ -812,12 +1363,22 @@ export default function SwarfMillingModal({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-300">CNC Controller Dialect</label>
+                <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                    CNC Controller Dialect
+                  </label>
                   <select
                     value={formState.controllerDialect}
                     onChange={(e) => updateField('controllerDialect', e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                    style={{
+                      width: '100%',
+                      padding: '5px 8px',
+                      fontSize: '11.5px',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #94a3b8',
+                      borderRadius: '3px',
+                      color: '#0f172a'
+                    }}
                   >
                     {Object.values(SWARF_TCPM_DIALECTS).map((d) => (
                       <option key={d.id} value={d.id}>
@@ -831,33 +1392,57 @@ export default function SwarfMillingModal({
 
             {/* Page 9: Arc Filter & 5X Tolerance */}
             {activePage === 'arc_filter' && (
-              <div className="space-y-5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Arc Filter & 5X Tolerance</h3>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>
+                    Arc Filter &amp; 5X Tolerance
+                  </h3>
+                  <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0 }}>
                     Control trajectory point density and look-ahead acceleration.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Linearization Tolerance (mm)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Linearization Tolerance (mm)
+                    </label>
                     <input
                       type="number"
                       step="0.005"
                       value={formState.linearizationToleranceMm}
                       onChange={(e) => updateField('linearizationToleranceMm', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Max Rotary Step Per Block (&deg;)</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Max Rotary Step Per Block (&deg;)
+                    </label>
                     <input
                       type="number"
                       step="0.5"
                       value={formState.maxRotaryAngleStepDeg}
                       onChange={(e) => updateField('maxRotaryAngleStepDeg', Number(e.target.value))}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '4px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
                 </div>
@@ -866,33 +1451,55 @@ export default function SwarfMillingModal({
 
             {/* Page 10: Planes (WCS) & Coolant */}
             {activePage === 'planes_coolant' && (
-              <div className="space-y-5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Planes (WCS) & Coolant Management</h3>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>
+                    Planes (WCS) &amp; Coolant Management
+                  </h3>
+                  <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0 }}>
                     Select work coordinate system and cutting fluid mode.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Work Coordinate System (WCS)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Work Coordinate System (WCS)
+                    </label>
                     <select
                       value={formState.wcsPlane}
                       onChange={(e) => updateField('wcsPlane', e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '5px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a'
+                      }}
                     >
                       <option value="top_g17">Top (G17) - Standard Vertical</option>
                       <option value="front_g19">Front (G19)</option>
                       <option value="right_g18">Right (G18)</option>
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Coolant Mode</label>
+                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Coolant Mode
+                    </label>
                     <select
                       value={formState.coolantMode}
                       onChange={(e) => updateField('coolantMode', e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs bg-[#121620] border border-[#2d3748] rounded text-white focus:outline-none focus:border-purple-500"
+                      style={{
+                        width: '100%',
+                        padding: '5px 8px',
+                        fontSize: '11.5px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #94a3b8',
+                        borderRadius: '3px',
+                        color: '#0f172a'
+                      }}
                     >
                       <option value="flood_m08">Flood Coolant (M08)</option>
                       <option value="through_spindle_m88">High-Pressure TSC 70 bar (M88)</option>
@@ -906,16 +1513,37 @@ export default function SwarfMillingModal({
           </div>
         </div>
 
-        {/* Modal Footer: Real-time Physics HUD & Commit Actions */}
-        <div className="px-4 py-2.5 bg-[#141822] border-t border-[#2d3748] flex items-center justify-between text-xs select-none">
+        {/* Modal Footer: Real-time Physics HUD & Commit Actions (Mastercam Light Theme) */}
+        <div
+          style={{
+            height: '42px',
+            backgroundColor: '#e2e8f0',
+            borderTop: '1px solid #cbd5e1',
+            padding: '0 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '11.5px',
+            boxSizing: 'border-box'
+          }}
+        >
           {/* Real-time Physics HUD */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-400">Material:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ color: '#64748b', fontWeight: 500 }}>Material:</span>
               <select
                 value={formState.materialId}
                 onChange={(e) => updateField('materialId', e.target.value)}
-                className="px-2 py-0.5 bg-[#1e2430] border border-[#3b455b] rounded text-white font-medium text-xs focus:outline-none focus:border-purple-500"
+                style={{
+                  padding: '2px 6px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '3px',
+                  color: '#0f172a',
+                  fontWeight: 600,
+                  fontSize: '11px',
+                  outline: 'none'
+                }}
               >
                 {Object.values(SWARF_MILLING_MATERIALS).map((m) => (
                   <option key={m.id} value={m.id}>
@@ -925,17 +1553,14 @@ export default function SwarfMillingModal({
               </select>
             </div>
 
-            <div className="h-4 w-px bg-slate-700" />
+            <div style={{ width: '1px', height: '18px', backgroundColor: '#cbd5e1' }} />
 
-            <div className="flex items-center gap-3 text-[11px] text-slate-300 font-mono">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '11px', color: '#334155' }}>
               <span>
-                MRR: <strong className="text-white">{physics.mrr}</strong> cm&sup3;/min
+                MRR: <strong style={{ color: '#0f172a' }}>{physics.mrr}</strong> cm&sup3;/min
               </span>
               <span>
-                Power: <strong className="text-white">{physics.spindlePowerKw}</strong> kW
-              </span>
-              <span>
-                Force: <strong className="text-white">{physics.fc}</strong> N
+                Force: <strong style={{ color: '#0f172a' }}>{physics.fc}</strong> N
               </span>
               <span>
                 Deflection:{' '}
@@ -943,26 +1568,54 @@ export default function SwarfMillingModal({
                   {physics.deflectionMm} mm ({physics.deflectionMicrons} &mu;m)
                 </strong>
               </span>
-              <span>
-                Taper Err: <strong className="text-purple-300">{physics.taperErrorDeg}&deg;</strong>
-              </span>
             </div>
           </div>
 
-          {/* Action Buttons: Green Checkmark (OK) & Red Cancel */}
-          <div className="flex items-center gap-2">
+          {/* Action Buttons: Classic Mastercam Cancel & Green Commit Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={onClose}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition-colors"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 12px',
+                fontSize: '11.5px',
+                fontWeight: 500,
+                color: '#334155',
+                backgroundColor: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                transition: 'background 0.1s'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
             >
-              <X className="w-3.5 h-3.5 text-red-400" />
+              <X size={14} color="#dc2626" />
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="flex items-center gap-1.5 px-4 py-1 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded border border-emerald-500 shadow-md shadow-emerald-900/30 transition-all"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 16px',
+                fontSize: '11.5px',
+                fontWeight: 600,
+                color: '#ffffff',
+                background: 'linear-gradient(180deg, #16a34a 0%, #15803d 100%)',
+                border: '1px solid #166534',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                transition: 'filter 0.15s'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.1)')}
+              onMouseLeave={(e) => (e.currentTarget.style.filter = 'none')}
             >
-              <Check className="w-4 h-4 text-white" />
+              <Check size={15} color="#ffffff" />
               Generate Swarf Toolpath
             </button>
           </div>
