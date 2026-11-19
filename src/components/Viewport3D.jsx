@@ -2732,6 +2732,11 @@ export default function Viewport3D({
         multiaxis_morph: 0xa855f7,
         multi_parallel: 0xd946ef,
         "5axis_parallel": 0xd946ef,
+        "5axis_curve": 0xec4899,
+        multiaxis_drill: 0x0ea5e9,
+        "5axis_drill": 0x0ea5e9,
+        "5axis_port": 0x8b5cf6,
+        "5axis_blade": 0x0284c7,
         rotary_4axis: 0x0284c7,
         "4axis_rotary": 0x0284c7,
         multi_rotary: 0x0284c7,
@@ -2757,9 +2762,12 @@ export default function Viewport3D({
           'drill', 'spotdrill', 'tap', 'probe',
           'swarf', 'multi_parallel', '5axis_parallel',
           'multi_morph', '5axis_morph', 'multiaxis_morph',
-          'rotary_4axis', '4axis_rotary', 'multi_rotary'
+          'rotary_4axis', '4axis_rotary', 'multi_rotary',
+          '5axis_curve', 'multiaxis_drill', '5axis_drill',
+          '5axis_port', '5axis_blade'
         ].includes(op.badgeClass) || [
-          '5axis_swarf', '5axis_parallel', '5axis_morph', 'rotary_4axis', 'multiaxis_morph'
+          '5axis_swarf', '5axis_parallel', '5axis_morph', 'rotary_4axis', 'multiaxis_morph',
+          '5axis_curve', 'multiaxis_drill', '5axis_drill', '5axis_port', '5axis_blade'
         ].includes(op.strategyKey);
         let linkedRapidLines = null;
         if (!keepGeneratorRapids && toolpathData.cuttingLines?.length > 0) {
