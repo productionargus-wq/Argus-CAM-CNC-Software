@@ -48,6 +48,7 @@ export default function RibbonBar({
   onOpenRotary4AxisModal,
   onOpenMultiaxisDrillModal,
   onOpenMultiaxisCurveModal,
+  onOpenMultiaxisDeburrModal,
   onOpenPortExpertModal,
   onOpenBladeExpertModal,
   onOpenLeadInOutModal,
@@ -1883,6 +1884,14 @@ export default function RibbonBar({
                 if (action === 'tp_multi_blade') {
                   if (onOpenBladeExpertModal) {
                     onOpenBladeExpertModal();
+                  } else if (onOpenFiveAxisStudio) {
+                    onOpenFiveAxisStudio();
+                  }
+                  return;
+                }
+                if (action === 'tp_multi_deburr') {
+                  if (onOpenMultiaxisDeburrModal) {
+                    onOpenMultiaxisDeburrModal();
                   } else if (onOpenFiveAxisStudio) {
                     onOpenFiveAxisStudio();
                   }

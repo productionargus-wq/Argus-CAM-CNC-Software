@@ -56,6 +56,7 @@ import MultiaxisParallelModal from './components/MultiaxisParallelModal';
 import Rotary4AxisModal from './components/Rotary4AxisModal';
 import MultiaxisDrillModal from './components/MultiaxisDrillModal';
 import MultiaxisCurveModal from './components/MultiaxisCurveModal';
+import MultiaxisDeburrModal from './components/MultiaxisDeburrModal';
 import MultiaxisPortModal from './components/MultiaxisPortModal';
 import MultiaxisBladeModal from './components/MultiaxisBladeModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
@@ -382,6 +383,8 @@ export default function App() {
   const [editingMultiaxisDrillOp, setEditingMultiaxisDrillOp] = useState(null);
   const [isMultiaxisCurveModalOpen, setIsMultiaxisCurveModalOpen] = useState(false);
   const [editingMultiaxisCurveOp, setEditingMultiaxisCurveOp] = useState(null);
+  const [isMultiaxisDeburrModalOpen, setIsMultiaxisDeburrModalOpen] = useState(false);
+  const [editingMultiaxisDeburrOp, setEditingMultiaxisDeburrOp] = useState(null);
   const [isPortExpertModalOpen, setIsPortExpertModalOpen] = useState(false);
   const [editingPortExpertOp, setEditingPortExpertOp] = useState(null);
   const [isBladeExpertModalOpen, setIsBladeExpertModalOpen] = useState(false);
@@ -2108,6 +2111,17 @@ export default function App() {
     }
 
     if (
+      op?.strategyKey === '5axis_deburr' ||
+      op?.strategy === '5axis_deburr' ||
+      op?.badgeClass === '5axis_deburr' ||
+      op?.name?.toLowerCase()?.includes('deburr')
+    ) {
+      setEditingMultiaxisDeburrOp(op);
+      setIsMultiaxisDeburrModalOpen(true);
+      return;
+    }
+
+    if (
       op?.strategyKey === '5axis_port' ||
       op?.strategy === '5axis_port' ||
       op?.badgeClass === '5axis_port' ||
@@ -2466,6 +2480,10 @@ export default function App() {
     } else if (s === '5axis_curve' || s === 'curve_5x' || s === 'multi_curve') {
       setEditingMultiaxisCurveOp(null);
       setIsMultiaxisCurveModalOpen(true);
+      return;
+    } else if (s === '5axis_deburr' || s === 'deburr' || s === 'multi_deburr' || s === 'deburring') {
+      setEditingMultiaxisDeburrOp(null);
+      setIsMultiaxisDeburrModalOpen(true);
       return;
     } else if (s === '5axis_port' || s === 'port_expert' || s === 'multi_port') {
       setEditingPortExpertOp(null);
@@ -3266,6 +3284,54 @@ export default function App() {
     setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setIsMultiaxisCurveModalOpen(false);
     setEditingMultiaxisCurveOp(null);
+  };
+
+  const handleSaveMultiaxisDeburrOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : (savedOp.id != null && Number.isFinite(Number(savedOp.id)) ? Number(savedOp.id) : nextId);
+
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.toolId || savedOp.tool?.id)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 5, number: 5, type: 'ball_nose', diameter: 6.0, name: '6mm Ball Nose (Deburr)' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: finalId,
+      name: savedOp.name || '5-Axis Multiaxis Deburring',
+      strategy: '5axis_deburr',
+      strategyKey: '5axis_deburr',
+      badgeClass: '5axis_deburr',
+      badgeText: '5X-DEBURR',
+      color: '#f59e0b',
+      opType: 'multiaxis',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      tool: assignedTool,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 16000,
+      spindleRpm: savedOp.tool?.spindleSpeed || 16000,
+      feedRate: savedOp.tool?.feedRate || 3200,
+      rapidHeight: savedOp.linkingParameters?.clearancePlaneMm || 25.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
+      showToast('5-Axis Deburring parameters updated and toolpath regenerated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('5-Axis Deburring operation generated', 'success');
+    }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+    setIsMultiaxisDeburrModalOpen(false);
+    setEditingMultiaxisDeburrOp(null);
   };
 
   const handleSavePortExpertOp = (savedOp) => {
@@ -4612,6 +4678,13 @@ export default function App() {
       case 'tp_multi_curve':
         setEditingMultiaxisCurveOp(null);
         setIsMultiaxisCurveModalOpen(true);
+        break;
+      case '5axis_deburr':
+      case 'multiaxis_deburr':
+      case 'deburr':
+      case 'tp_multi_deburr':
+        setEditingMultiaxisDeburrOp(null);
+        setIsMultiaxisDeburrModalOpen(true);
         break;
       case '5axis_port':
       case 'port_expert':
@@ -7197,6 +7270,10 @@ export default function App() {
           setEditingMultiaxisCurveOp(null);
           setIsMultiaxisCurveModalOpen(true);
         }}
+        onOpenMultiaxisDeburrModal={() => {
+          setEditingMultiaxisDeburrOp(null);
+          setIsMultiaxisDeburrModalOpen(true);
+        }}
         onOpenPortExpertModal={() => {
           setEditingPortExpertOp(null);
           setIsPortExpertModalOpen(true);
@@ -7398,6 +7475,10 @@ export default function App() {
           onOpenMultiaxisCurveModal={() => {
             setEditingMultiaxisCurveOp(null);
             setIsMultiaxisCurveModalOpen(true);
+          }}
+          onOpenMultiaxisDeburrModal={() => {
+            setEditingMultiaxisDeburrOp(null);
+            setIsMultiaxisDeburrModalOpen(true);
           }}
           onOpenPortExpertModal={() => {
             setEditingPortExpertOp(null);
@@ -8374,6 +8455,26 @@ export default function App() {
         stockConfig={stockConfig}
         currentModel={currentModel}
         onSaveOperation={handleSaveMultiaxisCurveOp}
+        onNotify={showToast}
+        onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
+      />
+
+      {/* Mastercam 5-Axis Deburring Studio Modal */}
+      <MultiaxisDeburrModal
+        isOpen={isMultiaxisDeburrModalOpen}
+        onClose={() => {
+          setIsMultiaxisDeburrModalOpen(false);
+          setEditingMultiaxisDeburrOp(null);
+        }}
+        operation={editingMultiaxisDeburrOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        machines={machines}
+        onSelectMachine={handleSelectMachine}
+        lastDefinedTool={lastDefinedToolState}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        onSaveOperation={handleSaveMultiaxisDeburrOp}
         onNotify={showToast}
         onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
       />

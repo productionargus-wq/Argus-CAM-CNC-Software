@@ -350,6 +350,14 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         action: 'tp_multi_rotary',
         opType: 'rotary_4axis',
         tooltip: '4-Axis Simultaneous Rotary Cylinder Machining'
+      },
+      {
+        id: 'multi_deburr',
+        label: 'Deburr',
+        icon: 'TpMultiDeburr',
+        action: 'tp_multi_deburr',
+        opType: '5axis_deburr',
+        tooltip: '5-Axis Automated Edge Break & Deburring with Contact Point Shifting'
       }
     ]
   },

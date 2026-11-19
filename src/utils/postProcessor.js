@@ -190,6 +190,7 @@ export function generateNCProgram({
       op.badgeClass === 'multi_parallel' ||
       op.badgeClass === 'multiaxis_drill' ||
       op.badgeClass === '5axis_curve' ||
+      op.badgeClass === '5axis_deburr' ||
       op.badgeClass === '5axis_port' ||
       op.badgeClass === '5axis_blade' ||
       op.strategyKey === 'multiaxis_morph' ||
@@ -206,6 +207,8 @@ export function generateNCProgram({
       op.strategy === 'multiaxis_drill' ||
       op.strategyKey === '5axis_curve' ||
       op.strategy === '5axis_curve' ||
+      op.strategyKey === '5axis_deburr' ||
+      op.strategy === '5axis_deburr' ||
       op.strategyKey === '5axis_port' ||
       op.strategyKey === '5axis_blade';
 

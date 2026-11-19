@@ -13,6 +13,7 @@ import { generateMultiaxisParallelToolpath, generateMultiaxisParallelGCode } fro
 import { generateRotary4AxisToolpath, generateRotary4AxisGCode } from './rotary4AxisEngine.js';
 import { generateMultiaxisDrillToolpath, generateMultiaxisDrillGCode } from './multiaxisDrillEngine.js';
 import { generateMultiaxisCurveToolpath, generateMultiaxisCurveGCode } from './multiaxisCurveEngine.js';
+import { generateMultiaxisDeburrToolpath, generateMultiaxisDeburrGCode } from './multiaxisDeburrEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -72,7 +73,9 @@ export {
   generateMultiaxisDrillToolpath,
   generateMultiaxisDrillGCode,
   generateMultiaxisCurveToolpath,
-  generateMultiaxisCurveGCode
+  generateMultiaxisCurveGCode,
+  generateMultiaxisDeburrToolpath,
+  generateMultiaxisDeburrGCode
 };
 
 /**
@@ -4348,6 +4351,21 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
       }
     }, assignedTool, effectiveModel);
   }
+  if (
+    strategy === '5axis_deburr' ||
+    strategy === 'multiaxis_deburr' ||
+    strategy === 'deburr' ||
+    op.strategyKey === '5axis_deburr' ||
+    op.strategyKey === 'multiaxis_deburr' ||
+    op.badgeClass === '5axis_deburr'
+  ) {
+    return generateMultiaxisDeburrToolpath({
+      bounds: opBounds,
+      tool: assignedTool,
+      params: op,
+      model: effectiveModel
+    });
+  }
   if (strategy === 'drill') {
     return generateDrillingToolpath(opBounds, assignedTool, {
       drillDepth: op.totalDepth || 25.0,
@@ -4534,6 +4552,7 @@ export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds
      op.badgeClass === 'multi_parallel' || op.strategyKey === '5axis_parallel' || toolpathData.strategy === '5axis_parallel' ||
      op.badgeClass === 'multi_morph' || op.strategyKey === '5axis_morph' || toolpathData.strategy === 'multiaxis_morph' ||
      op.badgeClass === '5axis_curve' || op.strategyKey === '5axis_curve' || toolpathData.strategy === '5axis_curve' ||
+     op.badgeClass === '5axis_deburr' || op.strategyKey === '5axis_deburr' || toolpathData.strategy === '5axis_deburr' ||
      op.badgeClass === 'multiaxis_drill' || op.strategyKey === 'multiaxis_drill' || toolpathData.strategy === 'multiaxis_drill' ||
      op.badgeClass === 'rotary_4axis' || op.badgeClass === '4axis_rotary' || op.badgeClass === 'multi_rotary' ||
      op.strategyKey === 'rotary_4axis' || toolpathData.strategy === 'rotary_4axis') &&

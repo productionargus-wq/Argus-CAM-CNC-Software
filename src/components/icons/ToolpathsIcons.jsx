@@ -381,6 +381,20 @@ export function TpMultiRotaryIcon({ size = 16, className = '' }) {
   );
 }
 
+export function TpMultiDeburrIcon({ size = 26, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>
+      {/* 3D solid edge with chamfer break */}
+      <path d="M6 26 L6 14 L18 14 L24 20 L24 26 Z" fill="#fde68a" stroke="#d97706" strokeWidth="1" />
+      <line x1="18" y1="14" x2="24" y2="20" stroke="#f59e0b" strokeWidth="2.5" />
+      {/* Spherical cutter contact shifted on chamfer */}
+      <circle cx="21" cy="17" r="5" fill="rgba(245, 158, 11, 0.3)" stroke="#f59e0b" strokeWidth="1.2" />
+      {/* Tool vector pointing 45 deg */}
+      <line x1="21" y1="17" x2="27" y2="11" stroke="#0284c7" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // ==================== 4. STOCK GROUP ====================
 
 export function TpStockShadingIcon({ size = 26, className = '' }) {
@@ -571,6 +585,7 @@ export const TOOLPATHS_ICON_MAP = {
   TpMultiPort: TpMultiPortIcon,
   TpMultiBlade: TpMultiBladeIcon,
   TpMultiRotary: TpMultiRotaryIcon,
+  TpMultiDeburr: TpMultiDeburrIcon,
   TpStockShading: TpStockShadingIcon,
   TpStockDisplay: TpStockDisplayIcon,
   TpStockModel: TpStockModelIcon,
