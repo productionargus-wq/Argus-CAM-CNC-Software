@@ -53,6 +53,7 @@ import SurfaceRoughWaterlineModal from './components/SurfaceRoughWaterlineModal'
 import MultiaxisMorphModal from './components/MultiaxisMorphModal';
 import SwarfMillingModal from './components/SwarfMillingModal';
 import MultiaxisParallelModal from './components/MultiaxisParallelModal';
+import Rotary4AxisModal from './components/Rotary4AxisModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
@@ -371,6 +372,8 @@ export default function App() {
   const [editingSwarfMillingOp, setEditingSwarfMillingOp] = useState(null);
   const [isMultiaxisParallelModalOpen, setIsMultiaxisParallelModalOpen] = useState(false);
   const [editingMultiaxisParallelOp, setEditingMultiaxisParallelOp] = useState(null);
+  const [isRotary4AxisModalOpen, setIsRotary4AxisModalOpen] = useState(false);
+  const [editingRotary4AxisOp, setEditingRotary4AxisOp] = useState(null);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
@@ -2059,6 +2062,17 @@ export default function App() {
     }
 
     if (
+      op?.strategyKey === 'rotary_4axis' ||
+      op?.strategy === 'rotary_4axis' ||
+      op?.badgeClass === 'rotary_4axis' ||
+      op?.name?.toLowerCase()?.includes('rotary')
+    ) {
+      setEditingRotary4AxisOp(op);
+      setIsRotary4AxisModalOpen(true);
+      return;
+    }
+
+    if (
       op?.strategyKey === 'surface_finish_flowline' ||
       op?.badgeClass === 'flowline' ||
       op?.strategyKey === 'surface_finish_contour' ||
@@ -2399,6 +2413,10 @@ export default function App() {
     } else if (s === '5axis_parallel' || s === 'multi_parallel' || s === 'parallel_5x') {
       setEditingMultiaxisParallelOp(null);
       setIsMultiaxisParallelModalOpen(true);
+      return;
+    } else if (s === 'rotary_4axis' || s === 'rotary' || s === 'multi_rotary' || s === '4axis_rotary' || s === 'rotary_advanced') {
+      setEditingRotary4AxisOp(null);
+      setIsRotary4AxisModalOpen(true);
       return;
     } else if (s === 'adaptive' || s === 'dynamic_mill') {
       newOp = {
@@ -3037,6 +3055,60 @@ export default function App() {
     setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setIsMultiaxisParallelModalOpen(false);
     setEditingMultiaxisParallelOp(null);
+  };
+
+  const handleSaveRotary4AxisOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : (savedOp.id != null && Number.isFinite(Number(savedOp.id)) ? Number(savedOp.id) : nextId);
+
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.toolId || savedOp.tool?.id)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 1, number: 1, type: 'flat', diameter: 10, name: '10mm Rotary Endmill' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: finalId,
+      name: savedOp.name || '4-Axis Rotary Machining',
+      strategy: 'rotary_4axis',
+      strategyKey: 'rotary_4axis',
+      badgeClass: 'rotary_4axis',
+      badgeText: '4X-ROTARY',
+      color: '#0284c7',
+      opType: 'multiaxis',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      tool: assignedTool,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 10000,
+      spindleRpm: savedOp.tool?.spindleSpeed || 10000,
+      feedRate: savedOp.tool?.feedRate || 2000,
+      plungeRate: savedOp.tool?.plungeRate || 500,
+      machiningStyle: savedOp.cutPattern?.machiningStyle || 'axis_substitution',
+      rotaryAxis: savedOp.cutPattern?.rotaryAxis || 'X',
+      cylinderDiameter: savedOp.cutPattern?.cylinderDiameter || 60.0,
+      stepoverDeg: savedOp.stepoverPasses?.stepoverDeg || 3.5,
+      stepoverMm: savedOp.stepoverPasses?.stepoverMm || 1.2,
+      rapidHeight: savedOp.linkingParameters?.clearanceRadiusMm || 45.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
+      showToast('Rotary 4-Axis parameters updated and toolpath regenerated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('Rotary 4-Axis operation generated', 'success');
+    }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+    setIsRotary4AxisModalOpen(false);
+    setEditingRotary4AxisOp(null);
   };
 
   const handleSelectSampleModel = async (type) => {
@@ -4265,6 +4337,14 @@ export default function App() {
       case 'tp_multi_swarf':
         setEditingSwarfMillingOp(null);
         setIsSwarfMillingModalOpen(true);
+        break;
+      case 'rotary_4axis':
+      case '4axis_rotary':
+      case 'multi_rotary':
+      case 'tp_multi_rotary':
+      case 'rotary':
+        setEditingRotary4AxisOp(null);
+        setIsRotary4AxisModalOpen(true);
         break;
       case 'chaining':
       case 'chain':
@@ -6826,6 +6906,10 @@ export default function App() {
           setEditingMultiaxisParallelOp(null);
           setIsMultiaxisParallelModalOpen(true);
         }}
+        onOpenRotary4AxisModal={() => {
+          setEditingRotary4AxisOp(null);
+          setIsRotary4AxisModalOpen(true);
+        }}
         onOpenAdaptiveModal={() => {
           setEditingOptiRoughOp(null);
           setIsOptiRoughModalOpen(true);
@@ -7007,6 +7091,10 @@ export default function App() {
           onOpenMultiaxisParallelModal={() => {
             setEditingMultiaxisParallelOp(null);
             setIsMultiaxisParallelModalOpen(true);
+          }}
+          onOpenRotary4AxisModal={() => {
+            setEditingRotary4AxisOp(null);
+            setIsRotary4AxisModalOpen(true);
           }}
           onOpenSurfaceFinishContour={() => openSurfaceFinishSelection('contour', null)}
           onOpenSurfaceFinishPocket={() => openSurfaceFinishSelection('pocket', null)}
@@ -7915,6 +8003,26 @@ export default function App() {
         stockConfig={stockConfig}
         currentModel={currentModel}
         onSaveOperation={handleSaveMultiaxisParallelOp}
+        onNotify={showToast}
+        onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
+      />
+
+      {/* Mastercam Rotary 4-Axis Machining (Cylinder Wrapping & Rotary Advanced) Modal */}
+      <Rotary4AxisModal
+        isOpen={isRotary4AxisModalOpen}
+        onClose={() => {
+          setIsRotary4AxisModalOpen(false);
+          setEditingRotary4AxisOp(null);
+        }}
+        operation={editingRotary4AxisOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        machines={machines}
+        onSelectMachine={handleSelectMachine}
+        lastDefinedTool={lastDefinedToolState}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        onSaveOperation={handleSaveRotary4AxisOp}
         onNotify={showToast}
         onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
       />

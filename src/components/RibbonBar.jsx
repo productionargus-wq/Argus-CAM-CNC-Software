@@ -45,6 +45,7 @@ export default function RibbonBar({
   onOpenMultiaxisMorphModal,
   onOpenSwarfMillingModal,
   onOpenMultiaxisParallelModal,
+  onOpenRotary4AxisModal,
   onOpenLeadInOutModal,
   onOpenFiveAxisStudio,
   onOpenSolidVerifyModal,
@@ -1834,6 +1835,14 @@ export default function RibbonBar({
                 if (action === 'tp_multi_parallel') {
                   if (onOpenMultiaxisParallelModal) {
                     onOpenMultiaxisParallelModal();
+                  } else if (onOpenFiveAxisStudio) {
+                    onOpenFiveAxisStudio();
+                  }
+                  return;
+                }
+                if (action === 'tp_multi_rotary') {
+                  if (onOpenRotary4AxisModal) {
+                    onOpenRotary4AxisModal();
                   } else if (onOpenFiveAxisStudio) {
                     onOpenFiveAxisStudio();
                   }

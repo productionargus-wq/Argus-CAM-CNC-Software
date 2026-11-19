@@ -10,6 +10,7 @@ import { generateWaterlineRoughToolpath, generateWaterlineRoughGCode } from './w
 import { generateMultiaxisMorphToolpath, generateMultiaxisMorphGCode } from './multiaxisMorphEngine.js';
 import { generateMastercamSwarfToolpath, generateSwarfMillingGCode } from './swarfMillingEngine.js';
 import { generateMultiaxisParallelToolpath, generateMultiaxisParallelGCode } from './multiaxisParallelEngine.js';
+import { generateRotary4AxisToolpath, generateRotary4AxisGCode } from './rotary4AxisEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -63,7 +64,9 @@ export {
   generateMultiaxisMorphToolpath,
   generateMultiaxisMorphGCode,
   generateMastercamSwarfToolpath,
-  generateSwarfMillingGCode
+  generateSwarfMillingGCode,
+  generateRotary4AxisToolpath,
+  generateRotary4AxisGCode
 };
 
 /**
@@ -4206,6 +4209,66 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
         retractDistanceMm: 5.0
       }
     }, effectiveModel);
+  }
+  if (
+    strategy === 'rotary_4axis' ||
+    strategy === '4axis_rotary' ||
+    strategy === 'multi_rotary' ||
+    op.strategyKey === 'rotary_4axis' ||
+    op.badgeClass === 'rotary_4axis'
+  ) {
+    const rotaryData = generateRotary4AxisToolpath({
+      ...op,
+      cutPattern: op.cutPattern || {
+        machiningStyle: op.machiningStyle || 'axis_substitution',
+        rotaryAxis: op.rotaryAxis || 'X',
+        cylinderDiameter: op.cylinderDiameter || 60.0
+      },
+      tool: {
+        diameter: assignedTool.diameter || 10,
+        toolType: assignedTool.type || 'flat',
+        feedRate: op.feedRate || 2000,
+        spindleSpeed: op.spindleSpeed || 10000,
+        flutes: assignedTool.flutes || 2
+      }
+    }, effectiveModel);
+
+    const cuttingLines = [];
+    const rapidLines = [];
+    const trajectoryPoints = [];
+
+    for (let i = 0; i < rotaryData.points.length; i++) {
+      const p = rotaryData.points[i];
+      const vec3 = new THREE.Vector3(p.x, p.y, p.z);
+      trajectoryPoints.push({
+        point: vec3,
+        feedRate: p.feedRate || 2000,
+        isRapid: p.isRapid || false,
+        aDeg: p.aDeg || 0,
+        normal: p.normal ? new THREE.Vector3(p.normal.x, p.normal.y, p.normal.z) : new THREE.Vector3(0, 0, 1)
+      });
+      if (i > 0) {
+        const prev = rotaryData.points[i - 1];
+        const seg = [
+          new THREE.Vector3(prev.x, prev.y, prev.z),
+          vec3
+        ];
+        if (p.isRapid) rapidLines.push(seg);
+        else cuttingLines.push(seg);
+      }
+    }
+
+    return {
+      strategy: 'rotary_4axis',
+      cuttingLines,
+      rapidLines,
+      trajectoryPoints,
+      vectorNeedles: rotaryData.vectorNeedles,
+      contactRibbonVertices: rotaryData.contactRibbonVertices,
+      stats: rotaryData.stats,
+      physics: rotaryData.physics,
+      isSimultaneous4X: true
+    };
   }
   if (strategy === 'drill') {
     return generateDrillingToolpath(opBounds, assignedTool, {
