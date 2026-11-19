@@ -129,10 +129,7 @@ export default function MultiaxisParallelModal({
       name: `${preset.name} - 5X Parallel`
     }));
     if (onNotify) {
-      onNotify({
-        type: 'info',
-        message: `Applied Mastercam 5-Axis Preset: ${preset.name}`
-      });
+      onNotify(`Applied Mastercam 5-Axis Preset: ${preset.name}`, 'info');
     }
   };
 
@@ -150,10 +147,7 @@ export default function MultiaxisParallelModal({
     }));
 
     if (onNotify) {
-      onNotify({
-        type: 'success',
-        message: `✨ Loaded Recommended 5-Axis Surfacing Values: ${rec.spindleRpm} RPM, ${rec.feedRate} mm/min, ${rec.leadAngleDeg}° Lead Tilt`
-      });
+      onNotify(`✨ Loaded Recommended 5-Axis Surfacing Values: ${rec.spindleRpm} RPM, ${rec.feedRate} mm/min, ${rec.leadAngleDeg}° Lead Tilt`, 'success');
     }
   };
 

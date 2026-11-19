@@ -1054,8 +1054,14 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
 
   const showToast = (message, type = 'info', duration = 3000, action = null) => {
+    let msgText = message;
+    let msgType = type;
+    if (typeof message === 'object' && message !== null) {
+      msgText = message.message || message.text || JSON.stringify(message);
+      msgType = message.type || type || 'info';
+    }
     const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message, type, action }]);
+    setToasts((prev) => [...prev, { id, message: String(msgText || ''), type: msgType, action }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, duration);
@@ -8464,7 +8470,7 @@ export default function App() {
               transition: 'all 0.25s ease'
             }}
           >
-            <span>{toast.message}</span>
+            <span>{typeof toast.message === 'object' ? (toast.message?.message || JSON.stringify(toast.message)) : String(toast.message ?? '')}</span>
             {toast.action && (
               <button
                 onClick={() => {
