@@ -132,6 +132,7 @@ export default function ToolpathsContextMenu({
   onOpenSurfaceRoughWaterlineModal,
   onOpenMultiaxisCurveModal,
   onOpenMultiaxisDeburrModal,
+  onOpenMultiaxisRoughingModal,
   onOpenMultiaxisDrillModal,
   onOpenMultiaxisMorphModal,
   onOpenSwarfMillingModal,
@@ -350,6 +351,7 @@ export default function ToolpathsContextMenu({
                 <div className="mcam-ctx-sub" style={{ ...subStyle, minWidth: '170px' }}>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenMultiaxisCurveModal ? onOpenMultiaxisCurveModal() : onAddOperation?.('5axis_curve'))}>5-Axis Curve</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenMultiaxisDeburrModal ? onOpenMultiaxisDeburrModal() : onAddOperation?.('5axis_deburr'))}>5-Axis Deburring</div>
+                  <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenMultiaxisRoughingModal ? onOpenMultiaxisRoughingModal() : onAddOperation?.('5axis_rough'))}>5-Axis Roughing</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenSwarfMillingModal ? onOpenSwarfMillingModal() : onAddOperation?.('swarf'))}>5-Axis Swarf Milling</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenMultiaxisMorphModal ? onOpenMultiaxisMorphModal() : onAddOperation?.('multiaxis_morph'))}>5-Axis Morph Between 2 Curves</div>
                   <div className="mcam-ctx-item" onClick={() => handleAction(() => onOpenMultiaxisParallelModal ? onOpenMultiaxisParallelModal() : onAddOperation?.('5axis_parallel'))}>5-Axis Parallel</div>

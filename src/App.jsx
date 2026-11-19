@@ -57,6 +57,7 @@ import Rotary4AxisModal from './components/Rotary4AxisModal';
 import MultiaxisDrillModal from './components/MultiaxisDrillModal';
 import MultiaxisCurveModal from './components/MultiaxisCurveModal';
 import MultiaxisDeburrModal from './components/MultiaxisDeburrModal';
+import MultiaxisRoughingModal from './components/MultiaxisRoughingModal';
 import MultiaxisPortModal from './components/MultiaxisPortModal';
 import MultiaxisBladeModal from './components/MultiaxisBladeModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
@@ -385,6 +386,8 @@ export default function App() {
   const [editingMultiaxisCurveOp, setEditingMultiaxisCurveOp] = useState(null);
   const [isMultiaxisDeburrModalOpen, setIsMultiaxisDeburrModalOpen] = useState(false);
   const [editingMultiaxisDeburrOp, setEditingMultiaxisDeburrOp] = useState(null);
+  const [isMultiaxisRoughingModalOpen, setIsMultiaxisRoughingModalOpen] = useState(false);
+  const [editingMultiaxisRoughingOp, setEditingMultiaxisRoughingOp] = useState(null);
   const [isPortExpertModalOpen, setIsPortExpertModalOpen] = useState(false);
   const [editingPortExpertOp, setEditingPortExpertOp] = useState(null);
   const [isBladeExpertModalOpen, setIsBladeExpertModalOpen] = useState(false);
@@ -2122,6 +2125,18 @@ export default function App() {
     }
 
     if (
+      op?.strategyKey === '5axis_rough' ||
+      op?.strategy === '5axis_rough' ||
+      op?.badgeClass === '5axis_rough' ||
+      op?.name?.toLowerCase()?.includes('multiaxis rough') ||
+      op?.name?.toLowerCase()?.includes('5-axis rough')
+    ) {
+      setEditingMultiaxisRoughingOp(op);
+      setIsMultiaxisRoughingModalOpen(true);
+      return;
+    }
+
+    if (
       op?.strategyKey === '5axis_port' ||
       op?.strategy === '5axis_port' ||
       op?.badgeClass === '5axis_port' ||
@@ -2484,6 +2499,10 @@ export default function App() {
     } else if (s === '5axis_deburr' || s === 'deburr' || s === 'multi_deburr' || s === 'deburring') {
       setEditingMultiaxisDeburrOp(null);
       setIsMultiaxisDeburrModalOpen(true);
+      return;
+    } else if (s === '5axis_rough' || s === 'multi_rough' || s === 'multiaxis_roughing' || s === '5axis_roughing') {
+      setEditingMultiaxisRoughingOp(null);
+      setIsMultiaxisRoughingModalOpen(true);
       return;
     } else if (s === '5axis_port' || s === 'port_expert' || s === 'multi_port') {
       setEditingPortExpertOp(null);
@@ -3332,6 +3351,54 @@ export default function App() {
     setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setIsMultiaxisDeburrModalOpen(false);
     setEditingMultiaxisDeburrOp(null);
+  };
+
+  const handleSaveMultiaxisRoughingOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : (savedOp.id != null && Number.isFinite(Number(savedOp.id)) ? Number(savedOp.id) : nextId);
+
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.toolId || savedOp.tool?.id)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 3, number: 3, type: 'bullnose', diameter: 12.0, name: '12mm Bullnose (Roughing)' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: finalId,
+      name: savedOp.name || '5-Axis Multiaxis Roughing (Adaptive Cavity)',
+      strategy: '5axis_rough',
+      strategyKey: '5axis_rough',
+      badgeClass: '5axis_rough',
+      badgeText: '5X-ROUGH',
+      color: '#06b6d4',
+      opType: 'multiaxis',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      tool: assignedTool,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 12000,
+      spindleRpm: savedOp.tool?.spindleSpeed || 12000,
+      feedRate: savedOp.tool?.feedRate || 4500,
+      rapidHeight: savedOp.linkingParameters?.clearancePlaneMm || 25.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
+      showToast('5-Axis Multiaxis Roughing parameters updated and toolpath regenerated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('5-Axis Multiaxis Roughing operation generated', 'success');
+    }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+    setIsMultiaxisRoughingModalOpen(false);
+    setEditingMultiaxisRoughingOp(null);
   };
 
   const handleSavePortExpertOp = (savedOp) => {
@@ -4685,6 +4752,13 @@ export default function App() {
       case 'tp_multi_deburr':
         setEditingMultiaxisDeburrOp(null);
         setIsMultiaxisDeburrModalOpen(true);
+        break;
+      case '5axis_rough':
+      case 'multiaxis_rough':
+      case 'multiaxis_roughing':
+      case 'tp_multi_rough':
+        setEditingMultiaxisRoughingOp(null);
+        setIsMultiaxisRoughingModalOpen(true);
         break;
       case '5axis_port':
       case 'port_expert':
@@ -7274,6 +7348,10 @@ export default function App() {
           setEditingMultiaxisDeburrOp(null);
           setIsMultiaxisDeburrModalOpen(true);
         }}
+        onOpenMultiaxisRoughingModal={() => {
+          setEditingMultiaxisRoughingOp(null);
+          setIsMultiaxisRoughingModalOpen(true);
+        }}
         onOpenPortExpertModal={() => {
           setEditingPortExpertOp(null);
           setIsPortExpertModalOpen(true);
@@ -7479,6 +7557,10 @@ export default function App() {
           onOpenMultiaxisDeburrModal={() => {
             setEditingMultiaxisDeburrOp(null);
             setIsMultiaxisDeburrModalOpen(true);
+          }}
+          onOpenMultiaxisRoughingModal={() => {
+            setEditingMultiaxisRoughingOp(null);
+            setIsMultiaxisRoughingModalOpen(true);
           }}
           onOpenPortExpertModal={() => {
             setEditingPortExpertOp(null);
@@ -8475,6 +8557,26 @@ export default function App() {
         stockConfig={stockConfig}
         currentModel={currentModel}
         onSaveOperation={handleSaveMultiaxisDeburrOp}
+        onNotify={showToast}
+        onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
+      />
+
+      {/* Mastercam 5-Axis Multiaxis Roughing Studio Modal */}
+      <MultiaxisRoughingModal
+        isOpen={isMultiaxisRoughingModalOpen}
+        onClose={() => {
+          setIsMultiaxisRoughingModalOpen(false);
+          setEditingMultiaxisRoughingOp(null);
+        }}
+        operation={editingMultiaxisRoughingOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        machines={machines}
+        onSelectMachine={handleSelectMachine}
+        lastDefinedTool={lastDefinedToolState}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        onSaveOperation={handleSaveMultiaxisRoughingOp}
         onNotify={showToast}
         onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
       />

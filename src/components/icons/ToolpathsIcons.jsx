@@ -395,6 +395,22 @@ export function TpMultiDeburrIcon({ size = 26, className = '' }) {
   );
 }
 
+export function TpMultiRoughIcon({ size = 26, className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>
+      {/* 3D cavity pocket with multi-depth stepped roughing layers */}
+      <path d="M4 8 L8 24 L24 24 L28 8 Z" fill="#fde68a" stroke="#d97706" strokeWidth="1" />
+      <line x1="6" y1="14" x2="26" y2="14" stroke="#06b6d4" strokeWidth="1.2" strokeDasharray="2 2" />
+      <line x1="7" y1="19" x2="25" y2="19" stroke="#06b6d4" strokeWidth="1.2" strokeDasharray="2 2" />
+      {/* 5-axis tilted roughing cutter */}
+      <g transform="translate(18, 18) rotate(-25)">
+        <rect x="-3" y="-12" width="6" height="12" fill="#0891b2" stroke="#0e7490" strokeWidth="0.8" />
+        <line x1="0" y1="-12" x2="0" y2="-18" stroke="#0284c7" strokeWidth="1.2" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
 // ==================== 4. STOCK GROUP ====================
 
 export function TpStockShadingIcon({ size = 26, className = '' }) {
@@ -586,6 +602,7 @@ export const TOOLPATHS_ICON_MAP = {
   TpMultiBlade: TpMultiBladeIcon,
   TpMultiRotary: TpMultiRotaryIcon,
   TpMultiDeburr: TpMultiDeburrIcon,
+  TpMultiRough: TpMultiRoughIcon,
   TpStockShading: TpStockShadingIcon,
   TpStockDisplay: TpStockDisplayIcon,
   TpStockModel: TpStockModelIcon,

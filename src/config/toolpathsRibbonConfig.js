@@ -358,6 +358,14 @@ export const TOOLPATHS_RIBBON_CONFIG = [
         action: 'tp_multi_deburr',
         opType: '5axis_deburr',
         tooltip: '5-Axis Automated Edge Break & Deburring with Contact Point Shifting'
+      },
+      {
+        id: 'multi_rough',
+        label: 'Roughing',
+        icon: 'TpMultiRough',
+        action: 'tp_multi_rough',
+        opType: '5axis_rough',
+        tooltip: '5-Axis Multiaxis Roughing & Pocketing (Adaptive 5X Cavity Clearing)'
       }
     ]
   },
