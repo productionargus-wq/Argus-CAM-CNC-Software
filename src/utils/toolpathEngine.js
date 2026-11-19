@@ -9,6 +9,7 @@ import { generateParallelRoughToolpath, generateParallelRoughGCode } from './par
 import { generateWaterlineRoughToolpath, generateWaterlineRoughGCode } from './waterlineRoughToolpathEngine.js';
 import { generateMultiaxisMorphToolpath, generateMultiaxisMorphGCode } from './multiaxisMorphEngine.js';
 import { generateMastercamSwarfToolpath, generateSwarfMillingGCode } from './swarfMillingEngine.js';
+import { generateMultiaxisParallelToolpath, generateMultiaxisParallelGCode } from './multiaxisParallelEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -4162,6 +4163,21 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
     });
   }
   if (
+    strategy === 'multi_parallel' ||
+    strategy === '5axis_parallel' ||
+    strategy === 'parallel_5x' ||
+    op.strategyKey === '5axis_parallel' ||
+    op.strategyKey === 'multi_parallel' ||
+    op.badgeClass === 'multi_parallel'
+  ) {
+    return generateMultiaxisParallelToolpath(opBounds, assignedTool, {
+      ...op,
+      model: effectiveModel,
+      feedRate: op.feedRate || 2800,
+      spindleRpm: op.spindleRpm || 12000
+    });
+  }
+  if (
     strategy === 'multiaxis_morph' ||
     strategy === '5axis_morph' ||
     strategy === 'morph' ||
@@ -4371,9 +4387,10 @@ export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds
   const feedPlaneVal = Number(op.feedPlane) || 2.5;
   const feedPlaneAbsY = topY + (op.feedPlaneMode === 'absolute' ? feedPlaneVal : topStockLocal + feedPlaneVal);
 
-  // For 5-Axis Swarf Milling, trajectoryPoints contain exact 5X orientations and 3D roll-in/out motions
+  // For 5-Axis Multiaxis (Swarf Milling & Parallel Finishing), trajectoryPoints contain exact 5X orientations, tool vectors & 3D blend arcs
   if (
-    (op.badgeClass === 'swarf' || op.strategyKey === '5axis_swarf' || toolpathData.strategy === '5axis_swarf') &&
+    (op.badgeClass === 'swarf' || op.strategyKey === '5axis_swarf' || toolpathData.strategy === '5axis_swarf' ||
+     op.badgeClass === 'multi_parallel' || op.strategyKey === '5axis_parallel' || toolpathData.strategy === '5axis_parallel') &&
     toolpathData.trajectoryPoints &&
     toolpathData.trajectoryPoints.length > 1
   ) {

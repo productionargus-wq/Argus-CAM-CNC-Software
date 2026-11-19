@@ -52,6 +52,7 @@ import SurfaceRoughParallelModal from './components/SurfaceRoughParallelModal';
 import SurfaceRoughWaterlineModal from './components/SurfaceRoughWaterlineModal';
 import MultiaxisMorphModal from './components/MultiaxisMorphModal';
 import SwarfMillingModal from './components/SwarfMillingModal';
+import MultiaxisParallelModal from './components/MultiaxisParallelModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
@@ -368,6 +369,8 @@ export default function App() {
   const [editingMultiaxisMorphOp, setEditingMultiaxisMorphOp] = useState(null);
   const [isSwarfMillingModalOpen, setIsSwarfMillingModalOpen] = useState(false);
   const [editingSwarfMillingOp, setEditingSwarfMillingOp] = useState(null);
+  const [isMultiaxisParallelModalOpen, setIsMultiaxisParallelModalOpen] = useState(false);
+  const [editingMultiaxisParallelOp, setEditingMultiaxisParallelOp] = useState(null);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
@@ -2026,6 +2029,19 @@ export default function App() {
     }
 
     if (
+      op?.strategyKey === '5axis_parallel' ||
+      op?.strategy === '5axis_parallel' ||
+      op?.badgeClass === 'multi_parallel' ||
+      op?.strategyKey === 'multi_parallel' ||
+      op?.name?.toLowerCase()?.includes('5-axis parallel') ||
+      op?.name?.toLowerCase()?.includes('multiaxis parallel')
+    ) {
+      setEditingMultiaxisParallelOp(op);
+      setIsMultiaxisParallelModalOpen(true);
+      return;
+    }
+
+    if (
       op?.strategyKey === 'multiaxis_morph' ||
       op?.strategyKey === '5axis_morph' ||
       op?.badgeClass === 'multi_morph' ||
@@ -2373,6 +2389,10 @@ export default function App() {
     } else if (s === '5axis_swarf' || s === 'swarf') {
       setEditingSwarfMillingOp(null);
       setIsSwarfMillingModalOpen(true);
+      return;
+    } else if (s === '5axis_parallel' || s === 'multi_parallel' || s === 'parallel_5x') {
+      setEditingMultiaxisParallelOp(null);
+      setIsMultiaxisParallelModalOpen(true);
       return;
     } else if (s === 'adaptive' || s === 'dynamic_mill') {
       newOp = {
@@ -2957,6 +2977,60 @@ export default function App() {
     setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setIsSwarfMillingModalOpen(false);
     setEditingSwarfMillingOp(null);
+  };
+
+  const handleSaveMultiaxisParallelOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : (savedOp.id != null && Number.isFinite(Number(savedOp.id)) ? Number(savedOp.id) : nextId);
+
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.toolId || savedOp.tool?.id)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools[0] ||
+      { id: 5, number: 5, type: 'ball', diameter: 8, name: '8mm Ballnose Endmill' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: finalId,
+      name: savedOp.name || '5-Axis Parallel Surface Finishing',
+      strategy: '5axis_parallel',
+      strategyKey: '5axis_parallel',
+      badgeClass: 'multi_parallel',
+      badgeText: '5X-PARALLEL',
+      color: '#d946ef',
+      opType: 'multiaxis',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      tool: assignedTool,
+      spindleSpeed: savedOp.spindleRpm || 14000,
+      spindleRpm: savedOp.spindleRpm || 14000,
+      feedRate: savedOp.feedRate || 3200,
+      plungeRate: savedOp.plungeFeed || 600,
+      plungeFeed: savedOp.plungeFeed || 600,
+      machiningAngleDeg: savedOp.machiningAngleDeg ?? 0,
+      stepoverMm: savedOp.stepoverMm || 0.8,
+      leadAngleDeg: savedOp.leadAngleDeg ?? 12.0,
+      tiltAngleDeg: savedOp.tiltAngleDeg ?? 0.0,
+      rapidHeight: savedOp.clearanceZ || 50.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
+      showToast('5-Axis Parallel parameters updated and toolpath regenerated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('5-Axis Parallel operation generated', 'success');
+    }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+    setIsMultiaxisParallelModalOpen(false);
+    setEditingMultiaxisParallelOp(null);
   };
 
   const handleSelectSampleModel = async (type) => {
@@ -6742,6 +6816,10 @@ export default function App() {
           setEditingSwarfMillingOp(null);
           setIsSwarfMillingModalOpen(true);
         }}
+        onOpenMultiaxisParallelModal={() => {
+          setEditingMultiaxisParallelOp(null);
+          setIsMultiaxisParallelModalOpen(true);
+        }}
         onOpenAdaptiveModal={() => {
           setEditingOptiRoughOp(null);
           setIsOptiRoughModalOpen(true);
@@ -6919,6 +6997,10 @@ export default function App() {
           onOpenSwarfMillingModal={() => {
             setEditingSwarfMillingOp(null);
             setIsSwarfMillingModalOpen(true);
+          }}
+          onOpenMultiaxisParallelModal={() => {
+            setEditingMultiaxisParallelOp(null);
+            setIsMultiaxisParallelModalOpen(true);
           }}
           onOpenSurfaceFinishContour={() => openSurfaceFinishSelection('contour', null)}
           onOpenSurfaceFinishPocket={() => openSurfaceFinishSelection('pocket', null)}
@@ -7808,6 +7890,25 @@ export default function App() {
         stockConfig={stockConfig}
         currentModel={currentModel}
         onSaveOperation={handleSaveSwarfMillingOp}
+        onNotify={showToast}
+        onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
+      />
+
+      {/* Mastercam 5-Axis Multiaxis Parallel Surface Finishing Modal */}
+      <MultiaxisParallelModal
+        isOpen={isMultiaxisParallelModalOpen}
+        onClose={() => {
+          setIsMultiaxisParallelModalOpen(false);
+          setEditingMultiaxisParallelOp(null);
+        }}
+        operation={editingMultiaxisParallelOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        machines={machines}
+        onSelectMachine={handleSelectMachine}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        onSaveOperation={handleSaveMultiaxisParallelOp}
         onNotify={showToast}
         onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
       />

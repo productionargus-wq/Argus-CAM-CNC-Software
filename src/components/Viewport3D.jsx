@@ -2730,6 +2730,8 @@ export default function Viewport3D({
         rough_optirough: 0x06b6d4,
         multi_morph: 0xa855f7,
         multiaxis_morph: 0xa855f7,
+        multi_parallel: 0xd946ef,
+        "5axis_parallel": 0xd946ef,
         flowline: 0x10b981,
         rest: 0x14b8a6,
         rest_milling: 0x14b8a6,
@@ -2748,7 +2750,7 @@ export default function Viewport3D({
       const toolpathData = generateToolpathForOperation(op, opBounds, assignedTool, effectiveModel, stockConfig);
 
       if (toolpathData) {
-        const keepGeneratorRapids = ['drill', 'spotdrill', 'tap', 'probe', 'swarf'].includes(op.badgeClass);
+        const keepGeneratorRapids = ['drill', 'spotdrill', 'tap', 'probe', 'swarf', 'multi_parallel', '5axis_parallel'].includes(op.badgeClass);
         let linkedRapidLines = null;
         if (!keepGeneratorRapids && toolpathData.cuttingLines?.length > 0) {
           const { segments } = buildLinkedOperationSegments(toolpathData, op, opBounds, assignedTool);
@@ -2814,12 +2816,13 @@ export default function Viewport3D({
         }
 
         // 5-Axis Flank Contact Ribbon (Mastercam Shaded Ruled Flute Engagement Surface)
-        if (toolpathData.flankRibbonVertices && toolpathData.flankRibbonVertices.length > 0) {
+        const ribbonVerts = toolpathData.flankRibbonVertices || toolpathData.contactRibbonVertices;
+        if (ribbonVerts && ribbonVerts.length > 0) {
           const ribbonGeo = new THREE.BufferGeometry();
-          ribbonGeo.setAttribute('position', new THREE.Float32BufferAttribute(toolpathData.flankRibbonVertices, 3));
+          ribbonGeo.setAttribute('position', new THREE.Float32BufferAttribute(ribbonVerts, 3));
           ribbonGeo.computeVertexNormals();
           const ribbonMat = new THREE.MeshStandardMaterial({
-            color: 0x8b5cf6, // Violet Flank Ribbon
+            color: op.badgeClass === 'multi_parallel' ? 0xd946ef : 0x8b5cf6, // Fuchsia for Parallel, Violet for Swarf
             roughness: 0.35,
             metalness: 0.2,
             transparent: true,

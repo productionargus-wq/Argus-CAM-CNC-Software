@@ -44,6 +44,7 @@ export default function RibbonBar({
   onOpenSurfaceRoughWaterlineModal,
   onOpenMultiaxisMorphModal,
   onOpenSwarfMillingModal,
+  onOpenMultiaxisParallelModal,
   onOpenLeadInOutModal,
   onOpenFiveAxisStudio,
   onOpenSolidVerifyModal,
@@ -1825,6 +1826,14 @@ export default function RibbonBar({
                 if (action === 'tp_multi_swarf') {
                   if (onOpenSwarfMillingModal) {
                     onOpenSwarfMillingModal();
+                  } else if (onOpenFiveAxisStudio) {
+                    onOpenFiveAxisStudio();
+                  }
+                  return;
+                }
+                if (action === 'tp_multi_parallel') {
+                  if (onOpenMultiaxisParallelModal) {
+                    onOpenMultiaxisParallelModal();
                   } else if (onOpenFiveAxisStudio) {
                     onOpenFiveAxisStudio();
                   }

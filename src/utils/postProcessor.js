@@ -159,11 +159,16 @@ export function generateNCProgram({
     const is5AxisOp =
       op.badgeClass === 'swarf' ||
       op.badgeClass === 'multi_morph' ||
+      op.badgeClass === 'multi_parallel' ||
       op.strategyKey === 'multiaxis_morph' ||
       op.strategyKey === '5axis_morph' ||
       op.strategy === 'multiaxis_morph' ||
       op.strategyKey === '5axis_swarf' ||
-      op.strategy === '5axis_swarf';
+      op.strategy === '5axis_swarf' ||
+      op.strategyKey === '5axis_parallel' ||
+      op.strategy === '5axis_parallel' ||
+      op.strategyKey === 'multi_parallel' ||
+      op.strategy === 'multi_parallel';
 
     if (useHeidenhain) {
       lines.push(`${nextN()} TOOL CALL ${tool.number} Z S${effRpm} DL+0.00 DR+0.00`);
@@ -212,7 +217,7 @@ export function generateNCProgram({
 
     // Coordinate & Z-Linking helpers
     // Three.js Top (G17): +X = CNC +X, -Z = CNC +Y (cplaneGeometry vAxis), +Y = CNC +Z
-    const isWcsTop = stockConfig?.wcsZZero !== 'model_origin' || !model || !!op.chain || !!op.usesCustomSurfaces || !!(op.driveFaceIds?.length) || op.badgeClass === 'swarf' || op.strategyKey === '5axis_swarf' || op.strategy === '5axis_swarf' || op.badgeClass === 'flowline' || op.badgeClass === 'shallow' || op.badgeClass === 'parallel' || op.badgeClass === 'parallel_steep' || op.badgeClass === 'radial' || op.badgeClass === 'project' || op.badgeClass === 'leftover' || op.badgeClass === 'scallop' || op.badgeClass === 'blend' || op.badgeClass === 'adaptive' || op.badgeClass === 'optirough' || op.badgeClass === 'rough_pocket' || op.badgeClass === 'rough_parallel' || op.badgeClass === 'rough_waterline' || op.badgeClass === 'multi_morph' || op.strategyKey === 'surface_rough_optirough' || op.strategyKey === 'surface_rough_pocket' || op.strategyKey === 'surface_rough_parallel' || op.strategyKey === 'surface_rough_waterline' || op.strategyKey === 'waterline_rough' || op.strategyKey === 'multiaxis_morph' || op.strategyKey === '5axis_morph' || op.strategyKey === 'surface_finish_parallel' || op.strategyKey === 'surface_finish_parallel_steep' || op.strategyKey === 'surface_finish_radial' || op.strategyKey === 'surface_finish_project' || op.strategyKey === 'surface_finish_leftover' || op.strategyKey === 'surface_finish_scallop' || op.strategyKey === 'surface_finish_blend';
+    const isWcsTop = stockConfig?.wcsZZero !== 'model_origin' || !model || !!op.chain || !!op.usesCustomSurfaces || !!(op.driveFaceIds?.length) || op.badgeClass === 'swarf' || op.strategyKey === '5axis_swarf' || op.strategy === '5axis_swarf' || op.badgeClass === 'multi_parallel' || op.strategyKey === '5axis_parallel' || op.strategy === '5axis_parallel' || op.badgeClass === 'flowline' || op.badgeClass === 'shallow' || op.badgeClass === 'parallel' || op.badgeClass === 'parallel_steep' || op.badgeClass === 'radial' || op.badgeClass === 'project' || op.badgeClass === 'leftover' || op.badgeClass === 'scallop' || op.badgeClass === 'blend' || op.badgeClass === 'adaptive' || op.badgeClass === 'optirough' || op.badgeClass === 'rough_pocket' || op.badgeClass === 'rough_parallel' || op.badgeClass === 'rough_waterline' || op.badgeClass === 'multi_morph' || op.strategyKey === 'surface_rough_optirough' || op.strategyKey === 'surface_rough_pocket' || op.strategyKey === 'surface_rough_parallel' || op.strategyKey === 'surface_rough_waterline' || op.strategyKey === 'waterline_rough' || op.strategyKey === 'multiaxis_morph' || op.strategyKey === '5axis_morph' || op.strategyKey === 'surface_finish_parallel' || op.strategyKey === 'surface_finish_parallel_steep' || op.strategyKey === 'surface_finish_radial' || op.strategyKey === 'surface_finish_project' || op.strategyKey === 'surface_finish_leftover' || op.strategyKey === 'surface_finish_scallop' || op.strategyKey === 'surface_finish_blend';
     const zOffset = isWcsTop ? effectiveBounds.max.y : 0;
     const fmtNum = (n) => (Math.abs(n) < 0.0005 ? 0 : n).toFixed(3);
     const toCncY = (threeZ) => -threeZ;
