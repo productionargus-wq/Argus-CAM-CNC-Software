@@ -48,6 +48,7 @@ export function generateNCProgram({
     blockNum += 10;
     return n;
   };
+  const fmtNum = (n) => (Math.abs(n) < 0.0005 ? 0 : n).toFixed(3);
 
   let totalCuttingDistanceMm = 0;
   let totalRapidDistanceMm = 0;
@@ -152,10 +153,37 @@ export function generateNCProgram({
     lines.push(formatComment(`TOOL: T${tool.number} [${tool.name}] | DIA: ${tool.diameter}mm`));
     lines.push(formatComment('================================================'));
 
+    // Coordinate & Z-Linking helpers
+    // Three.js Top (G17): +X = CNC +X, -Z = CNC +Y (cplaneGeometry vAxis), +Y = CNC +Z
+    const isWcsTop = stockConfig?.wcsZZero !== 'model_origin' || !model || !!op.chain || !!op.usesCustomSurfaces || !!(op.driveFaceIds?.length) || op.badgeClass === 'swarf' || op.strategyKey === '5axis_swarf' || op.strategy === '5axis_swarf' || op.badgeClass === 'multi_parallel' || op.strategyKey === '5axis_parallel' || op.strategy === '5axis_parallel' || op.badgeClass === 'flowline' || op.badgeClass === 'shallow' || op.badgeClass === 'parallel' || op.badgeClass === 'parallel_steep' || op.badgeClass === 'radial' || op.badgeClass === 'project' || op.badgeClass === 'leftover' || op.badgeClass === 'scallop' || op.badgeClass === 'blend' || op.badgeClass === 'adaptive' || op.badgeClass === 'optirough' || op.badgeClass === 'rough_pocket' || op.badgeClass === 'rough_parallel' || op.badgeClass === 'rough_waterline' || op.badgeClass === 'multi_morph' || op.strategyKey === 'surface_rough_optirough' || op.strategyKey === 'surface_rough_pocket' || op.strategyKey === 'surface_rough_parallel' || op.strategyKey === 'surface_rough_waterline' || op.strategyKey === 'waterline_rough' || op.strategyKey === 'multiaxis_morph' || op.strategyKey === '5axis_morph' || op.strategyKey === 'surface_finish_parallel' || op.strategyKey === 'surface_finish_parallel_steep' || op.strategyKey === 'surface_finish_radial' || op.strategyKey === 'surface_finish_project' || op.strategyKey === 'surface_finish_leftover' || op.strategyKey === 'surface_finish_scallop' || op.strategyKey === 'surface_finish_blend';
+    const zOffset = isWcsTop ? effectiveBounds.max.y : 0;
+    const toCncY = (threeZ) => -threeZ;
+    const toCncZ = (threeY) => threeY - zOffset;
+
+    const clearanceZ = isWcsTop
+      ? (Number(op.rapidHeight) || 15.0)
+      : (effectiveBounds.max.y + (Number(op.rapidHeight) || 15.0) - zOffset);
+    const retractRel = Number(op.retractHeight) || 5.0;
+    const retractZ = isWcsTop
+      ? Math.min(clearanceZ, retractRel)
+      : (effectiveBounds.max.y + retractRel - zOffset);
+    const topStockLocal = Number(op.topOfStock) || 0;
+    const feedPlaneVal = Number(op.feedPlane) || 2.5;
+    const stockTopCncZ = isWcsTop ? topStockLocal : (effectiveBounds.max.y + topStockLocal - zOffset);
+
     let pendingIsoHeightOffset = false;
     let pendingIsoControlComp = false;
 
     // Tool Change & Spindle Start
+    const isRotary4AxisOp =
+      op.badgeClass === 'rotary_4axis' ||
+      op.badgeClass === '4axis_rotary' ||
+      op.badgeClass === 'multi_rotary' ||
+      op.strategyKey === 'rotary_4axis' ||
+      op.strategy === 'rotary_4axis' ||
+      op.name?.toLowerCase()?.includes('4-axis rotary') ||
+      op.name?.toLowerCase()?.includes('rotary');
+
     const is5AxisOp =
       op.badgeClass === 'swarf' ||
       op.badgeClass === 'multi_morph' ||
@@ -193,7 +221,17 @@ export function generateNCProgram({
       // Fanuc / Haas / GRBL / Mach3
       lines.push(`${nextN()} T${tool.number} M06 (${sanitizeIsoCommentText(tool.name)})`);
       lines.push(`${nextN()} S${effRpm} M03`);
-      if (is5AxisOp) {
+      if (isRotary4AxisOp) {
+        const cylRadius = Number(op.cutPattern?.cylinderDiameter || 60.0) / 2.0;
+        lines.push(`${nextN()} G00 X-45.000 Y0.000 A0.000`);
+        lines.push(`${nextN()} G43 H${tool.number} Z${fmtNum(clearanceZ)}${coolantIsoCode} ${formatInlineNote('TOOL LENGTH COMP')}`);
+        if (op.machineKinematics?.cylindricalInterpEnabled || op.cylindricalInterp) {
+          lines.push(`${nextN()} G107 C${cylRadius.toFixed(3)} ${formatInlineNote(`FANUC CYLINDRICAL INTERPOLATION ON - RADIUS ${cylRadius.toFixed(1)}mm`)}`);
+        }
+        if (op.machineKinematics?.enableAICC2Lookahead) {
+          lines.push(`${nextN()} G05.1 Q1 ${formatInlineNote('HIGH SPEED AICC II LOOK-AHEAD')}`);
+        }
+      } else if (is5AxisOp) {
         if (controller === CONTROLLER_DIALECTS.HAAS) {
           lines.push(`${nextN()} G234 H${tool.number}${coolantIsoCode} ${formatInlineNote('HAAS 5-AXIS TCPC ACTIVATION')}`);
           lines.push(`${nextN()} G187 P2 ${formatInlineNote('HAAS HIGH SPEED MACHINING - MEDIUM')}`);
@@ -214,25 +252,6 @@ export function generateNCProgram({
         }
       }
     }
-
-    // Coordinate & Z-Linking helpers
-    // Three.js Top (G17): +X = CNC +X, -Z = CNC +Y (cplaneGeometry vAxis), +Y = CNC +Z
-    const isWcsTop = stockConfig?.wcsZZero !== 'model_origin' || !model || !!op.chain || !!op.usesCustomSurfaces || !!(op.driveFaceIds?.length) || op.badgeClass === 'swarf' || op.strategyKey === '5axis_swarf' || op.strategy === '5axis_swarf' || op.badgeClass === 'multi_parallel' || op.strategyKey === '5axis_parallel' || op.strategy === '5axis_parallel' || op.badgeClass === 'flowline' || op.badgeClass === 'shallow' || op.badgeClass === 'parallel' || op.badgeClass === 'parallel_steep' || op.badgeClass === 'radial' || op.badgeClass === 'project' || op.badgeClass === 'leftover' || op.badgeClass === 'scallop' || op.badgeClass === 'blend' || op.badgeClass === 'adaptive' || op.badgeClass === 'optirough' || op.badgeClass === 'rough_pocket' || op.badgeClass === 'rough_parallel' || op.badgeClass === 'rough_waterline' || op.badgeClass === 'multi_morph' || op.strategyKey === 'surface_rough_optirough' || op.strategyKey === 'surface_rough_pocket' || op.strategyKey === 'surface_rough_parallel' || op.strategyKey === 'surface_rough_waterline' || op.strategyKey === 'waterline_rough' || op.strategyKey === 'multiaxis_morph' || op.strategyKey === '5axis_morph' || op.strategyKey === 'surface_finish_parallel' || op.strategyKey === 'surface_finish_parallel_steep' || op.strategyKey === 'surface_finish_radial' || op.strategyKey === 'surface_finish_project' || op.strategyKey === 'surface_finish_leftover' || op.strategyKey === 'surface_finish_scallop' || op.strategyKey === 'surface_finish_blend';
-    const zOffset = isWcsTop ? effectiveBounds.max.y : 0;
-    const fmtNum = (n) => (Math.abs(n) < 0.0005 ? 0 : n).toFixed(3);
-    const toCncY = (threeZ) => -threeZ;
-    const toCncZ = (threeY) => threeY - zOffset;
-
-    const clearanceZ = isWcsTop
-      ? (Number(op.rapidHeight) || 15.0)
-      : (effectiveBounds.max.y + (Number(op.rapidHeight) || 15.0) - zOffset);
-    const retractRel = Number(op.retractHeight) || 5.0;
-    const retractZ = isWcsTop
-      ? Math.min(clearanceZ, retractRel)
-      : (effectiveBounds.max.y + retractRel - zOffset);
-    const topStockLocal = Number(op.topOfStock) || 0;
-    const feedPlaneVal = Number(op.feedPlane) || 2.5;
-    const stockTopCncZ = isWcsTop ? topStockLocal : (effectiveBounds.max.y + topStockLocal - zOffset);
 
     const emitRapidXY = (cncX, cncY) => {
       if (controller === CONTROLLER_DIALECTS.HEIDENHAIN) {
@@ -292,7 +311,7 @@ export function generateNCProgram({
     };
 
     const entryStart = toolpathData.cuttingLines[0]?.[0] || toolpathData.rapidLines[0]?.[0] || null;
-    if (entryStart) {
+    if (entryStart && !isRotary4AxisOp) {
       emitLinkToPoint(entryStart, true);
       lastPos = entryStart.clone();
     }
@@ -364,7 +383,15 @@ export function generateNCProgram({
         // Fanuc / Haas / GRBL / Mach3
         const compPrefix = pendingIsoControlComp ? `${compCode} D${tool.number} ` : '';
         pendingIsoControlComp = false;
-        if (is5AxisOp && tp?.angles) {
+        if (isRotary4AxisOp) {
+          const rX = tp?.machinePos?.x !== undefined ? fmtNum(tp.machinePos.x) : cncX;
+          const rY = tp?.machinePos?.y !== undefined ? fmtNum(tp.machinePos.y) : '0.000';
+          const rZ = tp?.machinePos?.z !== undefined
+            ? fmtNum(tp.machinePos.z - (toolpathData.stock?.radius || 30.0))
+            : fmtNum(-Number(op.stepoverPasses?.maxRoughStepdownMm || 2.0));
+          const rotaryA = tp?.machinePos?.a !== undefined ? fmtNum(tp.machinePos.a) : (tp?.aDeg !== undefined ? fmtNum(tp.aDeg) : '0.000');
+          lines.push(`${nextN()} G01 ${compPrefix}X${rX} Y${rY} Z${rZ} A${rotaryA} F${segFeed}`);
+        } else if (is5AxisOp && tp?.angles) {
           if (tp.angles.A !== undefined) {
             lines.push(`${nextN()} G01 ${compPrefix}X${cncX} Y${cncY} Z${cncZ} A${tp.angles.A.toFixed(3)} C${tp.angles.C.toFixed(3)} F${segFeed}`);
           } else {
@@ -396,15 +423,24 @@ export function generateNCProgram({
       }
       lines.push(`${nextN()} G00 Z${finalRetractZ} M09`);
     } else {
-      if (is5AxisOp) {
+      if (isRotary4AxisOp) {
+        if (op.machineKinematics?.cylindricalInterpEnabled || op.cylindricalInterp) {
+          lines.push(`${nextN()} G107 C0 ${formatInlineNote('CYLINDRICAL INTERPOLATION CANCEL')}`);
+        }
+        lines.push(`${nextN()} G00 Z${finalRetractZ} M09`);
+        lines.push(`${nextN()} G28 G91 A0. ${formatInlineNote('HOME 4TH ROTARY AXIS')}`);
+      } else if (is5AxisOp) {
         lines.push(`${nextN()} G49 ${formatInlineNote('CANCEL 5-AXIS TCPM')}`);
         if (controller === CONTROLLER_DIALECTS.FANUC) {
           lines.push(`${nextN()} G05.1 Q0 ${formatInlineNote('AICC II OFF')}`);
         }
+        lines.push(`${nextN()} G00 Z${finalRetractZ} M09`);
       } else if (useControllerComp) {
         lines.push(`${nextN()} G40 ${formatInlineNote('CANCEL CUTTER RADIUS COMPENSATION')}`);
+        lines.push(`${nextN()} G00 Z${finalRetractZ} M09`);
+      } else {
+        lines.push(`${nextN()} G00 Z${finalRetractZ} M09`);
       }
-      lines.push(`${nextN()} G00 Z${finalRetractZ} M09`);
     }
   });
 

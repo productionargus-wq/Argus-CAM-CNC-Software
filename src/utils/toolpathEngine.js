@@ -4245,6 +4245,9 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
         feedRate: p.feedRate || 2000,
         isRapid: p.isRapid || false,
         aDeg: p.aDeg || 0,
+        angles: { A: p.aDeg || (p.machinePos?.a ?? 0), C: 0 },
+        machinePos: p.machinePos || { x: p.x, y: 0, z: p.radius || 30, a: p.aDeg || 0 },
+        toolVector: p.normal ? new THREE.Vector3(p.normal.x, p.normal.y, p.normal.z) : new THREE.Vector3(0, 1, 0),
         normal: p.normal ? new THREE.Vector3(p.normal.x, p.normal.y, p.normal.z) : new THREE.Vector3(0, 0, 1)
       });
       if (i > 0) {
