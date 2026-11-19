@@ -77,10 +77,26 @@ export default function Rotary4AxisModal({
     new Set(['rotary_cut_pattern', 'tool', 'axis_control_offset'])
   );
 
-  // Dragging state
+  // Dragging state with safe bounds
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, posX: 0, posY: 0 });
+
+  // Reset position to center whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [isOpen]);
+
+  // Escape key closes modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    if (isOpen) window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const handleMouseDown = (e) => {
     if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
@@ -98,9 +114,12 @@ export default function Rotary4AxisModal({
       if (!isDragging) return;
       const dx = e.clientX - dragRef.current.startX;
       const dy = e.clientY - dragRef.current.startY;
+      // Clamp drag boundaries so title bar can NEVER be dragged off-screen
+      const maxDragY = Math.max(50, window.innerHeight / 2 - 60);
+      const minDragY = -Math.max(50, window.innerHeight / 2 - 60);
       setPosition({
-        x: dragRef.current.posX + dx,
-        y: dragRef.current.posY + dy
+        x: Math.max(-window.innerWidth / 2 + 100, Math.min(window.innerWidth / 2 - 100, dragRef.current.posX + dx)),
+        y: Math.max(minDragY, Math.min(maxDragY, dragRef.current.posY + dy))
       });
     };
     const handleMouseUp = () => setIsDragging(false);
@@ -252,76 +271,179 @@ export default function Rotary4AxisModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[1px]">
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(3px)',
+        padding: '16px',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+        fontFamily: "'Segoe UI', Tahoma, Helvetica, sans-serif"
+      }}
+    >
       <div
         style={{
           transform: `translate(${position.x}px, ${position.y}px)`,
-          width: '920px',
-          maxWidth: '96vw',
+          width: '960px',
+          maxWidth: '98vw',
+          height: 'min(700px, 92vh)',
           maxHeight: '92vh',
           backgroundColor: '#f0f2f5',
-          color: '#1e293b'
+          border: '1px solid #717b87',
+          borderRadius: '4px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          fontSize: '12px',
+          color: '#1e293b',
+          userSelect: 'none'
         }}
-        className="flex flex-col rounded-lg shadow-2xl border border-slate-300 font-sans text-xs select-none overflow-hidden"
       >
-        {/* Title Bar */}
+        {/* Title Bar (Mastercam Classic Dark Slate Header) */}
         <div
           onMouseDown={handleMouseDown}
-          className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 border-b border-slate-300 cursor-move"
+          style={{
+            height: '34px',
+            background: 'linear-gradient(90deg, #1e293b 0%, #334155 100%)',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 12px',
+            fontSize: '12.5px',
+            fontWeight: 600,
+            borderBottom: '1px solid #475569',
+            boxSizing: 'border-box',
+            cursor: 'move',
+            flexShrink: 0
+          }}
         >
-          <div className="flex items-center gap-2">
-            <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold text-[10px] tracking-wider uppercase flex items-center gap-1">
-              <Disc size={11} className="inline" /> 4X
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Disc size={16} color="#38bdf8" />
+            <span>Rotary 4-Axis Machining (Cylinder Wrapping &amp; Axis Substitution) &mdash; Mastercam Engine</span>
+            <span
+              style={{
+                fontSize: '10px',
+                backgroundColor: 'rgba(56, 189, 248, 0.25)',
+                color: '#e0f2fe',
+                padding: '2px 7px',
+                borderRadius: '3px',
+                border: '1px solid rgba(56, 189, 248, 0.45)',
+                fontWeight: 600
+              }}
+            >
+              4X ROTARY
             </span>
-            <span className="font-semibold text-slate-800 text-[13px]">
-              Rotary 4-Axis Machining (Cylinder Wrapping &amp; Axis Substitution)
-            </span>
-            <span className="text-slate-400 text-[11px]">Mastercam 2026 Engine</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={handleApplyRecommended}
-              className="flex items-center gap-1 px-2 py-0.5 rounded border border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100 font-medium text-[11px] transition-colors"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 9px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: '#0369a1',
+                backgroundColor: '#f0f9ff',
+                border: '1px solid #bae6fd',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.15s'
+              }}
               title="Calculate optimal speed/feed and stepover for selected material"
             >
-              <Sparkles size={11} className="text-amber-600" />
-              Recommended Values
+              <Sparkles size={12} color="#0284c7" />
+              <span>Recommended Values</span>
             </button>
             <button
               onClick={() => setIsGuideOpen(!isGuideOpen)}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-medium transition-colors ${
-                isGuideOpen
-                  ? 'bg-blue-100 border-blue-400 text-blue-800'
-                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
-              }`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 9px',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: isGuideOpen ? '#0284c7' : '#e2e8f0',
+                backgroundColor: isGuideOpen ? '#e0f2fe' : 'rgba(255,255,255,0.1)',
+                border: isGuideOpen ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.15s'
+              }}
             >
-              <HelpCircle size={11} />
-              Machinist Guide
+              <HelpCircle size={12} />
+              <span>Machinist Guide</span>
             </button>
             <button
               onClick={onClose}
-              className="p-1 rounded hover:bg-slate-300 text-slate-600 hover:text-slate-900 transition-colors"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#cbd5e1',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '3px',
+                transition: 'all 0.15s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#dc2626';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = '#cbd5e1';
+              }}
+              title="Close (Esc)"
             >
-              <X size={15} />
+              <X size={16} />
             </button>
           </div>
         </div>
 
         {/* Presets Bar */}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 border-b border-slate-200 overflow-x-auto text-[11px]">
-          <span className="font-semibold text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-1">
-            <Zap size={11} className="text-amber-500" /> Presets:
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '5px 12px',
+            backgroundColor: '#ffffff',
+            borderBottom: '1px solid #cbd5e1',
+            gap: '8px',
+            flexShrink: 0,
+            overflowX: 'auto'
+          }}
+        >
+          <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+            <Zap size={12} color="#f59e0b" /> Presets:
           </span>
           {Object.values(ROTARY_4AXIS_PRESETS).map((pr) => (
             <button
               key={pr.id}
               onClick={() => handleApplyPreset(pr.id)}
-              className={`px-2 py-0.5 rounded border transition-colors whitespace-nowrap ${
-                formState.presetKey === pr.id
-                  ? 'bg-blue-600 text-white border-blue-600 font-medium shadow-xs'
-                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-              }`}
+              style={{
+                padding: '3px 8px',
+                fontSize: '11px',
+                backgroundColor: formState.presetKey === pr.id ? '#e0f2fe' : '#f1f5f9',
+                border: `1px solid ${formState.presetKey === pr.id ? '#38bdf8' : '#cbd5e1'}`,
+                borderRadius: '3px',
+                color: formState.presetKey === pr.id ? '#0369a1' : '#334155',
+                cursor: 'pointer',
+                fontWeight: formState.presetKey === pr.id ? 600 : 400,
+                whiteSpace: 'nowrap'
+              }}
               title={pr.desc}
             >
               {pr.name}
@@ -330,136 +452,176 @@ export default function Rotary4AxisModal({
         </div>
 
         {/* Main Body: 2-Column Mastercam Layout */}
-        <div className="flex flex-1 min-h-[460px] max-h-[580px] overflow-hidden">
+        <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           {/* Left Navigation Tree */}
-          <div className="w-[248px] shrink-0 border-r border-slate-300 bg-white flex flex-col justify-between">
-            <div className="p-2 overflow-y-auto">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
-                Tree View Navigation
-              </div>
-              <div className="space-y-0.5">
-                {Object.entries(ROTARY_4AXIS_PAGE_TITLES).map(([key, title]) => {
-                  const isActive = activePage === key;
-                  const isEdited = editedPages.has(key);
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setActivePage(key)}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded text-left transition-colors ${
-                        isActive
-                          ? 'bg-blue-600 text-white font-medium shadow-xs'
-                          : 'text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        {key === 'rotary_cut_pattern' && <Disc size={13} />}
-                        {key === 'tool' && <Sliders size={13} />}
-                        {key === 'holder' && <ShieldCheck size={13} />}
-                        {key === 'axis_control_offset' && <Compass size={13} />}
-                        {key === 'stepover_passes' && <Layers size={13} />}
-                        {key === 'collision_rotary_limits' && <AlertTriangle size={13} />}
-                        {key === 'linking_parameters' && <CornerDownRight size={13} />}
-                        {key === 'machine_kinematics' && <Cpu size={13} />}
-                        {key === 'arc_filter' && <Activity size={13} />}
-                        {key === 'planes_coolant' && <RotateCw size={13} />}
-                        {key === 'toolpath_type' && <Orbit size={13} />}
-                        <span className="truncate">{title}</span>
-                      </div>
-                      {isEdited && !isActive && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+          <div
+            style={{
+              width: '248px',
+              backgroundColor: '#e9ecef',
+              borderRight: '1px solid #cbd5e1',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '8px 0',
+              overflowY: 'auto',
+              flexShrink: 0
+            }}
+          >
+            <div
+              style={{
+                padding: '4px 14px 8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#64748b',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}
+            >
+              Rotary 4-Axis Pages
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', flex: 1 }}>
+              {Object.entries(ROTARY_4AXIS_PAGE_TITLES).map(([key, title]) => {
+                const isActive = activePage === key;
+                const isEdited = editedPages.has(key);
+                return (
+                  <div
+                    key={key}
+                    onClick={() => setActivePage(key)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '7px 14px',
+                      fontSize: '11.5px',
+                      cursor: 'pointer',
+                      backgroundColor: isActive ? '#ffffff' : 'transparent',
+                      borderLeft: isActive ? '4px solid #0284c7' : '4px solid transparent',
+                      color: isActive ? '#0369a1' : '#334155',
+                      fontWeight: isActive ? 600 : 400,
+                      transition: 'all 0.1s'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = '#dee2e6';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                      {key === 'rotary_cut_pattern' && <Disc size={13} color={isActive ? '#0284c7' : '#64748b'} />}
+                      {key === 'tool' && <Sliders size={13} color={isActive ? '#0284c7' : '#64748b'} />}
+                      {key === 'holder' && <ShieldCheck size={13} color={isActive ? '#0284c7' : '#64748b'} />}
+                      {key === 'axis_control_offset' && <Compass size={13} color={isActive ? '#0284c7' : '#64748b'} />}
+                      {key === 'stepover_passes' && <Layers size={13} color={isActive ? '#0284c7' : '#64748b'} />}
+                      {key === 'collision_rotary_limits' && <AlertTriangle size={13} color={isActive ? '#0284c7' : '#64748b'} />}
+                      {key === 'linking_parameters' && <CornerDownRight size={13} color={isActive ? '#0284c7' : '#64748b'} />}
+                      {key === 'machine_kinematics' && <Cpu size={13} color={isActive ? '#0284c7' : '#64748b'} />}
+                      {key === 'arc_filter' && <Activity size={13} color={isActive ? '#0284c7' : '#64748b'} />}
+                      {key === 'planes_coolant' && <RotateCw size={13} color={isActive ? '#0284c7' : '#64748b'} />}
+                      {key === 'toolpath_type' && <Orbit size={13} color={isActive ? '#0284c7' : '#64748b'} />}
+                      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
+                    </div>
+                    {isEdited && !isActive && (
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#0284c7', marginLeft: '6px', flexShrink: 0 }} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Quick Summary Pill in Tree Footer */}
-            <div className="p-2.5 border-t border-slate-200 bg-slate-50 text-[11px] space-y-1">
-              <div className="flex justify-between text-slate-500">
+            {/* Quick Summary in Tree Footer */}
+            <div style={{ padding: '8px 12px', borderTop: '1px solid #cbd5e1', backgroundColor: '#f1f5f9', fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
                 <span>Cylinder OD:</span>
-                <span className="font-semibold text-slate-700">{formState.cutPattern?.cylinderDiameter} mm</span>
+                <span style={{ fontWeight: 600, color: '#1e293b' }}>{formState.cutPattern?.cylinderDiameter} mm</span>
               </div>
-              <div className="flex justify-between text-slate-500">
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
                 <span>Rotary Axis:</span>
-                <span className="font-semibold text-blue-700">{formState.cutPattern?.rotaryAxis}-Axis ({formState.cutPattern?.rotaryAxis === 'X' ? 'A' : 'B'})</span>
+                <span style={{ fontWeight: 600, color: '#0369a1' }}>{formState.cutPattern?.rotaryAxis}-Axis ({formState.cutPattern?.rotaryAxis === 'X' ? 'A' : 'B'})</span>
               </div>
-              <div className="flex justify-between text-slate-500">
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
                 <span>Style:</span>
-                <span className="font-semibold text-slate-700 capitalize">{formState.cutPattern?.machiningStyle?.replace('_', ' ')}</span>
+                <span style={{ fontWeight: 600, color: '#1e293b', textTransform: 'capitalize' }}>{formState.cutPattern?.machiningStyle?.replace('_', ' ')}</span>
               </div>
             </div>
           </div>
 
-          {/* Right Content Area */}
-          <div className="flex-1 overflow-y-auto p-4 bg-[#f0f2f5] space-y-4">
+          {/* Right Parameters Panel */}
+          <div
+            style={{
+              flex: 1,
+              backgroundColor: '#f8fafc',
+              padding: '16px 20px',
+              overflowY: 'auto',
+              boxSizing: 'border-box'
+            }}
+          >
             {/* PAGE 1: TOOLPATH TYPE */}
             {activePage === 'toolpath_type' && (
-              <div className="space-y-4">
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     4-Axis Rotary Multiaxis Strategy
                   </legend>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="flex items-start gap-2 p-2 border border-blue-200 bg-blue-50/50 rounded cursor-pointer">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px', border: formState.cutPattern?.machiningStyle === 'axis_substitution' ? '1px solid #38bdf8' : '1px solid #e2e8f0', backgroundColor: formState.cutPattern?.machiningStyle === 'axis_substitution' ? '#f0f9ff' : '#ffffff', borderRadius: '4px', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="tp_type"
                         checked={formState.cutPattern?.machiningStyle === 'axis_substitution'}
                         onChange={() => updateField('cutPattern', 'machiningStyle', 'axis_substitution')}
-                        className="mt-0.5 text-blue-600"
+                        style={{ marginTop: '2px' }}
                       />
                       <div>
-                        <div className="font-semibold text-slate-800">Axis Substitution (2D/3D Wrapping)</div>
-                        <div className="text-slate-500 text-[11px]">
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>Axis Substitution (2D/3D Wrapping)</div>
+                        <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>
                           Wraps planar geometry (cams, slots, lettering) onto cylinder OD via A = (360° × Y) / (π × D).
                         </div>
                       </div>
                     </label>
 
-                    <label className="flex items-start gap-2 p-2 border border-slate-200 bg-white rounded cursor-pointer hover:bg-slate-50">
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px', border: formState.cutPattern?.machiningStyle === 'axial' ? '1px solid #38bdf8' : '1px solid #e2e8f0', backgroundColor: formState.cutPattern?.machiningStyle === 'axial' ? '#f0f9ff' : '#ffffff', borderRadius: '4px', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="tp_type"
                         checked={formState.cutPattern?.machiningStyle === 'axial'}
                         onChange={() => updateField('cutPattern', 'machiningStyle', 'axial')}
-                        className="mt-0.5 text-blue-600"
+                        style={{ marginTop: '2px' }}
                       />
                       <div>
-                        <div className="font-semibold text-slate-800">Axial Rotary (Longitudinal Passes)</div>
-                        <div className="text-slate-500 text-[11px]">
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>Axial Rotary (Longitudinal Passes)</div>
+                        <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>
                           Cuts longitudinally along X while the rotary axis steps over around the circumference.
                         </div>
                       </div>
                     </label>
 
-                    <label className="flex items-start gap-2 p-2 border border-slate-200 bg-white rounded cursor-pointer hover:bg-slate-50">
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px', border: formState.cutPattern?.machiningStyle === 'spiral' ? '1px solid #38bdf8' : '1px solid #e2e8f0', backgroundColor: formState.cutPattern?.machiningStyle === 'spiral' ? '#f0f9ff' : '#ffffff', borderRadius: '4px', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="tp_type"
                         checked={formState.cutPattern?.machiningStyle === 'spiral'}
                         onChange={() => updateField('cutPattern', 'machiningStyle', 'spiral')}
-                        className="mt-0.5 text-blue-600"
+                        style={{ marginTop: '2px' }}
                       />
                       <div>
-                        <div className="font-semibold text-slate-800">Continuous Rotary Spiral</div>
-                        <div className="text-slate-500 text-[11px]">
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>Continuous Rotary Spiral</div>
+                        <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>
                           Continuous 360° helical revolutions around cylinder with linear axial feed for mirror finish.
                         </div>
                       </div>
                     </label>
 
-                    <label className="flex items-start gap-2 p-2 border border-slate-200 bg-white rounded cursor-pointer hover:bg-slate-50">
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px', border: formState.cutPattern?.machiningStyle === 'radial' ? '1px solid #38bdf8' : '1px solid #e2e8f0', backgroundColor: formState.cutPattern?.machiningStyle === 'radial' ? '#f0f9ff' : '#ffffff', borderRadius: '4px', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="tp_type"
                         checked={formState.cutPattern?.machiningStyle === 'radial'}
                         onChange={() => updateField('cutPattern', 'machiningStyle', 'radial')}
-                        className="mt-0.5 text-blue-600"
+                        style={{ marginTop: '2px' }}
                       />
                       <div>
-                        <div className="font-semibold text-slate-800">Radial Rings (Circumferential Passes)</div>
-                        <div className="text-slate-500 text-[11px]">
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>Radial Rings (Circumferential Passes)</div>
+                        <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>
                           Full 360° rotation at discrete axial step locations along cylinder.
                         </div>
                       </div>
@@ -471,48 +633,48 @@ export default function Rotary4AxisModal({
 
             {/* PAGE 2: ROTARY CUT PATTERN */}
             {activePage === 'rotary_cut_pattern' && (
-              <div className="space-y-4">
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     Rotary Stock Cylinder Definition
                   </legend>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Cylinder Diameter (OD)</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Cylinder Diameter (OD)</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="0.5"
                           min="1"
                           value={formState.cutPattern?.cylinderDiameter || 60.0}
                           onChange={(e) => updateField('cutPattern', 'cylinderDiameter', parseFloat(e.target.value) || 60.0)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">mm</span>
+                        <span style={{ color: '#64748b' }}>mm</span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Cylinder Length</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Cylinder Length</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="1"
                           min="5"
                           value={formState.cutPattern?.cylinderLength || 100.0}
                           onChange={(e) => updateField('cutPattern', 'cylinderLength', parseFloat(e.target.value) || 100.0)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">mm</span>
+                        <span style={{ color: '#64748b' }}>mm</span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Rotary Axis</label>
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Rotary Axis</label>
                       <select
                         value={formState.cutPattern?.rotaryAxis || 'X'}
                         onChange={(e) => updateField('cutPattern', 'rotaryAxis', e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                        style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                       >
                         <option value="X">X-Axis (A-Axis Rotary)</option>
                         <option value="Y">Y-Axis (B-Axis Rotary)</option>
@@ -522,17 +684,17 @@ export default function Rotary4AxisModal({
                   </div>
                 </fieldset>
 
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     Cutting Direction &amp; Sequence
                   </legend>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Cutting Method</label>
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Cutting Method</label>
                       <select
                         value={formState.cutPattern?.cuttingDirection || 'climb'}
                         onChange={(e) => updateField('cutPattern', 'cuttingDirection', e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                        style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                       >
                         <option value="climb">Climb Milling (Standard)</option>
                         <option value="conventional">Conventional Milling</option>
@@ -541,11 +703,11 @@ export default function Rotary4AxisModal({
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Axial Cut Sequence</label>
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Axial Cut Sequence</label>
                       <select
                         value={formState.cutPattern?.cutSequence || 'positive_x_to_negative'}
                         onChange={(e) => updateField('cutPattern', 'cutSequence', e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                        style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                       >
                         <option value="positive_x_to_negative">+X to -X (Headstock toward Tailstock)</option>
                         <option value="negative_x_to_positive">-X to +X (Tailstock toward Headstock)</option>
@@ -558,16 +720,16 @@ export default function Rotary4AxisModal({
 
             {/* PAGE 3: TOOL SELECTION & DYNAMICS */}
             {activePage === 'tool' && (
-              <div className="space-y-4">
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     Assigned 4-Axis Milling Tool
                   </legend>
-                  <div className="flex items-center gap-3 mb-3">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                     <select
                       value={formState.tool?.id}
                       onChange={(e) => handleSelectTool(e.target.value)}
-                      className="flex-1 px-2 py-1.5 border border-slate-300 rounded text-slate-800 font-medium bg-white focus:outline-blue-500"
+                      style={{ flex: 1, padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', fontWeight: 500, backgroundColor: '#ffffff' }}
                     >
                       {tools.map((t) => (
                         <option key={t.id} value={t.id}>
@@ -578,65 +740,65 @@ export default function Rotary4AxisModal({
                     {onOpenToolLibrary && (
                       <button
                         onClick={onOpenToolLibrary}
-                        className="px-3 py-1.5 bg-slate-100 border border-slate-300 rounded text-slate-700 hover:bg-slate-200 transition-colors font-medium"
+                        style={{ padding: '6px 12px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#334155', cursor: 'pointer', fontWeight: 500 }}
                       >
                         Select from Library...
                       </button>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-3">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Spindle Speed</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Spindle Speed</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="100"
                           value={formState.tool?.spindleSpeed || 10000}
                           onChange={(e) => updateField('tool', 'spindleSpeed', parseInt(e.target.value) || 10000)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">RPM</span>
+                        <span style={{ color: '#64748b' }}>RPM</span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Linear Feedrate</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Linear Feedrate</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="50"
                           value={formState.tool?.feedRate || 2000}
                           onChange={(e) => updateField('tool', 'feedRate', parseInt(e.target.value) || 2000)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">mm/min</span>
+                        <span style={{ color: '#64748b' }}>mm/min</span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Plunge Feedrate</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Plunge Feedrate</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="25"
                           value={formState.tool?.plungeRate || 500}
                           onChange={(e) => updateField('tool', 'plungeRate', parseInt(e.target.value) || 500)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">mm/min</span>
+                        <span style={{ color: '#64748b' }}>mm/min</span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Flute Count</label>
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Flute Count</label>
                       <input
                         type="number"
                         min="1"
                         max="8"
                         value={formState.tool?.flutes || 2}
                         onChange={(e) => updateField('tool', 'flutes', parseInt(e.target.value) || 2)}
-                        className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                        style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                       />
                     </div>
                   </div>
@@ -646,18 +808,18 @@ export default function Rotary4AxisModal({
 
             {/* PAGE 4: HOLDER DEFINITION */}
             {activePage === 'holder' && (
-              <div className="space-y-4">
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     Toolholder &amp; Gauge Length
                   </legend>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Holder Style</label>
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Holder Style</label>
                       <select
                         value={formState.holder?.type || 'CAT40_ER32'}
                         onChange={(e) => updateField('holder', 'type', e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                        style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                       >
                         <option value="CAT40_ER32">CAT40 - ER32 Precision Collet</option>
                         <option value="BT30_BBT">BT30 - BBT Dual Contact (Robodrill)</option>
@@ -665,28 +827,28 @@ export default function Rotary4AxisModal({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Gauge Length</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Gauge Length</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           value={formState.holder?.gaugeLength || 70.0}
                           onChange={(e) => updateField('holder', 'gaugeLength', parseFloat(e.target.value) || 70.0)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">mm</span>
+                        <span style={{ color: '#64748b' }}>mm</span>
                       </div>
                     </div>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Holder Clearance Margin</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Holder Clearance Margin</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="0.5"
                           value={formState.holder?.holderClearanceMargin || 3.0}
                           onChange={(e) => updateField('holder', 'holderClearanceMargin', parseFloat(e.target.value) || 3.0)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">mm</span>
+                        <span style={{ color: '#64748b' }}>mm</span>
                       </div>
                     </div>
                   </div>
@@ -696,39 +858,39 @@ export default function Rotary4AxisModal({
 
             {/* PAGE 5: AXIS CONTROL & CUTTER OFFSET (Y-OFFSET) */}
             {activePage === 'axis_control_offset' && (
-              <div className="space-y-4">
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     Cutter Offset Method (Centerline vs Y-Offset)
                   </legend>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <label className="flex items-start gap-2 p-2 border border-blue-200 bg-blue-50/50 rounded cursor-pointer">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px', border: formState.axisControl?.cutterOffsetMethod === 'centerline' ? '1px solid #38bdf8' : '1px solid #e2e8f0', backgroundColor: formState.axisControl?.cutterOffsetMethod === 'centerline' ? '#f0f9ff' : '#ffffff', borderRadius: '4px', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="offset_method"
                         checked={formState.axisControl?.cutterOffsetMethod === 'centerline'}
                         onChange={() => updateField('axisControl', 'cutterOffsetMethod', 'centerline')}
-                        className="mt-0.5 text-blue-600"
+                        style={{ marginTop: '2px' }}
                       />
                       <div>
-                        <div className="font-semibold text-slate-800">Centerline Cutting (Y = 0)</div>
-                        <div className="text-slate-500 text-[11px]">
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>Centerline Cutting (Y = 0)</div>
+                        <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>
                           Tool tip cuts directly on the rotary cylinder centerline axis.
                         </div>
                       </div>
                     </label>
 
-                    <label className="flex items-start gap-2 p-2 border border-slate-200 bg-white rounded cursor-pointer hover:bg-slate-50">
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px', border: formState.axisControl?.cutterOffsetMethod === 'y_offset' ? '1px solid #38bdf8' : '1px solid #e2e8f0', backgroundColor: formState.axisControl?.cutterOffsetMethod === 'y_offset' ? '#f0f9ff' : '#ffffff', borderRadius: '4px', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="offset_method"
                         checked={formState.axisControl?.cutterOffsetMethod === 'y_offset'}
                         onChange={() => updateField('axisControl', 'cutterOffsetMethod', 'y_offset')}
-                        className="mt-0.5 text-blue-600"
+                        style={{ marginTop: '2px' }}
                       />
                       <div>
-                        <div className="font-semibold text-slate-800">Y-Offset Tangential Cutting</div>
-                        <div className="text-slate-500 text-[11px]">
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>Y-Offset Tangential Cutting</div>
+                        <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>
                           Shifts cutter off-center to provide positive shear rake angle on cylinder OD.
                         </div>
                       </div>
@@ -736,21 +898,21 @@ export default function Rotary4AxisModal({
                   </div>
 
                   {formState.axisControl?.cutterOffsetMethod === 'y_offset' && (
-                    <div className="grid grid-cols-2 gap-3 p-2 bg-slate-50 rounded border border-slate-200">
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '10px', backgroundColor: '#f1f5f9', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
                       <div>
-                        <label className="block text-slate-600 mb-1 font-medium">Y-Offset Distance</label>
-                        <div className="flex items-center gap-1">
+                        <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Y-Offset Distance</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <input
                             type="number"
                             step="0.1"
                             value={formState.axisControl?.yOffsetDistanceMm || 1.5}
                             onChange={(e) => updateField('axisControl', 'yOffsetDistanceMm', parseFloat(e.target.value) || 1.5)}
-                            className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                            style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                           />
-                          <span className="text-slate-500">mm</span>
+                          <span style={{ color: '#64748b' }}>mm</span>
                         </div>
                       </div>
-                      <div className="text-slate-500 text-[11px] flex items-center">
+                      <div style={{ color: '#64748b', fontSize: '11px', display: 'flex', alignItems: 'center' }}>
                         Positive Y shifts tool towards operator; improves surface finish and chip shearing.
                       </div>
                     </div>
@@ -761,53 +923,53 @@ export default function Rotary4AxisModal({
 
             {/* PAGE 6: STEPOVER & DEPTH PASSES */}
             {activePage === 'stepover_passes' && (
-              <div className="space-y-4">
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     Stepover &amp; Cut Spacing
                   </legend>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Angular Stepover (Axial)</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Angular Stepover (Axial)</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="0.5"
                           min="0.1"
                           value={formState.stepoverPasses?.stepoverDeg || 3.5}
                           onChange={(e) => updateField('stepoverPasses', 'stepoverDeg', parseFloat(e.target.value) || 3.5)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">deg (°)</span>
+                        <span style={{ color: '#64748b' }}>deg (°)</span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Linear Stepover (Radial/Spiral)</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Linear Stepover (Radial/Spiral)</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="0.1"
                           min="0.05"
                           value={formState.stepoverPasses?.stepoverMm || 1.2}
                           onChange={(e) => updateField('stepoverPasses', 'stepoverMm', parseFloat(e.target.value) || 1.2)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">mm</span>
+                        <span style={{ color: '#64748b' }}>mm</span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Depth of Cut (ap)</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Depth of Cut (ap)</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="0.25"
                           value={formState.stepoverPasses?.maxRoughStepdownMm || 2.0}
                           onChange={(e) => updateField('stepoverPasses', 'maxRoughStepdownMm', parseFloat(e.target.value) || 2.0)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">mm</span>
+                        <span style={{ color: '#64748b' }}>mm</span>
                       </div>
                     </div>
                   </div>
@@ -817,39 +979,39 @@ export default function Rotary4AxisModal({
 
             {/* PAGE 7: COLLISION & ROTARY LIMITS */}
             {activePage === 'collision_rotary_limits' && (
-              <div className="space-y-4">
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     Rotary Travel Limits &amp; Unwind Mode
                   </legend>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <label className="flex items-start gap-2 p-2 border border-blue-200 bg-blue-50/50 rounded cursor-pointer">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px', border: formState.collisionControl?.rotaryLimitsMode === 'continuous' ? '1px solid #38bdf8' : '1px solid #e2e8f0', backgroundColor: formState.collisionControl?.rotaryLimitsMode === 'continuous' ? '#f0f9ff' : '#ffffff', borderRadius: '4px', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="rotary_limits"
                         checked={formState.collisionControl?.rotaryLimitsMode === 'continuous'}
                         onChange={() => updateField('collisionControl', 'rotaryLimitsMode', 'continuous')}
-                        className="mt-0.5 text-blue-600"
+                        style={{ marginTop: '2px' }}
                       />
                       <div>
-                        <div className="font-semibold text-slate-800">Continuous Multi-Turn Unwind</div>
-                        <div className="text-slate-500 text-[11px]">
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>Continuous Multi-Turn Unwind</div>
+                        <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>
                           Allows seamless continuous rotation past 360° without intermediate table rewinds.
                         </div>
                       </div>
                     </label>
 
-                    <label className="flex items-start gap-2 p-2 border border-slate-200 bg-white rounded cursor-pointer hover:bg-slate-50">
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px', border: formState.collisionControl?.rotaryLimitsMode === 'clamped' ? '1px solid #38bdf8' : '1px solid #e2e8f0', backgroundColor: formState.collisionControl?.rotaryLimitsMode === 'clamped' ? '#f0f9ff' : '#ffffff', borderRadius: '4px', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="rotary_limits"
                         checked={formState.collisionControl?.rotaryLimitsMode === 'clamped'}
                         onChange={() => updateField('collisionControl', 'rotaryLimitsMode', 'clamped')}
-                        className="mt-0.5 text-blue-600"
+                        style={{ marginTop: '2px' }}
                       />
                       <div>
-                        <div className="font-semibold text-slate-800">Clamped Rotary Window</div>
-                        <div className="text-slate-500 text-[11px]">
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>Clamped Rotary Window</div>
+                        <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>
                           Restricts rotary travel within specified minimum and maximum angular boundaries.
                         </div>
                       </div>
@@ -861,46 +1023,46 @@ export default function Rotary4AxisModal({
 
             {/* PAGE 8: LINKING & CLEARANCE CYLINDERS */}
             {activePage === 'linking_parameters' && (
-              <div className="space-y-4">
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     Cylindrical Clearance Zones
                   </legend>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Clearance Cylinder Radius</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Clearance Cylinder Radius</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="1"
                           value={formState.linkingParameters?.clearanceRadiusMm || 45.0}
                           onChange={(e) => updateField('linkingParameters', 'clearanceRadiusMm', parseFloat(e.target.value) || 45.0)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">mm</span>
+                        <span style={{ color: '#64748b' }}>mm</span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Retract Cylinder Radius</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Retract Cylinder Radius</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="1"
                           value={formState.linkingParameters?.retractRadiusMm || 35.0}
                           onChange={(e) => updateField('linkingParameters', 'retractRadiusMm', parseFloat(e.target.value) || 35.0)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">mm</span>
+                        <span style={{ color: '#64748b' }}>mm</span>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Pass Transition</label>
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Pass Transition</label>
                       <select
                         value={formState.linkingParameters?.transitionBetweenPasses || 'blend_loop'}
                         onChange={(e) => updateField('linkingParameters', 'transitionBetweenPasses', e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                        style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                       >
                         <option value="blend_loop">3D Parabolic Blend Loop (Recommended)</option>
                         <option value="direct">Direct Stepover on Cylinder</option>
@@ -914,18 +1076,18 @@ export default function Rotary4AxisModal({
 
             {/* PAGE 9: MACHINE KINEMATICS & POST DIALECT */}
             {activePage === 'machine_kinematics' && (
-              <div className="space-y-4">
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     Controller Dialect &amp; Rotary Interpolation
                   </legend>
-                  <div className="grid grid-cols-3 gap-3 mb-3">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Post Dialect</label>
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Post Dialect</label>
                       <select
                         value={formState.machineKinematics?.postDialect || 'fanuc'}
                         onChange={(e) => updateField('machineKinematics', 'postDialect', e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                        style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                       >
                         <option value="fanuc">Fanuc 30i / 31i / 0i-MF</option>
                         <option value="haas">Haas Automation 4-Axis</option>
@@ -934,11 +1096,11 @@ export default function Rotary4AxisModal({
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Feedrate Mode</label>
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Feedrate Mode</label>
                       <select
                         value={formState.machineKinematics?.feedMode || 'deg_per_min'}
                         onChange={(e) => updateField('machineKinematics', 'feedMode', e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                        style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                       >
                         <option value="deg_per_min">Degrees / Minute (G94)</option>
                         <option value="inverse_time">Inverse Time Feed (G93 - 1/min)</option>
@@ -946,26 +1108,26 @@ export default function Rotary4AxisModal({
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Rotary Axis Letter</label>
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Rotary Axis Letter</label>
                       <input
                         type="text"
                         maxLength="1"
                         value={formState.machineKinematics?.rotaryAxisLetter || 'A'}
                         onChange={(e) => updateField('machineKinematics', 'rotaryAxisLetter', e.target.value.toUpperCase())}
-                        className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 uppercase font-bold bg-white focus:outline-blue-500"
+                        style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', fontWeight: 700, textTransform: 'uppercase', backgroundColor: '#ffffff' }}
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-200">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
                     <input
                       type="checkbox"
                       id="cyl_interp"
                       checked={formState.machineKinematics?.cylindricalInterpEnabled ?? true}
                       onChange={(e) => updateField('machineKinematics', 'cylindricalInterpEnabled', e.target.checked)}
-                      className="rounded text-blue-600"
+                      style={{ cursor: 'pointer' }}
                     />
-                    <label htmlFor="cyl_interp" className="text-slate-700 font-medium cursor-pointer">
+                    <label htmlFor="cyl_interp" style={{ color: '#334155', fontWeight: 500, cursor: 'pointer' }}>
                       Enable Fanuc G107 / G07.1 Cylindrical Interpolation
                     </label>
                   </div>
@@ -975,36 +1137,36 @@ export default function Rotary4AxisModal({
 
             {/* PAGE 10: ARC FILTER & 4X TOLERANCE */}
             {activePage === 'arc_filter' && (
-              <div className="space-y-4">
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     4-Axis Arc Filtering &amp; Tolerances
                   </legend>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Total Chordal Tolerance</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Total Chordal Tolerance</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="0.005"
                           value={formState.arcFilter?.totalToleranceMm || 0.015}
                           onChange={(e) => updateField('arcFilter', 'totalToleranceMm', parseFloat(e.target.value) || 0.015)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">mm</span>
+                        <span style={{ color: '#64748b' }}>mm</span>
                       </div>
                     </div>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Max Angular Segment</label>
-                      <div className="flex items-center gap-1">
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Max Angular Segment</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <input
                           type="number"
                           step="1"
                           value={formState.arcFilter?.maxAngularSegmentDeg || 5.0}
                           onChange={(e) => updateField('arcFilter', 'maxAngularSegmentDeg', parseFloat(e.target.value) || 5.0)}
-                          className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                         />
-                        <span className="text-slate-500">deg (°)</span>
+                        <span style={{ color: '#64748b' }}>deg (°)</span>
                       </div>
                     </div>
                   </div>
@@ -1014,18 +1176,18 @@ export default function Rotary4AxisModal({
 
             {/* PAGE 11: PLANES & COOLANT */}
             {activePage === 'planes_coolant' && (
-              <div className="space-y-4">
-                <fieldset className="border border-slate-300 rounded p-3 bg-white shadow-2xs">
-                  <legend className="px-1 text-slate-700 font-semibold text-[11px]">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <fieldset style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '12px 14px', backgroundColor: '#ffffff' }}>
+                  <legend style={{ padding: '0 4px', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                     WCS &amp; Coolant Management
                   </legend>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Work Coordinate System (WCS)</label>
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Work Coordinate System (WCS)</label>
                       <select
                         value={formState.planesCoolant?.wcs || 'Top (G54)'}
                         onChange={(e) => updateField('planesCoolant', 'wcs', e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                        style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                       >
                         <option value="Top (G54)">Top (G54 - Standard)</option>
                         <option value="G55">G55</option>
@@ -1034,32 +1196,30 @@ export default function Rotary4AxisModal({
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 mb-1 font-medium">Operator Message</label>
+                      <label style={{ display: 'block', color: '#475569', marginBottom: '4px', fontWeight: 500 }}>Operator Message</label>
                       <input
                         type="text"
                         value={formState.planesCoolant?.operatorMessage || '4-AXIS ROTARY PASS'}
                         onChange={(e) => updateField('planesCoolant', 'operatorMessage', e.target.value)}
-                        className="w-full px-2 py-1 border border-slate-300 rounded text-slate-800 bg-white focus:outline-blue-500"
+                        style={{ width: '100%', padding: '5px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff' }}
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 pt-2 border-t border-slate-200">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
                         checked={formState.planesCoolant?.coolantFlood ?? true}
                         onChange={(e) => updateField('planesCoolant', 'coolantFlood', e.target.checked)}
-                        className="rounded text-blue-600"
                       />
                       <span>Flood Coolant (M08)</span>
                     </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
                         checked={formState.planesCoolant?.coolantThruSpindle ?? false}
                         onChange={(e) => updateField('planesCoolant', 'coolantThruSpindle', e.target.checked)}
-                        className="rounded text-blue-600"
                       />
                       <span>Through Spindle (M88)</span>
                     </label>
@@ -1071,49 +1231,62 @@ export default function Rotary4AxisModal({
 
           {/* Machinist Guide Drawer (Collapsible) */}
           {isGuideOpen && (
-            <div className="w-[280px] shrink-0 border-l border-slate-300 bg-white p-3 overflow-y-auto text-[11px] space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                <span className="font-bold text-slate-800 flex items-center gap-1">
-                  <Info size={13} className="text-blue-600" /> 4-Axis Rotary Guide
+            <div
+              style={{
+                width: '280px',
+                borderLeft: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                padding: '12px',
+                overflowY: 'auto',
+                fontSize: '11px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                flexShrink: 0
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', paddingBottom: '8px', borderBottom: '1px solid #e2e8f0' }}>
+                <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
+                  <Info size={13} color="#0284c7" /> 4-Axis Rotary Guide
                 </span>
                 <button
                   onClick={() => setIsGuideOpen(false)}
-                  className="p-0.5 rounded hover:bg-slate-200 text-slate-500"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px', color: '#64748b' }}
                 >
                   <X size={13} />
                 </button>
               </div>
 
               <div>
-                <h4 className="font-semibold text-slate-700 mb-1">Axis Substitution Formula</h4>
-                <p className="text-slate-600 leading-relaxed">
+                <h4 style={{ fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Axis Substitution Formula</h4>
+                <p style={{ color: '#475569', lineHeight: 1.5 }}>
                   Converts planar Y positions into rotary A degrees around cylinder OD:
                 </p>
-                <div className="p-2 bg-slate-100 rounded text-[10px] font-mono my-1 border border-slate-200">
+                <div style={{ padding: '6px 8px', backgroundColor: '#f1f5f9', borderRadius: '3px', fontFamily: 'monospace', fontSize: '10.5px', margin: '4px 0', border: '1px solid #cbd5e1' }}>
                   A = (360° × Y) / (π × D_cyl)
                 </div>
               </div>
 
               <div>
-                <h4 className="font-semibold text-slate-700 mb-1">Rotary Feedrate (deg/min)</h4>
-                <p className="text-slate-600 leading-relaxed">
+                <h4 style={{ fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Rotary Feedrate (deg/min)</h4>
+                <p style={{ color: '#475569', lineHeight: 1.5 }}>
                   Linear feed F (mm/min) along cylinder circumference translates to:
                 </p>
-                <div className="p-2 bg-slate-100 rounded text-[10px] font-mono my-1 border border-slate-200">
+                <div style={{ padding: '6px 8px', backgroundColor: '#f1f5f9', borderRadius: '3px', fontFamily: 'monospace', fontSize: '10.5px', margin: '4px 0', border: '1px solid #cbd5e1' }}>
                   F_rot = (360° × F_lin) / (π × D_cyl)
                 </div>
               </div>
 
               <div>
-                <h4 className="font-semibold text-slate-700 mb-1">Y-Offset Tangential Cutting</h4>
-                <p className="text-slate-600 leading-relaxed">
+                <h4 style={{ fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Y-Offset Tangential Cutting</h4>
+                <p style={{ color: '#475569', lineHeight: 1.5 }}>
                   Moving tool off-center produces positive cutting rake on cylindrical walls, eliminating rubbing and chatter.
                 </p>
               </div>
 
               <div>
-                <h4 className="font-semibold text-slate-700 mb-1">Fanuc G107 / G07.1</h4>
-                <p className="text-slate-600 leading-relaxed">
+                <h4 style={{ fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Fanuc G107 / G07.1</h4>
+                <p style={{ color: '#475569', lineHeight: 1.5 }}>
                   Enables CNC controller cylindrical interpolation, allowing circular arc programming (G02/G03) directly on cylinder face.
                 </p>
               </div>
@@ -1122,66 +1295,104 @@ export default function Rotary4AxisModal({
         </div>
 
         {/* Bottom Bar: Telemetry HUD & Action Buttons */}
-        <div className="flex items-center justify-between px-3 py-2 bg-white border-t border-slate-300">
-          <div className="flex items-center gap-4 text-[11px]">
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-500 font-medium">Material:</span>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '8px 14px',
+            backgroundColor: '#ffffff',
+            borderTop: '1px solid #cbd5e1',
+            flexShrink: 0
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '11px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ color: '#64748b', fontWeight: 500 }}>Material:</span>
               <select
                 value={selectedMaterial}
                 onChange={(e) => setSelectedMaterial(e.target.value)}
-                className="px-2 py-0.5 border border-slate-300 rounded text-slate-800 bg-white font-medium focus:outline-blue-500"
+                style={{ padding: '3px 8px', border: '1px solid #cbd5e1', borderRadius: '3px', color: '#1e293b', backgroundColor: '#ffffff', fontWeight: 500 }}
               >
                 {Object.values(ROTARY_4AXIS_MATERIALS).map((mat) => (
                   <option key={mat.id} value={mat.id.toUpperCase()}>
-                    {mat.name} ({mat.hardness})
+                    {mat.name.split(' ')[0]} ({mat.hardness})
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="h-4 w-px bg-slate-300" />
+            <div style={{ height: '16px', width: '1px', backgroundColor: '#cbd5e1' }} />
 
-            <div className="flex items-center gap-3 text-slate-600">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#475569' }}>
               <div>
-                <span className="text-slate-400">Cyl Dia: </span>
-                <span className="font-bold text-slate-800">{physics.cylinderDiameterMm}mm</span>
+                <span style={{ color: '#94a3b8' }}>Cyl Dia: </span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{physics.cylinderDiameterMm}mm</span>
               </div>
               <div>
-                <span className="text-slate-400">Rotary Feed: </span>
-                <span className="font-bold text-blue-700">{physics.rotaryFeedDegMin}°/min</span>
+                <span style={{ color: '#94a3b8' }}>Rotary Feed: </span>
+                <span style={{ fontWeight: 700, color: '#0284c7' }}>{physics.rotaryFeedDegMin}°/min</span>
               </div>
               <div>
-                <span className="text-slate-400">Tool Vc: </span>
-                <span className="font-bold text-slate-800">{physics.toolVcMMin} m/min</span>
+                <span style={{ color: '#94a3b8' }}>Tool Vc: </span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{physics.toolVcMMin} m/min</span>
               </div>
               <div>
-                <span className="text-slate-400">Scallop: </span>
-                <span className="font-bold text-slate-800">{physics.scallopMicrons} µm</span>
+                <span style={{ color: '#94a3b8' }}>Scallop: </span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{physics.scallopMicrons} µm</span>
               </div>
               <div>
-                <span className="text-slate-400">Power: </span>
-                <span className="font-bold text-slate-800">{physics.spindlePowerKw} kW</span>
+                <span style={{ color: '#94a3b8' }}>Power: </span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{physics.spindlePowerKw} kW</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={handleSave}
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded shadow-xs transition-colors flex items-center gap-1.5"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '6px 14px',
+                backgroundColor: '#0284c7',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+              }}
             >
               <Check size={13} />
               OK / Generate Toolpath
             </button>
             <button
               onClick={onClose}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded border border-slate-300 transition-colors"
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#f1f5f9',
+                color: '#334155',
+                border: '1px solid #cbd5e1',
+                borderRadius: '3px',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded border border-slate-300 transition-colors"
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#f1f5f9',
+                color: '#334155',
+                border: '1px solid #cbd5e1',
+                borderRadius: '3px',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
             >
               Apply
             </button>
