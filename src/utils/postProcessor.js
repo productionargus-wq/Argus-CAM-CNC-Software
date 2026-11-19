@@ -188,6 +188,7 @@ export function generateNCProgram({
       op.badgeClass === 'swarf' ||
       op.badgeClass === 'multi_morph' ||
       op.badgeClass === 'multi_parallel' ||
+      op.badgeClass === 'multiaxis_drill' ||
       op.strategyKey === 'multiaxis_morph' ||
       op.strategyKey === '5axis_morph' ||
       op.strategy === 'multiaxis_morph' ||
@@ -196,7 +197,10 @@ export function generateNCProgram({
       op.strategyKey === '5axis_parallel' ||
       op.strategy === '5axis_parallel' ||
       op.strategyKey === 'multi_parallel' ||
-      op.strategy === 'multi_parallel';
+      op.strategy === 'multi_parallel' ||
+      op.strategyKey === 'multiaxis_drill' ||
+      op.strategyKey === '5axis_drill' ||
+      op.strategy === 'multiaxis_drill';
 
     if (useHeidenhain) {
       lines.push(`${nextN()} TOOL CALL ${tool.number} Z S${effRpm} DL+0.00 DR+0.00`);

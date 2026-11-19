@@ -54,6 +54,7 @@ import MultiaxisMorphModal from './components/MultiaxisMorphModal';
 import SwarfMillingModal from './components/SwarfMillingModal';
 import MultiaxisParallelModal from './components/MultiaxisParallelModal';
 import Rotary4AxisModal from './components/Rotary4AxisModal';
+import MultiaxisDrillModal from './components/MultiaxisDrillModal';
 import AdaptiveRoughingModal from './components/AdaptiveRoughingModal';
 import LeadInOutDesignerModal from './components/LeadInOutDesignerModal';
 import FiveAxisStudioModal from './components/FiveAxisStudioModal';
@@ -374,6 +375,8 @@ export default function App() {
   const [editingMultiaxisParallelOp, setEditingMultiaxisParallelOp] = useState(null);
   const [isRotary4AxisModalOpen, setIsRotary4AxisModalOpen] = useState(false);
   const [editingRotary4AxisOp, setEditingRotary4AxisOp] = useState(null);
+  const [isMultiaxisDrillModalOpen, setIsMultiaxisDrillModalOpen] = useState(false);
+  const [editingMultiaxisDrillOp, setEditingMultiaxisDrillOp] = useState(null);
   const [isAdaptiveModalOpen, setIsAdaptiveModalOpen] = useState(false);
   const [isLeadInOutModalOpen, setIsLeadInOutModalOpen] = useState(false);
   const [isFiveAxisModalOpen, setIsFiveAxisModalOpen] = useState(false);
@@ -2073,6 +2076,18 @@ export default function App() {
     }
 
     if (
+      op?.strategyKey === 'multiaxis_drill' ||
+      op?.strategy === 'multiaxis_drill' ||
+      op?.badgeClass === 'multiaxis_drill' ||
+      op?.name?.toLowerCase()?.includes('multiaxis drill') ||
+      op?.name?.toLowerCase()?.includes('5-axis drill')
+    ) {
+      setEditingMultiaxisDrillOp(op);
+      setIsMultiaxisDrillModalOpen(true);
+      return;
+    }
+
+    if (
       op?.strategyKey === 'surface_finish_flowline' ||
       op?.badgeClass === 'flowline' ||
       op?.strategyKey === 'surface_finish_contour' ||
@@ -2417,6 +2432,10 @@ export default function App() {
     } else if (s === 'rotary_4axis' || s === 'rotary' || s === 'multi_rotary' || s === '4axis_rotary' || s === 'rotary_advanced') {
       setEditingRotary4AxisOp(null);
       setIsRotary4AxisModalOpen(true);
+      return;
+    } else if (s === 'multiaxis_drill' || s === '5axis_drill' || s === 'multi_drill') {
+      setEditingMultiaxisDrillOp(null);
+      setIsMultiaxisDrillModalOpen(true);
       return;
     } else if (s === 'adaptive' || s === 'dynamic_mill') {
       newOp = {
@@ -3109,6 +3128,58 @@ export default function App() {
     setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
     setIsRotary4AxisModalOpen(false);
     setEditingRotary4AxisOp(null);
+  };
+
+  const handleSaveMultiaxisDrillOp = (savedOp) => {
+    if (!savedOp) return;
+    const prevOps = operationsRef.current || operations || [];
+    const exists = prevOps.some((o) => String(o.id) === String(savedOp.id));
+    const numericIds = prevOps.map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
+    const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+    const finalId = exists ? savedOp.id : (savedOp.id != null && Number.isFinite(Number(savedOp.id)) ? Number(savedOp.id) : nextId);
+
+    const assignedTool =
+      tools.find((t) => String(t.id) === String(savedOp.toolId || savedOp.tool?.id)) ||
+      tools.find((t) => Number(t.number) === Number(savedOp.tool?.number)) ||
+      tools.find((t) => t.type === 'drill') ||
+      tools[0] ||
+      { id: 10, number: 10, type: 'drill', diameter: 6.0, name: '6.0mm Carbide Drill' };
+
+    const formattedOp = {
+      ...savedOp,
+      id: finalId,
+      name: savedOp.name || '5-Axis Multiaxis Drilling',
+      strategy: 'multiaxis_drill',
+      strategyKey: 'multiaxis_drill',
+      badgeClass: 'multiaxis_drill',
+      badgeText: '5X-DRILL',
+      color: '#06b6d4',
+      opType: 'multiaxis',
+      toolId: assignedTool.id,
+      toolName: `T${assignedTool.number} - ${assignedTool.name}`,
+      tool: assignedTool,
+      spindleSpeed: savedOp.tool?.spindleSpeed || 6366,
+      spindleRpm: savedOp.tool?.spindleSpeed || 6366,
+      feedRate: savedOp.tool?.feedRate || 1146,
+      plungeRate: savedOp.tool?.feedRate || 1146,
+      cycleType: savedOp.cutParameters?.cycleType || 'G83',
+      peckDepthMm: savedOp.cutParameters?.peckDepthMm || 5.0,
+      rapidHeight: savedOp.linkingClearance?.safetyClearanceRadiusMm || 65.0,
+      visible: true
+    };
+
+    if (exists) {
+      setOperations((prev) => prev.map((o) => (String(o.id) === String(formattedOp.id) ? formattedOp : o)));
+      showToast('5-Axis Multiaxis Drill parameters updated and toolpath regenerated', 'success');
+    } else {
+      setOperations((prev) => [...prev, formattedOp]);
+      setActiveOpId(formattedOp.id);
+      showToast('5-Axis Multiaxis Drill operation generated', 'success');
+    }
+    setActiveManagerTab('Toolpaths');
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+    setIsMultiaxisDrillModalOpen(false);
+    setEditingMultiaxisDrillOp(null);
   };
 
   const handleSelectSampleModel = async (type) => {
@@ -4345,6 +4416,13 @@ export default function App() {
       case 'rotary':
         setEditingRotary4AxisOp(null);
         setIsRotary4AxisModalOpen(true);
+        break;
+      case 'multiaxis_drill':
+      case '5axis_drill':
+      case 'multi_drill':
+      case 'tp_multi_drill':
+        setEditingMultiaxisDrillOp(null);
+        setIsMultiaxisDrillModalOpen(true);
         break;
       case 'chaining':
       case 'chain':
@@ -6910,6 +6988,10 @@ export default function App() {
           setEditingRotary4AxisOp(null);
           setIsRotary4AxisModalOpen(true);
         }}
+        onOpenMultiaxisDrillModal={() => {
+          setEditingMultiaxisDrillOp(null);
+          setIsMultiaxisDrillModalOpen(true);
+        }}
         onOpenAdaptiveModal={() => {
           setEditingOptiRoughOp(null);
           setIsOptiRoughModalOpen(true);
@@ -7095,6 +7177,10 @@ export default function App() {
           onOpenRotary4AxisModal={() => {
             setEditingRotary4AxisOp(null);
             setIsRotary4AxisModalOpen(true);
+          }}
+          onOpenMultiaxisDrillModal={() => {
+            setEditingMultiaxisDrillOp(null);
+            setIsMultiaxisDrillModalOpen(true);
           }}
           onOpenSurfaceFinishContour={() => openSurfaceFinishSelection('contour', null)}
           onOpenSurfaceFinishPocket={() => openSurfaceFinishSelection('pocket', null)}
@@ -8023,6 +8109,26 @@ export default function App() {
         stockConfig={stockConfig}
         currentModel={currentModel}
         onSaveOperation={handleSaveRotary4AxisOp}
+        onNotify={showToast}
+        onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
+      />
+
+      {/* Mastercam 5-Axis Multiaxis Drilling & Auto 3D Hole Recognition Studio Modal */}
+      <MultiaxisDrillModal
+        isOpen={isMultiaxisDrillModalOpen}
+        onClose={() => {
+          setIsMultiaxisDrillModalOpen(false);
+          setEditingMultiaxisDrillOp(null);
+        }}
+        operation={editingMultiaxisDrillOp}
+        tools={tools}
+        activeMachine={activeMachine}
+        machines={machines}
+        onSelectMachine={handleSelectMachine}
+        lastDefinedTool={lastDefinedToolState}
+        stockConfig={stockConfig}
+        currentModel={currentModel}
+        onSaveOperation={handleSaveMultiaxisDrillOp}
         onNotify={showToast}
         onOpenToolLibrary={() => setIsDefineToolModalOpen(true)}
       />

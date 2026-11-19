@@ -11,6 +11,7 @@ import { generateMultiaxisMorphToolpath, generateMultiaxisMorphGCode } from './m
 import { generateMastercamSwarfToolpath, generateSwarfMillingGCode } from './swarfMillingEngine.js';
 import { generateMultiaxisParallelToolpath, generateMultiaxisParallelGCode } from './multiaxisParallelEngine.js';
 import { generateRotary4AxisToolpath, generateRotary4AxisGCode } from './rotary4AxisEngine.js';
+import { generateMultiaxisDrillToolpath, generateMultiaxisDrillGCode } from './multiaxisDrillEngine.js';
 import { createTouchProbe3D, generateProbingToolpath, PROBING_STRATEGIES } from './probingEngine.js';
 import { generateAdaptiveTrochoidalToolpath, ADAPTIVE_MATERIALS, calculateAdaptivePhysics } from './adaptiveRoughingEngine.js';
 import {
@@ -66,7 +67,9 @@ export {
   generateMastercamSwarfToolpath,
   generateSwarfMillingGCode,
   generateRotary4AxisToolpath,
-  generateRotary4AxisGCode
+  generateRotary4AxisGCode,
+  generateMultiaxisDrillToolpath,
+  generateMultiaxisDrillGCode
 };
 
 /**
@@ -4273,6 +4276,44 @@ export function generateToolpathForOperation(op = {}, opSafeBounds, assignedTool
       isSimultaneous4X: true
     };
   }
+  if (
+    strategy === 'multiaxis_drill' ||
+    strategy === '5axis_drill' ||
+    strategy === 'multi_drill' ||
+    op.strategyKey === 'multiaxis_drill' ||
+    op.strategyKey === '5axis_drill' ||
+    op.badgeClass === 'multiaxis_drill'
+  ) {
+    return generateMultiaxisDrillToolpath({
+      ...op,
+      holeSelection: op.holeSelection || {
+        selectedHoles: op.selectedHoles || []
+      },
+      cutParameters: op.cutParameters || {
+        cycleType: op.cycleType || 'G83',
+        peckDepthMm: op.peckDepthMm || op.stepdown || 5.0,
+        chipBreakRetractMm: op.chipBreakRetractMm || 0.8
+      },
+      depthTipComp: op.depthTipComp || {
+        addTipLengthToDepth: op.addTipLengthToDepth ?? true,
+        throughHoleBreakthroughMm: op.throughHoleBreakthroughMm || 1.5
+      },
+      linkingClearance: op.linkingClearance || {
+        axialRetractBeforeIndexMm: op.axialRetractBeforeIndexMm || 15.0,
+        safetyClearanceRadiusMm: op.safetyClearanceRadiusMm || 65.0
+      },
+      machineKinematics: op.machineKinematics || {
+        kinematicsId: op.kinematicsId || 'table_table_ac',
+        postDialect: op.postDialect || 'fanuc_twp'
+      }
+    }, {
+      ...assignedTool,
+      diameter: assignedTool.diameter || 6.0,
+      pointAngleDeg: assignedTool.pointAngleDeg || 140,
+      feedRate: op.feedRate || assignedTool.feedRate || 1000,
+      spindleSpeed: op.spindleSpeed || assignedTool.spindleSpeed || 6000
+    }, effectiveModel);
+  }
   if (strategy === 'drill') {
     return generateDrillingToolpath(opBounds, assignedTool, {
       drillDepth: op.totalDepth || 25.0,
@@ -4453,11 +4494,12 @@ export function buildLinkedOperationSegments(toolpathData, op = {}, opSafeBounds
   const feedPlaneVal = Number(op.feedPlane) || 2.5;
   const feedPlaneAbsY = topY + (op.feedPlaneMode === 'absolute' ? feedPlaneVal : topStockLocal + feedPlaneVal);
 
-  // For 5-Axis Multiaxis (Swarf, Parallel, Morph) and 4-Axis Rotary, trajectoryPoints contain exact multi-axis orientations, tool vectors & 3D blend arcs
+  // For 5-Axis Multiaxis (Swarf, Parallel, Morph, Drill) and 4-Axis Rotary, trajectoryPoints contain exact multi-axis orientations, tool vectors & 3D blend arcs
   if (
     (op.badgeClass === 'swarf' || op.strategyKey === '5axis_swarf' || toolpathData.strategy === '5axis_swarf' ||
      op.badgeClass === 'multi_parallel' || op.strategyKey === '5axis_parallel' || toolpathData.strategy === '5axis_parallel' ||
      op.badgeClass === 'multi_morph' || op.strategyKey === '5axis_morph' || toolpathData.strategy === 'multiaxis_morph' ||
+     op.badgeClass === 'multiaxis_drill' || op.strategyKey === 'multiaxis_drill' || toolpathData.strategy === 'multiaxis_drill' ||
      op.badgeClass === 'rotary_4axis' || op.badgeClass === '4axis_rotary' || op.badgeClass === 'multi_rotary' ||
      op.strategyKey === 'rotary_4axis' || toolpathData.strategy === 'rotary_4axis') &&
     toolpathData.trajectoryPoints &&
