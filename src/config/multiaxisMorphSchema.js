@@ -310,15 +310,25 @@ export function calculateMultiaxisMorphPhysics(tool = {}, cutParams = {}, materi
   // Spindle Torque (Nm)
   const torqueNm = (9550 * powerKw) / Math.max(10, rpm);
 
+  // Theoretical Scallop Height (microns)
+  const rEff = d / 2;
+  const scallopMm = (ae * ae) / (8 * Math.max(0.1, rEff));
+  const scallopMicrons = Number((scallopMm * 1000).toFixed(1));
+
   return {
     effectiveDiameterMm: Number(effectiveDiameter.toFixed(2)),
+    effDiameterMm: Number(effectiveDiameter.toFixed(2)),
     surfaceSpeedMpm: Math.round(vc),
+    effVcMMin: Math.round(vc),
     feedPerToothMm: Number(fz.toFixed(4)),
     averageChipThicknessMm: Number(hm.toFixed(4)),
     mrrCm3Min: Number(mrr.toFixed(2)),
+    mrr: Number(mrr.toFixed(2)),
     cuttingForceN: Math.round(fc),
+    forceN: Math.round(fc),
     powerKw: Number(powerKw.toFixed(2)),
     torqueNm: Number(torqueNm.toFixed(2)),
+    scallopMicrons,
     materialName: mat.name,
     kcBase: mat.kc
   };
@@ -481,3 +491,35 @@ export function createDefaultMultiaxisMorphState(context = {}) {
     }
   };
 }
+
+/**
+ * Calculates physics-based recommended cutting settings for 5-axis morphing
+ */
+export function calculateRecommendedMorphSettings({
+  materialKey = 'ALU_6061',
+  tool = {},
+  tools = []
+}) {
+  const activeTool = tool?.diameter ? tool : resolveDefaultMultiaxisTool(tools);
+  const mat = MULTIAXIS_MORPH_MATERIALS[materialKey?.toUpperCase()] || MULTIAXIS_MORPH_MATERIALS.ALU_6061;
+  const dia = Math.max(1, Number(activeTool?.diameter) || 10);
+  const flutes = Math.max(1, Number(activeTool?.flutes) || 4);
+
+  // Compute RPM based on surface speed Vc
+  const targetRpm = Math.min(24000, Math.max(1500, Math.round((mat.vc * 1000) / (Math.PI * dia))));
+  // Compute Feed based on target chip load
+  const targetFeed = Math.min(10000, Math.max(250, Math.round(targetRpm * flutes * (mat.fzNominal || 0.06))));
+
+  return {
+    spindleSpeed: targetRpm,
+    feedRate: targetFeed,
+    plungeRate: Math.round(targetFeed * 0.3),
+    numberOfCuts: mat.recommendedPasses || 25,
+    stepoverDistanceMm: mat.recommendedStepoverMm || 1.5,
+    leadAngleDeg: mat.recommendedLeadDeg || 10.0,
+    tiltAngleDeg: mat.recommendedTiltDeg || 15.0,
+    materialKey: mat.id || materialKey,
+    recommendedTool: activeTool
+  };
+}
+
