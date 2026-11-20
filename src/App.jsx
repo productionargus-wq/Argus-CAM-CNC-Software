@@ -1863,6 +1863,12 @@ export default function App() {
         return;
       }
 
+      if (e.key === 'F4' || e.code === 'F4') {
+        e.preventDefault();
+        setIsEntityAnalyzerOpen(true);
+        return;
+      }
+
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName) || target?.isContentEditable) return;
 
       if (isCtrlOrMeta && (lowerKey === 'n' || e.code === 'KeyN')) {
@@ -6643,6 +6649,33 @@ export default function App() {
     showToast(`Deleted ${removed.length} selected entity(s) (Use Undelete Entity to restore)`, 'success');
   };
 
+  const handleUpdateCustomEntityProps = (entityId, newProps) => {
+    if (!entityId) return false;
+    const prevList = customGeometryRef.current || [];
+    const targetIndex = prevList.findIndex(
+      (item) => (item.id || item.uuid || item.name) === entityId || getCustomEntityId(item) === entityId
+    );
+    if (targetIndex < 0) return false;
+    const oldEntity = prevList[targetIndex];
+    const curUd = oldEntity.userData || {};
+    const r = newProps.radius !== undefined ? Math.max(0.1, Number(newProps.radius)) : (curUd.radius || 25);
+    const cx = newProps.centerX !== undefined ? Number(newProps.centerX) : (curUd.center?.x ?? 0);
+    const cz = newProps.centerY !== undefined ? Number(newProps.centerY) : (curUd.center?.z ?? curUd.center?.y ?? 0);
+    const y = newProps.centerZ !== undefined ? Number(newProps.centerZ) : (oldEntity.position?.y ?? curUd.center?.y ?? 0);
+    const plane = curUd.plane || 'G17';
+    const updated = createWireframeCircle(r, y, [cx, cz], 0, 360, plane, {
+      color: oldEntity.material?.color?.getHex?.() || 0x1d4ed8,
+      name: `Wireframe_Circle_R${r.toFixed(1)}`
+    });
+    updated.uuid = entityId;
+    if (updated.userData) updated.userData.customId = entityId;
+    const newList = [...prevList];
+    newList[targetIndex] = updated;
+    commitCustomGeometry(newList, true);
+    showToast(`Circle updated: Ø${(r * 2).toFixed(2)} mm at (${cx}, ${cz})`, 'success');
+    return true;
+  };
+
   const handleUpdateSelectedEntities = (updater) => {
     setSelectedEntityIds((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
@@ -9396,6 +9429,7 @@ export default function App() {
         stockConfig={stockConfig}
         currentProjectName={currentProjectName}
         selectedEntities={selectedEntitiesList}
+        onUpdateEntity={handleUpdateCustomEntityProps}
       />
 
       {/* 13. Precision Distance Caliper Modal (Tab 2) */}
