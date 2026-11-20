@@ -197,10 +197,10 @@ export function snapToEntityPoints(cursorPoint, existingEntities = [], snapToler
 }
 
 /**
- * Mathematically computes the two outer bitangent lines connecting two circles.
+ * Mathematically computes all 4 bitangent lines (2 outer, 2 inner) connecting two circles.
  * @param {THREE.Object3D|Object} circleA First circle entity
  * @param {THREE.Object3D|Object} circleB Second circle entity
- * @returns {{ topTangent: { p1: THREE.Vector3, p2: THREE.Vector3 }, bottomTangent: { p1: THREE.Vector3, p2: THREE.Vector3 } } | null}
+ * @returns {{ upperOuter: { p1: THREE.Vector3, p2: THREE.Vector3 }, lowerOuter: { p1: THREE.Vector3, p2: THREE.Vector3 }, cross1: object|null, cross2: object|null, topTangent: object, bottomTangent: object, candidates: Array } | null}
  */
 export function computeBitangentLines(circleA, circleB) {
   if (!circleA || !circleB) return null;
@@ -224,20 +224,79 @@ export function computeBitangentLines(circleA, circleB) {
   const cosPhi = Math.max(-1.0, Math.min(1.0, (rA - rB) / d));
   const phi = Math.acos(cosPhi);
 
-  // Top outer bitangent (upper crest)
-  const alphaTop = gamma + phi;
-  const p1Top = new THREE.Vector3(ax + rA * Math.cos(alphaTop), y, az + rA * Math.sin(alphaTop));
-  const p2Top = new THREE.Vector3(bx + rB * Math.cos(alphaTop), y, bz + rB * Math.sin(alphaTop));
+  // Outer bitangent candidate 1
+  const a1 = gamma + phi;
+  const p1_1 = new THREE.Vector3(ax + rA * Math.cos(a1), y, az + rA * Math.sin(a1));
+  const p2_1 = new THREE.Vector3(bx + rB * Math.cos(a1), y, bz + rB * Math.sin(a1));
 
-  // Bottom outer bitangent (lower crest)
-  const alphaBottom = gamma - phi;
-  const p1Bottom = new THREE.Vector3(ax + rA * Math.cos(alphaBottom), y, az + rA * Math.sin(alphaBottom));
-  const p2Bottom = new THREE.Vector3(bx + rB * Math.cos(alphaBottom), y, bz + rB * Math.sin(alphaBottom));
+  // Outer bitangent candidate 2
+  const a2 = gamma - phi;
+  const p1_2 = new THREE.Vector3(ax + rA * Math.cos(a2), y, az + rA * Math.sin(a2));
+  const p2_2 = new THREE.Vector3(bx + rB * Math.cos(a2), y, bz + rB * Math.sin(a2));
+
+  // In Top view (G17 / XZ plane), more negative Z = higher Y_2D (top crest)
+  const upperOuter = p1_1.z <= p1_2.z
+    ? { p1: p1_1, p2: p2_1 }
+    : { p1: p1_2, p2: p2_2 };
+  const lowerOuter = p1_1.z > p1_2.z
+    ? { p1: p1_1, p2: p2_1 }
+    : { p1: p1_2, p2: p2_2 };
+
+  // Internal cross bitangents (only if circles do not overlap)
+  let cross1 = null;
+  let cross2 = null;
+  if (d > rA + rB + 0.1) {
+    const cosPhiInt = Math.max(-1.0, Math.min(1.0, (rA + rB) / d));
+    const phiInt = Math.acos(cosPhiInt);
+    const ac1 = gamma + phiInt;
+    const ac2 = gamma - phiInt;
+    cross1 = {
+      p1: new THREE.Vector3(ax + rA * Math.cos(ac1), y, az + rA * Math.sin(ac1)),
+      p2: new THREE.Vector3(bx + rB * Math.cos(ac1 + Math.PI), y, bz + rB * Math.sin(ac1 + Math.PI))
+    };
+    cross2 = {
+      p1: new THREE.Vector3(ax + rA * Math.cos(ac2), y, az + rA * Math.sin(ac2)),
+      p2: new THREE.Vector3(bx + rB * Math.cos(ac2 + Math.PI), y, bz + rB * Math.sin(ac2 + Math.PI))
+    };
+  }
+
+  const candidates = [upperOuter, lowerOuter, cross1, cross2].filter(Boolean);
 
   return {
-    topTangent: { p1: p1Top, p2: p2Top },
-    bottomTangent: { p1: p1Bottom, p2: p2Bottom }
+    upperOuter,
+    lowerOuter,
+    cross1,
+    cross2,
+    topTangent: upperOuter,     // backward-compatible alias pointing to true +Y crest
+    bottomTangent: lowerOuter,  // backward-compatible alias pointing to -Y crest
+    candidates
   };
+}
+
+/**
+ * Computes the two analytical tangent contact points on a circle from an external point.
+ */
+export function computeCirclePointTangent(circle, externalPt) {
+  if (!circle || !externalPt) return null;
+  const c = circle.userData?.center || { x: 0, y: 0, z: 0 };
+  const r = Number(circle.userData?.radius || 25);
+  const cx = c.x || 0;
+  const cz = c.z ?? c.y ?? 0;
+  const cy = (c.y !== undefined && c.y !== null) ? Number(c.y) : (circle.position?.y ?? (externalPt.y || 0));
+
+  const dx = externalPt.x - cx;
+  const dz = externalPt.z - cz;
+  const d = Math.hypot(dx, dz);
+  if (d <= r + 0.1) return null;
+
+  const theta = Math.atan2(dz, dx);
+  const cosBeta = Math.max(-1.0, Math.min(1.0, r / d));
+  const beta = Math.acos(cosBeta);
+
+  const t1 = new THREE.Vector3(cx + r * Math.cos(theta + beta), cy, cz + r * Math.sin(theta + beta));
+  const t2 = new THREE.Vector3(cx + r * Math.cos(theta - beta), cy, cz + r * Math.sin(theta - beta));
+
+  return { t1, t2 };
 }
 
 /**
@@ -345,7 +404,7 @@ export function createGhostPreview(tool, startPt, currentPt, options = {}) {
   });
 
   if (tool === 'line') {
-    const { p2 } = computeLineEnd(startPt, currentPt, options);
+    const { p2 } = options.exactEnd ? { p2: currentPt } : computeLineEnd(startPt, currentPt, options);
     const geo = new THREE.BufferGeometry().setFromPoints([startPt, p2]);
     const line = new THREE.Line(geo, dashedMaterial);
     line.computeLineDistances();
@@ -584,28 +643,26 @@ export function createSnapIndicator(point, snapType = 'endpoint') {
     const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 3, depthTest: false }));
     group.add(line);
   } else if (snapType === 'tangent') {
-    // Mastercam Tangent glyph (⊘): Vibrant Green Double-Ring + Tangent Bar with Glow
-    const ringGeo = new THREE.RingGeometry(2.0, 4.2, 24);
-    ringGeo.rotateX(-Math.PI / 2);
-    const ringMesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide, depthTest: false }));
-    ringMesh.position.set(point.x, point.y + 0.3, point.z);
-    group.add(ringMesh);
-
-    // Translucent backing glow for high contrast against any background
-    const glowGeo = new THREE.CircleGeometry(6.0, 24);
-    glowGeo.rotateX(-Math.PI / 2);
-    const glowMesh = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthTest: false }));
-    glowMesh.position.set(point.x, point.y + 0.25, point.z);
-    group.add(glowMesh);
+    // Mastercam Tangent badge (⊘): clean, lightweight 2.2mm wireframe ring with tangent bar
+    const r = 2.2;
+    const circlePts = [];
+    const segs = 20;
+    for (let i = 0; i <= segs; i++) {
+      const a = (i / segs) * Math.PI * 2;
+      circlePts.push(new THREE.Vector3(point.x + Math.cos(a) * r, point.y + 0.3, point.z + Math.sin(a) * r));
+    }
+    const cGeo = new THREE.BufferGeometry().setFromPoints(circlePts);
+    const cLine = new THREE.Line(cGeo, new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2, depthTest: false }));
+    group.add(cLine);
 
     // Tangent bar on top
     const barPts = [
-      new THREE.Vector3(point.x - 6.5, point.y + 0.35, point.z - 4.5),
-      new THREE.Vector3(point.x + 6.5, point.y + 0.35, point.z - 4.5)
+      new THREE.Vector3(point.x - 3.2, point.y + 0.3, point.z - r),
+      new THREE.Vector3(point.x + 3.2, point.y + 0.3, point.z - r)
     ];
-    const barGeo = new THREE.BufferGeometry().setFromPoints(barPts);
-    const barLine = new THREE.Line(barGeo, new THREE.LineBasicMaterial({ color: 0x047857, linewidth: 3, depthTest: false }));
-    group.add(barLine);
+    const bGeo = new THREE.BufferGeometry().setFromPoints(barPts);
+    const bLine = new THREE.Line(bGeo, new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2, depthTest: false }));
+    group.add(bLine);
   } else if (snapType === 'nearest') {
     // Hourglass (On-circle / on-curve snap ⧗)
     const size = 3.0;

@@ -50,6 +50,7 @@ import {
   computeRectPlacement,
   computeLineEnd,
   computeBitangentLines,
+  computeCirclePointTangent,
   hitTestWireframeEntity,
   computeArc3Points,
   computeBoltCircle,
@@ -417,6 +418,7 @@ export default function Viewport3D({
   const dynamicTrimStrokeRef = useRef(null);
   const partTopYRef = useRef(partMetrics?.box?.max?.y ?? 0);
   const renderLockedPreviewAtRef = useRef(null);
+  const tangentEntityARef = useRef(null);
 
   useEffect(() => { partTopYRef.current = partMetrics?.box?.max?.y ?? 0; }, [partMetrics]);
   useEffect(() => { activeDrawingRadiusRef.current = activeDrawingRadius; }, [activeDrawingRadius]);
@@ -522,6 +524,7 @@ export default function Viewport3D({
           : `Click canvas to place Ø ${(lr * 2).toFixed(1)} mm circle, or OK for (0, 0)`
       );
     } else if (tool === 'line') {
+      if (isLineTangentRef.current) return;
       const ll = isLengthLockedRef.current && Number(activeDrawingLengthRef.current) > 0
         ? Number(activeDrawingLengthRef.current)
         : null;
@@ -575,6 +578,7 @@ export default function Viewport3D({
   useEffect(() => {
     if (reselectTrigger > 0 || undoTrigger > 0) {
       sketchAnchorRef.current = null;
+      tangentEntityARef.current = null;
       setSketchAnchor(null);
       if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
       if (snapIndicatorGroupRef.current) snapIndicatorGroupRef.current.clear();
@@ -620,6 +624,7 @@ export default function Viewport3D({
       if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
       if (snapIndicatorGroupRef.current) snapIndicatorGroupRef.current.clear();
       sketchAnchorRef.current = null;
+      tangentEntityARef.current = null;
       setSketchAnchor(null);
       setDimensionFeedback(null);
     }
@@ -629,6 +634,7 @@ export default function Viewport3D({
     setActiveSketchTool(sketchTool);
     activeSketchToolRef.current = sketchTool;
     sketchAnchorRef.current = null;
+    tangentEntityARef.current = null;
     setSketchAnchor(null);
     if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
     setDimensionFeedback(null);
@@ -1153,29 +1159,51 @@ export default function Viewport3D({
         // When both circles are found in tangent mode, use pure mathematical bitangent — bypass all angle/length locks
         let bitanCommit = false;
         if (isLineTangentRef.current) {
-          const entities = (customGeometryRef.current || []).filter(e => e && e.userData && (e.userData.cadType === 'circle' || e.userData.cadType === 'arc'));
-          const circleA = entities.find(ent => {
+          const circles = (customGeometryRef.current || []).filter(e => e && e.userData && (e.userData.cadType === 'circle' || e.userData.cadType === 'arc'));
+          const circleA = tangentEntityARef.current || circles.find(ent => {
             const c = ent.userData.center;
             const r = Number(ent.userData.radius || 25);
-            const dist = Math.hypot(anchor.x - (c.x || 0), anchor.z - (c.z ?? c.y ?? 0));
-            return Math.abs(dist - r) < 14.0;
+            const distCenter = Math.hypot(anchor.x - (c.x || 0), anchor.z - (c.z ?? c.y ?? 0));
+            return Math.abs(distCenter - r) < Math.max(30.0, r * 0.45);
           });
-          const circleB = entities.find(ent => {
-            if (circleA && ent.uuid === circleA.uuid) return false;
+
+          let circleB = null;
+          let bestDistB = Infinity;
+          circles.forEach(ent => {
+            if (circleA && ent.uuid === circleA.uuid) return;
             const c = ent.userData.center;
             const r = Number(ent.userData.radius || 25);
-            const dist = Math.hypot(finalPt.x - (c.x || 0), finalPt.z - (c.z ?? c.y ?? 0));
-            return Math.abs(dist - r) < 30.0;
+            const distCenter = Math.hypot(finalPt.x - (c.x || 0), finalPt.z - (c.z ?? c.y ?? 0));
+            const distCirc = Math.abs(distCenter - r);
+            if (distCirc < Math.max(45.0, r * 0.65) && distCirc < bestDistB) {
+              bestDistB = distCirc;
+              circleB = ent;
+            }
           });
 
           if (circleA && circleB) {
             const bitan = computeBitangentLines(circleA, circleB);
-            if (bitan) {
-              const dTop = finalPt.distanceTo(bitan.topTangent.p2);
-              const dBottom = finalPt.distanceTo(bitan.bottomTangent.p2);
-              const chosen = dTop <= dBottom ? bitan.topTangent : bitan.bottomTangent;
-              p1Final = chosen.p1.clone();
-              p2Final = chosen.p2.clone();
+            if (bitan && bitan.candidates.length > 0) {
+              let bestCandidate = bitan.candidates[0];
+              let minD = Infinity;
+              bitan.candidates.forEach((cand) => {
+                const d = finalPt.distanceTo(cand.p2);
+                if (d < minD) {
+                  minD = d;
+                  bestCandidate = cand;
+                }
+              });
+              p1Final = bestCandidate.p1.clone();
+              p2Final = bestCandidate.p2.clone();
+              bitanCommit = true;
+            }
+          } else if (circleA && !circleB) {
+            const tanSol = computeCirclePointTangent(circleA, finalPt);
+            if (tanSol) {
+              const d1 = finalPt.distanceTo(tanSol.t1);
+              const d2 = finalPt.distanceTo(tanSol.t2);
+              p1Final = (d1 <= d2 ? tanSol.t1 : tanSol.t2).clone();
+              p2Final = finalPt.clone();
               bitanCommit = true;
             }
           }
@@ -1442,6 +1470,24 @@ export default function Viewport3D({
               sketchAnchorRef.current = finalPt.clone();
               setSketchAnchor(finalPt.clone());
               isDrawingDrag = true;
+
+              if (tool === 'line' && isLineTangentRef.current) {
+                // Mastercam Tangent selection: identify Circle A unambiguously
+                const circles = (customGeometryRef.current || []).filter(e => e && e.userData && (e.userData.cadType === 'circle' || e.userData.cadType === 'arc'));
+                let bestCircle = null;
+                let bestDist = Infinity;
+                circles.forEach(ent => {
+                  const c = ent.userData.center;
+                  const r = Number(ent.userData.radius || 25);
+                  const distCenter = Math.hypot(finalPt.x - (c.x || 0), finalPt.z - (c.z ?? c.y ?? 0));
+                  const distCirc = Math.abs(distCenter - r);
+                  if (distCirc < Math.max(35.0, r * 0.5) && distCirc < bestDist) {
+                    bestDist = distCirc;
+                    bestCircle = ent;
+                  }
+                });
+                tangentEntityARef.current = bestCircle;
+              }
               if (onDrawingUpdateRef.current) {
                 if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
                   onDrawingUpdateRef.current({
@@ -1775,29 +1821,51 @@ export default function Viewport3D({
               // Tangent mode: when two circles found, bypass all locks and use pure bitangent math
               let bitanPreview = false;
               if (isLineTangentRef.current) {
-                const entities = (customGeometryRef.current || []).filter(e => e && e.userData && (e.userData.cadType === 'circle' || e.userData.cadType === 'arc'));
-                const circleA = entities.find(ent => {
+                const circles = (customGeometryRef.current || []).filter(e => e && e.userData && (e.userData.cadType === 'circle' || e.userData.cadType === 'arc'));
+                const circleA = tangentEntityARef.current || circles.find(ent => {
                   const c = ent.userData.center;
                   const r = Number(ent.userData.radius || 25);
-                  const dist = Math.hypot(anchor.x - (c.x || 0), anchor.z - (c.z ?? c.y ?? 0));
-                  return Math.abs(dist - r) < 14.0;
+                  const distCenter = Math.hypot(anchor.x - (c.x || 0), anchor.z - (c.z ?? c.y ?? 0));
+                  return Math.abs(distCenter - r) < Math.max(30.0, r * 0.45);
                 });
-                const circleB = entities.find(ent => {
-                  if (circleA && ent.uuid === circleA.uuid) return false;
+
+                let circleB = null;
+                let bestDistB = Infinity;
+                circles.forEach(ent => {
+                  if (circleA && ent.uuid === circleA.uuid) return;
                   const c = ent.userData.center;
                   const r = Number(ent.userData.radius || 25);
-                  const dist = Math.hypot(finalPt.x - (c.x || 0), finalPt.z - (c.z ?? c.y ?? 0));
-                  return Math.abs(dist - r) < 30.0;
+                  const distCenter = Math.hypot(finalPt.x - (c.x || 0), finalPt.z - (c.z ?? c.y ?? 0));
+                  const distCirc = Math.abs(distCenter - r);
+                  if (distCirc < Math.max(45.0, r * 0.65) && distCirc < bestDistB) {
+                    bestDistB = distCirc;
+                    circleB = ent;
+                  }
                 });
 
                 if (circleA && circleB) {
                   const bitan = computeBitangentLines(circleA, circleB);
-                  if (bitan) {
-                    const dTop = finalPt.distanceTo(bitan.topTangent.p2);
-                    const dBottom = finalPt.distanceTo(bitan.bottomTangent.p2);
-                    const chosen = dTop <= dBottom ? bitan.topTangent : bitan.bottomTangent;
-                    p1Preview = chosen.p1.clone();
-                    p2Preview = chosen.p2.clone();
+                  if (bitan && bitan.candidates.length > 0) {
+                    let bestCandidate = bitan.candidates[0];
+                    let minD = Infinity;
+                    bitan.candidates.forEach((cand) => {
+                      const d = finalPt.distanceTo(cand.p2);
+                      if (d < minD) {
+                        minD = d;
+                        bestCandidate = cand;
+                      }
+                    });
+                    p1Preview = bestCandidate.p1.clone();
+                    p2Preview = bestCandidate.p2.clone();
+                    bitanPreview = true;
+                  }
+                } else if (circleA && !circleB) {
+                  const tanSol = computeCirclePointTangent(circleA, finalPt);
+                  if (tanSol) {
+                    const d1 = finalPt.distanceTo(tanSol.t1);
+                    const d2 = finalPt.distanceTo(tanSol.t2);
+                    p1Preview = (d1 <= d2 ? tanSol.t1 : tanSol.t2).clone();
+                    p2Preview = finalPt.clone();
                     bitanPreview = true;
                   }
                 }
@@ -1819,12 +1887,18 @@ export default function Viewport3D({
               }
 
               const lineOpts = getLockedLineOptions();
-              const ghost = createGhostPreview('line', p1Preview, previewP2, bitanPreview ? { lineType: 'freeform' } : lineOpts);
+              const ghost = createGhostPreview('line', p1Preview, previewP2, bitanPreview ? { exactEnd: true } : lineOpts);
               sketchGhostGroupRef.current.add(ghost);
+
+              // Position snap indicator exactly at the tangent endpoint previewP2 so it never appears detached
+              if (bitanPreview && snapIndicatorGroupRef.current) {
+                snapIndicatorGroupRef.current.clear();
+                snapIndicatorGroupRef.current.add(createSnapIndicator(previewP2, 'tangent'));
+              }
 
               setDimensionFeedback(`L: ${previewLength.toFixed(2)} mm, ∠ ${previewAngle.toFixed(1)}°`);
               if (bitanPreview) {
-                setSketchPromptText('AutoCursor: Bitangent (⊘⊘) - Click to place exact tangent line between circles');
+                setSketchPromptText('AutoCursor: Bitangent (⊘⊘) - Click second circle to drop exact tangent line');
               } else if (snapResult.snapped) {
                 if (snapResult.type === 'tangent') {
                   setSketchPromptText('AutoCursor: Tangent Snap (⊘) - Click to drop exact tangent endpoint');
