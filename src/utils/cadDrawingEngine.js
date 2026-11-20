@@ -208,7 +208,7 @@ export function computeBitangentLines(circleA, circleB) {
   const cB = circleB.userData?.center || { x: 0, y: 0, z: 0 };
   const rA = Number(circleA.userData?.radius || 25);
   const rB = Number(circleB.userData?.radius || 25);
-  const y = circleA.position?.y ?? cA.y ?? 0;
+  const y = (cA.y !== undefined && cA.y !== null) ? Number(cA.y) : (circleA.position?.y ?? 0);
 
   const ax = cA.x || 0;
   const az = cA.z ?? cA.y ?? 0;

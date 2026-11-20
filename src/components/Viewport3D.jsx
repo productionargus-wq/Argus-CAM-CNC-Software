@@ -1145,11 +1145,43 @@ export default function Viewport3D({
           });
         }
       } else if (tool === 'line' || tool === 'line_parallel' || tool === 'line_perp') {
-        const { p2, length, angle } = computeLineEnd(anchor, finalPt, getLockedLineOptions());
+        let p1Final = anchor.clone();
+        let p2Final = finalPt.clone();
+
+        // If tangent mode is enabled, or connecting two circles tangentially:
+        if (isLineTangentRef.current) {
+          const entities = (customGeometryRef.current || []).filter(e => e && e.userData && (e.userData.cadType === 'circle' || e.userData.cadType === 'arc'));
+          const circleA = entities.find(ent => {
+            const c = ent.userData.center;
+            const r = Number(ent.userData.radius || 25);
+            const dist = Math.hypot(anchor.x - (c.x || 0), anchor.z - (c.z ?? c.y ?? 0));
+            return Math.abs(dist - r) < 14.0;
+          });
+          const circleB = entities.find(ent => {
+            if (circleA && ent.uuid === circleA.uuid) return false;
+            const c = ent.userData.center;
+            const r = Number(ent.userData.radius || 25);
+            const dist = Math.hypot(finalPt.x - (c.x || 0), finalPt.z - (c.z ?? c.y ?? 0));
+            return Math.abs(dist - r) < 30.0;
+          });
+
+          if (circleA && circleB) {
+            const bitan = computeBitangentLines(circleA, circleB);
+            if (bitan) {
+              const dTop = finalPt.distanceTo(bitan.topTangent.p2);
+              const dBottom = finalPt.distanceTo(bitan.bottomTangent.p2);
+              const chosen = dTop <= dBottom ? bitan.topTangent : bitan.bottomTangent;
+              p1Final = chosen.p1.clone();
+              p2Final = chosen.p2.clone();
+            }
+          }
+        }
+
+        const { p2, length, angle } = computeLineEnd(p1Final, p2Final, getLockedLineOptions());
         if (length < 0.5) return false;
 
         newEntity = createWireframeLine(
-          [anchor.x, anchor.y, anchor.z],
+          [p1Final.x, p1Final.y, p1Final.z],
           [p2.x, p2.y, p2.z],
           { color: 0x38bdf8, name: `Wireframe_${tool === 'line_perp' ? 'Perp' : tool === 'line_parallel' ? 'Parallel' : 'Line'}_${Date.now()}` }
         );
@@ -1158,7 +1190,7 @@ export default function Viewport3D({
             tool,
             length,
             angle,
-            pt1: anchor,
+            pt1: p1Final,
             pt2: p2,
             completed: true
           });
@@ -1720,9 +1752,40 @@ export default function Viewport3D({
                 });
               }
             } else if (tool === 'line' || tool === 'line_parallel' || tool === 'line_perp') {
+              let p1Preview = anchor.clone();
+              let p2Preview = finalPt.clone();
+
+              if (isLineTangentRef.current) {
+                const entities = (customGeometryRef.current || []).filter(e => e && e.userData && (e.userData.cadType === 'circle' || e.userData.cadType === 'arc'));
+                const circleA = entities.find(ent => {
+                  const c = ent.userData.center;
+                  const r = Number(ent.userData.radius || 25);
+                  const dist = Math.hypot(anchor.x - (c.x || 0), anchor.z - (c.z ?? c.y ?? 0));
+                  return Math.abs(dist - r) < 14.0;
+                });
+                const circleB = entities.find(ent => {
+                  if (circleA && ent.uuid === circleA.uuid) return false;
+                  const c = ent.userData.center;
+                  const r = Number(ent.userData.radius || 25);
+                  const dist = Math.hypot(finalPt.x - (c.x || 0), finalPt.z - (c.z ?? c.y ?? 0));
+                  return Math.abs(dist - r) < 30.0;
+                });
+
+                if (circleA && circleB) {
+                  const bitan = computeBitangentLines(circleA, circleB);
+                  if (bitan) {
+                    const dTop = finalPt.distanceTo(bitan.topTangent.p2);
+                    const dBottom = finalPt.distanceTo(bitan.bottomTangent.p2);
+                    const chosen = dTop <= dBottom ? bitan.topTangent : bitan.bottomTangent;
+                    p1Preview = chosen.p1.clone();
+                    p2Preview = chosen.p2.clone();
+                  }
+                }
+              }
+
               const lineOpts = getLockedLineOptions();
-              const { p2, length, angle } = computeLineEnd(anchor, finalPt, lineOpts);
-              const ghost = createGhostPreview('line', anchor, p2, lineOpts);
+              const { p2, length, angle } = computeLineEnd(p1Preview, p2Preview, lineOpts);
+              const ghost = createGhostPreview('line', p1Preview, p2, lineOpts);
               sketchGhostGroupRef.current.add(ghost);
 
               setDimensionFeedback(`L: ${length.toFixed(2)} mm, ∠ ${angle.toFixed(1)}°`);
@@ -2064,15 +2127,8 @@ export default function Viewport3D({
 
           if (dragDist > 12 && sketchAnchorRef.current) {
             const anchor = sketchAnchorRef.current;
-            const localPt = getSketchIntersection(e);
-            let finalPt = localPt || anchor;
-            if (objectSnapRef.current) {
-              const snap = snapToEntityPoints(finalPt, customGeometryRef.current, 5.0);
-              if (snap.snapped) finalPt = snap.point;
-            } else if (gridSnapRef.current) {
-              finalPt = snapToGrid(finalPt, gridStepRef.current, orthoLockRef.current, anchor);
-            }
-
+            const resolved = resolveSnappedPoint(e);
+            const finalPt = resolved?.finalPt || getSketchIntersection(e) || anchor;
             commitInteractiveEntity(anchor, finalPt);
           }
         }
