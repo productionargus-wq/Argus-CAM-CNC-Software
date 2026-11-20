@@ -11,6 +11,14 @@ import CircleCenterPointPanel from './CircleCenterPointPanel';
 import RectanglePanel from './RectanglePanel';
 import LineEndpointsPanel from './LineEndpointsPanel';
 import ArcTangentPanel from './ArcTangentPanel';
+import PointPositionPanel from './PointPositionPanel';
+import BoltCirclePanel from './BoltCirclePanel';
+import LineParallelPerpPanel from './LineParallelPerpPanel';
+import Arc3PointsPanel from './Arc3PointsPanel';
+import SplineManualPanel from './SplineManualPanel';
+import DynamicTrimPanel from './DynamicTrimPanel';
+import FilletChamferPanel from './FilletChamferPanel';
+import ModifyLengthPanel from './ModifyLengthPanel';
 import SurfaceExtrudePanel from './SurfaceExtrudePanel';
 import SolidExtrudePanel from './SolidExtrudePanel';
 import RotatePanel from './RotatePanel';
@@ -190,12 +198,81 @@ export default function OperationsTree({
   activeDraftingMode = 'horizontal',
   onApplyDrafting,
   onCancelDrafting,
-  onChangeDraftingMode
+  onChangeDraftingMode,
+  // Mastercam Wireframe Tools
+  pointParams,
+  onChangePointCoords,
+  onChangePointMethod,
+  onChangePointSegments,
+  onChangePointAlongDist,
+  onApplyPoint,
+  onOkPoint,
+  onCancelPoint,
+  boltCircleParams,
+  onChangeBoltPcd,
+  onChangeBoltHoles,
+  onChangeBoltStartAngle,
+  onChangeBoltSweepAngle,
+  onChangeBoltHoleDia,
+  onChangeBoltCenter,
+  onApplyBoltCircle,
+  onOkBoltCircle,
+  onCancelBoltCircle,
+  lineRelParams,
+  onChangeLineRelMode,
+  onChangeLineRelOffset,
+  onChangeLineRelSide,
+  onChangeLineRelLength,
+  onToggleLineRelLengthLock,
+  onApplyLineRel,
+  onOkLineRel,
+  onCancelLineRel,
+  arc3ptParams,
+  onChangeArc3ptMode,
+  onChangeArc3ptRadius,
+  onToggleArc3ptRadiusLock,
+  onApplyArc3pt,
+  onOkArc3pt,
+  onCancelArc3pt,
+  splineParams,
+  onClearSplinePoints,
+  onUndoSplinePoint,
+  onChangeSplineType,
+  onToggleSplineClosed,
+  onChangeSplineTension,
+  onApplySpline,
+  onOkSpline,
+  onCancelSpline,
+  trimParams,
+  onChangeTrimMode,
+  onChangeDivideSegments,
+  onApplyTrim,
+  onOkTrim,
+  onCancelTrim,
+  filletChamferParams,
+  onChangeFilletMode,
+  onChangeFilletRadius,
+  onToggleFilletRadiusLock,
+  onChangeChamferDist1,
+  onChangeChamferDist2,
+  onToggleTrimEntities,
+  onApplyFillet,
+  onOkFillet,
+  onCancelFillet,
+  modifyLengthParams,
+  onChangeModifyLengthMode,
+  onChangeModifyLengthValue,
+  onChangeModifyLengthEnd,
+  onApplyModifyLength,
+  onOkModifyLength,
+  onCancelModifyLength
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
   const currentTab = activeManagerTab || localTab;
   const isWireframeTool = [
     'Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent',
+    'Point Pos...', 'Bolt Circle', 'Line Rel...', 'Arc 3 Points',
+    'Spline', 'Dynamic Trim', 'Fillet/Cham...', 'Modify Length',
     'Surface Ex...', 'Solid Extru...', 'Rotate', 'Translate', 'Offset Cha...', 'Drafting'
   ].includes(currentTab);
 
@@ -222,7 +299,36 @@ export default function OperationsTree({
     } else if (activeDrawingTool === 'arc_tangent' || activeDrawingTool === 'arctangent' || activeDrawingTool === 'arc') {
       setLocalTab('Arc Tangent');
       if (onSelectManagerTab) onSelectManagerTab('Arc Tangent');
-    } else if (['Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent', 'Surface Ex...'].includes(localTab)) {
+    } else if (activeDrawingTool === 'point' || activeDrawingTool === 'datum') {
+      setLocalTab('Point Pos...');
+      if (onSelectManagerTab) onSelectManagerTab('Point Pos...');
+    } else if (activeDrawingTool === 'bolt_circle' || activeDrawingTool === 'pcd') {
+      setLocalTab('Bolt Circle');
+      if (onSelectManagerTab) onSelectManagerTab('Bolt Circle');
+    } else if (['line_parallel', 'line_perp', 'line_closest'].includes(activeDrawingTool)) {
+      setLocalTab('Line Rel...');
+      if (onSelectManagerTab) onSelectManagerTab('Line Rel...');
+    } else if (['arc_3pt', 'circle_edge'].includes(activeDrawingTool)) {
+      setLocalTab('Arc 3 Points');
+      if (onSelectManagerTab) onSelectManagerTab('Arc 3 Points');
+    } else if (activeDrawingTool === 'spline') {
+      setLocalTab('Spline');
+      if (onSelectManagerTab) onSelectManagerTab('Spline');
+    } else if (['dynamic_trim', 'trim_1', 'trim_2', 'trim_3', 'divide'].includes(activeDrawingTool)) {
+      setLocalTab('Dynamic Trim');
+      if (onSelectManagerTab) onSelectManagerTab('Dynamic Trim');
+    } else if (['fillet', 'chamfer'].includes(activeDrawingTool)) {
+      setLocalTab('Fillet/Cham...');
+      if (onSelectManagerTab) onSelectManagerTab('Fillet/Cham...');
+    } else if (activeDrawingTool === 'modify_length') {
+      setLocalTab('Modify Length');
+      if (onSelectManagerTab) onSelectManagerTab('Modify Length');
+    } else if ([
+      'Circle Cent...', 'Rectangle', 'Line Endp...', 'Arc Tangent',
+      'Point Pos...', 'Bolt Circle', 'Line Rel...', 'Arc 3 Points',
+      'Spline', 'Dynamic Trim', 'Fillet/Cham...', 'Modify Length',
+      'Surface Ex...'
+    ].includes(localTab)) {
       setLocalTab('Toolpaths');
       if (onSelectManagerTab) onSelectManagerTab('Toolpaths');
     }
@@ -366,6 +472,30 @@ export default function OperationsTree({
     }
     if (activeDrawingTool === 'arc_tangent' || activeDrawingTool === 'arctangent' || activeDrawingTool === 'arc' || currentTab === 'Arc Tangent') {
       list.push('Arc Tangent');
+    }
+    if (activeDrawingTool === 'point' || activeDrawingTool === 'datum' || currentTab === 'Point Pos...') {
+      list.push('Point Pos...');
+    }
+    if (activeDrawingTool === 'bolt_circle' || activeDrawingTool === 'pcd' || currentTab === 'Bolt Circle') {
+      list.push('Bolt Circle');
+    }
+    if (['line_parallel', 'line_perp', 'line_closest'].includes(activeDrawingTool) || currentTab === 'Line Rel...') {
+      list.push('Line Rel...');
+    }
+    if (['arc_3pt', 'circle_edge'].includes(activeDrawingTool) || currentTab === 'Arc 3 Points') {
+      list.push('Arc 3 Points');
+    }
+    if (activeDrawingTool === 'spline' || currentTab === 'Spline') {
+      list.push('Spline');
+    }
+    if (['dynamic_trim', 'trim_1', 'trim_2', 'trim_3', 'divide'].includes(activeDrawingTool) || currentTab === 'Dynamic Trim') {
+      list.push('Dynamic Trim');
+    }
+    if (['fillet', 'chamfer'].includes(activeDrawingTool) || currentTab === 'Fillet/Cham...') {
+      list.push('Fillet/Cham...');
+    }
+    if (activeDrawingTool === 'modify_length' || currentTab === 'Modify Length') {
+      list.push('Modify Length');
     }
     if (activeSurfaceTool === 'extrude' || currentTab === 'Surface Ex...') {
       list.push('Surface Ex...');
@@ -646,6 +776,142 @@ export default function OperationsTree({
             onApply={onApplyArc}
             onOk={onOkArc}
             onCancel={onCancelArc}
+          />
+        </div>
+      ) : currentTab === 'Point Pos...' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <PointPositionPanel
+            coords={pointParams?.coords ?? { x: 0, y: 0, z: 0 }}
+            onChangeCoords={onChangePointCoords}
+            pointMethod={pointParams?.pointMethod || 'position'}
+            onChangePointMethod={onChangePointMethod}
+            numSegments={pointParams?.numSegments ?? 5}
+            onChangeNumSegments={onChangePointSegments}
+            alongDistance={pointParams?.alongDistance ?? 10}
+            onChangeAlongDistance={onChangePointAlongDist}
+            onApply={onApplyPoint}
+            onOk={onOkPoint}
+            onCancel={onCancelPoint}
+          />
+        </div>
+      ) : currentTab === 'Bolt Circle' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <BoltCirclePanel
+            pcd={boltCircleParams?.pcd ?? 60}
+            onChangePcd={onChangeBoltPcd}
+            numHoles={boltCircleParams?.numHoles ?? 6}
+            onChangeNumHoles={onChangeBoltHoles}
+            startAngle={boltCircleParams?.startAngle ?? 0}
+            onChangeStartAngle={onChangeBoltStartAngle}
+            sweepAngle={boltCircleParams?.sweepAngle ?? 360}
+            onChangeSweepAngle={onChangeBoltSweepAngle}
+            holeDiameter={boltCircleParams?.holeDiameter ?? 6.8}
+            onChangeHoleDiameter={onChangeBoltHoleDia}
+            center={boltCircleParams?.center ?? { x: 0, y: 0, z: 0 }}
+            onChangeCenter={onChangeBoltCenter}
+            onApply={onApplyBoltCircle}
+            onOk={onOkBoltCircle}
+            onCancel={onCancelBoltCircle}
+          />
+        </div>
+      ) : currentTab === 'Line Rel...' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <LineParallelPerpPanel
+            mode={lineRelParams?.mode || 'parallel'}
+            onChangeMode={onChangeLineRelMode}
+            offsetDistance={lineRelParams?.offsetDistance ?? 10}
+            onChangeOffsetDistance={onChangeLineRelOffset}
+            side={lineRelParams?.side || 'left'}
+            onChangeSide={onChangeLineRelSide}
+            lineLength={lineRelParams?.lineLength ?? 50}
+            onChangeLineLength={onChangeLineRelLength}
+            isLengthLocked={lineRelParams?.isLengthLocked || false}
+            onToggleLengthLock={onToggleLineRelLengthLock}
+            onApply={onApplyLineRel}
+            onOk={onOkLineRel}
+            onCancel={onCancelLineRel}
+          />
+        </div>
+      ) : currentTab === 'Arc 3 Points' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <Arc3PointsPanel
+            mode={arc3ptParams?.mode || 'arc3pt'}
+            onChangeMode={onChangeArc3ptMode}
+            p1={arc3ptParams?.p1}
+            p2={arc3ptParams?.p2}
+            p3={arc3ptParams?.p3}
+            radius={arc3ptParams?.radius ?? 25}
+            onChangeRadius={onChangeArc3ptRadius}
+            isRadiusLocked={arc3ptParams?.isRadiusLocked || false}
+            onToggleRadiusLock={onToggleArc3ptRadiusLock}
+            onApply={onApplyArc3pt}
+            onOk={onOkArc3pt}
+            onCancel={onCancelArc3pt}
+          />
+        </div>
+      ) : currentTab === 'Spline' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <SplineManualPanel
+            splinePoints={splineParams?.splinePoints ?? []}
+            onClearPoints={onClearSplinePoints}
+            onUndoPoint={onUndoSplinePoint}
+            splineType={splineParams?.splineType || 'catmull_rom'}
+            onChangeSplineType={onChangeSplineType}
+            isClosed={splineParams?.isClosed || false}
+            onToggleClosed={onToggleSplineClosed}
+            tension={splineParams?.tension ?? 0.5}
+            onChangeTension={onChangeSplineTension}
+            onApply={onApplySpline}
+            onOk={onOkSpline}
+            onCancel={onCancelSpline}
+          />
+        </div>
+      ) : currentTab === 'Dynamic Trim' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <DynamicTrimPanel
+            trimMode={trimParams?.trimMode || 'dynamic'}
+            onChangeTrimMode={onChangeTrimMode}
+            divideSegments={trimParams?.divideSegments ?? 2}
+            onChangeDivideSegments={onChangeDivideSegments}
+            trimCount={trimParams?.trimCount ?? 0}
+            onApply={onApplyTrim}
+            onOk={onOkTrim}
+            onCancel={onCancelTrim}
+          />
+        </div>
+      ) : currentTab === 'Fillet/Cham...' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <FilletChamferPanel
+            mode={filletChamferParams?.mode || 'fillet'}
+            onChangeMode={onChangeFilletMode}
+            radius={filletChamferParams?.radius ?? 5}
+            onChangeRadius={onChangeFilletRadius}
+            isRadiusLocked={filletChamferParams?.isRadiusLocked || false}
+            onToggleRadiusLock={onToggleFilletRadiusLock}
+            chamferDist1={filletChamferParams?.chamferDist1 ?? 5}
+            onChangeChamferDist1={onChangeChamferDist1}
+            chamferDist2={filletChamferParams?.chamferDist2 ?? 5}
+            onChangeChamferDist2={onChangeChamferDist2}
+            trimEntities={filletChamferParams?.trimEntities ?? true}
+            onToggleTrimEntities={onToggleTrimEntities}
+            filletCount={filletChamferParams?.filletCount ?? 0}
+            onApply={onApplyFillet}
+            onOk={onOkFillet}
+            onCancel={onCancelFillet}
+          />
+        </div>
+      ) : currentTab === 'Modify Length' ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <ModifyLengthPanel
+            mode={modifyLengthParams?.mode || 'delta'}
+            onChangeMode={onChangeModifyLengthMode}
+            value={modifyLengthParams?.value ?? 10}
+            onChangeValue={onChangeModifyLengthValue}
+            endToModify={modifyLengthParams?.endToModify ?? 2}
+            onChangeEndToModify={onChangeModifyLengthEnd}
+            onApply={onApplyModifyLength}
+            onOk={onOkModifyLength}
+            onCancel={onCancelModifyLength}
           />
         </div>
       ) : currentTab === 'Surface Ex...' ? (

@@ -25,7 +25,19 @@ import {
 } from '../utils/cadSelectionEngine';
 import AutoCursorBar from './AutoCursorBar';
 import QuickMaskBar from './QuickMaskBar';
-import { parseSTLFile, calculatePartMetrics, createWireframeLine, createWireframeRect, createWireframeCircle, createPointMarker, createParametricChainExtrusion } from '../utils/cadGeometry';
+import {
+  parseSTLFile,
+  calculatePartMetrics,
+  createWireframeLine,
+  createWireframeRect,
+  createWireframeCircle,
+  createPointMarker,
+  createBoltHoleCircle,
+  createWireframeArc,
+  createWireframeSpline,
+  createParallelLine,
+  createParametricChainExtrusion
+} from '../utils/cadGeometry';
 import { parseAnyCADFile } from '../utils/universalCadParser';
 import ScaleRulerHUD from './ScaleRulerHUD';
 import ViewGnomonHUD from './ViewGnomonHUD';
@@ -37,7 +49,10 @@ import {
   createSnapIndicator,
   computeRectPlacement,
   computeLineEnd,
-  hitTestWireframeEntity
+  hitTestWireframeEntity,
+  computeArc3Points,
+  computeBoltCircle,
+  performDynamicTrim
 } from '../utils/cadDrawingEngine';
 import {
   generateToolpathForOperation,
@@ -170,6 +185,7 @@ export default function Viewport3D({
   onAddCustomEntity = null,
   onRemoveCustomEntity = null,
   onClearWireframes = null,
+  onReplaceCustomGeometry = null,
   onGenerateToolpathFromSketch = null,
   onOpenViewStudioModal,
   onToggleCameraMode,
@@ -392,6 +408,10 @@ export default function Viewport3D({
   const orthoLockRef = useRef(false);
   const customGeometryRef = useRef(customGeometry);
   const onAddCustomEntityRef = useRef(onAddCustomEntity);
+  const onReplaceCustomGeometryRef = useRef(onReplaceCustomGeometry);
+  const arc3ptClicksRef = useRef([]);
+  const splineNodesRef = useRef([]);
+  const dynamicTrimStrokeRef = useRef(null);
   const partTopYRef = useRef(partMetrics?.box?.max?.y ?? 0);
   const renderLockedPreviewAtRef = useRef(null);
 
@@ -575,6 +595,20 @@ export default function Viewport3D({
         sketchTool === 'circle' ? 'Enter the center point' :
         sketchTool === 'rect' ? 'Select position of first corner' :
         sketchTool === 'line' ? 'Specify first endpoint' :
+        sketchTool === 'point' || sketchTool === 'drill' ? 'Click canvas or type coordinates to place point' :
+        sketchTool === 'bolt_circle' || sketchTool === 'pcd' ? 'Click center to place Bolt Hole Circle (PCD)' :
+        sketchTool === 'line_parallel' ? 'Click reference curve to create parallel line' :
+        sketchTool === 'line_perp' ? 'Click reference curve to create perpendicular line' :
+        sketchTool === 'line_closest' ? 'Select two entities to bridge closest points' :
+        sketchTool === 'arc_3pt' ? 'Click first endpoint of 3-point arc' :
+        sketchTool === 'circle_edge' ? 'Click points on circle circumference' :
+        sketchTool === 'spline' ? 'Click points to interpolate spline nodes (double-click to finish)' :
+        sketchTool === 'dynamic_trim' ? 'Drag scissor stroke across wireframe entities to snip' :
+        sketchTool === 'trim_2' ? 'Select two curves to trim to corner intersection' :
+        sketchTool === 'divide' ? 'Click curve to break into pieces' :
+        sketchTool === 'fillet' ? 'Select two curves to insert tangent fillet radius' :
+        sketchTool === 'chamfer' ? 'Select two curves to insert bevel chamfer' :
+        sketchTool === 'modify_length' ? 'Click near line endpoint to extend or shorten' :
         sketchTool === 'arc_tangent' ? 'Select the entity that the arc is to be tangent to' :
         'Click & drag on canvas'
       );
@@ -603,6 +637,10 @@ export default function Viewport3D({
   useEffect(() => {
     onAddCustomEntityRef.current = onAddCustomEntity;
   }, [onAddCustomEntity]);
+
+  useEffect(() => {
+    onReplaceCustomGeometryRef.current = onReplaceCustomGeometry;
+  }, [onReplaceCustomGeometry]);
 
   useEffect(() => {
     gridSnapRef.current = gridSnap;
@@ -999,12 +1037,26 @@ export default function Viewport3D({
       return null;
     };
 
-    const getDefaultPromptForTool = (tool) => (
-      tool === 'rect' ? 'Select position of first corner' :
-      tool === 'line' ? 'Specify first endpoint' :
-      tool === 'arc_tangent' ? 'Select the entity that the arc is to be tangent to' :
-      'Enter the center point'
-    );
+    const getDefaultPromptForTool = (tool) => {
+      switch (tool) {
+        case 'point': return 'Select point position [AutoCursor: End, Mid, Arc Ctr]';
+        case 'bolt_circle': return 'Select PCD center point on active CPlane';
+        case 'line': return 'Specify first endpoint';
+        case 'line_parallel': return 'Select reference line or drag parallel line';
+        case 'line_perp': return 'Select reference line or drag perpendicular line';
+        case 'circle': return 'Enter the center point';
+        case 'arc_3pt': return 'Select first point on arc';
+        case 'arc_tangent': return 'Select the entity that the arc is to be tangent to';
+        case 'spline': return 'Click canvas to add spline node (Enter to finish)';
+        case 'rect': return 'Select position of first corner';
+        case 'dynamic_trim': return 'Drag scissor stroke across entities to trim';
+        case 'fillet': return 'Select first entity for corner fillet';
+        case 'chamfer': return 'Select first entity for chamfer';
+        case 'modify_length': return 'Select entity endpoint to modify length';
+        case 'break': return 'Select entity to break into pieces';
+        default: return 'Select position on active CPlane';
+      }
+    };
 
     const resolveSnappedPoint = (e) => {
       const localPt = getSketchIntersection(e);
@@ -1084,24 +1136,34 @@ export default function Viewport3D({
             completed: true
           });
         }
-      } else if (tool === 'line') {
+      } else if (tool === 'line' || tool === 'line_parallel' || tool === 'line_perp') {
         const { p2, length, angle } = computeLineEnd(anchor, finalPt, getLockedLineOptions());
         if (length < 0.5) return false;
 
         newEntity = createWireframeLine(
           [anchor.x, anchor.y, anchor.z],
           [p2.x, p2.y, p2.z],
-          { color: 0x38bdf8 }
+          { color: 0x38bdf8, name: `Wireframe_${tool === 'line_perp' ? 'Perp' : tool === 'line_parallel' ? 'Parallel' : 'Line'}_${Date.now()}` }
         );
         if (onDrawingUpdateRef.current) {
           onDrawingUpdateRef.current({
-            tool: 'line',
+            tool,
             length,
             angle,
             pt1: anchor,
             pt2: p2,
             completed: true
           });
+        }
+      } else if (tool === 'point' || tool === 'drill') {
+        newEntity = createPointMarker([finalPt.x, finalPt.y, finalPt.z], `Wireframe_Point_${Date.now()}`, 0x38bdf8);
+        if (onDrawingUpdateRef.current) {
+          onDrawingUpdateRef.current({ tool: 'point', point: finalPt, completed: true });
+        }
+      } else if (tool === 'bolt_circle') {
+        newEntity = createBoltHoleCircle(60, 6, finalPt.y, [finalPt.x, finalPt.z], 0, 3.5, { color: 0x38bdf8 });
+        if (onDrawingUpdateRef.current) {
+          onDrawingUpdateRef.current({ tool: 'bolt_circle', center: finalPt, pcd: 60, holes: 6, completed: true });
         }
       }
 
@@ -1249,7 +1311,61 @@ export default function Viewport3D({
             return;
           }
 
-          if (tool === 'line' || tool === 'rect' || tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
+          if (tool === 'point') {
+            const marker = createPointMarker([finalPt.x, finalPt.y, finalPt.z], `Wireframe_Point_${Date.now()}`, 0x38bdf8);
+            if (onAddCustomEntityRef.current) onAddCustomEntityRef.current(marker);
+            return;
+          }
+
+          if (tool === 'bolt_circle') {
+            const bolt = createBoltHoleCircle(60, 6, finalPt.y, [finalPt.x, finalPt.z], 0, 3.5, { color: 0x38bdf8 });
+            if (onAddCustomEntityRef.current) onAddCustomEntityRef.current(bolt);
+            return;
+          }
+
+          if (tool === 'arc_3pt') {
+            const clicks = arc3ptClicksRef.current || [];
+            clicks.push(finalPt.clone());
+            arc3ptClicksRef.current = clicks;
+            if (clicks.length === 1) {
+              setSketchPromptText('Select second point on arc');
+            } else if (clicks.length === 2) {
+              setSketchPromptText('Select third point (or radius) on arc');
+            } else if (clicks.length >= 3) {
+              const solved = computeArc3Points(clicks[0], clicks[1], clicks[2]);
+              if (solved && solved.radius > 0.5) {
+                const arcEnt = createWireframeArc(
+                  [solved.center.x, solved.center.y, solved.center.z],
+                  solved.radius,
+                  solved.startAngleDeg,
+                  solved.endAngleDeg,
+                  { color: 0x38bdf8, name: `Wireframe_Arc3Pt_R${solved.radius.toFixed(1)}` }
+                );
+                if (onAddCustomEntityRef.current) onAddCustomEntityRef.current(arcEnt);
+              }
+              arc3ptClicksRef.current = [];
+              if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+              setSketchPromptText(getDefaultPromptForTool('arc_3pt'));
+            }
+            return;
+          }
+
+          if (tool === 'spline') {
+            const nodes = splineNodesRef.current || [];
+            nodes.push(finalPt.clone());
+            splineNodesRef.current = nodes;
+            setSketchPromptText(`Spline: ${nodes.length} node(s) added (Press Enter or click OK to finish)`);
+            return;
+          }
+
+          if (tool === 'dynamic_trim') {
+            dynamicTrimStrokeRef.current = { start: finalPt.clone(), screenStart: { x: e.clientX, y: e.clientY } };
+            isDrawingDrag = true;
+            setSketchPromptText('Drag scissor stroke across wireframe entities to snip');
+            return;
+          }
+
+          if (tool === 'line' || tool === 'line_parallel' || tool === 'line_perp' || tool === 'rect' || tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
             if (!sketchAnchorRef.current) {
               // 1-Click placement when full dimensions are explicitly locked (Mastercam Auto-place)
               const fullyLockedRect = tool === 'rect'
@@ -1595,10 +1711,10 @@ export default function Viewport3D({
                   isDragging: isDrawingDrag
                 });
               }
-            } else if (tool === 'line') {
+            } else if (tool === 'line' || tool === 'line_parallel' || tool === 'line_perp') {
               const lineOpts = getLockedLineOptions();
               const { p2, length, angle } = computeLineEnd(anchor, finalPt, lineOpts);
-              const ghost = createGhostPreview(tool, anchor, p2, lineOpts);
+              const ghost = createGhostPreview('line', anchor, p2, lineOpts);
               sketchGhostGroupRef.current.add(ghost);
 
               setDimensionFeedback(`L: ${length.toFixed(2)} mm, ∠ ${angle.toFixed(1)}°`);
@@ -1606,7 +1722,7 @@ export default function Viewport3D({
 
               if (onDrawingUpdateRef.current) {
                 onDrawingUpdateRef.current({
-                  tool: 'line',
+                  tool,
                   length: lineOpts.lockedLength ?? length,
                   angle: lineOpts.lockedAngle ?? angle,
                   pt1: anchor,
@@ -1616,17 +1732,57 @@ export default function Viewport3D({
               }
             }
           } else {
-            const hasFullLock =
-              (activeSketchToolRef.current === 'rect' && isWidthLockedRef.current && Number(activeDrawingWidthRef.current) > 0 && isHeightLockedRef.current && Number(activeDrawingHeightRef.current) > 0) ||
-              ((activeSketchToolRef.current === 'circle' || activeSketchToolRef.current === 'arc_tangent' || activeSketchToolRef.current === 'arctangent') && isRadiusLockedRef.current && Number(activeDrawingRadiusRef.current) > 0) ||
-              (activeSketchToolRef.current === 'line' && isLengthLockedRef.current && Number(activeDrawingLengthRef.current) > 0 && isAngleLockedRef.current);
-
-            if (hasFullLock) {
-              renderLockedPreviewAtRef.current?.(finalPt, { isCursorHover: true });
-            } else {
+            const curTool = activeSketchToolRef.current;
+            if (curTool === 'point') {
+              if (sketchGhostGroupRef.current) {
+                sketchGhostGroupRef.current.clear();
+                const ghost = createGhostPreview('point', finalPt, finalPt);
+                sketchGhostGroupRef.current.add(ghost);
+              }
+            } else if (curTool === 'bolt_circle') {
+              if (sketchGhostGroupRef.current) {
+                sketchGhostGroupRef.current.clear();
+                const ghost = createGhostPreview('bolt_circle', finalPt, finalPt, { pcd: 60, numHoles: 6, holeRadius: 3.5 });
+                sketchGhostGroupRef.current.add(ghost);
+              }
+            } else if (curTool === 'arc_3pt') {
+              const clicks = arc3ptClicksRef.current || [];
               if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
-              setDimensionFeedback(null);
-              setSketchPromptText(getDefaultPromptForTool(activeSketchToolRef.current));
+              if (clicks.length === 1) {
+                const ghost = createGhostPreview('line', clicks[0], finalPt);
+                sketchGhostGroupRef.current.add(ghost);
+              } else if (clicks.length === 2) {
+                const solved = computeArc3Points(clicks[0], clicks[1], finalPt);
+                if (solved && solved.radius > 0.5) {
+                  const ghost = createGhostPreview('arc_3pt', clicks[0], finalPt, {
+                    center: solved.center,
+                    radius: solved.radius,
+                    startAngleDeg: solved.startAngleDeg,
+                    endAngleDeg: solved.endAngleDeg
+                  });
+                  sketchGhostGroupRef.current.add(ghost);
+                  setDimensionFeedback(`R: ${solved.radius.toFixed(2)} mm`);
+                }
+              }
+            } else if (curTool === 'dynamic_trim' && dynamicTrimStrokeRef.current) {
+              if (sketchGhostGroupRef.current) {
+                sketchGhostGroupRef.current.clear();
+                const ghost = createGhostPreview('dynamic_trim', dynamicTrimStrokeRef.current.start, finalPt);
+                sketchGhostGroupRef.current.add(ghost);
+              }
+            } else {
+              const hasFullLock =
+                (curTool === 'rect' && isWidthLockedRef.current && Number(activeDrawingWidthRef.current) > 0 && isHeightLockedRef.current && Number(activeDrawingHeightRef.current) > 0) ||
+                ((curTool === 'circle' || curTool === 'arc_tangent' || curTool === 'arctangent') && isRadiusLockedRef.current && Number(activeDrawingRadiusRef.current) > 0) ||
+                (curTool === 'line' && isLengthLockedRef.current && Number(activeDrawingLengthRef.current) > 0 && isAngleLockedRef.current);
+
+              if (hasFullLock) {
+                renderLockedPreviewAtRef.current?.(finalPt, { isCursorHover: true });
+              } else {
+                if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+                setDimensionFeedback(null);
+                setSketchPromptText(getDefaultPromptForTool(curTool));
+              }
             }
           }
         }
@@ -1846,22 +2002,52 @@ export default function Viewport3D({
         }
       }
 
-      if (isSketchModeRef.current && isDrawingDrag) {
-        isDrawingDrag = false;
-        const dragDist = Math.hypot(e.clientX - dragStartScreenX, e.clientY - dragStartScreenY);
+      if (isSketchModeRef.current) {
+        if (activeSketchToolRef.current === 'dynamic_trim' && dynamicTrimStrokeRef.current) {
+          const scissorStart = dynamicTrimStrokeRef.current.start;
+          const resolved = resolveSnappedPoint(e);
+          const scissorEnd = resolved?.finalPt || getSketchIntersection(e);
+          dynamicTrimStrokeRef.current = null;
+          isDrawingDrag = false;
+          if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
 
-        if (dragDist > 12 && sketchAnchorRef.current) {
-          const anchor = sketchAnchorRef.current;
-          const localPt = getSketchIntersection(e);
-          let finalPt = localPt || anchor;
-          if (objectSnapRef.current) {
-            const snap = snapToEntityPoints(finalPt, customGeometryRef.current, 5.0);
-            if (snap.snapped) finalPt = snap.point;
-          } else if (gridSnapRef.current) {
-            finalPt = snapToGrid(finalPt, gridStepRef.current, orthoLockRef.current, anchor);
+          if (scissorStart && scissorEnd && scissorStart.distanceTo(scissorEnd) > 1.0) {
+            const entities = customGeometryRef.current || [];
+            const trimRes = performDynamicTrim(scissorStart, scissorEnd, entities);
+            if (trimRes && trimRes.targetEntity) {
+              const newCurves = trimRes.keptSegments.map((seg, idx) =>
+                createWireframeLine([seg.p1.x, seg.p1.y, seg.p1.z], [seg.p2.x, seg.p2.y, seg.p2.z], {
+                  name: `${trimRes.targetEntity.name || 'Wireframe'}_Trimmed_${idx + 1}`,
+                  color: 0x38bdf8
+                })
+              );
+              const nextList = entities.filter((ent) => ent !== trimRes.targetEntity).concat(newCurves);
+              if (onReplaceCustomGeometryRef.current) {
+                onReplaceCustomGeometryRef.current(nextList);
+              }
+            }
           }
+          setSketchPromptText(getDefaultPromptForTool('dynamic_trim'));
+          return;
+        }
 
-          commitInteractiveEntity(anchor, finalPt);
+        if (isDrawingDrag) {
+          isDrawingDrag = false;
+          const dragDist = Math.hypot(e.clientX - dragStartScreenX, e.clientY - dragStartScreenY);
+
+          if (dragDist > 12 && sketchAnchorRef.current) {
+            const anchor = sketchAnchorRef.current;
+            const localPt = getSketchIntersection(e);
+            let finalPt = localPt || anchor;
+            if (objectSnapRef.current) {
+              const snap = snapToEntityPoints(finalPt, customGeometryRef.current, 5.0);
+              if (snap.snapped) finalPt = snap.point;
+            } else if (gridSnapRef.current) {
+              finalPt = snapToGrid(finalPt, gridStepRef.current, orthoLockRef.current, anchor);
+            }
+
+            commitInteractiveEntity(anchor, finalPt);
+          }
         }
       }
     };
@@ -3534,13 +3720,39 @@ export default function Viewport3D({
         return;
       }
 
-      if (e.key === 'Enter' && (polygonPointsRef.current?.length || 0) >= 3) {
-        e.preventDefault();
-        completePolygonRef.current?.(stickyMultiSelectRef.current);
-        return;
+      if (e.key === 'Enter') {
+        if ((polygonPointsRef.current?.length || 0) >= 3) {
+          e.preventDefault();
+          completePolygonRef.current?.(stickyMultiSelectRef.current);
+          return;
+        }
+        if ((splineNodesRef.current?.length || 0) >= 2) {
+          e.preventDefault();
+          const pts = splineNodesRef.current.map((p) => [p.x, p.y, p.z]);
+          const splineEnt = createWireframeSpline(pts, {
+            color: 0x38bdf8,
+            name: `Wireframe_Spline_${pts.length}Pts`
+          });
+          if (onAddCustomEntityRef.current) onAddCustomEntityRef.current(splineEnt);
+          splineNodesRef.current = [];
+          setSketchPromptText(getDefaultPromptForTool('spline'));
+          return;
+        }
       }
 
       if (e.key === 'Escape') {
+        if (arc3ptClicksRef.current?.length > 0) {
+          e.preventDefault();
+          arc3ptClicksRef.current = [];
+          if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+          return;
+        }
+        if (splineNodesRef.current?.length > 0) {
+          e.preventDefault();
+          splineNodesRef.current = [];
+          if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+          return;
+        }
         if ((polygonPointsRef.current?.length || 0) > 0 || vectorStartRef.current) {
           e.preventDefault();
           cancelInteractiveSelectionRef.current?.();
@@ -3596,8 +3808,28 @@ export default function Viewport3D({
         if (onToggleSelectModeRef.current) onToggleSelectModeRef.current(false);
       } else if (key === 'p') {
         e.preventDefault();
-        setActiveSketchTool('drill');
-        if (onChangeSketchTool) onChangeSketchTool('drill');
+        setActiveSketchTool('point');
+        if (onChangeSketchTool) onChangeSketchTool('point');
+        if (onToggleSelectModeRef.current) onToggleSelectModeRef.current(false);
+      } else if (key === 'b') {
+        e.preventDefault();
+        setActiveSketchTool('bolt_circle');
+        if (onChangeSketchTool) onChangeSketchTool('bolt_circle');
+        if (onToggleSelectModeRef.current) onToggleSelectModeRef.current(false);
+      } else if (key === 't') {
+        e.preventDefault();
+        setActiveSketchTool('dynamic_trim');
+        if (onChangeSketchTool) onChangeSketchTool('dynamic_trim');
+        if (onToggleSelectModeRef.current) onToggleSelectModeRef.current(false);
+      } else if (key === 's') {
+        e.preventDefault();
+        setActiveSketchTool('spline');
+        if (onChangeSketchTool) onChangeSketchTool('spline');
+        if (onToggleSelectModeRef.current) onToggleSelectModeRef.current(false);
+      } else if (key === 'a') {
+        e.preventDefault();
+        setActiveSketchTool('arc_3pt');
+        if (onChangeSketchTool) onChangeSketchTool('arc_3pt');
         if (onToggleSelectModeRef.current) onToggleSelectModeRef.current(false);
       }
     };

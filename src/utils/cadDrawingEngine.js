@@ -286,13 +286,125 @@ export function createGhostPreview(tool, startPt, currentPt, options = {}) {
     const radLine = new THREE.Line(radGeo, dashedMaterial);
     radLine.computeLineDistances();
     group.add(radLine);
-  } else if (tool === 'drill') {
+  } else if (tool === 'drill' || tool === 'point' || tool === 'datum') {
     const markerGeo = new THREE.RingGeometry(1.5, 3.0, 16);
     markerGeo.rotateX(-Math.PI / 2);
     const markerMat = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide });
     const marker = new THREE.Mesh(markerGeo, markerMat);
     marker.position.copy(currentPt);
     group.add(marker);
+
+    // Crosshair lines
+    const chMat = new THREE.LineBasicMaterial({ color: 0xef4444 });
+    const chGeo1 = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(currentPt.x - 4, currentPt.y, currentPt.z),
+      new THREE.Vector3(currentPt.x + 4, currentPt.y, currentPt.z)
+    ]);
+    const chGeo2 = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(currentPt.x, currentPt.y, currentPt.z - 4),
+      new THREE.Vector3(currentPt.x, currentPt.y, currentPt.z + 4)
+    ]);
+    group.add(new THREE.Line(chGeo1, chMat));
+    group.add(new THREE.Line(chGeo2, chMat));
+  } else if (tool === 'bolt_circle' || tool === 'pcd') {
+    const pcd = options.pcd || 60;
+    const radius = (options.lockedRadius && options.lockedRadius > 0)
+      ? Number(options.lockedRadius)
+      : Math.max(5, (pcd / 2) || startPt.distanceTo(currentPt));
+    const numHoles = options.numHoles || 6;
+    const holeRadius = options.holeRadius || 3.4;
+
+    // Pitch circle dashed
+    const pts = [];
+    const segs = 64;
+    for (let i = 0; i <= segs; i++) {
+      const th = (i / segs) * Math.PI * 2;
+      pts.push(new THREE.Vector3(
+        startPt.x + Math.cos(th) * radius,
+        startPt.y,
+        startPt.z + Math.sin(th) * radius
+      ));
+    }
+    const circle = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), dashedMaterial);
+    circle.computeLineDistances();
+    group.add(circle);
+
+    // Center marker
+    const cDot = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial({ color: 0x0284c7 }));
+    cDot.position.copy(startPt);
+    group.add(cDot);
+
+    // Holes preview
+    const startAng = ((options.startAngleDeg || 0) * Math.PI) / 180;
+    const stepAng = (Math.PI * 2) / Math.max(1, numHoles);
+    const holeMat = new THREE.LineBasicMaterial({ color: 0x0284c7 });
+
+    for (let h = 0; h < numHoles; h++) {
+      const hAng = startAng + h * stepAng;
+      const hx = startPt.x + radius * Math.cos(hAng);
+      const hz = startPt.z + radius * Math.sin(hAng);
+      const hPts = [];
+      for (let s = 0; s <= 16; s++) {
+        const a = (s / 16) * Math.PI * 2;
+        hPts.push(new THREE.Vector3(hx + Math.cos(a) * holeRadius, startPt.y, hz + Math.sin(a) * holeRadius));
+      }
+      group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(hPts), holeMat));
+    }
+  } else if (tool === 'dynamic_trim') {
+    // Red scissor cutting stroke
+    const strokeMat = new THREE.LineDashedMaterial({ color: 0xef4444, dashSize: 3, gapSize: 2, linewidth: 2 });
+    const strokeLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([startPt, currentPt]), strokeMat);
+    strokeLine.computeLineDistances();
+    group.add(strokeLine);
+
+    // End scissor indicator dot
+    const endDot = new THREE.Mesh(new THREE.SphereGeometry(1.2, 8, 8), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+    endDot.position.copy(currentPt);
+    group.add(endDot);
+  } else if (tool === 'arc_3pt' || tool === 'arc3pt') {
+    if (options.pt2) {
+      // We have pt1 (startPt), pt2 (options.pt2), and currentPt (pt3)
+      const solved = computeArc3Points(startPt, options.pt2, currentPt);
+      if (solved) {
+        const arcPts = [];
+        const segs = 48;
+        const startRad = solved.startAngle;
+        const totalRad = solved.sweepAngleRad;
+        const dir = solved.isCCW ? 1 : -1;
+        for (let i = 0; i <= segs; i++) {
+          const a = startRad + dir * (i / segs) * totalRad;
+          arcPts.push(new THREE.Vector3(
+            solved.center.x + Math.cos(a) * solved.radius,
+            solved.center.y,
+            solved.center.z + Math.sin(a) * solved.radius
+          ));
+        }
+        const arcLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(arcPts), dashedMaterial);
+        arcLine.computeLineDistances();
+        group.add(arcLine);
+      }
+    } else {
+      // 2 points chosen so far: show line between them
+      const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([startPt, currentPt]), dashedMaterial);
+      l.computeLineDistances();
+      group.add(l);
+    }
+  } else if (tool === 'spline') {
+    const pts = options.splinePoints ? [...options.splinePoints, currentPt] : [startPt, currentPt];
+    if (pts.length >= 2) {
+      const curve = new THREE.CatmullRomCurve3(pts);
+      const curvePts = curve.getPoints(Math.max(20, pts.length * 10));
+      const spLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curvePts), dashedMaterial);
+      spLine.computeLineDistances();
+      group.add(spLine);
+
+      // Node markers
+      pts.forEach((pt) => {
+        const dot = new THREE.Mesh(new THREE.SphereGeometry(0.8, 8, 8), new THREE.MeshBasicMaterial({ color: 0x0284c7 }));
+        dot.position.copy(pt);
+        group.add(dot);
+      });
+    }
   }
 
   return group;
@@ -614,4 +726,413 @@ export function extractClosedChainsFromCAD(entities = []) {
 
   return chains;
 }
+
+/**
+ * ============================================================================
+ * MASTERCAM WIREFRAME SUITE: ADVANCED GEOMETRIC & TRIMMING CALCULATION ENGINES
+ * ============================================================================
+ */
+
+/**
+ * Computes an arc passing through 3 non-collinear points in 3D (CPlane projected).
+ */
+export function computeArc3Points(p1, p2, p3) {
+  if (!p1 || !p2 || !p3) return null;
+  const x1 = p1.x, z1 = p1.z ?? p1.y;
+  const x2 = p2.x, z2 = p2.z ?? p2.y;
+  const x3 = p3.x, z3 = p3.z ?? p3.y;
+  const y = (p1.y + p2.y + p3.y) / 3;
+
+  const D = 2 * (x1 * (z2 - z3) + x2 * (z3 - z1) + x3 * (z1 - z2));
+  if (Math.abs(D) < 1e-7) return null; // Collinear points cannot form a unique circular arc
+
+  const cx = ((x1 * x1 + z1 * z1) * (z2 - z3) + (x2 * x2 + z2 * z2) * (z3 - z1) + (x3 * x3 + z3 * z3) * (z1 - z2)) / D;
+  const cz = ((x1 * x1 + z1 * z1) * (x3 - x2) + (x2 * x2 + z2 * z2) * (x1 - x3) + (x3 * x3 + z3 * z3) * (x2 - x1)) / D;
+  const radius = Math.hypot(x1 - cx, z1 - cz);
+
+  let a1 = Math.atan2(z1 - cz, x1 - cx);
+  let a2 = Math.atan2(z2 - cz, x2 - cx);
+  let a3 = Math.atan2(z3 - cz, x3 - cx);
+  if (a1 < 0) a1 += Math.PI * 2;
+  if (a2 < 0) a2 += Math.PI * 2;
+  if (a3 < 0) a3 += Math.PI * 2;
+
+  // Determine CCW vs CW sweep: does a2 lie between a1 and a3 going CCW?
+  const diffCCW = (a3 - a1 + Math.PI * 2) % (Math.PI * 2);
+  const midDiff = (a2 - a1 + Math.PI * 2) % (Math.PI * 2);
+  const isCCW = midDiff < diffCCW;
+
+  return {
+    center: new THREE.Vector3(cx, y, cz),
+    radius,
+    startAngle: a1,
+    midAngle: a2,
+    endAngle: a3,
+    startAngleDeg: (a1 * 180) / Math.PI,
+    endAngleDeg: (a3 * 180) / Math.PI,
+    isCCW,
+    sweepAngleRad: isCCW ? diffCCW : (Math.PI * 2 - diffCCW)
+  };
+}
+
+/**
+ * Computes Pitch Circle Diameter (PCD) bolt hole positions and reference geometry.
+ */
+export function computeBoltCircle(center = { x: 0, y: 0, z: 0 }, pcd = 60, numHoles = 6, startAngleDeg = 0, holeRadius = 3.4, sweepAngleDeg = 360) {
+  const holes = [];
+  const radius = pcd / 2;
+  const safeHoles = Math.max(1, Math.round(numHoles));
+  const stepAngle = sweepAngleDeg === 360
+    ? (360 / safeHoles)
+    : (safeHoles > 1 ? sweepAngleDeg / (safeHoles - 1) : 0);
+
+  for (let i = 0; i < safeHoles; i++) {
+    const angDeg = startAngleDeg + i * stepAngle;
+    const rad = (angDeg * Math.PI) / 180;
+    holes.push({
+      index: i + 1,
+      angleDeg: angDeg,
+      x: center.x + radius * Math.cos(rad),
+      y: center.y,
+      z: center.z + radius * Math.sin(rad),
+      radius: holeRadius
+    });
+  }
+
+  return {
+    center: new THREE.Vector3(center.x, center.y, center.z),
+    pcd,
+    radius,
+    numHoles: safeHoles,
+    startAngleDeg,
+    sweepAngleDeg,
+    holeRadius,
+    holes
+  };
+}
+
+/**
+ * Robust 2D Line-Line intersection solver on CPlane.
+ */
+export function findLineIntersection2D(p1, p2, p3, p4) {
+  const dx12 = p2.x - p1.x;
+  const dz12 = (p2.z ?? p2.y) - (p1.z ?? p1.y);
+  const dx34 = p4.x - p3.x;
+  const dz34 = (p4.z ?? p4.y) - (p3.z ?? p3.y);
+
+  const det = dx12 * dz34 - dz12 * dx34;
+  if (Math.abs(det) < 1e-8) return null; // Parallel or collinear
+
+  const dx13 = (p3.x) - (p1.x);
+  const dz13 = (p3.z ?? p3.y) - (p1.z ?? p1.y);
+
+  const t = (dx13 * dz34 - dz13 * dx34) / det;
+  const u = (dx13 * dz12 - dz13 * dx12) / det;
+
+  const y = (p1.y + p2.y + p3.y + p4.y) / 4;
+  const intPt = new THREE.Vector3(p1.x + t * dx12, y, (p1.z ?? p1.y) + t * dz12);
+
+  return {
+    point: intPt,
+    t,
+    u,
+    isSegmentA: t >= -1e-4 && t <= 1 + 1e-4,
+    isSegmentB: u >= -1e-4 && u <= 1 + 1e-4
+  };
+}
+
+/**
+ * Robust 2D Line-Circle intersection solver on CPlane.
+ */
+export function findLineCircleIntersection2D(p1, p2, center, radius) {
+  const dx = p2.x - p1.x;
+  const dz = (p2.z ?? p2.y) - (p1.z ?? p1.y);
+  const fx = p1.x - center.x;
+  const fz = (p1.z ?? p1.y) - (center.z ?? center.y);
+
+  const a = dx * dx + dz * dz;
+  const b = 2 * (fx * dx + fz * dz);
+  const c = fx * fx + fz * fz - radius * radius;
+
+  if (Math.abs(a) < 1e-9) return [];
+  const discriminant = b * b - 4 * a * c;
+  if (discriminant < -1e-6) return [];
+
+  const safeDisc = Math.max(0, discriminant);
+  const sqrtDisc = Math.sqrt(safeDisc);
+  const t1 = (-b - sqrtDisc) / (2 * a);
+  const t2 = (-b + sqrtDisc) / (2 * a);
+
+  const results = [];
+  const y = (p1.y + p2.y + center.y) / 3;
+
+  [t1, t2].forEach((t) => {
+    results.push({
+      point: new THREE.Vector3(p1.x + t * dx, y, (p1.z ?? p1.y) + t * dz),
+      t,
+      isSegment: t >= -1e-4 && t <= 1 + 1e-4
+    });
+  });
+
+  return results;
+}
+
+/**
+ * Finds all intersections between two arbitrary CAD wireframe entities.
+ */
+export function findCurveIntersections(entA, entB) {
+  if (!entA || !entB || entA === entB) return [];
+  const ptsA = extractPointsFromCadEntity(entA);
+  const ptsB = extractPointsFromCadEntity(entB);
+  if (ptsA.length < 2 || ptsB.length < 2) return [];
+
+  const intersections = [];
+  for (let i = 0; i < ptsA.length - 1; i++) {
+    for (let j = 0; j < ptsB.length - 1; j++) {
+      const res = findLineIntersection2D(ptsA[i], ptsA[i + 1], ptsB[j], ptsB[j + 1]);
+      if (res && res.isSegmentA && res.isSegmentB) {
+        intersections.push(res.point);
+      }
+    }
+  }
+  return intersections;
+}
+
+/**
+ * Mastercam Signature Dynamic Trim:
+ * Given a scissor line stroke (startPt, endPt), detects crossed wireframe entities,
+ * partitions them at nearest intersecting boundaries with all other entities, and snips that segment.
+ */
+export function performDynamicTrim(scissorStart, scissorEnd, allEntities = []) {
+  if (!scissorStart || !scissorEnd || !allEntities.length) return null;
+
+  // 1. Find which entities are intersected by the scissor stroke line
+  const hitCandidates = [];
+
+  allEntities.forEach((entity) => {
+    if (!isSelectableWireframeEntity(entity)) return;
+    const pts = extractPointsFromCadEntity(entity);
+    if (pts.length < 2) return;
+
+    for (let i = 0; i < pts.length - 1; i++) {
+      const hit = findLineIntersection2D(scissorStart, scissorEnd, pts[i], pts[i + 1]);
+      if (hit && hit.isSegmentA && hit.isSegmentB) {
+        hitCandidates.push({
+          entity,
+          segIndex: i,
+          hitPoint: hit.point,
+          hitT: hit.u,
+          pts
+        });
+        break;
+      }
+    }
+  });
+
+  if (!hitCandidates.length) return null;
+
+  const target = hitCandidates[0];
+  const { entity, pts, hitPoint } = target;
+
+  // 2. Find all intersections of this target entity with ALL OTHER entities in the model
+  const cutParams = [0, 1]; // Endpoints
+  const otherEntities = allEntities.filter((e) => e.uuid !== entity.uuid && isSelectableWireframeEntity(e));
+
+  for (let i = 0; i < pts.length - 1; i++) {
+    const pA = pts[i];
+    const pB = pts[i + 1];
+    const segLen = pA.distanceTo(pB);
+    if (segLen < 1e-4) continue;
+
+    otherEntities.forEach((other) => {
+      const otherPts = extractPointsFromCadEntity(other);
+      for (let j = 0; j < otherPts.length - 1; j++) {
+        const xRes = findLineIntersection2D(pA, pB, otherPts[j], otherPts[j + 1]);
+        if (xRes && xRes.isSegmentA && xRes.isSegmentB) {
+          // Compute cumulative parameter along full polyline/line
+          cutParams.push(xRes.t);
+        }
+      }
+    });
+  }
+
+  // Remove duplicate cut parameters and sort
+  const sortedParams = [...new Set(cutParams.map((t) => Number(t.toFixed(5))))].sort((a, b) => a - b);
+
+  // Find parameter of scissor cut hitPoint
+  const pStart = pts[0];
+  const pEnd = pts[pts.length - 1];
+  const fullLen = pStart.distanceTo(pEnd);
+  const scissorT = fullLen > 0 ? pStart.distanceTo(hitPoint) / fullLen : target.hitT;
+
+  // Find sub-interval containing scissorT
+  let snipIdx = 0;
+  for (let k = 0; k < sortedParams.length - 1; k++) {
+    if (scissorT >= sortedParams[k] - 1e-3 && scissorT <= sortedParams[k + 1] + 1e-3) {
+      snipIdx = k;
+      break;
+    }
+  }
+
+  // Sub-segments to keep: all except snipIdx
+  const keptSegments = [];
+  for (let k = 0; k < sortedParams.length - 1; k++) {
+    if (k !== snipIdx) {
+      const tA = sortedParams[k];
+      const tB = sortedParams[k + 1];
+      const ptA = new THREE.Vector3().lerpVectors(pStart, pEnd, tA);
+      const ptB = new THREE.Vector3().lerpVectors(pStart, pEnd, tB);
+      if (ptA.distanceTo(ptB) > 0.5) {
+        keptSegments.push({ p1: ptA, p2: ptB });
+      }
+    }
+  }
+
+  return {
+    targetEntity: entity,
+    hitPoint,
+    keptSegments,
+    snippedInterval: [sortedParams[snipIdx], sortedParams[snipIdx + 1]]
+  };
+}
+
+/**
+ * Computes a Mastercam Corner Fillet between two line entities.
+ * Automatically computes intersection, tangent touch points, and creates tangent circular fillet arc.
+ */
+export function computeFilletBetweenEntities(entA, entB, radius = 5, trimMode = 'trim') {
+  if (!entA || !entB || radius <= 0) return null;
+  const ptsA = extractPointsFromCadEntity(entA);
+  const ptsB = extractPointsFromCadEntity(entB);
+  if (ptsA.length < 2 || ptsB.length < 2) return null;
+
+  const p1 = ptsA[0], p2 = ptsA[ptsA.length - 1];
+  const p3 = ptsB[0], p4 = ptsB[ptsB.length - 1];
+
+  const intRes = findLineIntersection2D(p1, p2, p3, p4);
+  if (!intRes) return null; // Lines are parallel
+
+  const corner = intRes.point;
+
+  // Direction vectors pointing away from the corner on each line
+  const d1 = p1.distanceTo(corner) > p2.distanceTo(corner) ? p1 : p2;
+  const d2 = p3.distanceTo(corner) > p4.distanceTo(corner) ? p3 : p4;
+
+  const uA = new THREE.Vector3(d1.x - corner.x, 0, d1.z - corner.z).normalize();
+  const uB = new THREE.Vector3(d2.x - corner.x, 0, d2.z - corner.z).normalize();
+
+  const dot = Math.max(-0.999, Math.min(0.999, uA.dot(uB)));
+  const angle = Math.acos(dot);
+  if (angle < 0.05 || angle > Math.PI - 0.05) return null;
+
+  const tanDist = radius / Math.tan(angle / 2);
+  const touchA = new THREE.Vector3(corner.x + uA.x * tanDist, corner.y, corner.z + uA.z * tanDist);
+  const touchB = new THREE.Vector3(corner.x + uB.x * tanDist, corner.y, corner.z + uB.z * tanDist);
+
+  // Center is along the angle bisector at distance radius / sin(angle / 2)
+  const bisector = new THREE.Vector3().addVectors(uA, uB).normalize();
+  const centerDist = radius / Math.sin(angle / 2);
+  const center = new THREE.Vector3(corner.x + bisector.x * centerDist, corner.y, corner.z + bisector.z * centerDist);
+
+  // Arc angles
+  let angA = Math.atan2(touchA.z - center.z, touchA.x - center.x);
+  let angB = Math.atan2(touchB.z - center.z, touchB.x - center.x);
+
+  return {
+    center,
+    radius,
+    touchA,
+    touchB,
+    corner,
+    angleDeg: (angle * 180) / Math.PI,
+    filletArcData: {
+      center: [center.x, center.y, center.z],
+      radius,
+      startAngleDeg: (angA * 180) / Math.PI,
+      endAngleDeg: (angB * 180) / Math.PI
+    },
+    trimmedLineA: { p1: d1, p2: touchA },
+    trimmedLineB: { p1: d2, p2: touchB }
+  };
+}
+
+/**
+ * Computes a Mastercam Corner Chamfer between two line entities.
+ */
+export function computeChamferBetweenEntities(entA, entB, dist1 = 5, dist2 = 5, trimMode = 'trim') {
+  if (!entA || !entB || dist1 <= 0) return null;
+  const ptsA = extractPointsFromCadEntity(entA);
+  const ptsB = extractPointsFromCadEntity(entB);
+  if (ptsA.length < 2 || ptsB.length < 2) return null;
+
+  const p1 = ptsA[0], p2 = ptsA[ptsA.length - 1];
+  const p3 = ptsB[0], p4 = ptsB[ptsB.length - 1];
+
+  const intRes = findLineIntersection2D(p1, p2, p3, p4);
+  if (!intRes) return null;
+
+  const corner = intRes.point;
+  const d1 = p1.distanceTo(corner) > p2.distanceTo(corner) ? p1 : p2;
+  const d2 = p3.distanceTo(corner) > p4.distanceTo(corner) ? p3 : p4;
+
+  const uA = new THREE.Vector3(d1.x - corner.x, 0, d1.z - corner.z).normalize();
+  const uB = new THREE.Vector3(d2.x - corner.x, 0, d2.z - corner.z).normalize();
+
+  const cA = new THREE.Vector3(corner.x + uA.x * dist1, corner.y, corner.z + uA.z * dist1);
+  const cB = new THREE.Vector3(corner.x + uB.x * dist2, corner.y, corner.z + uB.z * dist2);
+
+  return {
+    corner,
+    chamferLine: { p1: cA, p2: cB },
+    trimmedLineA: { p1: d1, p2: cA },
+    trimmedLineB: { p1: d2, p2: cB }
+  };
+}
+
+/**
+ * Mastercam Modify Length: Adjusts line length by delta, total length, or percentage.
+ */
+export function computeModifyLength(entity, value = 10, mode = 'delta', endToModify = 2) {
+  if (!entity) return null;
+  const pts = extractPointsFromCadEntity(entity);
+  if (pts.length < 2) return null;
+
+  const p1 = pts[0].clone();
+  const p2 = pts[pts.length - 1].clone();
+  const curLen = p1.distanceTo(p2);
+  if (curLen < 1e-4) return null;
+
+  let newLen = curLen;
+  if (mode === 'delta') newLen = Math.max(0.1, curLen + value);
+  else if (mode === 'total') newLen = Math.max(0.1, value);
+  else if (mode === 'percent') newLen = Math.max(0.1, curLen * (value / 100));
+
+  const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
+
+  if (endToModify === 2) {
+    p2.copy(p1).addScaledVector(dir, newLen);
+  } else {
+    p1.copy(p2).addScaledVector(dir.negate(), newLen);
+  }
+
+  return { p1, p2, oldLength: curLen, newLength: newLen };
+}
+
+/**
+ * Mastercam Close Arc: Converts open circular arc into a full 360° circle.
+ */
+export function computeCloseArc(arcEntity) {
+  if (!arcEntity || !arcEntity.userData) return null;
+  const { center, radius } = arcEntity.userData;
+  if (!center || !radius) {
+    const pts = extractPointsFromCadEntity(arcEntity);
+    if (pts.length >= 3) {
+      const solved = computeArc3Points(pts[0], pts[Math.floor(pts.length / 2)], pts[pts.length - 1]);
+      if (solved) return { center: solved.center, radius: solved.radius, startAngleDeg: 0, endAngleDeg: 360, isFullCircle: true };
+    }
+    return null;
+  }
+  return { center: new THREE.Vector3(center.x, center.y, center.z), radius, startAngleDeg: 0, endAngleDeg: 360, isFullCircle: true };
+}
+
 

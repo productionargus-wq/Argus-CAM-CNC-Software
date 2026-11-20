@@ -145,6 +145,7 @@ export default function RibbonBar({
   onSnapCamera,
   onAddWireframe,
   onClearWireframes,
+  onCloseArc,
   onAddSurface,
   onClearSurfaces,
   onAddSolid,
@@ -1014,20 +1015,20 @@ export default function RibbonBar({
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
-                  className="ribbon-btn-large"
-                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('drill') : (onOpenWireframeModal && onOpenWireframeModal('datum'))}
-                  title="Point Position - Place 3D coordinate point / datum on viewport"
+                  className={`ribbon-btn-large ${isSketchModeActive && (sketchTool === 'point' || sketchTool === 'drill') ? 'active' : ''}`}
+                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('point') : (onOpenWireframeModal && onOpenWireframeModal('datum'))}
+                  title="Point Position (P) - Place 3D coordinate point / datum on viewport or along curves"
                 >
                   <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Plus size={22} color="#0284c7" strokeWidth={2.5} />
                     <div style={{ position: 'absolute', width: '4px', height: '4px', background: '#0284c7', borderRadius: '50%' }} />
                   </div>
-                  <span className="btn-label" style={{ fontWeight: 600 }}>Point<br />Position</span>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Point<br />Position ▾</span>
                 </button>
                 <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('pcd') : onAddWireframe('pcd')}
-                  title="Bolt Circle - Create Pitch Circle Diameter (PCD) bolt hole pattern"
+                  className={`ribbon-btn-large ${isSketchModeActive && sketchTool === 'bolt_circle' ? 'active' : ''}`}
+                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('bolt_circle') : (onOpenWireframeModal && onOpenWireframeModal('pcd'))}
+                  title="Bolt Circle - Create Pitch Circle Diameter (PCD) bolt hole pattern with live preview"
                 >
                   <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Circle size={20} color="#38bdf8" strokeWidth={1.5} />
@@ -1060,8 +1061,8 @@ export default function RibbonBar({
 
                 <div className="ribbon-col-stacked">
                   <button
-                    className="ribbon-btn-small"
-                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('parallel') : onAddWireframe('parallel')}
+                    className={`ribbon-btn-small ${isSketchModeActive && sketchTool === 'line_parallel' ? 'active' : ''}`}
+                    onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('line_parallel') : (onOpenWireframeModal && onOpenWireframeModal('parallel'))}
                     title="Line Parallel - Create parallel line at offset distance"
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', width: '13px' }}>
@@ -1071,8 +1072,8 @@ export default function RibbonBar({
                     <span>Line Parallel</span>
                   </button>
                   <button
-                    className="ribbon-btn-small"
-                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('perp') : onAddWireframe('perp')}
+                    className={`ribbon-btn-small ${isSketchModeActive && sketchTool === 'line_perp' ? 'active' : ''}`}
+                    onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('line_perp') : (onOpenWireframeModal && onOpenWireframeModal('perp'))}
                     title="Line Perpendicular - Create 90° normal line from entity"
                   >
                     <div style={{ position: 'relative', width: '12px', height: '12px' }}>
@@ -1082,8 +1083,8 @@ export default function RibbonBar({
                     <span>Line Perpendicular</span>
                   </button>
                   <button
-                    className="ribbon-btn-small"
-                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('closest') : onAddWireframe('line')}
+                    className={`ribbon-btn-small ${isSketchModeActive && sketchTool === 'line_closest' ? 'active' : ''}`}
+                    onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('line_closest') : (onOpenWireframeModal && onOpenWireframeModal('closest'))}
                     title="Line Closest - Create line connecting closest points between entities"
                   >
                     <div style={{ width: '12px', height: '1.5px', background: '#64748b' }} />
@@ -1111,8 +1112,8 @@ export default function RibbonBar({
 
                 <div className="ribbon-col-stacked">
                   <button
-                    className="ribbon-btn-small"
-                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('arc3pt') : onAddWireframe('circle')}
+                    className={`ribbon-btn-small ${isSketchModeActive && sketchTool === 'arc_3pt' ? 'active' : ''}`}
+                    onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('arc_3pt') : (onOpenWireframeModal && onOpenWireframeModal('arc3pt'))}
                     title="Arc 3 Points - Create circular arc passing through 3 points"
                   >
                     <Orbit size={13} color="#0284c7" />
@@ -1127,8 +1128,8 @@ export default function RibbonBar({
                     <span>Arc Tangent</span>
                   </button>
                   <button
-                    className="ribbon-btn-small"
-                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('circle') : onAddWireframe('circle')}
+                    className={`ribbon-btn-small ${isSketchModeActive && sketchTool === 'circle_edge' ? 'active' : ''}`}
+                    onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('circle_edge') : (onOpenWireframeModal && onOpenWireframeModal('circle'))}
                     title="Circle Edge Point - Create circle defined by edge points"
                   >
                     <Circle size={13} color="#64748b" />
@@ -1143,8 +1144,8 @@ export default function RibbonBar({
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('spline') : onAddWireframe('spline')}
+                  className={`ribbon-btn-large ${isSketchModeActive && sketchTool === 'spline' ? 'active' : ''}`}
+                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('spline') : (onOpenWireframeModal && onOpenWireframeModal('spline'))}
                   title="Spline Manual - Create smooth NURBS / Catmull-Rom spline through points"
                 >
                   <Sliders size={22} color="#0284c7" />
@@ -1194,7 +1195,7 @@ export default function RibbonBar({
                   </button>
                 </div>
 
-                {/* Column 2: Turn Profile, Relief Groove, Raster to Vector */}
+                {/* Column 2: Turn Profile, Relief Groove, Raster to Vector, Stairs & Doors */}
                 <div className="ribbon-col-stacked">
                   <button
                     className="ribbon-btn-small"
@@ -1219,6 +1220,14 @@ export default function RibbonBar({
                   >
                     <Sparkles size={13} color="#0284c7" />
                     <span>Raster to Vector</span>
+                  </button>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={() => onAddWireframe && onAddWireframe('stair')}
+                    title="Stair Geometry - Generate parametric stair tread wireframe"
+                  >
+                    <Box size={13} color="#64748b" />
+                    <span>Stair Geometry</span>
                   </button>
                 </div>
               </div>
@@ -1267,63 +1276,118 @@ export default function RibbonBar({
             {/* 7. Modify */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
+                {/* 1. Dynamic Trim (Signature Mastercam Tool) */}
                 <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('trim') : onAddWireframe('trim')}
-                  title="Trim Break Extend - Interactively trim, break or extend wireframe lines"
+                  className={`ribbon-btn-large ${isSketchModeActive && sketchTool === 'dynamic_trim' ? 'active' : ''}`}
+                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('dynamic_trim') : (onOpenWireframeModal && onOpenWireframeModal('trim'))}
+                  title="Dynamic Trim (T) - Drag scissor stroke across wireframe entities to snip between intersections"
                 >
                   <Scissors size={22} color="#f43f5e" />
-                  <span className="btn-label" style={{ fontWeight: 600 }}>Trim Break<br />Extend ▾</span>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Dynamic<br />Trim</span>
                 </button>
 
+                {/* 2. Trim to Entities (1, 2, 3 entities) */}
                 <button
-                  className="ribbon-btn-large"
-                  onClick={() => onOpenWireframeModal ? onOpenWireframeModal('fillet') : onAddWireframe('fillet')}
-                  title="Fillet Entities - Add tangent fillet arc radius between curves"
+                  className={`ribbon-btn-large ${isSketchModeActive && (sketchTool === 'trim_2' || sketchTool === 'trim_1') ? 'active' : ''}`}
+                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('trim_2') : (onOpenWireframeModal && onOpenWireframeModal('trim'))}
+                  title="Trim to Entities - Interactively trim/extend two entities to clean corner intersection"
                 >
-                  <Orbit size={22} color="#10b981" />
-                  <span className="btn-label" style={{ fontWeight: 600 }}>Fillet<br />Entities ▾</span>
+                  <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '18px', height: '1.5px', background: '#0284c7', transform: 'rotate(45deg)' }} />
+                    <div style={{ width: '18px', height: '1.5px', background: '#0284c7', transform: 'rotate(-45deg)' }} />
+                  </div>
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Trim to<br />Entities ▾</span>
                 </button>
 
-                {/* Micro-stack: Chamfer, Offset, Project */}
+                {/* 3. Break Two Pieces */}
+                <button
+                  className={`ribbon-btn-large ${isSketchModeActive && sketchTool === 'divide' ? 'active' : ''}`}
+                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('divide') : onBreakManyPieces()}
+                  title="Break Two Pieces - Divide entity at point or into segments"
+                >
+                  <Disc size={20} color="#64748b" />
+                  <span className="btn-label" style={{ fontWeight: 600 }}>Break Two<br />Pieces</span>
+                </button>
+
+                {/* Column 1: Divide, Join, Modify Length */}
                 <div className="ribbon-col-stacked">
                   <button
+                    className={`ribbon-btn-small ${isSketchModeActive && sketchTool === 'divide' ? 'active' : ''}`}
+                    onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('divide') : onBreakManyPieces()}
+                    title="Divide - Break curve into N equal segments"
+                  >
+                    <Disc size={12} color="#64748b" />
+                    <span>Divide</span>
+                  </button>
+                  <button
                     className="ribbon-btn-small"
-                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('chamfer') : onAddWireframe('chamfer')}
+                    onClick={onJoinEntities}
+                    title="Join contiguous collinear segments"
+                  >
+                    <Plus size={12} color="#0284c7" />
+                    <span>Join Entities</span>
+                  </button>
+                  <button
+                    className={`ribbon-btn-small ${isSketchModeActive && sketchTool === 'modify_length' ? 'active' : ''}`}
+                    onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('modify_length') : (onOpenWireframeModal && onOpenWireframeModal('line'))}
+                    title="Modify Length - Dynamically extend or shorten lines by delta or %"
+                  >
+                    <Move size={12} color="#0284c7" />
+                    <span>Modify Length ▾</span>
+                  </button>
+                </div>
+
+                {/* Column 2: Fillet, Chamfer, Offset */}
+                <div className="ribbon-col-stacked">
+                  <button
+                    className={`ribbon-btn-small ${isSketchModeActive && sketchTool === 'fillet' ? 'active' : ''}`}
+                    onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('fillet') : (onOpenWireframeModal && onOpenWireframeModal('fillet'))}
+                    title="Fillet Entities (F) - Add tangent circular fillet radius between curves"
+                  >
+                    <Orbit size={13} color="#10b981" />
+                    <span>Fillet Entities ▾</span>
+                  </button>
+                  <button
+                    className={`ribbon-btn-small ${isSketchModeActive && sketchTool === 'chamfer' ? 'active' : ''}`}
+                    onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('chamfer') : (onOpenWireframeModal && onOpenWireframeModal('chamfer'))}
                     title="Chamfer Entities - Add beveled chamfer corner between lines"
                   >
                     <Scissors size={13} color="#f59e0b" />
                     <span>Chamfer Entities ▾</span>
                   </button>
                   <button
-                    className="ribbon-btn-small"
-                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('offset') : onAddWireframe('offset')}
-                    title="Offset - Offset wireframe contour by distance"
+                    className={`ribbon-btn-small ${isSketchModeActive && sketchTool === 'offset' ? 'active' : ''}`}
+                    onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('offset') : (onOpenWireframeModal && onOpenWireframeModal('offset'))}
+                    title="Offset Entity - Offset wireframe contour by distance"
                   >
                     <Move size={13} color="#0284c7" />
-                    <span>Offset ▾</span>
+                    <span>Offset Entity</span>
                   </button>
+                </div>
+
+                {/* Column 3: Project, Close Arc, Clear */}
+                <div className="ribbon-col-stacked" style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '4px' }}>
                   <button
                     className="ribbon-btn-small"
                     onClick={() => onOpenWireframeModal ? onOpenWireframeModal('project') : onAddWireframe('project')}
                     title="Project - Project 2D wireframe onto 3D surface or plane"
                   >
-                    <ArrowDown size={13} color="#a855f7" />
+                    <ArrowDown size={12} color="#a855f7" />
                     <span>Project</span>
                   </button>
-                </div>
-
-                {/* Mini-tools on right: Break, Join, Clear */}
-                <div className="ribbon-col-stacked" style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '4px' }}>
-                  <button className="ribbon-btn-small" onClick={onBreakManyPieces} title="Break Many Pieces into Arcs">
-                    <Disc size={12} color="#64748b" />
-                    <span>Break</span>
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={onCloseArc || onBreakManyPieces}
+                    title="Close Arc - Convert open circular arc to 360° circle"
+                  >
+                    <Circle size={12} color="#0284c7" />
+                    <span>Close Arc ▾</span>
                   </button>
-                  <button className="ribbon-btn-small" onClick={onJoinEntities} title="Join contiguous collinear segments">
-                    <Plus size={12} color="#0284c7" />
-                    <span>Join</span>
-                  </button>
-                  <button className="ribbon-btn-small" onClick={onClearWireframes} title="Clear All Level 10 Wireframe Geometry">
+                  <button
+                    className="ribbon-btn-small"
+                    onClick={onClearWireframes}
+                    title="Clear All Level 10 Wireframe Geometry"
+                  >
                     <Trash2 size={12} color="#ef4444" />
                     <span>Clear</span>
                   </button>

@@ -123,6 +123,9 @@ import {
   createOffsetWireframe,
   createWireframeRect,
   createBoundingWireframe,
+  createPointMarker,
+  createBoltHoleCircle,
+  createParallelLine,
   createDrillPointsGrid,
   createPlanarSurface,
   createCylinderSurface,
@@ -146,7 +149,20 @@ import {
   deserializeHistoryFromPersistence
 } from './utils/workspacePersistence';
 import { parseAnyCADFile, openNativeMastercamFileDialog } from './utils/universalCadParser';
-import { extractClosedChainsFromCAD, buildChainFromEntity, computeRectPlacement, computeLineEnd, isSelectableWireframeEntity } from './utils/cadDrawingEngine';
+import {
+  extractClosedChainsFromCAD,
+  buildChainFromEntity,
+  computeRectPlacement,
+  computeLineEnd,
+  isSelectableWireframeEntity,
+  computeArc3Points,
+  computeBoltCircle,
+  performDynamicTrim,
+  computeFilletBetweenEntities,
+  computeChamferBetweenEntities,
+  computeModifyLength,
+  computeCloseArc
+} from './utils/cadDrawingEngine';
 import { getCustomEntityId, transformCustomEntityClone } from './utils/cadSelectionEngine';
 import CNCDesignBoard from './components/CNCDesignBoard';
 import { convertBoardDiagramsToToolpaths, getCADTemplate } from './utils/cncBoardEngine';
@@ -510,6 +526,69 @@ export default function App() {
     entityMethod: 'one_entity'
   });
   const [activeArcId, setActiveArcId] = useState(null);
+
+  // Mastercam Wireframe Suite States
+  const [pointParams, setPointParams] = useState({
+    coords: { x: 0, y: 35, z: 0 },
+    pointMethod: 'position',
+    numSegments: 5,
+    alongDistance: 10
+  });
+
+  const [boltCircleParams, setBoltCircleParams] = useState({
+    pcd: 60.0,
+    numHoles: 6,
+    startAngle: 0.0,
+    sweepAngle: 360.0,
+    holeDiameter: 6.8,
+    center: { x: 0, y: 35, z: 0 }
+  });
+
+  const [lineRelParams, setLineRelParams] = useState({
+    mode: 'parallel',
+    offsetDistance: 10.0,
+    side: 'left',
+    lineLength: 50.0,
+    isLengthLocked: false
+  });
+
+  const [arc3ptParams, setArc3ptParams] = useState({
+    mode: 'arc3pt',
+    p1: null,
+    p2: null,
+    p3: null,
+    radius: 25.0,
+    isRadiusLocked: false
+  });
+
+  const [splineParams, setSplineParams] = useState({
+    splinePoints: [],
+    splineType: 'catmull_rom',
+    isClosed: false,
+    tension: 0.5
+  });
+
+  const [trimParams, setTrimParams] = useState({
+    trimMode: 'dynamic',
+    divideSegments: 2,
+    trimCount: 0
+  });
+
+  const [filletChamferParams, setFilletChamferParams] = useState({
+    mode: 'fillet',
+    radius: 5.0,
+    chamferDist1: 5.0,
+    chamferDist2: 5.0,
+    trimEntities: true,
+    filletCount: 0,
+    isRadiusLocked: false
+  });
+
+  const [modifyLengthParams, setModifyLengthParams] = useState({
+    mode: 'delta',
+    value: 10.0,
+    endToModify: 2
+  });
 
   // Mastercam Surfaces -> Extrude & Interactive Floating Chaining State
   const [activeSurfaceTool, setActiveSurfaceTool] = useState(null); // 'extrude' | null
@@ -5450,9 +5529,293 @@ export default function App() {
       setArcParams((prev) => ({ ...prev, isLocked: false }));
       setActiveArcId(null);
       showToast('Arc Tangent: Select entity that arc is to be tangent to', 'info');
+    } else if (tool === 'point' || tool === 'drill') {
+      setDrawingToolSync('point');
+      setActiveManagerTab('Point Pos...');
+      showToast('Point Position: Click canvas to place points or type coordinates in AutoCursor', 'info');
+    } else if (tool === 'bolt_circle' || tool === 'pcd') {
+      setDrawingToolSync('bolt_circle');
+      setActiveManagerTab('Bolt Circle');
+      showToast('Bolt Circle: Click center on canvas or configure PCD parameters and click OK', 'info');
+    } else if (tool === 'line_parallel' || tool === 'line_perp' || tool === 'line_closest') {
+      setDrawingToolSync(tool);
+      setActiveManagerTab('Line Rel...');
+      const relMode = tool === 'line_perp' ? 'perpendicular' : tool === 'line_closest' ? 'closest' : 'parallel';
+      setLineRelParams((prev) => ({ ...prev, mode: relMode }));
+      showToast(`${tool === 'line_perp' ? 'Line Perpendicular' : tool === 'line_closest' ? 'Line Closest' : 'Line Parallel'}: Click reference curve in 3D viewport`, 'info');
+    } else if (tool === 'arc_3pt' || tool === 'circle_edge') {
+      setDrawingToolSync(tool);
+      setActiveManagerTab('Arc 3 Points');
+      setArc3ptParams((prev) => ({ ...prev, mode: tool, p1: null, p2: null, p3: null }));
+      showToast(tool === 'circle_edge' ? 'Circle Edge Point: Click points on edge' : 'Arc 3 Points: Click Start -> End -> Radius Point', 'info');
+    } else if (tool === 'spline') {
+      setDrawingToolSync('spline');
+      setActiveManagerTab('Spline');
+      setSplineParams((prev) => ({ ...prev, splinePoints: [] }));
+      showToast('Spline Manual: Click successive node points in viewport to interpolate smooth curve', 'info');
+    } else if (tool === 'dynamic_trim' || tool === 'trim_1' || tool === 'trim_2' || tool === 'trim_3' || tool === 'divide') {
+      setDrawingToolSync(tool);
+      setActiveManagerTab('Dynamic Trim');
+      setTrimParams((prev) => ({ ...prev, trimMode: tool === 'divide' ? 'divide' : tool === 'trim_2' ? 'trim_2' : 'dynamic' }));
+      showToast(tool === 'dynamic_trim' ? 'Dynamic Trim: Drag cursor across wireframe entities to snip between intersections' : 'Trim to Entities: Select curves to trim', 'info');
+    } else if (tool === 'fillet' || tool === 'chamfer') {
+      setDrawingToolSync(tool);
+      setActiveManagerTab('Fillet/Cham...');
+      setFilletChamferParams((prev) => ({ ...prev, mode: tool }));
+      showToast(`${tool === 'fillet' ? 'Fillet' : 'Chamfer'} Entities: Click two curves in viewport to blend corner`, 'info');
+    } else if (tool === 'modify_length') {
+      setDrawingToolSync('modify_length');
+      setActiveManagerTab('Modify Length');
+      showToast('Modify Length: Click near line endpoint to extend or shorten', 'info');
     } else {
       setDrawingToolSync(null);
       showToast(`✏️ CAD Sketcher Active: Click & drag on 3D Viewport to draw ${tool.toUpperCase()} (Esc to exit)`, 'info');
+    }
+  };
+
+  // ----- Mastercam Wireframe Operations Handlers -----
+  // 1. Point Position Handlers
+  const handleApplyPoint = (stayOpen = true) => {
+    const pt = pointParams.coords || { x: 0, y: 35, z: 0 };
+    const marker = createPointMarker([pt.x, pt.y, pt.z], `Wireframe_Point_${Date.now()}`, 0xef4444);
+    handleAddCustomEntity(marker);
+    if (!stayOpen) {
+      setIsSketchModeActive(false);
+      setDrawingToolSync(null);
+      setActiveManagerTab('Toolpaths');
+      showToast('Point Position accepted.', 'success');
+    } else {
+      showToast('Point placed. Click next location.', 'info');
+    }
+  };
+
+  const handleOkPoint = () => handleApplyPoint(false);
+  const handleCancelPoint = () => {
+    setIsSketchModeActive(false);
+    setDrawingToolSync(null);
+    setActiveManagerTab('Toolpaths');
+  };
+
+  // 2. Bolt Circle Handlers
+  const handleApplyBoltCircle = (stayOpen = true) => {
+    const { pcd, numHoles, startAngle, sweepAngle, holeDiameter, center } = boltCircleParams;
+    const boltCircle = createBoltHoleCircle(
+      pcd,
+      numHoles,
+      center.y ?? 35,
+      [center.x ?? 0, center.z ?? 0],
+      startAngle,
+      holeDiameter / 2,
+      { name: `Wireframe_BoltCircle_PCD${Math.round(pcd)}_${numHoles}Holes` }
+    );
+    handleAddCustomEntity(boltCircle);
+    if (!stayOpen) {
+      setIsSketchModeActive(false);
+      setDrawingToolSync(null);
+      setActiveManagerTab('Toolpaths');
+      showToast(`Bolt Circle PCD ${pcd}mm (${numHoles} holes) committed.`, 'success');
+    } else {
+      showToast('Bolt Circle committed. Ready for next.', 'info');
+    }
+  };
+
+  const handleOkBoltCircle = () => handleApplyBoltCircle(false);
+  const handleCancelBoltCircle = () => {
+    setIsSketchModeActive(false);
+    setDrawingToolSync(null);
+    setActiveManagerTab('Toolpaths');
+  };
+
+  // 3. Line Rel Handlers
+  const handleApplyLineRel = (stayOpen = true) => {
+    const { mode, offsetDistance, side, lineLength } = lineRelParams;
+    const currentList = customGeometryRef.current || [];
+    const refLine = currentList.slice().reverse().find((e) => isSelectableWireframeEntity(e) && (e.userData?.type === 'line' || e.name?.includes('Line')));
+    if (refLine) {
+      const p1 = [-40, 35, 0], p2 = [40, 35, 0];
+      const newLine = createParallelLine(p1, p2, offsetDistance, 'G17', {
+        name: `Wireframe_${mode === 'perpendicular' ? 'Perp' : 'Parallel'}_Offset${offsetDistance}`
+      });
+      handleAddCustomEntity(newLine);
+      showToast(`${mode === 'perpendicular' ? 'Perpendicular' : 'Parallel'} line created.`, 'success');
+    } else {
+      showToast('Click an existing line entity on canvas first.', 'info');
+    }
+    if (!stayOpen) {
+      setIsSketchModeActive(false);
+      setDrawingToolSync(null);
+      setActiveManagerTab('Toolpaths');
+    }
+  };
+
+  const handleOkLineRel = () => handleApplyLineRel(false);
+  const handleCancelLineRel = () => {
+    setIsSketchModeActive(false);
+    setDrawingToolSync(null);
+    setActiveManagerTab('Toolpaths');
+  };
+
+  // 4. Arc 3 Points Handlers
+  const handleApplyArc3pt = (stayOpen = true) => {
+    const { p1, p2, p3, radius } = arc3ptParams;
+    const pt1 = p1 || { x: -30, y: 35, z: 0 };
+    const pt2 = p2 || { x: 30, y: 35, z: 0 };
+    const pt3 = p3 || { x: 0, y: 35, z: 25 };
+    const solved = computeArc3Points(pt1, pt2, pt3);
+    if (solved) {
+      const arc = createWireframeArc(
+        [solved.center.x, solved.center.y, solved.center.z],
+        solved.radius,
+        solved.startAngleDeg,
+        solved.endAngleDeg,
+        { name: `Wireframe_Arc3Pt_R${solved.radius.toFixed(1)}` }
+      );
+      handleAddCustomEntity(arc);
+      showToast(`Arc 3 Points created (R${solved.radius.toFixed(1)}).`, 'success');
+    }
+    if (!stayOpen) {
+      setIsSketchModeActive(false);
+      setDrawingToolSync(null);
+      setActiveManagerTab('Toolpaths');
+    }
+  };
+
+  const handleOkArc3pt = () => handleApplyArc3pt(false);
+  const handleCancelArc3pt = () => {
+    setIsSketchModeActive(false);
+    setDrawingToolSync(null);
+    setActiveManagerTab('Toolpaths');
+  };
+
+  // 5. Spline Handlers
+  const handleApplySpline = (stayOpen = true) => {
+    const pts = splineParams.splinePoints;
+    if (pts.length >= 2) {
+      const spline = createWireframeSpline(pts.map((p) => [p.x, p.y, p.z ?? p.y]), {
+        name: `Wireframe_Spline_Manual_${pts.length}Pts`
+      });
+      handleAddCustomEntity(spline);
+      showToast(`Spline with ${pts.length} control points committed.`, 'success');
+    }
+    if (!stayOpen) {
+      setIsSketchModeActive(false);
+      setDrawingToolSync(null);
+      setActiveManagerTab('Toolpaths');
+    }
+  };
+
+  const handleOkSpline = () => handleApplySpline(false);
+  const handleCancelSpline = () => {
+    setIsSketchModeActive(false);
+    setDrawingToolSync(null);
+    setActiveManagerTab('Toolpaths');
+  };
+
+  // 6. Dynamic Trim Handlers
+  const handleApplyTrim = (stayOpen = true) => {
+    if (!stayOpen) {
+      setIsSketchModeActive(false);
+      setDrawingToolSync(null);
+      setActiveManagerTab('Toolpaths');
+      showToast('Trim modifications accepted.', 'success');
+    }
+  };
+
+  const handleOkTrim = () => handleApplyTrim(false);
+  const handleCancelTrim = () => {
+    setIsSketchModeActive(false);
+    setDrawingToolSync(null);
+    setActiveManagerTab('Toolpaths');
+  };
+
+  // 7. Fillet / Chamfer Handlers
+  const handleApplyFillet = (stayOpen = true) => {
+    const { mode, radius, chamferDist1, chamferDist2 } = filletChamferParams;
+    const currentList = customGeometryRef.current || [];
+    const lines = currentList.filter((e) => isSelectableWireframeEntity(e) && (e.userData?.type === 'line' || e.name?.includes('Line')));
+    if (lines.length >= 2) {
+      if (mode === 'fillet') {
+        const res = computeFilletBetweenEntities(lines[0], lines[1], radius);
+        if (res) {
+          const arc = createWireframeArc(res.filletArcData.center, res.filletArcData.radius, res.filletArcData.startAngleDeg, res.filletArcData.endAngleDeg, {
+            name: `Wireframe_Fillet_R${radius}`
+          });
+          handleAddCustomEntity(arc);
+          showToast(`Corner fillet R${radius} inserted.`, 'success');
+        }
+      } else {
+        const res = computeChamferBetweenEntities(lines[0], lines[1], chamferDist1, chamferDist2);
+        if (res) {
+          const cLine = createWireframeLine(
+            [res.chamferLine.p1.x, res.chamferLine.p1.y, res.chamferLine.p1.z],
+            [res.chamferLine.p2.x, res.chamferLine.p2.y, res.chamferLine.p2.z],
+            { name: `Wireframe_Chamfer_${chamferDist1}x${chamferDist2}` }
+          );
+          handleAddCustomEntity(cLine);
+          showToast(`Chamfer ${chamferDist1}x${chamferDist2} inserted.`, 'success');
+        }
+      }
+    }
+    if (!stayOpen) {
+      setIsSketchModeActive(false);
+      setDrawingToolSync(null);
+      setActiveManagerTab('Toolpaths');
+    }
+  };
+
+  const handleOkFillet = () => handleApplyFillet(false);
+  const handleCancelFillet = () => {
+    setIsSketchModeActive(false);
+    setDrawingToolSync(null);
+    setActiveManagerTab('Toolpaths');
+  };
+
+  // 8. Modify Length Handlers
+  const handleApplyModifyLength = (stayOpen = true) => {
+    const { mode, value, endToModify } = modifyLengthParams;
+    const currentList = customGeometryRef.current || [];
+    const line = currentList.slice().reverse().find((e) => isSelectableWireframeEntity(e) && (e.userData?.type === 'line' || e.name?.includes('Line')));
+    if (line) {
+      const res = computeModifyLength(line, value, mode, endToModify);
+      if (res) {
+        const newLine = createWireframeLine([res.p1.x, res.p1.y, res.p1.z], [res.p2.x, res.p2.y, res.p2.z], {
+          name: line.name || `Wireframe_Line_L${res.newLength.toFixed(1)}`
+        });
+        const nextList = currentList.filter((e) => e !== line).concat([newLine]);
+        commitCustomGeometry(nextList, true);
+        showToast(`Line length modified to ${res.newLength.toFixed(1)}mm.`, 'success');
+      }
+    }
+    if (!stayOpen) {
+      setIsSketchModeActive(false);
+      setDrawingToolSync(null);
+      setActiveManagerTab('Toolpaths');
+    }
+  };
+
+  const handleOkModifyLength = () => handleApplyModifyLength(false);
+  const handleCancelModifyLength = () => {
+    setIsSketchModeActive(false);
+    setDrawingToolSync(null);
+    setActiveManagerTab('Toolpaths');
+  };
+
+  // 9. Close Arc Handler
+  const handleCloseArc = () => {
+    const currentList = customGeometryRef.current || [];
+    const arc = currentList.slice().reverse().find((e) => isSelectableWireframeEntity(e) && (e.userData?.type === 'arc' || e.name?.includes('Arc')));
+    if (arc) {
+      const closed = computeCloseArc(arc);
+      if (closed) {
+        const fullCirc = createWireframeCircle(closed.radius, closed.center.y, [closed.center.x, closed.center.z], 0, 360, 'G17', {
+          name: `Wireframe_ClosedCircle_R${closed.radius.toFixed(1)}`
+        });
+        const nextList = currentList.filter((e) => e !== arc).concat([fullCirc]);
+        commitCustomGeometry(nextList, true);
+        showToast(`Arc closed into complete 360° circle (R${closed.radius.toFixed(1)}).`, 'success');
+      }
+    } else {
+      showToast('Select an arc entity to close.', 'info');
     }
   };
 
@@ -7410,6 +7773,7 @@ export default function App() {
         onSnapCamera={handleSnapCamera}
         onAddWireframe={handleAddWireframe}
         onClearWireframes={handleClearWireframes}
+        onCloseArc={handleCloseArc}
         onCreateBoundingBox={handleCreateBoundingBox}
         onCreateSilhouette={handleCreateSilhouette}
         onCreateTurnProfile={handleCreateTurnProfile}
@@ -7682,6 +8046,73 @@ export default function App() {
           onApplyDrafting={handleApplyDrafting}
           onCancelDrafting={handleCancelDrafting}
           onChangeDraftingMode={(m) => setActiveDraftingMode(m)}
+          // Mastercam Wireframe Suite Props
+          pointParams={pointParams}
+          onChangePointCoords={(coords) => setPointParams((prev) => ({ ...prev, coords }))}
+          onChangePointMethod={(pointMethod) => setPointParams((prev) => ({ ...prev, pointMethod }))}
+          onChangePointSegments={(numSegments) => setPointParams((prev) => ({ ...prev, numSegments }))}
+          onChangePointAlongDist={(alongDistance) => setPointParams((prev) => ({ ...prev, alongDistance }))}
+          onApplyPoint={handleApplyPoint}
+          onOkPoint={handleOkPoint}
+          onCancelPoint={handleCancelPoint}
+          boltCircleParams={boltCircleParams}
+          onChangeBoltPcd={(pcd) => setBoltCircleParams((prev) => ({ ...prev, pcd }))}
+          onChangeBoltHoles={(numHoles) => setBoltCircleParams((prev) => ({ ...prev, numHoles }))}
+          onChangeBoltStartAngle={(startAngle) => setBoltCircleParams((prev) => ({ ...prev, startAngle }))}
+          onChangeBoltSweepAngle={(sweepAngle) => setBoltCircleParams((prev) => ({ ...prev, sweepAngle }))}
+          onChangeBoltHoleDia={(holeDiameter) => setBoltCircleParams((prev) => ({ ...prev, holeDiameter }))}
+          onChangeBoltCenter={(center) => setBoltCircleParams((prev) => ({ ...prev, center }))}
+          onApplyBoltCircle={handleApplyBoltCircle}
+          onOkBoltCircle={handleOkBoltCircle}
+          onCancelBoltCircle={handleCancelBoltCircle}
+          lineRelParams={lineRelParams}
+          onChangeLineRelMode={(mode) => setLineRelParams((prev) => ({ ...prev, mode }))}
+          onChangeLineRelOffset={(offsetDistance) => setLineRelParams((prev) => ({ ...prev, offsetDistance }))}
+          onChangeLineRelSide={(side) => setLineRelParams((prev) => ({ ...prev, side }))}
+          onChangeLineRelLength={(lineLength) => setLineRelParams((prev) => ({ ...prev, lineLength }))}
+          onToggleLineRelLengthLock={() => setLineRelParams((prev) => ({ ...prev, isLengthLocked: !prev.isLengthLocked }))}
+          onApplyLineRel={handleApplyLineRel}
+          onOkLineRel={handleOkLineRel}
+          onCancelLineRel={handleCancelLineRel}
+          arc3ptParams={arc3ptParams}
+          onChangeArc3ptMode={(mode) => setArc3ptParams((prev) => ({ ...prev, mode }))}
+          onChangeArc3ptRadius={(radius) => setArc3ptParams((prev) => ({ ...prev, radius }))}
+          onToggleArc3ptRadiusLock={() => setArc3ptParams((prev) => ({ ...prev, isRadiusLocked: !prev.isRadiusLocked }))}
+          onApplyArc3pt={handleApplyArc3pt}
+          onOkArc3pt={handleOkArc3pt}
+          onCancelArc3pt={handleCancelArc3pt}
+          splineParams={splineParams}
+          onClearSplinePoints={() => setSplineParams((prev) => ({ ...prev, splinePoints: [] }))}
+          onUndoSplinePoint={() => setSplineParams((prev) => ({ ...prev, splinePoints: prev.splinePoints.slice(0, -1) }))}
+          onChangeSplineType={(splineType) => setSplineParams((prev) => ({ ...prev, splineType }))}
+          onToggleSplineClosed={(isClosed) => setSplineParams((prev) => ({ ...prev, isClosed }))}
+          onChangeSplineTension={(tension) => setSplineParams((prev) => ({ ...prev, tension }))}
+          onApplySpline={handleApplySpline}
+          onOkSpline={handleOkSpline}
+          onCancelSpline={handleCancelSpline}
+          trimParams={trimParams}
+          onChangeTrimMode={(trimMode) => setTrimParams((prev) => ({ ...prev, trimMode }))}
+          onChangeDivideSegments={(divideSegments) => setTrimParams((prev) => ({ ...prev, divideSegments }))}
+          onApplyTrim={handleApplyTrim}
+          onOkTrim={handleOkTrim}
+          onCancelTrim={handleCancelTrim}
+          filletChamferParams={filletChamferParams}
+          onChangeFilletMode={(mode) => setFilletChamferParams((prev) => ({ ...prev, mode }))}
+          onChangeFilletRadius={(radius) => setFilletChamferParams((prev) => ({ ...prev, radius }))}
+          onToggleFilletRadiusLock={() => setFilletChamferParams((prev) => ({ ...prev, isRadiusLocked: !prev.isRadiusLocked }))}
+          onChangeChamferDist1={(chamferDist1) => setFilletChamferParams((prev) => ({ ...prev, chamferDist1 }))}
+          onChangeChamferDist2={(chamferDist2) => setFilletChamferParams((prev) => ({ ...prev, chamferDist2 }))}
+          onToggleTrimEntities={(trimEntities) => setFilletChamferParams((prev) => ({ ...prev, trimEntities }))}
+          onApplyFillet={handleApplyFillet}
+          onOkFillet={handleOkFillet}
+          onCancelFillet={handleCancelFillet}
+          modifyLengthParams={modifyLengthParams}
+          onChangeModifyLengthMode={(mode) => setModifyLengthParams((prev) => ({ ...prev, mode }))}
+          onChangeModifyLengthValue={(value) => setModifyLengthParams((prev) => ({ ...prev, value }))}
+          onChangeModifyLengthEnd={(endToModify) => setModifyLengthParams((prev) => ({ ...prev, endToModify }))}
+          onApplyModifyLength={handleApplyModifyLength}
+          onOkModifyLength={handleOkModifyLength}
+          onCancelModifyLength={handleCancelModifyLength}
         />
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
@@ -7745,6 +8176,7 @@ export default function App() {
                 onAddCustomEntity={handleAddCustomEntity}
                 onRemoveCustomEntity={handleRemoveCustomEntity}
                 onClearWireframes={handleClearWireframes}
+                onReplaceCustomGeometry={(nextList) => commitCustomGeometry(nextList, true)}
                 onGenerateToolpathFromSketch={handleGenerateToolpathFromSketch}
                 onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
                 onToggleCameraMode={setCameraMode}
@@ -7875,6 +8307,7 @@ export default function App() {
               onAddCustomEntity={handleAddCustomEntity}
               onRemoveCustomEntity={handleRemoveCustomEntity}
               onClearWireframes={handleClearWireframes}
+              onReplaceCustomGeometry={(nextList) => commitCustomGeometry(nextList, true)}
               onGenerateToolpathFromSketch={handleGenerateToolpathFromSketch}
               onOpenViewStudioModal={() => setIsViewStudioModalOpen(true)}
               onToggleCameraMode={setCameraMode}
