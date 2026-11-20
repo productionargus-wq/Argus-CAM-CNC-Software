@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
-import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box } from 'lucide-react';
+import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box, CheckCircle2, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 import TitleBar from './components/TitleBar';
 import RibbonBar from './components/RibbonBar';
 import OperationsTree from './components/OperationsTree';
@@ -9619,57 +9619,86 @@ export default function App() {
         gap: '8px',
         pointerEvents: 'none'
       }}>
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            style={{
-              pointerEvents: 'auto',
-              background: toast.type === 'danger' ? '#ef4444' :
-                          toast.type === 'warning' ? '#f59e0b' :
-                          toast.type === 'success' ? '#10b981' :
-                          '#ffffff',
-              color: toast.type ? '#ffffff' : '#0f172a',
-              padding: '9px 16px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: '500',
-              fontFamily: 'Inter, system-ui, sans-serif',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-              border: toast.type ? '1px solid rgba(255,255,255,0.2)' : '1px solid #cbd5e1',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.25s ease'
-            }}
-          >
-            <span>{typeof toast.message === 'object' ? (toast.message?.message || JSON.stringify(toast.message)) : String(toast.message ?? '')}</span>
-            {toast.action && (
-              <button
-                onClick={() => {
-                  toast.action.onClick();
-                  setToasts((prev) => prev.filter((t) => t.id !== toast.id));
-                }}
-                style={{
-                  marginLeft: '8px',
-                  background: '#0284c7',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '4px 10px',
-                  borderRadius: '4px',
-                  fontWeight: '700',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)'
-                }}
-              >
-                {toast.action.label}
-              </button>
-            )}
-          </div>
-        ))}
+        {toasts.map((toast) => {
+          const type = toast.type || 'info';
+          const isDanger = type === 'danger' || type === 'error';
+          const isWarning = type === 'warning';
+          const isSuccess = type === 'success';
+
+          const bg = isDanger ? '#fef2f2' :
+                     isWarning ? '#fffbeb' :
+                     isSuccess ? '#ecfdf5' :
+                     '#ffffff';
+          const border = isDanger ? '1.5px solid #ef4444' :
+                         isWarning ? '1.5px solid #f59e0b' :
+                         isSuccess ? '1.5px solid #10b981' :
+                         '1.5px solid #0284c7';
+          const textColor = isDanger ? '#991b1b' :
+                            isWarning ? '#92400e' :
+                            isSuccess ? '#065f46' :
+                            '#0f172a';
+          const iconColor = isDanger ? '#ef4444' :
+                            isWarning ? '#f59e0b' :
+                            isSuccess ? '#10b981' :
+                            '#0284c7';
+
+          return (
+            <div
+              key={toast.id}
+              style={{
+                pointerEvents: 'auto',
+                background: bg,
+                color: textColor,
+                padding: '9px 14px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.14)',
+                border: border,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.25s ease'
+              }}
+            >
+              {isSuccess && <CheckCircle2 size={16} color={iconColor} style={{ flexShrink: 0 }} />}
+              {isWarning && <AlertTriangle size={16} color={iconColor} style={{ flexShrink: 0 }} />}
+              {isDanger && <AlertCircle size={16} color={iconColor} style={{ flexShrink: 0 }} />}
+              {!isSuccess && !isWarning && !isDanger && <Info size={16} color={iconColor} style={{ flexShrink: 0 }} />}
+
+              <span style={{ flex: 1, wordBreak: 'break-word', color: textColor }}>
+                {typeof toast.message === 'object' ? (toast.message?.message || JSON.stringify(toast.message)) : String(toast.message ?? '')}
+              </span>
+
+              {toast.action && (
+                <button
+                  onClick={() => {
+                    toast.action.onClick();
+                    setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+                  }}
+                  style={{
+                    marginLeft: '8px',
+                    background: '#0284c7',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    fontWeight: '700',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)'
+                  }}
+                >
+                  {toast.action.label}
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

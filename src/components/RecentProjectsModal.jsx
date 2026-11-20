@@ -122,7 +122,7 @@ export default function RecentProjectsModal({
 
           {/* Recent Files List */}
           <div>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#0284c7', marginBottom: '8px' }}>
               RECENT PROJECTS &amp; SAMPLE JOBS:
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '340px', overflowY: 'auto' }}>
@@ -131,8 +131,8 @@ export default function RecentProjectsModal({
                   key={index}
                   onClick={() => handleSelectRecent(item)}
                   style={{
-                    background: '#11151e',
-                    border: '1px solid #283344',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
                     borderRadius: '6px',
                     padding: '10px 14px',
                     cursor: 'pointer',
@@ -141,23 +141,23 @@ export default function RecentProjectsModal({
                     alignItems: 'center',
                     transition: 'all 0.15s ease'
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#38bdf8')}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#283344')}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#0284c7')}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e2e8f0')}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ background: '#f1f5f9', padding: '8px', borderRadius: '4px' }}>
-                      <Box size={18} color="#38bdf8" />
+                    <div style={{ background: '#e0f2fe', padding: '8px', borderRadius: '4px' }}>
+                      <Box size={18} color="#0284c7" />
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '12px' }}>{item.projectName}</div>
-                      <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+                      <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
                         {item.filename} &bull; {item.machine}
                       </div>
                     </div>
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '10.5px', color: '#10b981', fontWeight: 600 }}>
+                    <div style={{ fontSize: '10.5px', color: '#059669', fontWeight: 600 }}>
                       {item.opsCount} Ops &bull; {item.toolsCount} Tools
                     </div>
                     <div style={{ fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>
@@ -169,7 +169,7 @@ export default function RecentProjectsModal({
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid #283344' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
             <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
           </div>
         </div>

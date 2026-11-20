@@ -105,8 +105,8 @@ export default function DistanceCaliperModal({
           {/* Coordinate Inputs (Point 1 and Point 2) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             {/* Point 1 */}
-            <div style={{ background: '#11151e', border: '1px solid #283344', borderRadius: '6px', padding: '12px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8', marginBottom: '8px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#0284c7', marginBottom: '8px' }}>
                 POINT 1 (START DATUM)
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -115,9 +115,9 @@ export default function DistanceCaliperModal({
                   <input
                     type="number"
                     step="0.01"
-                    className="text-input"
                     value={p1.x}
                     onChange={(e) => setP1({ ...p1, x: e.target.value })}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '4px', padding: '5px 8px', fontSize: '12px', fontWeight: 600, fontFamily: 'var(--font-mono)', width: '100%' }}
                   />
                   <span style={{ fontSize: '10px', color: '#64748b' }}>mm</span>
                 </div>
@@ -126,9 +126,9 @@ export default function DistanceCaliperModal({
                   <input
                     type="number"
                     step="0.01"
-                    className="text-input"
                     value={p1.y}
                     onChange={(e) => setP1({ ...p1, y: e.target.value })}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '4px', padding: '5px 8px', fontSize: '12px', fontWeight: 600, fontFamily: 'var(--font-mono)', width: '100%' }}
                   />
                   <span style={{ fontSize: '10px', color: '#64748b' }}>mm</span>
                 </div>
@@ -137,9 +137,9 @@ export default function DistanceCaliperModal({
                   <input
                     type="number"
                     step="0.01"
-                    className="text-input"
                     value={p1.z}
                     onChange={(e) => setP1({ ...p1, z: e.target.value })}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '4px', padding: '5px 8px', fontSize: '12px', fontWeight: 600, fontFamily: 'var(--font-mono)', width: '100%' }}
                   />
                   <span style={{ fontSize: '10px', color: '#64748b' }}>mm</span>
                 </div>
@@ -147,8 +147,8 @@ export default function DistanceCaliperModal({
             </div>
 
             {/* Point 2 */}
-            <div style={{ background: '#11151e', border: '1px solid #283344', borderRadius: '6px', padding: '12px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#f59e0b', marginBottom: '8px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#d97706', marginBottom: '8px' }}>
                 POINT 2 (TARGET DATUM)
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -157,9 +157,9 @@ export default function DistanceCaliperModal({
                   <input
                     type="number"
                     step="0.01"
-                    className="text-input"
                     value={p2.x}
                     onChange={(e) => setP2({ ...p2, x: e.target.value })}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '4px', padding: '5px 8px', fontSize: '12px', fontWeight: 600, fontFamily: 'var(--font-mono)', width: '100%' }}
                   />
                   <span style={{ fontSize: '10px', color: '#64748b' }}>mm</span>
                 </div>
@@ -168,9 +168,9 @@ export default function DistanceCaliperModal({
                   <input
                     type="number"
                     step="0.01"
-                    className="text-input"
                     value={p2.y}
                     onChange={(e) => setP2({ ...p2, y: e.target.value })}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '4px', padding: '5px 8px', fontSize: '12px', fontWeight: 600, fontFamily: 'var(--font-mono)', width: '100%' }}
                   />
                   <span style={{ fontSize: '10px', color: '#64748b' }}>mm</span>
                 </div>
@@ -179,9 +179,9 @@ export default function DistanceCaliperModal({
                   <input
                     type="number"
                     step="0.01"
-                    className="text-input"
                     value={p2.z}
                     onChange={(e) => setP2({ ...p2, z: e.target.value })}
+                    style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '4px', padding: '5px 8px', fontSize: '12px', fontWeight: 600, fontFamily: 'var(--font-mono)', width: '100%' }}
                   />
                   <span style={{ fontSize: '10px', color: '#64748b' }}>mm</span>
                 </div>
@@ -192,43 +192,43 @@ export default function DistanceCaliperModal({
           {/* Caliper Measurement Readout Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
             {/* 3D True Distance */}
-            <div style={{ background: '#0c0f16', border: '1px solid #3b82f6', borderRadius: '6px', padding: '12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '10px', color: '#38bdf8', textTransform: 'uppercase', fontWeight: 700 }}>3D TRUE DISTANCE</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
+            <div style={{ background: '#f0f9ff', border: '1.5px solid #0284c7', borderRadius: '6px', padding: '12px', textAlign: 'center' }}>
+              <div style={{ fontSize: '10px', color: '#0369a1', textTransform: 'uppercase', fontWeight: 700 }}>3D TRUE DISTANCE</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: '#0284c7', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
                 {d3D.toFixed(3)} mm
               </div>
-              <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Direct Euclidean vector</div>
+              <div style={{ fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>Direct Euclidean vector</div>
             </div>
 
             {/* 2D Planar Distance */}
-            <div style={{ background: '#0c0f16', border: '1px solid #283344', borderRadius: '6px', padding: '12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '10px', color: '#10b981', textTransform: 'uppercase', fontWeight: 700 }}>2D PLANAR (XZ)</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#f8fafc', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
+            <div style={{ background: '#ecfdf5', border: '1.5px solid #10b981', borderRadius: '6px', padding: '12px', textAlign: 'center' }}>
+              <div style={{ fontSize: '10px', color: '#047857', textTransform: 'uppercase', fontWeight: 700 }}>2D PLANAR (XZ)</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: '#059669', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
                 {d2D.toFixed(3)} mm
               </div>
-              <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Horizontal projection</div>
+              <div style={{ fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>Horizontal projection</div>
             </div>
 
             {/* True Angle */}
-            <div style={{ background: '#0c0f16', border: '1px solid #283344', borderRadius: '6px', padding: '12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '10px', color: '#f59e0b', textTransform: 'uppercase', fontWeight: 700 }}>INCLINATION ANGLE</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#f59e0b', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
+            <div style={{ background: '#fffbeb', border: '1.5px solid #f59e0b', borderRadius: '6px', padding: '12px', textAlign: 'center' }}>
+              <div style={{ fontSize: '10px', color: '#b45309', textTransform: 'uppercase', fontWeight: 700 }}>INCLINATION ANGLE</div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: '#d97706', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
                 {angleDeg}&deg;
               </div>
-              <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: '2px' }}>Relative to XY plane</div>
+              <div style={{ fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>Relative to XY plane</div>
             </div>
           </div>
 
           {/* Delta Axis Components Table */}
-          <div style={{ background: '#11151e', border: '1px solid #283344', borderRadius: '6px', padding: '10px 14px' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px 14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
-              <div><span style={{ color: '#94a3b8' }}>&Delta;X: </span><strong style={{ color: '#ef4444' }}>{dx.toFixed(3)} mm</strong></div>
-              <div><span style={{ color: '#94a3b8' }}>&Delta;Y (Height): </span><strong style={{ color: '#10b981' }}>{dy.toFixed(3)} mm</strong></div>
-              <div><span style={{ color: '#94a3b8' }}>&Delta;Z: </span><strong style={{ color: '#3b82f6' }}>{dz.toFixed(3)} mm</strong></div>
+              <div><span style={{ color: '#64748b' }}>&Delta;X: </span><strong style={{ color: '#ef4444' }}>{dx.toFixed(3)} mm</strong></div>
+              <div><span style={{ color: '#64748b' }}>&Delta;Y (Height): </span><strong style={{ color: '#10b981' }}>{dy.toFixed(3)} mm</strong></div>
+              <div><span style={{ color: '#64748b' }}>&Delta;Z: </span><strong style={{ color: '#3b82f6' }}>{dz.toFixed(3)} mm</strong></div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: '1px solid #283344' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
             <button type="button" className="btn-secondary" onClick={onClose}>Close Caliper</button>
           </div>
         </div>

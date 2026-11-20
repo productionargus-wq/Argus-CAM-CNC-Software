@@ -301,7 +301,7 @@ export default function EntityAnalyzerModal({
           {/* Active File Banner */}
           <div style={{
             background: '#ffffff',
-            border: '1px solid #2d3545',
+            border: '1px solid #cbd5e1',
             borderRadius: '6px',
             padding: '10px 14px',
             display: 'flex',
@@ -309,10 +309,10 @@ export default function EntityAnalyzerModal({
             alignItems: 'center'
           }}>
             <div>
-              <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+              <div style={{ fontSize: '11px', color: '#64748b' }}>
                 {hasSelection ? 'Window-Selected Canvas Entities:' : 'Target CAD Entity:'}
               </div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#38bdf8' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0284c7' }}>
                 {hasSelection ? `${selSummary.count} Selected (${selSummary.label})` : currentProjectName}
               </div>
               {hasSelection && selSummary.totalLengthMm > 0 && (
@@ -322,9 +322,9 @@ export default function EntityAnalyzerModal({
               )}
             </div>
             <div style={{
-              background: 'rgba(16, 185, 129, 0.15)',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              color: '#34d399',
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: '#059669',
               padding: '3px 8px',
               borderRadius: '12px',
               fontSize: '11px',
@@ -340,77 +340,77 @@ export default function EntityAnalyzerModal({
 
           {/* Metric Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-            <div style={{ background: '#f8fafc', border: '1px solid #242c3d', borderRadius: '6px', padding: '10px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px' }}>
               <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase' }}>Dimensions (X x Y x Z)</div>
               <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
                 {dim.x} &times; {dim.y} &times; {dim.z}
               </div>
-              <div style={{ fontSize: '10px', color: '#38bdf8', marginTop: '2px' }}>Millimeters (G21)</div>
+              <div style={{ fontSize: '10px', color: '#0284c7', marginTop: '2px' }}>Millimeters (G21)</div>
             </div>
 
-            <div style={{ background: '#f8fafc', border: '1px solid #242c3d', borderRadius: '6px', padding: '10px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px' }}>
               <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase' }}>Displacement Volume</div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#10b981', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#059669', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
                 {volume.toLocaleString()} cm³
               </div>
-              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Area: {area.toLocaleString()} mm²</div>
+              <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>Area: {area.toLocaleString()} mm²</div>
             </div>
 
-            <div style={{ background: '#f8fafc', border: '1px solid #242c3d', borderRadius: '6px', padding: '10px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px' }}>
               <div style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase' }}>Surface Tessellation</div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#a855f7', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#7c3aed', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
                 {triangles.toLocaleString()}
               </div>
-              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Triangles / Facets</div>
+              <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>Triangles / Facets</div>
             </div>
           </div>
 
           {/* Center of Gravity & Mass Table */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div style={{ background: '#11151e', border: '1px solid #242c3d', borderRadius: '6px', padding: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid #242c3d', paddingBottom: '6px', marginBottom: '8px' }}>
-                <Compass size={14} color="#38bdf8" />
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8' }}>CENTER OF MASS (G54 DATUM)</span>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginBottom: '8px' }}>
+                <Compass size={14} color="#0284c7" />
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#0284c7' }}>CENTER OF MASS (G54 DATUM)</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#94a3b8' }}>X Centroid:</span>
+                  <span style={{ color: '#64748b' }}>X Centroid:</span>
                   <span style={{ color: '#0f172a', fontWeight: 600 }}>{center.x} mm</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#94a3b8' }}>Y Centroid:</span>
+                  <span style={{ color: '#64748b' }}>Y Centroid:</span>
                   <span style={{ color: '#0f172a', fontWeight: 600 }}>{center.y} mm</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#94a3b8' }}>Z Centroid:</span>
+                  <span style={{ color: '#64748b' }}>Z Centroid:</span>
                   <span style={{ color: '#0f172a', fontWeight: 600 }}>{center.z} mm</span>
                 </div>
               </div>
             </div>
 
-            <div style={{ background: '#11151e', border: '1px solid #242c3d', borderRadius: '6px', padding: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid #242c3d', paddingBottom: '6px', marginBottom: '8px' }}>
-                <Scale size={14} color="#f59e0b" />
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#f59e0b' }}>ESTIMATED MASS BY ALLOY</span>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginBottom: '8px' }}>
+                <Scale size={14} color="#d97706" />
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#d97706' }}>ESTIMATED MASS BY ALLOY</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#94a3b8' }}>Alu 6061-T6 (2.70 g/cm³):</span>
-                  <span style={{ color: '#38bdf8', fontWeight: 600 }}>{massAlu} kg</span>
+                  <span style={{ color: '#64748b' }}>Alu 6061-T6 (2.70 g/cm³):</span>
+                  <span style={{ color: '#0284c7', fontWeight: 600 }}>{massAlu} kg</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#94a3b8' }}>Steel 4140 (7.85 g/cm³):</span>
-                  <span style={{ color: '#f59e0b', fontWeight: 600 }}>{massSteel} kg</span>
+                  <span style={{ color: '#64748b' }}>Steel 4140 (7.85 g/cm³):</span>
+                  <span style={{ color: '#d97706', fontWeight: 600 }}>{massSteel} kg</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#94a3b8' }}>Configured Stock:</span>
-                  <span style={{ color: '#10b981', fontWeight: 600 }}>{stockConfig.material} ({stockConfig.massKg} kg)</span>
+                  <span style={{ color: '#64748b' }}>Configured Stock:</span>
+                  <span style={{ color: '#059669', fontWeight: 600 }}>{stockConfig.material} ({stockConfig.massKg} kg)</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: '1px solid #242c3d' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
             <button className="btn-secondary" onClick={onClose}>Close</button>
           </div>
         </div>

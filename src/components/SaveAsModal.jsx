@@ -95,11 +95,11 @@ export default function SaveAsModal({
             />
           </div>
 
-          <div style={{ background: '#11151e', border: '1px solid #283344', borderRadius: '4px', padding: '10px', fontSize: '11px', color: '#94a3b8' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px', fontSize: '11px', color: '#64748b' }}>
             Package will contain: full 3D CAD workpiece geometry, all active CAM operations, cutting feeds/speeds, raw stock allowances, machine kinematics, and G54 origin datums.
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: '1px solid #283344' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn-primary" style={{ background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)', borderColor: '#10b981' }}>
               <Download size={14} />
