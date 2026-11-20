@@ -8445,6 +8445,19 @@ export default function App() {
         activeRadius={isSketchModeActive && (sketchTool === 'circle' || activeDrawingTool === 'circle' || sketchTool === 'arc_tangent' || activeDrawingTool === 'arc_tangent') ? (sketchTool === 'arc_tangent' ? arcParams.radius : circleParams.radius) : null}
         activeRectDimensions={isSketchModeActive && (sketchTool === 'rect' || activeDrawingTool === 'rect') ? { width: rectParams.width, height: rectParams.height } : null}
         activeLineDimensions={isSketchModeActive && (sketchTool === 'line' || activeDrawingTool === 'line') ? { length: lineParams.length, angle: lineParams.angle } : null}
+        constructionZ={constructionZ}
+        onChangeConstructionZ={(val) => {
+          setConstructionZ(val);
+          showToast(`Construction Z Elevation: ${val.toFixed(4)} mm`, 'info', 1600);
+        }}
+        constructionMode={constructionMode}
+        onToggleConstructionMode={() => {
+          setConstructionMode((prev) => {
+            const next = prev === '3d' ? '2d' : '3d';
+            showToast(`Construction Mode: ${next.toUpperCase()} (${next === '2d' ? 'Locked to CPlane Z' : 'Full 3D'})`, 'info', 1800);
+            return next;
+          });
+        }}
         theme={theme}
       />
 

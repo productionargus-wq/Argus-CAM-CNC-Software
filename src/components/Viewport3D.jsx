@@ -1789,11 +1789,14 @@ export default function Viewport3D({
       }
 
       if (onCoordinateUpdate) {
-        onCoordinateUpdate({
-          x: (camera.position.x * -1.5).toFixed(4),
-          y: (camera.position.z * -1.2).toFixed(4),
-          z: camera.position.y.toFixed(4)
-        });
+        const pt = getSketchIntersection(e);
+        if (pt) {
+          onCoordinateUpdate({
+            x: pt.x.toFixed(4),
+            y: (-pt.z).toFixed(4),
+            z: '0.0000'
+          });
+        }
       }
     };
 

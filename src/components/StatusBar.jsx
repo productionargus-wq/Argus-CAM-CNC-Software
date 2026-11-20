@@ -21,11 +21,21 @@ export default function StatusBar({
   activeRadius = null,
   activeRectDimensions = null,
   activeLineDimensions = null,
-  theme = 'light'
+  theme = 'light',
+  constructionZ = 0.0,
+  onChangeConstructionZ = null,
+  constructionMode = '3d',
+  onToggleConstructionMode = null
 }) {
   const [cplaneMenuOpen, setCplaneMenuOpen] = useState(false);
   const [wcsMenuOpen, setWcsMenuOpen] = useState(false);
+  const [isEditingZ, setIsEditingZ] = useState(false);
+  const [tempZInput, setTempZInput] = useState(String(constructionZ ?? 0));
   const containerRef = useRef(null);
+
+  useEffect(() => {
+    setTempZInput(String(constructionZ ?? 0));
+  }, [constructionZ]);
 
   useEffect(() => {
     const handleDocClick = (e) => {
@@ -110,15 +120,95 @@ export default function StatusBar({
 
         <div style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.2)' }} />
 
-        {/* Coordinates Readout */}
-        <div className="status-item" style={{ gap: '6px', fontFamily: 'monospace', fontSize: '10.5px' }}>
+        {/* Coordinates Readout & Mastercam Z Elevation */}
+        <div className="status-item" style={{ gap: '6px', fontFamily: 'monospace', fontSize: '10.5px', alignItems: 'center', display: 'flex' }}>
           <span>X:</span>
-          <span className="status-val">{coords.x ?? '0.00000'}</span>
+          <span className="status-val">{coords.x ?? '0.0000'}</span>
           <span>Y:</span>
-          <span className="status-val">{coords.y ?? '0.00000'}</span>
-          <span>Z:</span>
-          <span className="status-val">{coords.z ?? '0.00000'}</span>
-          <span style={{ color: '#38bdf8', fontWeight: 700, marginLeft: '4px' }}>3D</span>
+          <span className="status-val">{coords.y ?? '0.0000'}</span>
+
+          {/* Mastercam Interactive Construction Z Elevation */}
+          <div
+            title="Click to edit Construction Z Elevation depth (e.g. 0.0000)"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '3px',
+              padding: '1px 5px',
+              background: isEditingZ ? '#0284c7' : 'rgba(255, 255, 255, 0.08)',
+              borderRadius: '3px',
+              border: isEditingZ ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.2)',
+              cursor: 'pointer'
+            }}
+            onClick={() => {
+              if (!isEditingZ) {
+                setTempZInput(String(constructionZ ?? 0));
+                setIsEditingZ(true);
+              }
+            }}
+          >
+            <span style={{ color: '#94a3b8', fontWeight: 700 }}>Z:</span>
+            {isEditingZ ? (
+              <input
+                autoFocus
+                type="number"
+                step="0.5"
+                value={tempZInput}
+                onChange={(e) => setTempZInput(e.target.value)}
+                onBlur={() => {
+                  const val = parseFloat(tempZInput) || 0;
+                  onChangeConstructionZ?.(val);
+                  setIsEditingZ(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = parseFloat(tempZInput) || 0;
+                    onChangeConstructionZ?.(val);
+                    setIsEditingZ(false);
+                  } else if (e.key === 'Escape') {
+                    setIsEditingZ(false);
+                  }
+                }}
+                style={{
+                  width: '56px',
+                  background: '#ffffff',
+                  color: '#0f172a',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '10.5px',
+                  fontFamily: 'monospace',
+                  fontWeight: 700,
+                  borderRadius: '2px',
+                  padding: '0 2px'
+                }}
+              />
+            ) : (
+              <span className="status-val" style={{ color: '#38bdf8', fontWeight: 700 }}>
+                {Number(constructionZ || 0).toFixed(4)}
+              </span>
+            )}
+          </div>
+
+          {/* Mastercam 2D / 3D Construction Mode Toggle */}
+          <button
+            type="button"
+            onClick={onToggleConstructionMode}
+            title={`Construction Mode: ${String(constructionMode || '3d').toUpperCase()} (Click to toggle 2D / 3D)`}
+            style={{
+              color: constructionMode === '2d' ? '#f59e0b' : '#38bdf8',
+              fontWeight: 800,
+              marginLeft: '2px',
+              background: constructionMode === '2d' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(56, 189, 248, 0.15)',
+              border: `1px solid ${constructionMode === '2d' ? '#f59e0b' : '#0284c7'}`,
+              borderRadius: '2px',
+              padding: '1px 5px',
+              cursor: 'pointer',
+              fontSize: '10px',
+              lineHeight: 1
+            }}
+          >
+            {String(constructionMode || '3d').toUpperCase()}
+          </button>
         </div>
       </div>
 
