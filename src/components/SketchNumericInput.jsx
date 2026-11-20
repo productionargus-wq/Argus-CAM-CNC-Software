@@ -14,8 +14,11 @@ function formatCleanNumber(val, decimals = 4) {
  * without external prop sync or fixed-decimal formatting fighting keystrokes.
  */
 export default function SketchNumericInput({
+  label = null,
+  labelWidth = null,
   value = 0,
-  onChangeNumber,
+  onChange = null,
+  onChangeNumber = null,
   min = -Infinity,
   max = Infinity,
   step = 1,
@@ -48,6 +51,7 @@ export default function SketchNumericInput({
     if (!Number.isFinite(parsed)) return;
     if (parsed < min || parsed > max) return;
     if (onChangeNumber) onChangeNumber(parsed);
+    if (onChange) onChange(parsed);
   };
 
   const handleChange = (e) => {
@@ -73,8 +77,9 @@ export default function SketchNumericInput({
     const parsed = text === '' || text === '-' || text === '.' || text === '-.' ? NaN : Number(text);
     if (Number.isFinite(parsed)) {
       const clamped = Math.min(max, Math.max(min, parsed));
-      if (clamped !== Number(value) && onChangeNumber) {
-        onChangeNumber(clamped);
+      if (clamped !== Number(value)) {
+        if (onChangeNumber) onChangeNumber(clamped);
+        if (onChange) onChange(clamped);
       }
       setText(formatCleanNumber(clamped, decimals));
     } else {
@@ -104,9 +109,10 @@ export default function SketchNumericInput({
     setHasTypedEdit(false);
     setText(formatCleanNumber(next, decimals));
     if (onChangeNumber) onChangeNumber(next);
+    if (onChange) onChange(next);
   };
 
-  return (
+  const renderInputBox = (
     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, position: 'relative' }}>
       <div
         style={{
@@ -270,6 +276,7 @@ export default function SketchNumericInput({
                 setHasTypedEdit(false);
                 setText(formatCleanNumber(presetVal, decimals));
                 if (onChangeNumber) onChangeNumber(presetVal);
+                if (onChange) onChange(presetVal);
                 setShowPresetMenu(false);
               }}
               style={{
@@ -293,4 +300,26 @@ export default function SketchNumericInput({
       )}
     </div>
   );
+
+  if (label) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
+        <span
+          style={{
+            fontSize: '11px',
+            color: '#334155',
+            fontWeight: 600,
+            width: labelWidth || '90px',
+            minWidth: labelWidth || '90px',
+            flexShrink: 0
+          }}
+        >
+          {label}
+        </span>
+        {renderInputBox}
+      </div>
+    );
+  }
+
+  return renderInputBox;
 }
