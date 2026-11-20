@@ -49,6 +49,7 @@ import {
   createSnapIndicator,
   computeRectPlacement,
   computeLineEnd,
+  computeBitangentLines,
   hitTestWireframeEntity,
   computeArc3Points,
   computeBoltCircle,
