@@ -13,7 +13,8 @@ import {
   EyeOff,
   Layers,
   Move3d,
-  Check
+  Check,
+  Ruler
 } from 'lucide-react';
 
 /**
@@ -184,6 +185,7 @@ export default function AutoCursorBar({
   onTransformSelection,
   onBlankSelection,
   onDeleteSelection,
+  onAnalyzeSelection,
   theme = 'light'
 }) {
   const [openMenu, setOpenMenu] = useState(null); // 'autocursor' | 'xyz' | 'settings' | 'method' | 'containment' | null
@@ -520,6 +522,11 @@ export default function AutoCursorBar({
           {selectedCount > 0 ? (
             <>
               <span className="ctx-badge">{selectedCount} Selected</span>
+              {onAnalyzeSelection && (
+                <button type="button" className="ctx-btn is-accent" onClick={onAnalyzeSelection} title="Analyze & Edit Entity Properties (F4)">
+                  <Ruler size={11} /> Analyze / Edit (F4)
+                </button>
+              )}
               {onExtrudeSelection && (
                 <button type="button" className="ctx-btn is-accent" onClick={onExtrudeSelection} title="Extrude Selected Contour(s)">
                   <Layers size={11} /> Extrude

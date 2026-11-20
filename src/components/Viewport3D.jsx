@@ -231,6 +231,7 @@ export default function Viewport3D({
   onBlankSelectedEntities = null,
   onRequestExtrudeSelection = null,
   onRequestTransformSelection = null,
+  onAnalyzeSelection = null,
   snapMode: propSnapMode = 'auto',
   onChangeSnapMode = null,
   isAutoCursorLocked = false,
@@ -2268,6 +2269,27 @@ export default function Viewport3D({
           polygonPointsRef.current = pts.slice(0, -1);
         }
         completePolygonSelection(!!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current));
+        return;
+      }
+
+      // Mastercam: Double clicking any entity opens Analyze Entity / Edit Properties (F4)
+      if (!isSolidFaceSelectActive() && onAnalyzeSelection) {
+        const rect = dom.getBoundingClientRect();
+        const picked = hitTestEntityAtScreenPoint(
+          customGeometryRef.current || [],
+          camera,
+          { x: e.clientX - rect.left, y: e.clientY - rect.top },
+          rect.width,
+          rect.height,
+          { worldYOffset: 49, layerVisibility: layerVisibilityRef.current }
+        );
+        if (picked) {
+          e.preventDefault();
+          const pickedId = getCustomEntityId(picked);
+          onChangeSelectedEntities?.([pickedId]);
+          onAnalyzeSelection();
+          return;
+        }
       }
     };
 
@@ -4313,6 +4335,7 @@ export default function Viewport3D({
           }}
           onExtrudeSelection={onRequestExtrudeSelection ? () => onRequestExtrudeSelection(selectedEntitiesList) : null}
           onTransformSelection={onRequestTransformSelection ? () => onRequestTransformSelection(selectedEntitiesList) : null}
+          onAnalyzeSelection={onAnalyzeSelection}
           onBlankSelection={onBlankSelectedEntities ? () => onBlankSelectedEntities(selectedEntityIds) : null}
           onDeleteSelection={onDeleteSelectedEntities ? () => onDeleteSelectedEntities(selectedEntityIds) : null}
           theme={theme}

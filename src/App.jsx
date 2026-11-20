@@ -6658,6 +6658,38 @@ export default function App() {
     if (targetIndex < 0) return false;
     const oldEntity = prevList[targetIndex];
     const curUd = oldEntity.userData || {};
+
+    const isLineEntity = newProps.cadType === 'line' || curUd.cadType === 'line' || curUd.type === 'line' || !!newProps.p1;
+    if (isLineEntity) {
+      const p1 = newProps.p1 || curUd.p1;
+      const p2 = newProps.p2 || curUd.p2;
+      if (!p1 || !p2) return false;
+      const updated = createWireframeLine(
+        [p1.x, p1.y, p1.z],
+        [p2.x, p2.y, p2.z],
+        {
+          color: oldEntity.material?.color?.getHex?.() || 0x1d4ed8,
+          name: oldEntity.name || `Wireframe_Line_${Date.now()}`
+        }
+      );
+      updated.uuid = entityId;
+      if (updated.userData) {
+        updated.userData.customId = entityId;
+        updated.userData.cadType = 'line';
+        updated.userData.type = 'line';
+        updated.userData.p1 = { x: p1.x, y: p1.y, z: p1.z };
+        updated.userData.p2 = { x: p2.x, y: p2.y, z: p2.z };
+      }
+      const newList = [...prevList];
+      newList[targetIndex] = updated;
+      commitCustomGeometry(newList, true);
+      const dx = p2.x - p1.x;
+      const dz = p2.z - p1.z;
+      const len = Math.hypot(dx, dz);
+      showToast(`Line updated: Length ${len.toFixed(2)} mm`, 'success');
+      return true;
+    }
+
     const r = newProps.radius !== undefined ? Math.max(0.1, Number(newProps.radius)) : (curUd.radius || 25);
     const cx = newProps.centerX !== undefined ? Number(newProps.centerX) : (curUd.center?.x ?? 0);
     const cz = newProps.centerY !== undefined ? Number(newProps.centerY) : (curUd.center?.z ?? curUd.center?.y ?? 0);
@@ -8242,6 +8274,7 @@ export default function App() {
                 onBlankSelectedEntities={handleBlankSelectedEntities}
                 onRequestExtrudeSelection={handleExtrudeFromSelection}
                 onRequestTransformSelection={() => handleOpenTransformModal('translate')}
+                onAnalyzeSelection={() => setIsEntityAnalyzerOpen(true)}
                 snapMode={snapMode}
                 onChangeSnapMode={setSnapMode}
                 isAutoCursorLocked={isAutoCursorLocked}
@@ -8387,6 +8420,7 @@ export default function App() {
               onBlankSelectedEntities={handleBlankSelectedEntities}
               onRequestExtrudeSelection={handleExtrudeFromSelection}
               onRequestTransformSelection={() => handleOpenTransformModal('translate')}
+              onAnalyzeSelection={() => setIsEntityAnalyzerOpen(true)}
               snapMode={snapMode}
               onChangeSnapMode={setSnapMode}
               isAutoCursorLocked={isAutoCursorLocked}
@@ -8480,7 +8514,25 @@ export default function App() {
         showAxes={showAxes}
         activeRadius={isSketchModeActive && (sketchTool === 'circle' || activeDrawingTool === 'circle' || sketchTool === 'arc_tangent' || activeDrawingTool === 'arc_tangent') ? (sketchTool === 'arc_tangent' ? arcParams.radius : circleParams.radius) : null}
         activeRectDimensions={isSketchModeActive && (sketchTool === 'rect' || activeDrawingTool === 'rect') ? { width: rectParams.width, height: rectParams.height } : null}
-        activeLineDimensions={isSketchModeActive && (sketchTool === 'line' || activeDrawingTool === 'line') ? { length: lineParams.length, angle: lineParams.angle } : null}
+        activeLineDimensions={
+          isSketchModeActive && (sketchTool === 'line' || activeDrawingTool === 'line')
+            ? { length: lineParams.length, angle: lineParams.angle }
+            : (selectedEntitiesList.length === 1 && (selectedEntitiesList[0]?.userData?.cadType === 'line' || selectedEntitiesList[0]?.userData?.type === 'line' || selectedEntitiesList[0]?.userData?.p1))
+              ? (() => {
+                  const ent = selectedEntitiesList[0];
+                  const ud = ent.userData || {};
+                  const p1 = ud.p1 || (ent.geometry?.attributes?.position ? { x: ent.geometry.attributes.position.getX(0), y: ent.geometry.attributes.position.getY(0), z: ent.geometry.attributes.position.getZ(0) } : null);
+                  const p2 = ud.p2 || (ent.geometry?.attributes?.position ? { x: ent.geometry.attributes.position.getX(1), y: ent.geometry.attributes.position.getY(1), z: ent.geometry.attributes.position.getZ(1) } : null);
+                  if (!p1 || !p2) return null;
+                  const dx = p2.x - p1.x;
+                  const dz = p2.z - p1.z;
+                  return {
+                    length: Math.hypot(dx, dz),
+                    angle: (Math.atan2(-dz, dx) * 180 / Math.PI + 360) % 360
+                  };
+                })()
+              : null
+        }
         constructionZ={constructionZ}
         onChangeConstructionZ={(val) => {
           setConstructionZ(val);
