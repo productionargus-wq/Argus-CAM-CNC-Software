@@ -107,16 +107,16 @@ export default function LineEndpointsPanel({
         </div>
       </div>
 
-      {/* 2. Mastercam Dark Action Bar (Matching Images 1, 3, 4) */}
+      {/* 2. Light Action Bar (Mastercam light theme) */}
       <div
         style={{
           height: '34px',
-          background: '#2b2d31',
+          background: '#e2e8f0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 8px',
-          borderBottom: '1px solid #1e2024'
+          borderBottom: '1px solid #cbd5e1'
         }}
       >
         {/* Help Button (Blue Circle with ?) */}

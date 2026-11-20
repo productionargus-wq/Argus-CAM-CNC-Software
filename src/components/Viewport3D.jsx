@@ -1150,6 +1150,8 @@ export default function Viewport3D({
         let p2Final = finalPt.clone();
 
         // If tangent mode is enabled, or connecting two circles tangentially:
+        // When both circles are found in tangent mode, use pure mathematical bitangent — bypass all angle/length locks
+        let bitanCommit = false;
         if (isLineTangentRef.current) {
           const entities = (customGeometryRef.current || []).filter(e => e && e.userData && (e.userData.cadType === 'circle' || e.userData.cadType === 'arc'));
           const circleA = entities.find(ent => {
@@ -1174,25 +1176,39 @@ export default function Viewport3D({
               const chosen = dTop <= dBottom ? bitan.topTangent : bitan.bottomTangent;
               p1Final = chosen.p1.clone();
               p2Final = chosen.p2.clone();
+              bitanCommit = true;
             }
           }
         }
 
-        const { p2, length, angle } = computeLineEnd(p1Final, p2Final, getLockedLineOptions());
-        if (length < 0.5) return false;
+        let p2Commit, lengthCommit, angleCommit;
+        if (bitanCommit) {
+          // Mastercam style: use exact bitangent endpoints, never override with angle/length locks
+          p2Commit = p2Final.clone();
+          const bdx = p2Final.x - p1Final.x;
+          const bdz = p2Final.z - p1Final.z;
+          lengthCommit = Math.hypot(bdx, bdz);
+          angleCommit = Math.atan2(-bdz, bdx) * (180 / Math.PI);
+          if (angleCommit < 0) angleCommit += 360;
+        } else {
+          const res = computeLineEnd(p1Final, p2Final, getLockedLineOptions());
+          p2Commit = res.p2; lengthCommit = res.length; angleCommit = res.angle;
+        }
+
+        if (lengthCommit < 0.5) return false;
 
         newEntity = createWireframeLine(
           [p1Final.x, p1Final.y, p1Final.z],
-          [p2.x, p2.y, p2.z],
+          [p2Commit.x, p2Commit.y, p2Commit.z],
           { color: 0x38bdf8, name: `Wireframe_${tool === 'line_perp' ? 'Perp' : tool === 'line_parallel' ? 'Parallel' : 'Line'}_${Date.now()}` }
         );
         if (onDrawingUpdateRef.current) {
           onDrawingUpdateRef.current({
             tool,
-            length,
-            angle,
+            length: lengthCommit,
+            angle: angleCommit,
             pt1: p1Final,
-            pt2: p2,
+            pt2: p2Commit,
             completed: true
           });
         }
@@ -1756,6 +1772,8 @@ export default function Viewport3D({
               let p1Preview = anchor.clone();
               let p2Preview = finalPt.clone();
 
+              // Tangent mode: when two circles found, bypass all locks and use pure bitangent math
+              let bitanPreview = false;
               if (isLineTangentRef.current) {
                 const entities = (customGeometryRef.current || []).filter(e => e && e.userData && (e.userData.cadType === 'circle' || e.userData.cadType === 'arc'));
                 const circleA = entities.find(ent => {
@@ -1780,17 +1798,34 @@ export default function Viewport3D({
                     const chosen = dTop <= dBottom ? bitan.topTangent : bitan.bottomTangent;
                     p1Preview = chosen.p1.clone();
                     p2Preview = chosen.p2.clone();
+                    bitanPreview = true;
                   }
                 }
               }
 
+              let previewP2, previewLength, previewAngle;
+              if (bitanPreview) {
+                // Use exact bitangent — never collapse to 0° due to angle lock
+                previewP2 = p2Preview.clone();
+                const bdx = p2Preview.x - p1Preview.x;
+                const bdz = p2Preview.z - p1Preview.z;
+                previewLength = Math.hypot(bdx, bdz);
+                previewAngle = Math.atan2(-bdz, bdx) * (180 / Math.PI);
+                if (previewAngle < 0) previewAngle += 360;
+              } else {
+                const lineOpts = getLockedLineOptions();
+                const res = computeLineEnd(p1Preview, p2Preview, lineOpts);
+                previewP2 = res.p2; previewLength = res.length; previewAngle = res.angle;
+              }
+
               const lineOpts = getLockedLineOptions();
-              const { p2, length, angle } = computeLineEnd(p1Preview, p2Preview, lineOpts);
-              const ghost = createGhostPreview('line', p1Preview, p2, lineOpts);
+              const ghost = createGhostPreview('line', p1Preview, previewP2, bitanPreview ? { lineType: 'freeform' } : lineOpts);
               sketchGhostGroupRef.current.add(ghost);
 
-              setDimensionFeedback(`L: ${length.toFixed(2)} mm, ∠ ${angle.toFixed(1)}°`);
-              if (snapResult.snapped) {
+              setDimensionFeedback(`L: ${previewLength.toFixed(2)} mm, ∠ ${previewAngle.toFixed(1)}°`);
+              if (bitanPreview) {
+                setSketchPromptText('AutoCursor: Bitangent (⊘⊘) - Click to place exact tangent line between circles');
+              } else if (snapResult.snapped) {
                 if (snapResult.type === 'tangent') {
                   setSketchPromptText('AutoCursor: Tangent Snap (⊘) - Click to drop exact tangent endpoint');
                 } else if (snapResult.type === 'quadrant') {
@@ -1811,10 +1846,10 @@ export default function Viewport3D({
               if (onDrawingUpdateRef.current) {
                 onDrawingUpdateRef.current({
                   tool,
-                  length: lineOpts.lockedLength ?? length,
-                  angle: lineOpts.lockedAngle ?? angle,
-                  pt1: anchor,
-                  pt2: p2,
+                  length: bitanPreview ? previewLength : (lineOpts.lockedLength ?? previewLength),
+                  angle: bitanPreview ? previewAngle : (lineOpts.lockedAngle ?? previewAngle),
+                  pt1: p1Preview,
+                  pt2: previewP2,
                   isDragging: isDrawingDrag
                 });
               }
