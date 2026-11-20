@@ -8229,6 +8229,8 @@ export default function App() {
                 activeDrawingAngle={lineParams.angle}
                 isAngleLocked={lineParams.isAngleLocked}
                 lineType={lineParams.lineType}
+              isLineTangent={lineParams.isTangent}
+                isLineTangent={lineParams.isTangent}
                 onDrawingUpdate={handleDrawingUpdate}
                 reselectTrigger={reselectTrigger}
                 undoTrigger={undoTrigger}
@@ -8360,6 +8362,7 @@ export default function App() {
               activeDrawingAngle={lineParams.angle}
               isAngleLocked={lineParams.isAngleLocked}
               lineType={lineParams.lineType}
+              isLineTangent={lineParams.isTangent}
               onDrawingUpdate={handleDrawingUpdate}
               reselectTrigger={reselectTrigger}
               undoTrigger={undoTrigger}

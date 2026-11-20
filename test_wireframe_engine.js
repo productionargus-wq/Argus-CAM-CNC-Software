@@ -20,6 +20,7 @@ import {
   snapToGrid,
   snapToEntityPoints
 } from './src/utils/cadDrawingEngine.js';
+import { createWireframeCircle } from './src/utils/cadGeometry.js';
 
 console.log('--- Testing Mastercam Wireframe CAD & Dynamic Trimming Engine ---');
 
@@ -285,4 +286,25 @@ console.log('\n[11] Testing snapToEntityPoints (Quadrant & Tangent)...');
   console.log(`  ✓ Tangent Snap from (0, 60) verified: Touch point at (${snapTan.point.x.toFixed(2)}, ${snapTan.point.z.toFixed(2)})`);
 }
 
-console.log('\n=== ALL 11 MASTERCAM WIREFRAME CAD ENGINE TESTS PASSED (100%) ===\n');
+// 12. Test snapToEntityPoints with full Three.js Wireframe Circles (65 tessellation points)
+console.log('\n[12] Testing snapToEntityPoints with real Wireframe Circle meshes...');
+{
+  const mainCircle = createWireframeCircle(60, 35, [0, 0], 0, 360, 'G17');
+  const lobeBOuter = createWireframeCircle(27.5, 35, [110, -35], 0, 360, 'G17');
+  const lobeBInner = createWireframeCircle(12.5, 35, [110, -35], 0, 360, 'G17');
+
+  const entities = [mainCircle, lobeBOuter, lobeBInner];
+  const anchor = new THREE.Vector3(0, 35, -60);
+
+  // Cursor near top rim of Lobe B outer circle: (108, 35, -61)
+  const cursor = new THREE.Vector3(108, 35, -61);
+  const snapResult = snapToEntityPoints(cursor, entities, 14.0, { anchorPoint: anchor });
+
+  assert(snapResult.snapped, 'Should snap to Lobe B');
+  assert.strictEqual(snapResult.type, 'tangent', 'Tessellation points must NOT hijack snap; must be tangent');
+  assert(Math.abs(snapResult.point.x - 109.37) < 0.2, `Snap X should be ~109.37, got ${snapResult.point.x}`);
+  assert(Math.abs(snapResult.point.z - (-62.49)) < 0.2, `Snap Z should be ~-62.49, got ${snapResult.point.z}`);
+  console.log(`  ✓ Wireframe circle 65-point tessellation bypassed: Tangent Snap correctly locked onto (${snapResult.point.x.toFixed(2)}, ${snapResult.point.z.toFixed(2)})`);
+}
+
+console.log('\n=== ALL 12 MASTERCAM WIREFRAME CAD ENGINE TESTS PASSED (100%) ===\n');

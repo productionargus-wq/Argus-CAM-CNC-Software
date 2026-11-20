@@ -207,6 +207,7 @@ export default function Viewport3D({
   activeDrawingAngle = null,
   isAngleLocked = false,
   lineType = 'freeform',
+  isLineTangent = false,
   onDrawingUpdate = null,
   reselectTrigger = 0,
   undoTrigger = 0,
@@ -401,6 +402,7 @@ export default function Viewport3D({
   const activeDrawingAngleRef = useRef(activeDrawingAngle);
   const isAngleLockedRef = useRef(isAngleLocked);
   const lineTypeRef = useRef(lineType);
+  const isLineTangentRef = useRef(isLineTangent);
   const onDrawingUpdateRef = useRef(onDrawingUpdate);
   const gridSnapRef = useRef(true);
   const gridStepRef = useRef(5.0);
@@ -430,6 +432,7 @@ export default function Viewport3D({
   useEffect(() => { activeDrawingAngleRef.current = activeDrawingAngle; }, [activeDrawingAngle]);
   useEffect(() => { isAngleLockedRef.current = isAngleLocked; }, [isAngleLocked]);
   useEffect(() => { lineTypeRef.current = lineType; }, [lineType]);
+  useEffect(() => { isLineTangentRef.current = isLineTangent; }, [isLineTangent]);
   useEffect(() => { onDrawingUpdateRef.current = onDrawingUpdate; }, [onDrawingUpdate]);
   useEffect(() => { isChainingActiveRef.current = isChainingActive; }, [isChainingActive]);
   useEffect(() => { chainingPlaneModeRef.current = chainingPlaneMode; }, [chainingPlaneMode]);
@@ -1064,10 +1067,11 @@ export default function Viewport3D({
       let finalPt = localPt;
       let snapResult = { snapped: false, point: localPt, type: null };
       if (objectSnapRef.current) {
-        const snapTol = Math.max(8.0, (spherical?.radius || 350) * 0.025);
+        const snapTol = Math.max(12.0, (spherical?.radius || 350) * 0.035);
         snapResult = snapToEntityPoints(localPt, customGeometryRef.current, snapTol, {
           anchorPoint: sketchAnchorRef.current,
-          activeTool: activeSketchToolRef.current
+          activeTool: activeSketchToolRef.current,
+          isLineTangent: isLineTangentRef.current
         });
       }
       if (snapResult.snapped) {
@@ -1724,13 +1728,15 @@ export default function Viewport3D({
               setDimensionFeedback(`L: ${length.toFixed(2)} mm, ∠ ${angle.toFixed(1)}°`);
               if (snapResult.snapped) {
                 if (snapResult.type === 'tangent') {
-                  setSketchPromptText('Tangent Snap (⊘) - Click to drop exact tangent endpoint');
+                  setSketchPromptText('AutoCursor: Tangent Snap (⊘) - Click to drop exact tangent endpoint');
                 } else if (snapResult.type === 'quadrant') {
-                  setSketchPromptText('Quadrant Snap (◇) - Click to drop at circle quadrant');
+                  setSketchPromptText('AutoCursor: Quadrant Snap (◇) - Click to drop at circle quadrant');
                 } else if (snapResult.type === 'center') {
-                  setSketchPromptText('Center Snap (⊙) - Click to drop at center point');
+                  setSketchPromptText('AutoCursor: Center Snap (⊙) - Click to drop at center point');
                 } else if (snapResult.type === 'endpoint') {
-                  setSketchPromptText('Endpoint Snap (■) - Click to drop at entity endpoint');
+                  setSketchPromptText('AutoCursor: Endpoint Snap (■) - Click to drop at entity endpoint');
+                } else if (snapResult.type === 'nearest') {
+                  setSketchPromptText('AutoCursor: On Curve (⧗) - Click to drop on circumference');
                 } else {
                   setSketchPromptText('Specify second endpoint');
                 }
@@ -4434,17 +4440,38 @@ export default function Viewport3D({
             position: 'fixed',
             left: mouseScreenPos.x + 15,
             top: mouseScreenPos.y + 15,
-            background: isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.92)',
-            border: isLight ? '1px solid #cbd5e1' : '1px solid #334155',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-            padding: '2px 8px',
-            borderRadius: '3px',
-            fontSize: '11px',
-            fontWeight: 600,
-            color: isLight ? '#0f172a' : '#f8fafc',
+            background: sketchPromptText.includes('Tangent')
+              ? '#ecfdf5'
+              : sketchPromptText.includes('Quadrant')
+              ? '#f0f9ff'
+              : sketchPromptText.includes('On Curve')
+              ? '#ecfeff'
+              : isLight ? 'rgba(255, 255, 255, 0.96)' : 'rgba(15, 23, 42, 0.92)',
+            border: sketchPromptText.includes('Tangent')
+              ? '1.5px solid #10b981'
+              : sketchPromptText.includes('Quadrant')
+              ? '1.5px solid #0284c7'
+              : sketchPromptText.includes('On Curve')
+              ? '1.5px solid #0891b2'
+              : isLight ? '1px solid #cbd5e1' : '1px solid #334155',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            padding: '3px 9px',
+            borderRadius: '4px',
+            fontSize: '11.5px',
+            fontWeight: 700,
+            color: sketchPromptText.includes('Tangent')
+              ? '#065f46'
+              : sketchPromptText.includes('Quadrant')
+              ? '#0369a1'
+              : sketchPromptText.includes('On Curve')
+              ? '#0e7490'
+              : isLight ? '#0f172a' : '#f8fafc',
             pointerEvents: 'none',
             zIndex: 9999,
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
           }}
         >
           {sketchPromptText}

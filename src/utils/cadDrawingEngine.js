@@ -96,32 +96,7 @@ export function snapToEntityPoints(cursorPoint, existingEntities = [], snapToler
       const c = new THREE.Vector3(cx, cy, cz);
       const r = Number(rawRadius || (entity.geometry?.parameters?.radius) || 25);
 
-      // 2a. Center snap
-      const dCenter = cursorPoint.distanceTo(c);
-      if (dCenter < closestDist) {
-        closestDist = dCenter;
-        snappedPoint = c.clone();
-        snapType = 'center';
-      }
-
-      // 2b. Cardinal Quadrants (North, South, East, West in G17 XZ plane)
-      const quadrants = [
-        new THREE.Vector3(cx, cy, cz + r), // North (+Z / +Y 2D)
-        new THREE.Vector3(cx, cy, cz - r), // South (-Z / -Y 2D)
-        new THREE.Vector3(cx + r, cy, cz), // East (+X)
-        new THREE.Vector3(cx - r, cy, cz)  // West (-X)
-      ];
-
-      quadrants.forEach((q) => {
-        const dQ = cursorPoint.distanceTo(q);
-        if (dQ < closestDist) {
-          closestDist = dQ;
-          snappedPoint = q.clone();
-          snapType = 'quadrant';
-        }
-      });
-
-      // 2c. True Mathematical Tangent snap from Anchor Point to Circle
+      // 2a. True Mathematical Tangent snap from Anchor Point to Circle (TOP PRIORITY when drawing lines)
       if (anchor) {
         const dx = anchor.x - cx;
         const dz = anchor.z - cz;
@@ -131,21 +106,23 @@ export function snapToEntityPoints(cursorPoint, existingEntities = [], snapToler
           const cosBeta = Math.max(-1.0, Math.min(1.0, r / distToAnchor));
           const beta = Math.acos(cosBeta);
 
-          // Two exact tangent touch points on the circle perimeter
+          // Two exact analytical tangent touch points on the circle perimeter
           const t1 = new THREE.Vector3(cx + r * Math.cos(theta + beta), cy, cz + r * Math.sin(theta + beta));
           const t2 = new THREE.Vector3(cx + r * Math.cos(theta - beta), cy, cz + r * Math.sin(theta - beta));
 
-          // Tangent snap has high priority when drawing lines to circles
-          const tanTol = Math.max(closestDist, snapTolerance * 2.0);
+          // Tangent snap has highest magnetic pull when connecting to circles
+          const tanSnapRadius = options.isLineTangent
+            ? Math.max(45.0, snapTolerance * 3.5)
+            : Math.max(25.0, snapTolerance * 2.2);
           const dt1 = cursorPoint.distanceTo(t1);
           const dt2 = cursorPoint.distanceTo(t2);
 
-          if (dt1 < tanTol && dt1 < closestDist * 1.6) {
+          if (dt1 < tanSnapRadius && (dt1 < closestDist || snapType === 'nearest' || snapType === 'endpoint')) {
             closestDist = dt1;
             snappedPoint = t1.clone();
             snapType = 'tangent';
           }
-          if (dt2 < tanTol && dt2 < closestDist * 1.6) {
+          if (dt2 < tanSnapRadius && (dt2 < closestDist || snapType === 'nearest' || snapType === 'endpoint')) {
             closestDist = dt2;
             snappedPoint = t2.clone();
             snapType = 'tangent';
@@ -153,9 +130,35 @@ export function snapToEntityPoints(cursorPoint, existingEntities = [], snapToler
         }
       }
 
-      // 2d. Exact Circumference Projection (snap anywhere onto the circle perimeter if no specific snap found)
-      const hasSpecificSnap = snapType && snapType !== 'nearest';
-      if (!hasSpecificSnap) {
+      // 2b. Cardinal Quadrants (North, South, East, West in G17 XZ plane)
+      if (snapType !== 'tangent') {
+        const quadrants = [
+          new THREE.Vector3(cx, cy, cz - r), // North (-Z / +Y 2D)
+          new THREE.Vector3(cx, cy, cz + r), // South (+Z / -Y 2D)
+          new THREE.Vector3(cx + r, cy, cz), // East (+X)
+          new THREE.Vector3(cx - r, cy, cz)  // West (-X)
+        ];
+
+        quadrants.forEach((q) => {
+          const dQ = cursorPoint.distanceTo(q);
+          if (dQ < closestDist && snapType !== 'tangent') {
+            closestDist = dQ;
+            snappedPoint = q.clone();
+            snapType = 'quadrant';
+          }
+        });
+      }
+
+      // 2c. Center snap
+      const dCenter = cursorPoint.distanceTo(c);
+      if (dCenter < closestDist && snapType !== 'tangent') {
+        closestDist = dCenter;
+        snappedPoint = c.clone();
+        snapType = 'center';
+      }
+
+      // 2d. Exact Circumference Projection (fallback only if no specific snap found)
+      if (!snapType || snapType === 'nearest') {
         const curDistCenter = Math.hypot(cursorPoint.x - cx, cursorPoint.z - cz);
         const radDelta = Math.abs(curDistCenter - r);
         if (radDelta < closestDist && curDistCenter > 0.001) {
@@ -172,12 +175,12 @@ export function snapToEntityPoints(cursorPoint, existingEntities = [], snapToler
       }
     }
 
-    // 3. Check general point arrays (rectangles, polygons)
-    if (Array.isArray(points)) {
+    // 3. Check general point arrays (rectangles, polygons ONLY - NOT circles/arcs!)
+    if (cadType !== 'circle' && cadType !== 'arc' && Array.isArray(points)) {
       points.forEach((p) => {
         const v = new THREE.Vector3(p.x, p.y, p.z);
         const d = cursorPoint.distanceTo(v);
-        if (d < closestDist) {
+        if (d < closestDist && snapType !== 'tangent') {
           closestDist = d;
           snappedPoint = v.clone();
           snapType = 'endpoint';
@@ -569,51 +572,59 @@ export function createSnapIndicator(point, snapType = 'endpoint') {
     group.add(line);
   } else if (snapType === 'quadrant') {
     // Diamond (Mastercam Quadrant glyph ◇)
-    const size = 3.0;
+    const size = 4.0;
     const pts = [
-      new THREE.Vector3(point.x, point.y + 0.1, point.z - size),
-      new THREE.Vector3(point.x + size, point.y + 0.1, point.z),
-      new THREE.Vector3(point.x, point.y + 0.1, point.z + size),
-      new THREE.Vector3(point.x - size, point.y + 0.1, point.z),
-      new THREE.Vector3(point.x, point.y + 0.1, point.z - size)
+      new THREE.Vector3(point.x, point.y + 0.3, point.z - size),
+      new THREE.Vector3(point.x + size, point.y + 0.3, point.z),
+      new THREE.Vector3(point.x, point.y + 0.3, point.z + size),
+      new THREE.Vector3(point.x - size, point.y + 0.3, point.z),
+      new THREE.Vector3(point.x, point.y + 0.3, point.z - size)
     ];
     const geo = new THREE.BufferGeometry().setFromPoints(pts);
-    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 3, depthTest: false }));
     group.add(line);
   } else if (snapType === 'tangent') {
-    // Circle with tangent bar on top (Mastercam Tangent glyph ⊘)
-    const ringGeo = new THREE.RingGeometry(1.2, 2.0, 16);
+    // Mastercam Tangent glyph (⊘): Vibrant Green Double-Ring + Tangent Bar with Glow
+    const ringGeo = new THREE.RingGeometry(2.0, 4.2, 24);
     ringGeo.rotateX(-Math.PI / 2);
-    const ringMesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
-    ringMesh.position.set(point.x, point.y + 0.1, point.z);
+    const ringMesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide, depthTest: false }));
+    ringMesh.position.set(point.x, point.y + 0.3, point.z);
     group.add(ringMesh);
 
+    // Translucent backing glow for high contrast against any background
+    const glowGeo = new THREE.CircleGeometry(6.0, 24);
+    glowGeo.rotateX(-Math.PI / 2);
+    const glowMesh = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthTest: false }));
+    glowMesh.position.set(point.x, point.y + 0.25, point.z);
+    group.add(glowMesh);
+
+    // Tangent bar on top
     const barPts = [
-      new THREE.Vector3(point.x - 3.2, point.y + 0.1, point.z - 2.2),
-      new THREE.Vector3(point.x + 3.2, point.y + 0.1, point.z - 2.2)
+      new THREE.Vector3(point.x - 6.5, point.y + 0.35, point.z - 4.5),
+      new THREE.Vector3(point.x + 6.5, point.y + 0.35, point.z - 4.5)
     ];
     const barGeo = new THREE.BufferGeometry().setFromPoints(barPts);
-    const barLine = new THREE.Line(barGeo, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+    const barLine = new THREE.Line(barGeo, new THREE.LineBasicMaterial({ color: 0x047857, linewidth: 3, depthTest: false }));
     group.add(barLine);
   } else if (snapType === 'nearest') {
-    // Hourglass (On-circle / on-curve snap)
-    const size = 2.0;
+    // Hourglass (On-circle / on-curve snap ⧗)
+    const size = 3.0;
     const pts = [
-      new THREE.Vector3(point.x - size, point.y + 0.1, point.z - size),
-      new THREE.Vector3(point.x + size, point.y + 0.1, point.z - size),
-      new THREE.Vector3(point.x - size, point.y + 0.1, point.z + size),
-      new THREE.Vector3(point.x + size, point.y + 0.1, point.z + size),
-      new THREE.Vector3(point.x - size, point.y + 0.1, point.z - size)
+      new THREE.Vector3(point.x - size, point.y + 0.3, point.z - size),
+      new THREE.Vector3(point.x + size, point.y + 0.3, point.z - size),
+      new THREE.Vector3(point.x - size, point.y + 0.3, point.z + size),
+      new THREE.Vector3(point.x + size, point.y + 0.3, point.z + size),
+      new THREE.Vector3(point.x - size, point.y + 0.3, point.z - size)
     ];
     const geo = new THREE.BufferGeometry().setFromPoints(pts);
-    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x06b6d4, linewidth: 2, depthTest: false }));
     group.add(line);
   } else {
     // Center Circle (⊙)
-    const geo = new THREE.RingGeometry(1.2, 2.2, 16);
+    const geo = new THREE.RingGeometry(1.8, 3.2, 20);
     geo.rotateX(-Math.PI / 2);
-    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
-    mesh.position.set(point.x, point.y + 0.1, point.z);
+    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide, depthTest: false }));
+    mesh.position.set(point.x, point.y + 0.3, point.z);
     group.add(mesh);
   }
 
