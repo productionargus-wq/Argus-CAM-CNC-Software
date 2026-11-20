@@ -16,6 +16,7 @@ import {
   computeChamferBetweenEntities,
   computeModifyLength,
   computeCloseArc,
+  computeBitangentLines,
   snapToGrid,
   snapToEntityPoints
 } from './src/utils/cadDrawingEngine.js';
@@ -234,4 +235,54 @@ console.log('\n[9] Testing computeCloseArc...');
   console.log(`  ✓ Converted open arc (45°-180°) into 360° closed circle`);
 }
 
-console.log('\n=== ALL 9 MASTERCAM WIREFRAME CAD ENGINE TESTS PASSED (100%) ===\n');
+// 10. Test computeBitangentLines (Outer Tangent between Main Hub and Lobe B)
+console.log('\n[10] Testing computeBitangentLines...');
+{
+  const c1 = { userData: { cadType: 'circle', center: { x: 0, y: 0, z: 0 }, radius: 60 } };
+  const c2 = { userData: { cadType: 'circle', center: { x: 110, y: 0, z: 35 }, radius: 27.5 } };
+
+  const bitan = computeBitangentLines(c1, c2);
+  assert(bitan !== null, 'Should solve outer bitangents');
+  assert(bitan.topTangent && bitan.bottomTangent, 'Should have top and bottom tangents');
+
+  // Verify distance from center of c1 to topTangent.p1 is exactly R1 (60)
+  const d1 = Math.hypot(bitan.topTangent.p1.x, bitan.topTangent.p1.z);
+  assert(Math.abs(d1 - 60) < 1e-3, `P1 should lie on circle 1, got distance ${d1}`);
+
+  // Verify distance from center of c2 to topTangent.p2 is exactly R2 (27.5)
+  const d2 = Math.hypot(bitan.topTangent.p2.x - 110, bitan.topTangent.p2.z - 35);
+  assert(Math.abs(d2 - 27.5) < 1e-3, `P2 should lie on circle 2, got distance ${d2}`);
+
+  console.log(`  ✓ Exact Bitangent computed: Contact 1 at (${bitan.topTangent.p1.x.toFixed(2)}, ${bitan.topTangent.p1.z.toFixed(2)}), Contact 2 at (${bitan.topTangent.p2.x.toFixed(2)}, ${bitan.topTangent.p2.z.toFixed(2)})`);
+}
+
+// 11. Test snapToEntityPoints with Quadrant & Tangent Snapping
+console.log('\n[11] Testing snapToEntityPoints (Quadrant & Tangent)...');
+{
+  const circle = {
+    userData: {
+      cadType: 'circle',
+      center: { x: 110, y: 0, z: 35 },
+      radius: 27.5
+    }
+  };
+
+  // Test Quadrant Snap near top of circle: (110, 35 + 27.5) = (110, 62.5)
+  const cursorNearTop = new THREE.Vector3(108, 0, 61);
+  const snapQ = snapToEntityPoints(cursorNearTop, [circle], 8.0);
+  assert(snapQ.snapped, 'Should snap near top of circle');
+  assert.strictEqual(snapQ.type, 'quadrant', 'Should be quadrant snap');
+  assert(Math.abs(snapQ.point.x - 110) < 1e-3, 'Quadrant X should be 110');
+  assert(Math.abs(snapQ.point.z - 62.5) < 1e-3, 'Quadrant Z should be 62.5');
+  console.log(`  ✓ Quadrant Snap verified: (${snapQ.point.x.toFixed(2)}, ${snapQ.point.z.toFixed(2)})`);
+
+  // Test Tangent Snap from Anchor Point at (0, 0, 60)
+  const anchor = new THREE.Vector3(0, 0, 60);
+  const cursorNearTan = new THREE.Vector3(109, 0, 63);
+  const snapTan = snapToEntityPoints(cursorNearTan, [circle], 12.0, { anchorPoint: anchor });
+  assert(snapTan.snapped, 'Should snap to tangent');
+  assert.strictEqual(snapTan.type, 'tangent', 'Should be tangent snap');
+  console.log(`  ✓ Tangent Snap from (0, 60) verified: Touch point at (${snapTan.point.x.toFixed(2)}, ${snapTan.point.z.toFixed(2)})`);
+}
+
+console.log('\n=== ALL 11 MASTERCAM WIREFRAME CAD ENGINE TESTS PASSED (100%) ===\n');

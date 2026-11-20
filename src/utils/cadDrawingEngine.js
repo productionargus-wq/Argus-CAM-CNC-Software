@@ -47,7 +47,7 @@ export function snapToGrid(point, gridStep = 5.0, isOrtho = false, anchorPoint =
  * Detects whether the cursor is near any existing vertex, midpoint, or circle center.
  * Returns { snapped: boolean, point: Vector3, type: 'endpoint' | 'midpoint' | 'center' }
  */
-export function snapToEntityPoints(cursorPoint, existingEntities = [], snapTolerance = 4.0) {
+export function snapToEntityPoints(cursorPoint, existingEntities = [], snapTolerance = 6.0, options = {}) {
   if (!cursorPoint || !existingEntities || existingEntities.length === 0) {
     return { snapped: false, point: cursorPoint, type: null };
   }
@@ -55,10 +55,11 @@ export function snapToEntityPoints(cursorPoint, existingEntities = [], snapToler
   let closestDist = snapTolerance;
   let snappedPoint = null;
   let snapType = null;
+  const anchor = options.anchorPoint ? new THREE.Vector3(options.anchorPoint.x, options.anchorPoint.y ?? cursorPoint.y, options.anchorPoint.z) : null;
 
   existingEntities.forEach((entity) => {
     if (!entity || !entity.userData) return;
-    const { cadType, points, center, p1, p2 } = entity.userData;
+    const { cadType, points, center, p1, p2, radius: rawRadius } = entity.userData;
 
     // 1. Check Line endpoints and midpoint
     if (cadType === 'line' && p1 && p2) {
@@ -87,14 +88,87 @@ export function snapToEntityPoints(cursorPoint, existingEntities = [], snapToler
       }
     }
 
-    // 2. Check Circle/Arc center and quadrant points
+    // 2. Check Circle/Arc center, cardinal quadrants, and tangent touch points
     if ((cadType === 'circle' || cadType === 'arc') && center) {
-      const c = new THREE.Vector3(center.x, center.y, center.z);
+      const cx = center.x || 0;
+      const cy = center.y ?? cursorPoint.y;
+      const cz = center.z ?? center.y ?? 0;
+      const c = new THREE.Vector3(cx, cy, cz);
+      const r = Number(rawRadius || (entity.geometry?.parameters?.radius) || 25);
+
+      // 2a. Center snap
       const dCenter = cursorPoint.distanceTo(c);
       if (dCenter < closestDist) {
         closestDist = dCenter;
         snappedPoint = c.clone();
         snapType = 'center';
+      }
+
+      // 2b. Cardinal Quadrants (North, South, East, West in G17 XZ plane)
+      const quadrants = [
+        new THREE.Vector3(cx, cy, cz + r), // North (+Z / +Y 2D)
+        new THREE.Vector3(cx, cy, cz - r), // South (-Z / -Y 2D)
+        new THREE.Vector3(cx + r, cy, cz), // East (+X)
+        new THREE.Vector3(cx - r, cy, cz)  // West (-X)
+      ];
+
+      quadrants.forEach((q) => {
+        const dQ = cursorPoint.distanceTo(q);
+        if (dQ < closestDist) {
+          closestDist = dQ;
+          snappedPoint = q.clone();
+          snapType = 'quadrant';
+        }
+      });
+
+      // 2c. True Mathematical Tangent snap from Anchor Point to Circle
+      if (anchor) {
+        const dx = anchor.x - cx;
+        const dz = anchor.z - cz;
+        const distToAnchor = Math.hypot(dx, dz);
+        if (distToAnchor > r + 0.1) {
+          const theta = Math.atan2(dz, dx);
+          const cosBeta = Math.max(-1.0, Math.min(1.0, r / distToAnchor));
+          const beta = Math.acos(cosBeta);
+
+          // Two exact tangent touch points on the circle perimeter
+          const t1 = new THREE.Vector3(cx + r * Math.cos(theta + beta), cy, cz + r * Math.sin(theta + beta));
+          const t2 = new THREE.Vector3(cx + r * Math.cos(theta - beta), cy, cz + r * Math.sin(theta - beta));
+
+          // Tangent snap has high priority when drawing lines to circles
+          const tanTol = Math.max(closestDist, snapTolerance * 2.0);
+          const dt1 = cursorPoint.distanceTo(t1);
+          const dt2 = cursorPoint.distanceTo(t2);
+
+          if (dt1 < tanTol && dt1 < closestDist * 1.6) {
+            closestDist = dt1;
+            snappedPoint = t1.clone();
+            snapType = 'tangent';
+          }
+          if (dt2 < tanTol && dt2 < closestDist * 1.6) {
+            closestDist = dt2;
+            snappedPoint = t2.clone();
+            snapType = 'tangent';
+          }
+        }
+      }
+
+      // 2d. Exact Circumference Projection (snap anywhere onto the circle perimeter if no specific snap found)
+      const hasSpecificSnap = snapType && snapType !== 'nearest';
+      if (!hasSpecificSnap) {
+        const curDistCenter = Math.hypot(cursorPoint.x - cx, cursorPoint.z - cz);
+        const radDelta = Math.abs(curDistCenter - r);
+        if (radDelta < closestDist && curDistCenter > 0.001) {
+          const factor = r / curDistCenter;
+          const onCirc = new THREE.Vector3(
+            cx + (cursorPoint.x - cx) * factor,
+            cy,
+            cz + (cursorPoint.z - cz) * factor
+          );
+          closestDist = radDelta;
+          snappedPoint = onCirc;
+          snapType = 'nearest';
+        }
       }
     }
 
@@ -117,6 +191,50 @@ export function snapToEntityPoints(cursorPoint, existingEntities = [], snapToler
   }
 
   return { snapped: false, point: cursorPoint, type: null };
+}
+
+/**
+ * Mathematically computes the two outer bitangent lines connecting two circles.
+ * @param {THREE.Object3D|Object} circleA First circle entity
+ * @param {THREE.Object3D|Object} circleB Second circle entity
+ * @returns {{ topTangent: { p1: THREE.Vector3, p2: THREE.Vector3 }, bottomTangent: { p1: THREE.Vector3, p2: THREE.Vector3 } } | null}
+ */
+export function computeBitangentLines(circleA, circleB) {
+  if (!circleA || !circleB) return null;
+  const cA = circleA.userData?.center || { x: 0, y: 0, z: 0 };
+  const cB = circleB.userData?.center || { x: 0, y: 0, z: 0 };
+  const rA = Number(circleA.userData?.radius || 25);
+  const rB = Number(circleB.userData?.radius || 25);
+  const y = circleA.position?.y ?? cA.y ?? 0;
+
+  const ax = cA.x || 0;
+  const az = cA.z ?? cA.y ?? 0;
+  const bx = cB.x || 0;
+  const bz = cB.z ?? cB.y ?? 0;
+
+  const dx = bx - ax;
+  const dz = bz - az;
+  const d = Math.hypot(dx, dz);
+  if (d <= Math.abs(rA - rB) + 0.1) return null; // One circle is completely inside the other
+
+  const gamma = Math.atan2(dz, dx);
+  const cosPhi = Math.max(-1.0, Math.min(1.0, (rA - rB) / d));
+  const phi = Math.acos(cosPhi);
+
+  // Top outer bitangent (upper crest)
+  const alphaTop = gamma + phi;
+  const p1Top = new THREE.Vector3(ax + rA * Math.cos(alphaTop), y, az + rA * Math.sin(alphaTop));
+  const p2Top = new THREE.Vector3(bx + rB * Math.cos(alphaTop), y, bz + rB * Math.sin(alphaTop));
+
+  // Bottom outer bitangent (lower crest)
+  const alphaBottom = gamma - phi;
+  const p1Bottom = new THREE.Vector3(ax + rA * Math.cos(alphaBottom), y, az + rA * Math.sin(alphaBottom));
+  const p2Bottom = new THREE.Vector3(bx + rB * Math.cos(alphaBottom), y, bz + rB * Math.sin(alphaBottom));
+
+  return {
+    topTangent: { p1: p1Top, p2: p2Top },
+    bottomTangent: { p1: p1Bottom, p2: p2Bottom }
+  };
 }
 
 /**
@@ -417,7 +535,12 @@ export function createSnapIndicator(point, snapType = 'endpoint') {
   const group = new THREE.Group();
   group.name = "Snap_Indicator_Marker";
 
-  const color = snapType === 'endpoint' ? 0x10b981 : snapType === 'midpoint' ? 0x06b6d4 : 0xf59e0b;
+  const color = snapType === 'endpoint' ? 0x10b981 :
+                snapType === 'midpoint' ? 0x06b6d4 :
+                snapType === 'quadrant' ? 0x0284c7 :
+                snapType === 'tangent' ? 0x10b981 :
+                snapType === 'nearest' ? 0x06b6d4 :
+                0xf59e0b;
 
   if (snapType === 'endpoint') {
     // Green square box
@@ -444,8 +567,49 @@ export function createSnapIndicator(point, snapType = 'endpoint') {
     const geo = new THREE.BufferGeometry().setFromPoints(pts);
     const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
     group.add(line);
+  } else if (snapType === 'quadrant') {
+    // Diamond (Mastercam Quadrant glyph ◇)
+    const size = 3.0;
+    const pts = [
+      new THREE.Vector3(point.x, point.y + 0.1, point.z - size),
+      new THREE.Vector3(point.x + size, point.y + 0.1, point.z),
+      new THREE.Vector3(point.x, point.y + 0.1, point.z + size),
+      new THREE.Vector3(point.x - size, point.y + 0.1, point.z),
+      new THREE.Vector3(point.x, point.y + 0.1, point.z - size)
+    ];
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+    group.add(line);
+  } else if (snapType === 'tangent') {
+    // Circle with tangent bar on top (Mastercam Tangent glyph ⊘)
+    const ringGeo = new THREE.RingGeometry(1.2, 2.0, 16);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
+    ringMesh.position.set(point.x, point.y + 0.1, point.z);
+    group.add(ringMesh);
+
+    const barPts = [
+      new THREE.Vector3(point.x - 3.2, point.y + 0.1, point.z - 2.2),
+      new THREE.Vector3(point.x + 3.2, point.y + 0.1, point.z - 2.2)
+    ];
+    const barGeo = new THREE.BufferGeometry().setFromPoints(barPts);
+    const barLine = new THREE.Line(barGeo, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+    group.add(barLine);
+  } else if (snapType === 'nearest') {
+    // Hourglass (On-circle / on-curve snap)
+    const size = 2.0;
+    const pts = [
+      new THREE.Vector3(point.x - size, point.y + 0.1, point.z - size),
+      new THREE.Vector3(point.x + size, point.y + 0.1, point.z - size),
+      new THREE.Vector3(point.x - size, point.y + 0.1, point.z + size),
+      new THREE.Vector3(point.x + size, point.y + 0.1, point.z + size),
+      new THREE.Vector3(point.x - size, point.y + 0.1, point.z - size)
+    ];
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, linewidth: 2 }));
+    group.add(line);
   } else {
-    // Center Circle
+    // Center Circle (⊙)
     const geo = new THREE.RingGeometry(1.2, 2.2, 16);
     geo.rotateX(-Math.PI / 2);
     const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));

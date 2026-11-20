@@ -1064,7 +1064,11 @@ export default function Viewport3D({
       let finalPt = localPt;
       let snapResult = { snapped: false, point: localPt, type: null };
       if (objectSnapRef.current) {
-        snapResult = snapToEntityPoints(localPt, customGeometryRef.current, 5.0);
+        const snapTol = Math.max(8.0, (spherical?.radius || 350) * 0.025);
+        snapResult = snapToEntityPoints(localPt, customGeometryRef.current, snapTol, {
+          anchorPoint: sketchAnchorRef.current,
+          activeTool: activeSketchToolRef.current
+        });
       }
       if (snapResult.snapped) {
         finalPt = snapResult.point;
@@ -1718,7 +1722,21 @@ export default function Viewport3D({
               sketchGhostGroupRef.current.add(ghost);
 
               setDimensionFeedback(`L: ${length.toFixed(2)} mm, ∠ ${angle.toFixed(1)}°`);
-              setSketchPromptText('Specify second endpoint');
+              if (snapResult.snapped) {
+                if (snapResult.type === 'tangent') {
+                  setSketchPromptText('Tangent Snap (⊘) - Click to drop exact tangent endpoint');
+                } else if (snapResult.type === 'quadrant') {
+                  setSketchPromptText('Quadrant Snap (◇) - Click to drop at circle quadrant');
+                } else if (snapResult.type === 'center') {
+                  setSketchPromptText('Center Snap (⊙) - Click to drop at center point');
+                } else if (snapResult.type === 'endpoint') {
+                  setSketchPromptText('Endpoint Snap (■) - Click to drop at entity endpoint');
+                } else {
+                  setSketchPromptText('Specify second endpoint');
+                }
+              } else {
+                setSketchPromptText('Specify second endpoint');
+              }
 
               if (onDrawingUpdateRef.current) {
                 onDrawingUpdateRef.current({
