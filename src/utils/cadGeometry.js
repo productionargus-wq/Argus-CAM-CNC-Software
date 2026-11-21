@@ -3153,6 +3153,23 @@ export function createWireframeLine(
   return line;
 }
 
+export function createWireframePolyline(points = [], options = {}) {
+  const pts = points.map((p) => p instanceof THREE.Vector3 ? p : new THREE.Vector3(p[0] ?? p.x ?? 0, p[1] ?? p.y ?? 0, p[2] ?? p.z ?? 0));
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const color = options.color || 0x38bdf8;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  line.name = options.name || `Wireframe_Curve_${pts.length}`;
+  line.userData = {
+    type: options.type || 'arc',
+    cadType: options.cadType || 'arc',
+    points: pts,
+    center: options.center || null,
+    radius: options.radius || null
+  };
+  return line;
+}
+
 /**
  * Creates a parallel offset wireframe line
  */

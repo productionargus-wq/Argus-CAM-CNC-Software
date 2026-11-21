@@ -1185,12 +1185,62 @@ export function performDynamicTrim(scissorStart, scissorEnd, allEntities = []) {
 
   const target = hitCandidates[0];
   const { entity, pts, hitPoint } = target;
+  const N = pts.length;
+  if (N < 2) return null;
+
+  const isClosed = pts[0].distanceTo(pts[N - 1]) < 1e-3 || entity.userData?.type === 'circle' || entity.userData?.cadType === 'circle';
+
+  // Compute cumulative distance along the target curve
+  const cumDist = [0];
+  for (let i = 0; i < N - 1; i++) {
+    cumDist.push(cumDist[i] + pts[i].distanceTo(pts[i + 1]));
+  }
+  const totalLength = cumDist[N - 1];
+  if (totalLength < 1e-4) return null;
+
+  // Helper to get point at fractional parameter u in [0, 1]
+  const getPointAtParam = (u) => {
+    const s = Math.max(0, Math.min(1, u)) * totalLength;
+    for (let i = 0; i < N - 1; i++) {
+      if (s >= cumDist[i] - 1e-6 && s <= cumDist[i + 1] + 1e-6) {
+        const segLen = cumDist[i + 1] - cumDist[i];
+        const t = segLen > 1e-6 ? (s - cumDist[i]) / segLen : 0;
+        return new THREE.Vector3().lerpVectors(pts[i], pts[i + 1], Math.max(0, Math.min(1, t)));
+      }
+    }
+    return pts[N - 1].clone();
+  };
+
+  // Helper to extract all vertices on the curve between uA and uB (uA <= uB)
+  const extractSubCurve = (uA, uB) => {
+    if (uA >= uB) return [];
+    const pA = getPointAtParam(uA);
+    const pB = getPointAtParam(uB);
+    const sA = uA * totalLength;
+    const sB = uB * totalLength;
+    const subPts = [pA];
+
+    for (let i = 0; i < N; i++) {
+      const s = cumDist[i];
+      if (s > sA + 1e-3 && s < sB - 1e-3) {
+        subPts.push(pts[i].clone());
+      }
+    }
+    subPts.push(pB);
+    return subPts;
+  };
+
+  // Calculate normalized parameter of scissor cut hitPoint
+  const scissorSegIdx = target.segIndex;
+  const scissorSegLen = cumDist[scissorSegIdx + 1] - cumDist[scissorSegIdx];
+  const scissorS = cumDist[scissorSegIdx] + target.hitT * scissorSegLen;
+  const scissorU = Math.max(0, Math.min(1, scissorS / totalLength));
 
   // 2. Find all intersections of this target entity with ALL OTHER entities in the model
-  const cutParams = [0, 1]; // Endpoints
+  const cutParams = [];
   const otherEntities = allEntities.filter((e) => e.uuid !== entity.uuid && isSelectableWireframeEntity(e));
 
-  for (let i = 0; i < pts.length - 1; i++) {
+  for (let i = 0; i < N - 1; i++) {
     const pA = pts[i];
     const pB = pts[i + 1];
     const segLen = pA.distanceTo(pB);
@@ -1201,41 +1251,92 @@ export function performDynamicTrim(scissorStart, scissorEnd, allEntities = []) {
       for (let j = 0; j < otherPts.length - 1; j++) {
         const xRes = findLineIntersection2D(pA, pB, otherPts[j], otherPts[j + 1]);
         if (xRes && xRes.isSegmentA && xRes.isSegmentB) {
-          // Compute cumulative parameter along full polyline/line
-          cutParams.push(xRes.t);
+          const cutS = cumDist[i] + xRes.t * segLen;
+          const cutU = Math.max(0, Math.min(1, cutS / totalLength));
+          cutParams.push(cutU);
         }
       }
     });
   }
 
-  // Remove duplicate cut parameters and sort
-  const sortedParams = [...new Set(cutParams.map((t) => Number(t.toFixed(5))))].sort((a, b) => a - b);
+  // Remove duplicates and sort
+  const sortedCuts = [...new Set(cutParams.map((u) => Number(u.toFixed(5))))]
+    .filter((u) => u > 1e-4 && u < 1 - 1e-4)
+    .sort((a, b) => a - b);
 
-  // Find parameter of scissor cut hitPoint
-  const pStart = pts[0];
-  const pEnd = pts[pts.length - 1];
-  const fullLen = pStart.distanceTo(pEnd);
-  const scissorT = fullLen > 0 ? pStart.distanceTo(hitPoint) / fullLen : target.hitT;
-
-  // Find sub-interval containing scissorT
-  let snipIdx = 0;
-  for (let k = 0; k < sortedParams.length - 1; k++) {
-    if (scissorT >= sortedParams[k] - 1e-3 && scissorT <= sortedParams[k + 1] + 1e-3) {
-      snipIdx = k;
-      break;
-    }
-  }
-
-  // Sub-segments to keep: all except snipIdx
   const keptSegments = [];
-  for (let k = 0; k < sortedParams.length - 1; k++) {
-    if (k !== snipIdx) {
-      const tA = sortedParams[k];
-      const tB = sortedParams[k + 1];
-      const ptA = new THREE.Vector3().lerpVectors(pStart, pEnd, tA);
-      const ptB = new THREE.Vector3().lerpVectors(pStart, pEnd, tB);
-      if (ptA.distanceTo(ptB) > 0.5) {
-        keptSegments.push({ p1: ptA, p2: ptB });
+
+  if (isClosed) {
+    // If fewer than 2 cuts, cannot partition a closed loop
+    if (sortedCuts.length < 2) return null;
+
+    const intervals = [];
+    const K = sortedCuts.length;
+    for (let k = 0; k < K - 1; k++) {
+      intervals.push({ uA: sortedCuts[k], uB: sortedCuts[k + 1], wrapped: false });
+    }
+    intervals.push({ uA: sortedCuts[K - 1], uB: sortedCuts[0], wrapped: true });
+
+    let snipIndex = -1;
+    for (let k = 0; k < intervals.length; k++) {
+      const { uA, uB, wrapped } = intervals[k];
+      if (!wrapped) {
+        if (scissorU >= uA - 1e-3 && scissorU <= uB + 1e-3) {
+          snipIndex = k;
+          break;
+        }
+      } else {
+        if (scissorU >= uA - 1e-3 || scissorU <= uB + 1e-3) {
+          snipIndex = k;
+          break;
+        }
+      }
+    }
+
+    if (snipIndex === -1) snipIndex = 0;
+
+    for (let k = 0; k < intervals.length; k++) {
+      if (k === snipIndex) continue;
+      const { uA, uB, wrapped } = intervals[k];
+      let subPts = [];
+      if (!wrapped) {
+        subPts = extractSubCurve(uA, uB);
+      } else {
+        const part1 = extractSubCurve(uA, 1.0);
+        const part2 = extractSubCurve(0.0, uB);
+        subPts = [...part1.slice(0, -1), ...part2];
+      }
+
+      if (subPts.length >= 2) {
+        keptSegments.push({
+          p1: subPts[0],
+          p2: subPts[subPts.length - 1],
+          points: subPts
+        });
+      }
+    }
+  } else {
+    // Open curve (Line or Arc)
+    const allBounds = [0, ...sortedCuts, 1];
+    let snipIndex = 0;
+    for (let k = 0; k < allBounds.length - 1; k++) {
+      if (scissorU >= allBounds[k] - 1e-3 && scissorU <= allBounds[k + 1] + 1e-3) {
+        snipIndex = k;
+        break;
+      }
+    }
+
+    for (let k = 0; k < allBounds.length - 1; k++) {
+      if (k === snipIndex) continue;
+      const uA = allBounds[k];
+      const uB = allBounds[k + 1];
+      const subPts = extractSubCurve(uA, uB);
+      if (subPts.length >= 2) {
+        keptSegments.push({
+          p1: subPts[0],
+          p2: subPts[subPts.length - 1],
+          points: subPts
+        });
       }
     }
   }
@@ -1243,8 +1344,7 @@ export function performDynamicTrim(scissorStart, scissorEnd, allEntities = []) {
   return {
     targetEntity: entity,
     hitPoint,
-    keptSegments,
-    snippedInterval: [sortedParams[snipIdx], sortedParams[snipIdx + 1]]
+    keptSegments
   };
 }
 

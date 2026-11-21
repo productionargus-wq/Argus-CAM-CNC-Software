@@ -30,6 +30,7 @@ import {
   parseSTLFile,
   calculatePartMetrics,
   createWireframeLine,
+  createWireframePolyline,
   createWireframeRect,
   createWireframeCircle,
   createPointMarker,
@@ -2361,12 +2362,20 @@ export default function Viewport3D({
             const entities = customGeometryRef.current || [];
             const trimRes = performDynamicTrim(scissorStart, scissorEnd, entities);
             if (trimRes && trimRes.targetEntity) {
-              const newCurves = trimRes.keptSegments.map((seg, idx) =>
-                createWireframeLine([seg.p1.x, seg.p1.y, seg.p1.z], [seg.p2.x, seg.p2.y, seg.p2.z], {
+              const newCurves = trimRes.keptSegments.map((seg, idx) => {
+                if (seg.points && seg.points.length > 2) {
+                  return createWireframePolyline(seg.points, {
+                    name: `${trimRes.targetEntity.name || 'Wireframe'}_Trimmed_${idx + 1}`,
+                    color: 0x38bdf8,
+                    type: 'arc',
+                    cadType: 'arc'
+                  });
+                }
+                return createWireframeLine([seg.p1.x, seg.p1.y, seg.p1.z], [seg.p2.x, seg.p2.y, seg.p2.z], {
                   name: `${trimRes.targetEntity.name || 'Wireframe'}_Trimmed_${idx + 1}`,
                   color: 0x38bdf8
-                })
-              );
+                });
+              });
               const nextList = entities.filter((ent) => ent !== trimRes.targetEntity).concat(newCurves);
               if (onReplaceCustomGeometryRef.current) {
                 onReplaceCustomGeometryRef.current(nextList);

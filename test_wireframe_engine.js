@@ -140,6 +140,35 @@ console.log('\n[5] Testing performDynamicTrim...');
   assert(Math.abs(kept.p1.x - (-100)) < 1e-2, `Kept start X should be -100, got ${kept.p1.x}`);
   assert(Math.abs(kept.p2.x - 0) < 1e-2, `Kept end X should be 0 (the intersection), got ${kept.p2.x}`);
   console.log(`  ✓ Mastercam Dynamic Trim correctly snipped segment [0, 100], preserving [${kept.p1.x.toFixed(1)}, ${kept.p2.x.toFixed(1)}]`);
+
+  // Test 5b: Dynamic trim on a Circle intersected by two lines (e.g. Cam Lobe B)
+  const circlePts = [];
+  const segs = 64;
+  for (let i = 0; i <= segs; i++) {
+    const a = (i / segs) * Math.PI * 2;
+    circlePts.push(new THREE.Vector3(Math.cos(a) * 20, 0, Math.sin(a) * 20));
+  }
+  const circleEnt = {
+    uuid: 'circle-1',
+    name: 'Wireframe_Circle_LobeB',
+    userData: { type: 'circle', cadType: 'circle', points: circlePts }
+  };
+  const boundLine1 = {
+    uuid: 'line-cut-1',
+    userData: { cadType: 'line', points: [new THREE.Vector3(-30, 0, 10), new THREE.Vector3(30, 0, 10)] }
+  };
+  const boundLine2 = {
+    uuid: 'line-cut-2',
+    userData: { cadType: 'line', points: [new THREE.Vector3(-30, 0, -10), new THREE.Vector3(30, 0, -10)] }
+  };
+  // Snip the left side arc of the circle (X = -20)
+  const circleScissorStart = new THREE.Vector3(-25, 0, 0);
+  const circleScissorEnd = new THREE.Vector3(-15, 0, 0);
+  const circleTrimRes = performDynamicTrim(circleScissorStart, circleScissorEnd, [circleEnt, boundLine1, boundLine2]);
+  assert(circleTrimRes !== null, 'Should detect circle');
+  assert(circleTrimRes.keptSegments.length > 0, 'Should keep surviving arcs of the circle');
+  assert(circleTrimRes.keptSegments[0].points.length > 2, 'Kept segment should preserve smooth arc points');
+  console.log(`  ✓ Circle Dynamic Trim: Preserved ${circleTrimRes.keptSegments.length} smooth curved arc(s) after snipping boundary segment`);
 }
 
 // 6. Test computeFilletBetweenEntities
