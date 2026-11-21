@@ -1,10 +1,19 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
-import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box, CheckCircle2, AlertTriangle, AlertCircle, Info } from 'lucide-react';
+import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box, CheckCircle2, AlertTriangle, AlertCircle, Info, FolderOpen, Undo2, Redo2 } from 'lucide-react';
 import TitleBar from './components/TitleBar';
 import RibbonBar from './components/RibbonBar';
 import OperationsTree from './components/OperationsTree';
 import Viewport3D from './components/Viewport3D';
+import { useMobileLayout } from './hooks/useMobileLayout';
+import MobileNavBar from './components/mobile/MobileNavBar';
+import MobileBottomSheet from './components/mobile/MobileBottomSheet';
+import { 
+  MobileCADPanel, 
+  MobileToolpathsPanel, 
+  MobileSimulatePanel, 
+  MobileGCodePanel 
+} from './components/mobile/MobileContentPanels';
 import NC2CheckModal from './components/NC2CheckModal';
 import MachineSimModal from './components/MachineSimModal';
 import StockSetupModal from './components/StockSetupModal';
@@ -266,6 +275,14 @@ export default function App() {
   const [currentProjectName, setCurrentProjectName] = useState('Surface_Finish_Pencil.mcam');
   const [unitSystem, setUnitSystem] = useState('metric');
   const [isFileBackstageOpen, setIsFileBackstageOpen] = useState(false);
+  const {
+    isMobile,
+    isLandscape,
+    activeMobileTab,
+    isMobileDrawerOpen,
+    openMobileTab,
+    closeMobileDrawer
+  } = useMobileLayout();
   const [projectDescriptor, setProjectDescriptor] = useState('Mastercam 5-Axis Multi-Surface Machining Project for DMU 50 VMC');
   const [projectCreatedDate, setProjectCreatedDate] = useState(() => new Date(Date.now() - 3600000 * 24 * 2));
   const [projectLastModifiedDate, setProjectLastModifiedDate] = useState(() => new Date());
@@ -7652,8 +7669,52 @@ export default function App() {
 
   return (
     <div id="root" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* 1. TitleBar */}
-      <TitleBar
+      {isMobile ? (
+        <header className="h-12 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-3 text-slate-200 select-none z-30 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-black text-white text-xs shadow-md">
+              A
+            </div>
+            <div className="leading-tight">
+              <div className="text-xs font-bold text-white tracking-wide truncate max-w-[150px]">
+                {currentProjectName || 'Argus CAM Mobile'}
+              </div>
+              <div className="text-[9px] text-cyan-400 font-medium">
+                {activeMachine?.name ? activeMachine.name.split(' ')[0] : 'Fanuc 5-Axis'}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleOpenViaNativeDialog}
+              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium border border-slate-700 flex items-center gap-1 active:scale-95"
+              title="Open STEP / IGES / CAD File"
+            >
+              <FolderOpen size={13} className="text-cyan-400" />
+              Open
+            </button>
+            <button
+              onClick={handleUndo}
+              disabled={historyIndex <= 0}
+              className={`p-1.5 rounded bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 ${historyIndex <= 0 ? 'opacity-40' : ''}`}
+              title="Undo"
+            >
+              <Undo2 size={14} />
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={historyIndex >= history.length - 1}
+              className={`p-1.5 rounded bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 ${historyIndex >= history.length - 1 ? 'opacity-40' : ''}`}
+              title="Redo"
+            >
+              <Redo2 size={14} />
+            </button>
+          </div>
+        </header>
+      ) : (
+        <>
+          {/* 1. TitleBar */}
+          <TitleBar
         currentProject={currentProjectName}
         activeMachine={activeMachine}
         theme={theme}
@@ -7938,20 +7999,25 @@ export default function App() {
         onChangeViewMode={setWorkspaceViewMode}
         onStartFlowlineWizard={() => handleFlowlineWizardStep('wizard_new_file', 1)}
       />
+      </>
+      )}
 
       {/* Flowline 3-Axis Guided Wizard Bar */}
-      <FlowlineWizardBar
-        isActive={flowlineWizardActive}
-        currentStep={flowlineWizardStep}
-        onStepClick={handleFlowlineWizardStep}
-        onClose={() => setFlowlineWizardActive(false)}
-        unitSystem={unitSystem}
-        activeMachineName={activeMachine?.name || '3-Axis Mill Default'}
-      />
+      {!isMobile && (
+        <FlowlineWizardBar
+          isActive={flowlineWizardActive}
+          currentStep={flowlineWizardStep}
+          onStepClick={handleFlowlineWizardStep}
+          onClose={() => setFlowlineWizardActive(false)}
+          unitSystem={unitSystem}
+          activeMachineName={activeMachine?.name || '3-Axis Mill Default'}
+        />
+      )}
 
       {/* 3. Main CAD/CAM Workspace */}
       <div className="workspace-body">
-        {/* Left Operations / Levels / Solids / Planes Manager Tree */}
+        {/* Left Operations / Levels / Solids / Planes Manager Tree (Desktop only, drawer on mobile) */}
+        {!isMobile && (
         <OperationsTree
           operations={operations}
           onToggleOp={handleToggleOp}
@@ -8247,6 +8313,7 @@ export default function App() {
           onOkModifyLength={handleOkModifyLength}
           onCancelModifyLength={handleCancelModifyLength}
         />
+        )}
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
         {workspaceViewMode === '2d' && (
@@ -8549,75 +8616,77 @@ export default function App() {
         onSaveBookmark={handleSaveViewsheetBookmark}
       />
 
-      {/* 5. Bottom Status Bar */}
-      <StatusBar
-        coords={coords}
-        activeWcs={activeWcs}
-        activeCPlane={activePlane}
-        activeTPlane="Top"
-        selectedCount={selectedEntityIds.length || (currentModel ? 1 : 0)}
-        isSectionView={clippingPlane?.enabled}
-        onToggleSectionView={() => setClippingPlane(cp => ({ ...cp, enabled: !cp?.enabled }))}
-        unitSystem={unitSystem}
-        onToggleUnitSystem={() => {
-          setUnitSystem((prev) => {
-            const next = prev === 'metric' ? 'imperial' : 'metric';
-            showToast(`Active Units switched to: ${next.toUpperCase()}`, 'info', 1800);
-            return next;
-          });
-        }}
-        onSelectCPlane={(plane) => {
-          setActivePlane(plane);
-          showToast(`Cplane set to ${plane}`, 'info', 1600);
-        }}
-        onSelectWcs={(wcs) => {
-          setActiveWcs(wcs);
-          showToast(`Active WCS Datum: ${wcs}`, 'info', 1600);
-        }}
-        onToggleAxes={() => {
-          setShowAxes((prev) => {
-            const next = !prev;
-            showToast(`Origin crosshairs (F9): ${next ? 'ON' : 'OFF'}`, 'info', 1500);
-            return next;
-          });
-        }}
-        showAxes={showAxes}
-        activeRadius={isSketchModeActive && (sketchTool === 'circle' || activeDrawingTool === 'circle' || sketchTool === 'arc_tangent' || activeDrawingTool === 'arc_tangent') ? (sketchTool === 'arc_tangent' ? arcParams.radius : circleParams.radius) : null}
-        activeRectDimensions={isSketchModeActive && (sketchTool === 'rect' || activeDrawingTool === 'rect') ? { width: rectParams.width, height: rectParams.height } : null}
-        activeLineDimensions={
-          isSketchModeActive && (sketchTool === 'line' || activeDrawingTool === 'line')
-            ? { length: lineParams.length, angle: lineParams.angle }
-            : (selectedEntitiesList.length === 1 && (selectedEntitiesList[0]?.userData?.cadType === 'line' || selectedEntitiesList[0]?.userData?.type === 'line' || selectedEntitiesList[0]?.userData?.p1))
-              ? (() => {
-                  const ent = selectedEntitiesList[0];
-                  const ud = ent.userData || {};
-                  const p1 = ud.p1 || (ent.geometry?.attributes?.position ? { x: ent.geometry.attributes.position.getX(0), y: ent.geometry.attributes.position.getY(0), z: ent.geometry.attributes.position.getZ(0) } : null);
-                  const p2 = ud.p2 || (ent.geometry?.attributes?.position ? { x: ent.geometry.attributes.position.getX(1), y: ent.geometry.attributes.position.getY(1), z: ent.geometry.attributes.position.getZ(1) } : null);
-                  if (!p1 || !p2) return null;
-                  const dx = p2.x - p1.x;
-                  const dz = p2.z - p1.z;
-                  return {
-                    length: Math.hypot(dx, dz),
-                    angle: (Math.atan2(-dz, dx) * 180 / Math.PI + 360) % 360
-                  };
-                })()
-              : null
-        }
-        constructionZ={constructionZ}
-        onChangeConstructionZ={(val) => {
-          setConstructionZ(val);
-          showToast(`Construction Z Elevation: ${val.toFixed(4)} mm`, 'info', 1600);
-        }}
-        constructionMode={constructionMode}
-        onToggleConstructionMode={() => {
-          setConstructionMode((prev) => {
-            const next = prev === '3d' ? '2d' : '3d';
-            showToast(`Construction Mode: ${next.toUpperCase()} (${next === '2d' ? 'Locked to CPlane Z' : 'Full 3D'})`, 'info', 1800);
-            return next;
-          });
-        }}
-        theme={theme}
-      />
+      {/* 5. Bottom Status Bar (Desktop only) */}
+      {!isMobile && (
+        <StatusBar
+          coords={coords}
+          activeWcs={activeWcs}
+          activeCPlane={activePlane}
+          activeTPlane="Top"
+          selectedCount={selectedEntityIds.length || (currentModel ? 1 : 0)}
+          isSectionView={clippingPlane?.enabled}
+          onToggleSectionView={() => setClippingPlane(cp => ({ ...cp, enabled: !cp?.enabled }))}
+          unitSystem={unitSystem}
+          onToggleUnitSystem={() => {
+            setUnitSystem((prev) => {
+              const next = prev === 'metric' ? 'imperial' : 'metric';
+              showToast(`Active Units switched to: ${next.toUpperCase()}`, 'info', 1800);
+              return next;
+            });
+          }}
+          onSelectCPlane={(plane) => {
+            setActivePlane(plane);
+            showToast(`Cplane set to ${plane}`, 'info', 1600);
+          }}
+          onSelectWcs={(wcs) => {
+            setActiveWcs(wcs);
+            showToast(`Active WCS Datum: ${wcs}`, 'info', 1600);
+          }}
+          onToggleAxes={() => {
+            setShowAxes((prev) => {
+              const next = !prev;
+              showToast(`Origin crosshairs (F9): ${next ? 'ON' : 'OFF'}`, 'info', 1500);
+              return next;
+            });
+          }}
+          showAxes={showAxes}
+          activeRadius={isSketchModeActive && (sketchTool === 'circle' || activeDrawingTool === 'circle' || sketchTool === 'arc_tangent' || activeDrawingTool === 'arc_tangent') ? (sketchTool === 'arc_tangent' ? arcParams.radius : circleParams.radius) : null}
+          activeRectDimensions={isSketchModeActive && (sketchTool === 'rect' || activeDrawingTool === 'rect') ? { width: rectParams.width, height: rectParams.height } : null}
+          activeLineDimensions={
+            isSketchModeActive && (sketchTool === 'line' || activeDrawingTool === 'line')
+              ? { length: lineParams.length, angle: lineParams.angle }
+              : (selectedEntitiesList.length === 1 && (selectedEntitiesList[0]?.userData?.cadType === 'line' || selectedEntitiesList[0]?.userData?.type === 'line' || selectedEntitiesList[0]?.userData?.p1))
+                ? (() => {
+                    const ent = selectedEntitiesList[0];
+                    const ud = ent.userData || {};
+                    const p1 = ud.p1 || (ent.geometry?.attributes?.position ? { x: ent.geometry.attributes.position.getX(0), y: ent.geometry.attributes.position.getY(0), z: ent.geometry.attributes.position.getZ(0) } : null);
+                    const p2 = ud.p2 || (ent.geometry?.attributes?.position ? { x: ent.geometry.attributes.position.getX(1), y: ent.geometry.attributes.position.getY(1), z: ent.geometry.attributes.position.getZ(1) } : null);
+                    if (!p1 || !p2) return null;
+                    const dx = p2.x - p1.x;
+                    const dz = p2.z - p1.z;
+                    return {
+                      length: Math.hypot(dx, dz),
+                      angle: (Math.atan2(-dz, dx) * 180 / Math.PI + 360) % 360
+                    };
+                  })()
+                : null
+          }
+          constructionZ={constructionZ}
+          onChangeConstructionZ={(val) => {
+            setConstructionZ(val);
+            showToast(`Construction Z Elevation: ${val.toFixed(4)} mm`, 'info', 1600);
+          }}
+          constructionMode={constructionMode}
+          onToggleConstructionMode={() => {
+            setConstructionMode((prev) => {
+              const next = prev === '3d' ? '2d' : '3d';
+              showToast(`Construction Mode: ${next.toUpperCase()} (${next === '2d' ? 'Locked to CPlane Z' : 'Full 3D'})`, 'info', 1800);
+              return next;
+            });
+          }}
+          theme={theme}
+        />
+      )}
 
       {/* Mastercam Backstage File Menu UI */}
       <FileBackstageView
@@ -9733,11 +9802,169 @@ export default function App() {
         activeWcs={activeWcs}
       />
 
+      {/* Mobile Bottom Navigation & Sheets */}
+      {isMobile && (
+        <MobileNavBar
+          activeTab={activeMobileTab}
+          onSelectTab={openMobileTab}
+          isDrawerOpen={isMobileDrawerOpen}
+          operationsCount={operations.length}
+          hasModel={Boolean(currentModel || customGeometry.length > 0)}
+        />
+      )}
+
+      {isMobile && (
+        <MobileBottomSheet
+          isOpen={isMobileDrawerOpen && activeMobileTab !== 'viewport'}
+          onClose={closeMobileDrawer}
+          title={
+            activeMobileTab === 'cad' ? 'CAD Drawing Tools' :
+            activeMobileTab === 'toolpaths' ? '3D Toolpath Strategies' :
+            activeMobileTab === 'tree' ? 'Operations Tree' :
+            activeMobileTab === 'simulate' ? 'CNC Simulation & Verify' :
+            activeMobileTab === 'gcode' ? 'G-Code Post Processor' : 'Controls'
+          }
+          subtitle={
+            activeMobileTab === 'cad' ? 'Select 2D/3D Wireframe or Surface tool' :
+            activeMobileTab === 'toolpaths' ? 'Surface Finish Flowline, OptiRough, Contour, etc.' :
+            activeMobileTab === 'tree' ? `${operations.length} Operation(s) • Levels • Solids` :
+            activeMobileTab === 'simulate' ? '3D Toolpath Tracing & Volumetric Verify' :
+            activeMobileTab === 'gcode' ? (activeMachine?.name || 'Fanuc 5-Axis') : ''
+          }
+        >
+          {activeMobileTab === 'cad' && (
+            <MobileCADPanel
+              onSelectTool={(tool) => {
+                if (tool === 'extrude') {
+                  setActiveSurfaceTool('extrude');
+                  setIsChainingPaletteOpen(true);
+                } else {
+                  handleStartInteractiveSketch(tool);
+                }
+                closeMobileDrawer();
+              }}
+              onOpenDrafting={() => {
+                handleOpenDraftingModal('linear');
+                closeMobileDrawer();
+              }}
+              onOpenTransform={() => {
+                handleOpenTransformModal('translate');
+                closeMobileDrawer();
+              }}
+              onClose={closeMobileDrawer}
+            />
+          )}
+
+          {activeMobileTab === 'toolpaths' && (
+            <MobileToolpathsPanel
+              onOpenFlowline={() => openSurfaceFinishSelection('flowline', null)}
+              onOpenOptiRough={() => handleQuickAddOp('optirough')}
+              onOpenContour={() => openSurfaceFinishSelection('contour', null)}
+              onOpenPocket={() => openSurfaceFinishSelection('pocket', null)}
+              onOpenDrill={() => handleQuickAddOp('drill')}
+              onOpenSwarf={() => handleQuickAddOp('swarf')}
+              onClose={closeMobileDrawer}
+            />
+          )}
+
+          {activeMobileTab === 'tree' && (
+            <div className="max-h-[65vh] overflow-y-auto">
+              <OperationsTree
+                operations={operations}
+                onToggleOp={handleToggleOp}
+                activeOpId={activeOpId}
+                onSelectOp={setActiveOpId}
+                onEditOp={handleEditOp}
+                onAddOp={handleQuickAddOp}
+                onRegenerate={handleRegenerateAll}
+                onOpenStockModal={() => setIsStockModalOpen(true)}
+                onOpenAFR={() => setIsAFRModalOpen(true)}
+                activeManagerTab={activeManagerTab}
+                onSelectManagerTab={setActiveManagerTab}
+                levels={levels}
+                onToggleLevel={handleToggleLevel}
+                activeLevelId={levels.find((l) => l.active)?.id || 1}
+                onSetActiveLevel={handleSetActiveLevel}
+                onAddLevel={handleAddLevel}
+                planes={planesList}
+                activePlane={activePlane}
+                onSelectPlane={handleSelectPlane}
+                onOpenCPlanesModal={() => setIsCPlanesModalOpen(true)}
+                onDeletePlane={handleDeletePlane}
+                solids={solidsList}
+                activeSolidId={solidsList.find((s) => s.active)?.id || 1}
+                onSelectSolid={(id) => setSolidsList((prev) => prev.map((s) => ({ ...s, active: s.id === id })))}
+                onToggleSolidVisibility={handleToggleSolidVisibility}
+                onOpenSolidsModal={handleOpenSolidsModal}
+                onStartBackplot={handleStartBackplot}
+                onStartVerify={handleStartVerify}
+                activeMachine={activeMachine}
+                stockConfig={stockConfig}
+                currentProjectName={currentProjectName}
+                onOpenPostModal={() => setIsPostModalOpen(true)}
+                onOpenToolManager={() => setIsToolManagerOpen(true)}
+                onOpenHSMFilter={() => setIsHSMFilterModalOpen(true)}
+                onOpenHelpGuide={() => setIsHelpGuideOpen(true)}
+                onOpenWireframeModal={handleOpenWireframeModal}
+                onOpenChaining={() => setIsMastercamChainingModalOpen(true)}
+                onOpenMachineConfig={() => setIsMachineConfigModalOpen(true)}
+                onOpenFeedsSpeeds={handleOpenFeedsSpeeds}
+                onMoveOpUp={(id) => handleMoveOp(id, -1)}
+                onMoveOpDown={(id) => handleMoveOp(id, 1)}
+                onDeleteOp={handleDeleteOpById}
+                onToggleLockOp={handleToggleLockOp}
+                onToggleGhostOp={handleToggleGhostOp}
+              />
+            </div>
+          )}
+
+          {activeMobileTab === 'simulate' && (
+            <MobileSimulatePanel
+              isBackplotActive={isBackplotActive}
+              onToggleBackplot={() => {
+                if (isBackplotActive) {
+                  setIsBackplotActive(false);
+                } else {
+                  handleStartBackplot('all');
+                }
+              }}
+              onStepForward={() => {}}
+              onStepBack={() => {}}
+              onReset={() => {
+                setIsBackplotActive(false);
+              }}
+              backplotProgress={0}
+              onOpenVerifyModal={() => {
+                setIsSimModalOpen(true);
+                closeMobileDrawer();
+              }}
+              onClose={closeMobileDrawer}
+            />
+          )}
+
+          {activeMobileTab === 'gcode' && (
+            <MobileGCodePanel
+              gcode=""
+              onPostProcess={() => {
+                setIsPostModalOpen(true);
+                closeMobileDrawer();
+              }}
+              onDownload={() => {
+                setIsGCodeViewerOpen(true);
+                closeMobileDrawer();
+              }}
+              projectName={currentProjectName}
+            />
+          )}
+        </MobileBottomSheet>
+      )}
+
       {/* Floating Modern Toast Notification Stack */}
       <div style={{
         position: 'fixed',
-        bottom: '32px',
+        bottom: isMobile ? '76px' : '32px',
         right: '16px',
+        left: isMobile ? '16px' : 'auto',
         zIndex: 99999,
         display: 'flex',
         flexDirection: 'column',

@@ -13,9 +13,16 @@
     "preview": "vite preview",
     "electron:start": "electron .",
     "electron:pack": "vite build && electron-builder --win --dir",
-    "electron:build": "vite build && electron-builder --win"
+    "electron:build": "vite build && electron-builder --win",
+    "mobile:sync": "vite build && npx cap sync",
+    "mobile:android": "npx cap open android",
+    "mobile:add:android": "npx cap add android",
+    "mobile:run:android": "vite build && npx cap run android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
     "clipper-lib": "^6.4.2",
     "gcode-parser": "^2.2.0",
     "lucide-react": "^1.16.0",

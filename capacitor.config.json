@@ -1,0 +1,13 @@
+{
+  "appId": "com.argus.mastercam",
+  "appName": "Argus Master CAM",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "hardwareAccelerated": true
+  }
+}

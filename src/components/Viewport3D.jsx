@@ -2490,6 +2490,136 @@ export default function Viewport3D({
       }
     };
 
+    // Multi-touch gestures for mobile / touch devices (1-finger orbit, 2-finger pinch zoom, 2-finger pan)
+    let isTouchDragging = false;
+    let isTouchPanning = false;
+    let prevTouchX = 0;
+    let prevTouchY = 0;
+    let touchDownTime = 0;
+    let touchDownX = 0;
+    let touchDownY = 0;
+    let initialPinchDist = null;
+    let initialTouchRadius = null;
+    let lastTouchMidpoint = null;
+
+    const onTouchStart = (e) => {
+      touchDownTime = performance.now();
+      if (e.touches.length === 1) {
+        touchDownX = e.touches[0].clientX;
+        touchDownY = e.touches[0].clientY;
+        prevTouchX = touchDownX;
+        prevTouchY = touchDownY;
+        isTouchDragging = true;
+        isTouchPanning = false;
+        initialPinchDist = null;
+      } else if (e.touches.length === 2) {
+        isTouchDragging = false;
+        isTouchPanning = true;
+        initialPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        initialTouchRadius = spherical.radius;
+        lastTouchMidpoint = {
+          x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+          y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+        };
+      }
+    };
+
+    const onTouchMove = (e) => {
+      if (e.touches.length === 1 && isTouchDragging) {
+        if (e.cancelable) e.preventDefault();
+        const deltaX = e.touches[0].clientX - prevTouchX;
+        const deltaY = e.touches[0].clientY - prevTouchY;
+        prevTouchX = e.touches[0].clientX;
+        prevTouchY = e.touches[0].clientY;
+
+        spherical.theta -= deltaX * 0.008;
+        spherical.phi = Math.max(0.01, Math.min(Math.PI - 0.01, spherical.phi - deltaY * 0.008));
+        camera.up.set(0, 1, 0);
+        const offset = new THREE.Vector3().setFromSpherical(spherical);
+        camera.position.copy(orbitTargetRef.current).add(offset);
+        camera.lookAt(orbitTargetRef.current);
+      } else if (e.touches.length === 2) {
+        if (e.cancelable) e.preventDefault();
+        // 2-Finger Pinch-to-Zoom
+        const curPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        if (initialPinchDist && initialPinchDist > 5 && curPinchDist > 5) {
+          const pinchRatio = initialPinchDist / curPinchDist;
+          spherical.radius = Math.max(10, Math.min(50000, initialTouchRadius * pinchRatio));
+          const offset = new THREE.Vector3().setFromSpherical(spherical);
+          camera.position.copy(orbitTargetRef.current).add(offset);
+          camera.lookAt(orbitTargetRef.current);
+          setCamDist(spherical.radius);
+        }
+
+        // 2-Finger Pan
+        const curMidpoint = {
+          x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+          y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+        };
+        if (lastTouchMidpoint) {
+          const deltaMidX = curMidpoint.x - lastTouchMidpoint.x;
+          const deltaMidY = curMidpoint.y - lastTouchMidpoint.y;
+          const panFactor = Math.max(0.05, (spherical.radius / 700) * 0.4);
+          const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
+          const up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
+          camera.position.addScaledVector(right, -deltaMidX * panFactor).addScaledVector(up, deltaMidY * panFactor);
+          orbitTargetRef.current.addScaledVector(right, -deltaMidX * panFactor).addScaledVector(up, deltaMidY * panFactor);
+        }
+        lastTouchMidpoint = curMidpoint;
+      }
+    };
+
+    const onTouchEnd = (e) => {
+      const touchDuration = performance.now() - touchDownTime;
+      if (e.touches.length === 0) {
+        if (isTouchDragging && touchDuration < 300) {
+          const movedDist = Math.hypot(prevTouchX - touchDownX, prevTouchY - touchDownY);
+          if (movedDist < 8) {
+            // Quick tap: raycast entity or solid face
+            const rect = dom.getBoundingClientRect();
+            const tapX = touchDownX - rect.left;
+            const tapY = touchDownY - rect.top;
+            if (isSolidFaceSelectActive()) {
+              const res = raycastSolidFaceAtClient(touchDownX, touchDownY);
+              if (res?.hitFace) {
+                handleSolidFaceClick(res.hitFace.id, false);
+              }
+            } else {
+              const picked = hitTestEntityAtScreenPoint(
+                customGeometryRef.current || [],
+                camera,
+                { x: tapX, y: tapY },
+                rect.width,
+                rect.height,
+                { worldYOffset: 49, layerVisibility: layerVisibilityRef.current }
+              );
+              if (picked) {
+                const pickedId = getCustomEntityId(picked);
+                onChangeSelectedEntities?.([pickedId]);
+              }
+            }
+          }
+        }
+        isTouchDragging = false;
+        isTouchPanning = false;
+        initialPinchDist = null;
+        lastTouchMidpoint = null;
+      } else if (e.touches.length === 1) {
+        prevTouchX = e.touches[0].clientX;
+        prevTouchY = e.touches[0].clientY;
+        isTouchDragging = true;
+        isTouchPanning = false;
+        initialPinchDist = null;
+        lastTouchMidpoint = null;
+      }
+    };
+
     const onDoubleClick = (e) => {
       if ((polygonPointsRef.current?.length || 0) >= 3 && getEffectiveMethod() === 'polygon') {
         e.preventDefault();
@@ -2530,6 +2660,10 @@ export default function Viewport3D({
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
     dom.addEventListener('wheel', onWheel, { passive: false });
+    dom.addEventListener('touchstart', onTouchStart, { passive: false });
+    dom.addEventListener('touchmove', onTouchMove, { passive: false });
+    dom.addEventListener('touchend', onTouchEnd);
+    dom.addEventListener('touchcancel', onTouchEnd);
     dom.addEventListener('contextmenu', (e) => e.preventDefault());
 
     // Render Loop
@@ -2559,6 +2693,10 @@ export default function Viewport3D({
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       dom.removeEventListener('wheel', onWheel);
+      dom.removeEventListener('touchstart', onTouchStart);
+      dom.removeEventListener('touchmove', onTouchMove);
+      dom.removeEventListener('touchend', onTouchEnd);
+      dom.removeEventListener('touchcancel', onTouchEnd);
       if (container && renderer.domElement) {
         container.removeChild(renderer.domElement);
       }
