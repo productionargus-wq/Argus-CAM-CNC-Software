@@ -54,6 +54,7 @@ import {
   hitTestWireframeEntity,
   computeArc3Points,
   computeBoltCircle,
+  computeArcTangentBetweenEntities,
   performDynamicTrim
 } from '../utils/cadDrawingEngine';
 import {
@@ -197,6 +198,7 @@ export default function Viewport3D({
   showEndpoints = false,
   activeDrawingRadius = null,
   isRadiusLocked = false,
+  arcEntityMethod = 'two_entities',
   activeDrawingWidth = null,
   isWidthLocked = false,
   activeDrawingHeight = null,
@@ -420,6 +422,11 @@ export default function Viewport3D({
   const partTopYRef = useRef(partMetrics?.box?.max?.y ?? 0);
   const renderLockedPreviewAtRef = useRef(null);
   const tangentEntityARef = useRef(null);
+  const arcEntityMethodRef = useRef(arcEntityMethod);
+  const arcTangentEntityARef = useRef(null);
+  const arcTangentClickARef = useRef(null);
+
+  useEffect(() => { arcEntityMethodRef.current = arcEntityMethod; }, [arcEntityMethod]);
 
   useEffect(() => { partTopYRef.current = partMetrics?.box?.max?.y ?? 0; }, [partMetrics]);
   useEffect(() => { activeDrawingRadiusRef.current = activeDrawingRadius; }, [activeDrawingRadius]);
@@ -508,7 +515,7 @@ export default function Viewport3D({
             ? `Click to place ${lw} × ${lh} mm rectangle`
             : `Click canvas to place ${lw} × ${lh} mm, or click OK for (0, 0)`
       );
-    } else if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
+    } else if (tool === 'circle') {
       const lr = isRadiusLockedRef.current && Number(activeDrawingRadiusRef.current) > 0
         ? Number(activeDrawingRadiusRef.current)
         : null;
@@ -1103,11 +1110,50 @@ export default function Viewport3D({
       lockedAngle: isAngleLockedRef.current && activeDrawingAngleRef.current !== null && activeDrawingAngleRef.current !== undefined ? activeDrawingAngleRef.current : null
     });
 
+    const pickNearestWireframeEntity = (pt, maxDist = 55) => {
+      const entities = (customGeometryRef.current || []).filter(e => e && e.visible !== false);
+      let bestEnt = null;
+      let bestDist = Infinity;
+      entities.forEach(ent => {
+        const ud = ent.userData || {};
+        if (ud.radius || ud.cadType === 'circle' || ud.type === 'circle' || ud.type === 'arc' || ud.cadType === 'arc') {
+          const c = ud.center || {};
+          const cx = c.x ?? (Array.isArray(c) ? c[0] : 0);
+          const cz = c.z ?? (Array.isArray(c) ? (c[2] ?? c[1]) : (c.y ?? 0));
+          const r = Number(ud.radius || 25);
+          const distCenter = Math.hypot(pt.x - cx, pt.z - cz);
+          const distPerim = Math.abs(distCenter - r);
+          if (distPerim < maxDist && distPerim < bestDist) {
+            bestDist = distPerim;
+            bestEnt = ent;
+          }
+        } else if (ud.cadType === 'line' || ud.type === 'line' || (ud.p1 && ud.p2)) {
+          const p1 = ud.p1 || { x: 0, z: 0 };
+          const p2 = ud.p2 || { x: 0, z: 0 };
+          const dx = p2.x - p1.x;
+          const dz = p2.z - p1.z;
+          const lenSq = dx * dx + dz * dz;
+          let dist = Infinity;
+          if (lenSq < 1e-6) {
+            dist = Math.hypot(pt.x - p1.x, pt.z - p1.z);
+          } else {
+            const t = Math.max(0, Math.min(1, ((pt.x - p1.x) * dx + (pt.z - p1.z) * dz) / lenSq));
+            dist = Math.hypot(pt.x - (p1.x + t * dx), pt.z - (p1.z + t * dz));
+          }
+          if (dist < maxDist && dist < bestDist) {
+            bestDist = dist;
+            bestEnt = ent;
+          }
+        }
+      });
+      return bestEnt;
+    };
+
     const commitInteractiveEntity = (anchor, finalPt) => {
       const tool = activeSketchToolRef.current;
       let newEntity = null;
 
-      if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
+      if (tool === 'circle') {
         const radius = (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0)
           ? Number(activeDrawingRadiusRef.current)
           : anchor.distanceTo(finalPt);
@@ -1451,13 +1497,78 @@ export default function Viewport3D({
             return;
           }
 
-          if (tool === 'line' || tool === 'line_parallel' || tool === 'line_perp' || tool === 'rect' || tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
+          if (tool === 'arc_tangent' || tool === 'arctangent') {
+            const radius = (activeDrawingRadiusRef.current && Number(activeDrawingRadiusRef.current) > 0)
+              ? Number(activeDrawingRadiusRef.current)
+              : 15;
+            const picked = pickNearestWireframeEntity(finalPt);
+            if (!arcTangentEntityARef.current) {
+              if (picked) {
+                arcTangentEntityARef.current = picked;
+                arcTangentClickARef.current = finalPt.clone();
+                sketchAnchorRef.current = finalPt.clone();
+                setSketchAnchor(finalPt.clone());
+                isDrawingDrag = true;
+                setSketchPromptText(`Select second entity to blend with tangent arc (Radius: ${radius.toFixed(1)} mm)`);
+                setDimensionFeedback(`Entity 1 selected: ${picked.name || 'Curve'}. Click Entity 2.`);
+                if (snapIndicatorGroupRef.current) {
+                  snapIndicatorGroupRef.current.clear();
+                  snapIndicatorGroupRef.current.add(createSnapIndicator(finalPt, 'tangent'));
+                }
+              } else {
+                setSketchPromptText('Click directly on the perimeter of first circle or curve');
+              }
+              return;
+            } else {
+              // 2nd click: Pick second entity and solve tangent arc
+              if (picked && picked !== arcTangentEntityARef.current) {
+                const solved = computeArcTangentBetweenEntities(
+                  arcTangentEntityARef.current,
+                  picked,
+                  radius,
+                  arcTangentClickARef.current,
+                  finalPt
+                );
+                if (solved) {
+                  const newArc = createWireframeArc(
+                    [solved.center.x, solved.center.y, solved.center.z],
+                    solved.radius,
+                    solved.startAngleDeg,
+                    solved.endAngleDeg,
+                    { color: 0x38bdf8, name: `Wireframe_Arc_Tangent_R${solved.radius.toFixed(1)}` }
+                  );
+                  if (onAddCustomEntityRef.current) {
+                    onAddCustomEntityRef.current(newArc);
+                  }
+                  if (onDrawingUpdateRef.current) {
+                    onDrawingUpdateRef.current({
+                      tool: 'arc_tangent',
+                      center: solved.center,
+                      radius: solved.radius,
+                      completed: true
+                    });
+                  }
+                }
+              }
+              arcTangentEntityARef.current = null;
+              arcTangentClickARef.current = null;
+              sketchAnchorRef.current = null;
+              setSketchAnchor(null);
+              isDrawingDrag = false;
+              if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+              setDimensionFeedback(null);
+              setSketchPromptText('Select the entity that the arc is to be tangent to');
+              return;
+            }
+          }
+
+          if (tool === 'line' || tool === 'line_parallel' || tool === 'line_perp' || tool === 'rect' || tool === 'circle') {
             if (!sketchAnchorRef.current) {
               // 1-Click placement when full dimensions are explicitly locked (Mastercam Auto-place)
               const fullyLockedRect = tool === 'rect'
                 && isWidthLockedRef.current && activeDrawingWidthRef.current > 0
                 && isHeightLockedRef.current && activeDrawingHeightRef.current > 0;
-              const fullyLockedCircle = (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent')
+              const fullyLockedCircle = tool === 'circle'
                 && isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0;
               const fullyLockedLine = tool === 'line'
                 && isLengthLockedRef.current && activeDrawingLengthRef.current > 0
@@ -1490,7 +1601,7 @@ export default function Viewport3D({
                 tangentEntityARef.current = bestCircle;
               }
               if (onDrawingUpdateRef.current) {
-                if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
+                if (tool === 'circle') {
                   onDrawingUpdateRef.current({
                     tool: 'circle',
                     center: finalPt.clone(),
@@ -1774,7 +1885,40 @@ export default function Viewport3D({
             const tool = activeSketchToolRef.current;
             sketchGhostGroupRef.current.clear();
 
-            if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
+            if (tool === 'arc_tangent' || tool === 'arctangent') {
+              if (arcTangentEntityARef.current && sketchGhostGroupRef.current) {
+                const radius = (activeDrawingRadiusRef.current && Number(activeDrawingRadiusRef.current) > 0)
+                  ? Number(activeDrawingRadiusRef.current)
+                  : 15;
+                const picked = pickNearestWireframeEntity(finalPt);
+                sketchGhostGroupRef.current.clear();
+                if (picked && picked !== arcTangentEntityARef.current) {
+                  const solved = computeArcTangentBetweenEntities(
+                    arcTangentEntityARef.current,
+                    picked,
+                    radius,
+                    arcTangentClickARef.current,
+                    finalPt
+                  );
+                  if (solved) {
+                    const ghost = createGhostPreview('arc', solved.center, finalPt, {
+                      startAngleDeg: solved.startAngleDeg,
+                      endAngleDeg: solved.endAngleDeg,
+                      radius: solved.radius
+                    });
+                    sketchGhostGroupRef.current.add(ghost);
+
+                    if (snapIndicatorGroupRef.current) {
+                      snapIndicatorGroupRef.current.clear();
+                      snapIndicatorGroupRef.current.add(createSnapIndicator(solved.touchA, 'tangent'));
+                      snapIndicatorGroupRef.current.add(createSnapIndicator(solved.touchB, 'tangent'));
+                    }
+                    setDimensionFeedback(`Tangent Blend Arc: R ${solved.radius.toFixed(2)} mm (Click to commit)`);
+                    setSketchPromptText('Click second entity to commit tangent blend arc');
+                  }
+                }
+              }
+            } else if (tool === 'circle') {
               const lockedR = (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0)
                 ? Number(activeDrawingRadiusRef.current)
                 : null;

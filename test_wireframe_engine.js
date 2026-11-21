@@ -17,6 +17,7 @@ import {
   computeModifyLength,
   computeCloseArc,
   computeBitangentLines,
+  computeArcTangentBetweenEntities,
   snapToGrid,
   snapToEntityPoints
 } from './src/utils/cadDrawingEngine.js';
@@ -307,4 +308,31 @@ console.log('\n[12] Testing snapToEntityPoints with real Wireframe Circle meshes
   console.log(`  ✓ Wireframe circle 65-point tessellation bypassed: Tangent Snap correctly locked onto (${snapResult.point.x.toFixed(2)}, ${snapResult.point.z.toFixed(2)})`);
 }
 
-console.log('\n=== ALL 12 MASTERCAM WIREFRAME CAD ENGINE TESTS PASSED (100%) ===\n');
+// 13. Test computeArcTangentBetweenEntities (Arc Tangent 2 Entities: Circle-Circle & Circle-Line)
+console.log('\n[13] Testing computeArcTangentBetweenEntities (Arc Tangent Two Entities)...');
+{
+  const circ1 = createWireframeCircle(25, 35, [105, -42], 0, 360, 'G17');
+  const circ2 = createWireframeCircle(18, 35, [75, 20], 0, 360, 'G17');
+  const hint = new THREE.Vector3(70, 35, -10);
+
+  const res = computeArcTangentBetweenEntities(circ1, circ2, 15, hint);
+  assert(res !== null, 'Should solve tangent arc between two circles');
+  assert(res.radius > 0, 'Radius should be positive');
+  assert(res.touchA && res.touchB, 'Should have contact points touchA and touchB');
+
+  // Contact points must lie on respective circle perimeters
+  const distA = Math.hypot(res.touchA.x - 105, res.touchA.z - (-42));
+  const distB = Math.hypot(res.touchB.x - 75, res.touchB.z - 20);
+  assert(Math.abs(distA - 25) < 1e-2, `touchA must lie on Circle A perimeter (25), got ${distA}`);
+  assert(Math.abs(distB - 18) < 1e-2, `touchB must lie on Circle B perimeter (18), got ${distB}`);
+
+  // Contact points must also lie on the blend arc
+  const arcDistA = Math.hypot(res.touchA.x - res.center.x, res.touchA.z - res.center.z);
+  const arcDistB = Math.hypot(res.touchB.x - res.center.x, res.touchB.z - res.center.z);
+  assert(Math.abs(arcDistA - res.radius) < 1e-2, `touchA must lie on blend arc (R=${res.radius}), got ${arcDistA}`);
+  assert(Math.abs(arcDistB - res.radius) < 1e-2, `touchB must lie on blend arc (R=${res.radius}), got ${arcDistB}`);
+
+  console.log(`  ✓ Circle-Circle Tangent Blend Arc solved: Center (${res.center.x.toFixed(2)}, ${res.center.z.toFixed(2)}), R=${res.radius.toFixed(2)}, Sweep=${res.startAngleDeg.toFixed(1)}° -> ${res.endAngleDeg.toFixed(1)}°`);
+}
+
+console.log('\n=== ALL 13 MASTERCAM WIREFRAME CAD ENGINE TESTS PASSED (100%) ===\n');

@@ -8247,8 +8247,9 @@ export default function App() {
                 onToggleCameraMode={setCameraMode}
                 onUpdateClippingPlane={setClippingPlane}
                 onChangeRenderMode={setRenderMode}
-                activeDrawingRadius={circleParams.radius}
-                isRadiusLocked={circleParams.isLocked}
+                activeDrawingRadius={sketchTool === 'arc_tangent' ? arcParams.radius : circleParams.radius}
+                isRadiusLocked={sketchTool === 'arc_tangent' ? arcParams.isLocked : circleParams.isLocked}
+                arcEntityMethod={arcParams.entityMethod}
                 activeDrawingWidth={rectParams.width}
                 isWidthLocked={rectParams.isWidthLocked}
                 activeDrawingHeight={rectParams.height}
@@ -8381,8 +8382,9 @@ export default function App() {
               onToggleCameraMode={setCameraMode}
               onUpdateClippingPlane={setClippingPlane}
               onChangeRenderMode={setRenderMode}
-              activeDrawingRadius={circleParams.radius}
-              isRadiusLocked={circleParams.isLocked}
+              activeDrawingRadius={sketchTool === 'arc_tangent' ? arcParams.radius : circleParams.radius}
+              isRadiusLocked={sketchTool === 'arc_tangent' ? arcParams.isLocked : circleParams.isLocked}
+              arcEntityMethod={arcParams.entityMethod}
               activeDrawingWidth={rectParams.width}
               isWidthLocked={rectParams.isWidthLocked}
               activeDrawingHeight={rectParams.height}

@@ -432,7 +432,27 @@ export function createGhostPreview(tool, startPt, currentPt, options = {}) {
       plane.position.set(cx, y, cz);
       group.add(plane);
     }
-  } else if (tool === 'circle' || tool === 'arc_tangent' || tool === 'arctangent') {
+  } else if (tool === 'arc') {
+    const center = startPt;
+    const radius = options.radius || 15;
+    const startRad = (Number(options.startAngleDeg || 0) * Math.PI) / 180;
+    const endRad = (Number(options.endAngleDeg || 180) * Math.PI) / 180;
+    const sweep = endRad - startRad;
+    const segments = 48;
+    const pts = [];
+    for (let i = 0; i <= segments; i++) {
+      const theta = startRad + (i / segments) * sweep;
+      pts.push(new THREE.Vector3(
+        center.x + radius * Math.cos(theta),
+        center.y,
+        center.z + radius * Math.sin(theta)
+      ));
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const arcLine = new THREE.Line(geo, dashedMaterial);
+    arcLine.computeLineDistances();
+    group.add(arcLine);
+  } else if (tool === 'circle') {
     const radius = (options.lockedRadius && options.lockedRadius > 0)
       ? Number(options.lockedRadius)
       : Math.max(0.5, startPt.distanceTo(currentPt));
@@ -1365,6 +1385,189 @@ export function computeCloseArc(arcEntity) {
     return null;
   }
   return { center: new THREE.Vector3(center.x, center.y, center.z), radius, startAngleDeg: 0, endAngleDeg: 360, isFullCircle: true };
+}
+
+/**
+ * Mastercam Arc Tangent (Two Entities):
+ * Computes a tangent blend arc with radius R between any two 2D CAD entities (Circle-Circle, Circle-Line, Line-Line).
+ */
+export function computeArcTangentBetweenEntities(entA, entB, radius = 15, clickHintA = null, clickHintB = null) {
+  if (!entA || !entB || radius <= 0) return null;
+
+  const getCirc = (ent) => {
+    const ud = ent.userData || {};
+    if (ud.radius && (ud.cadType === 'circle' || ud.type === 'circle' || ud.type === 'arc' || ud.cadType === 'arc' || typeof ud.radius === 'number')) {
+      const c = ud.center || {};
+      const cx = c.x ?? (Array.isArray(c) ? c[0] : 0);
+      const cy = c.y ?? (Array.isArray(c) ? c[1] : (ent.position?.y ?? 0));
+      const cz = c.z ?? (Array.isArray(c) ? (c[2] ?? c[1]) : (c.y ?? 0));
+      return { center: new THREE.Vector3(cx, cy, cz), radius: Number(ud.radius) };
+    }
+    return null;
+  };
+
+  const getLinePts = (ent) => {
+    const pts = extractPointsFromCadEntity(ent);
+    if (pts.length >= 2) {
+      return { p1: pts[0], p2: pts[pts.length - 1] };
+    }
+    return null;
+  };
+
+  const circA = getCirc(entA);
+  const circB = getCirc(entB);
+  const lineA = !circA ? getLinePts(entA) : null;
+  const lineB = !circB ? getLinePts(entB) : null;
+
+  const hint = clickHintB || clickHintA || new THREE.Vector3();
+
+  // Case 1: Both entities are circles (e.g. Lobe B & Lobe C)
+  if (circA && circB) {
+    const cA = circA.center;
+    const cB = circB.center;
+    const rA = circA.radius;
+    const rB = circB.radius;
+    const dx = cB.x - cA.x;
+    const dz = cB.z - cA.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 1e-4) return null;
+
+    const gap = d - rA - rB;
+    const R = Math.max(radius, gap > 0 ? (gap / 2 + 0.05) : radius);
+    const D1 = rA + R;
+    const D2 = rB + R;
+
+    if (d > D1 + D2 || d < Math.abs(D1 - D2)) return null;
+
+    const a = (D1 * D1 - D2 * D2 + d * d) / (2 * d);
+    const h = Math.sqrt(Math.max(0, D1 * D1 - a * a));
+    const pMidX = cA.x + (a / d) * dx;
+    const pMidZ = cA.z + (a / d) * dz;
+    const ux = -dz / d;
+    const uz = dx / d;
+
+    const sol1 = { x: pMidX + h * ux, y: cA.y, z: pMidZ + h * uz };
+    const sol2 = { x: pMidX - h * ux, y: cA.y, z: pMidZ - h * uz };
+
+    const d1 = Math.hypot(sol1.x - hint.x, sol1.z - hint.z);
+    const d2 = Math.hypot(sol2.x - hint.x, sol2.z - hint.z);
+    const center = d1 < d2 ? sol1 : sol2;
+
+    const touchA = {
+      x: cA.x + ((center.x - cA.x) / D1) * rA,
+      y: cA.y,
+      z: cA.z + ((center.z - cA.z) / D1) * rA
+    };
+    const touchB = {
+      x: cB.x + ((center.x - cB.x) / D2) * rB,
+      y: cB.y,
+      z: cB.z + ((center.z - cB.z) / D2) * rB
+    };
+
+    const thetaA = (Math.atan2(touchA.z - center.z, touchA.x - center.x) * 180 / Math.PI + 360) % 360;
+    const thetaB = (Math.atan2(touchB.z - center.z, touchB.x - center.x) * 180 / Math.PI + 360) % 360;
+
+    let startAngleDeg = thetaA;
+    let endAngleDeg = thetaB;
+    let diff = (endAngleDeg - startAngleDeg + 360) % 360;
+    if (diff > 180) {
+      startAngleDeg = thetaB;
+      endAngleDeg = thetaA;
+    }
+
+    return {
+      center: new THREE.Vector3(center.x, center.y, center.z),
+      radius: R,
+      startAngleDeg,
+      endAngleDeg,
+      touchA: new THREE.Vector3(touchA.x, touchA.y, touchA.z),
+      touchB: new THREE.Vector3(touchB.x, touchB.y, touchB.z)
+    };
+  }
+
+  // Case 2: One circle and one line
+  const circ = circA || circB;
+  const line = lineA || lineB;
+  if (circ && line) {
+    const cA = circ.center;
+    const rA = circ.radius;
+    const p1 = line.p1;
+    const p2 = line.p2;
+    const vx = p2.x - p1.x;
+    const vz = p2.z - p1.z;
+    const len = Math.hypot(vx, vz);
+    if (len < 1e-4) return null;
+    const ux = vx / len;
+    const uz = vz / len;
+
+    const norm1 = { x: -uz, z: ux };
+    const norm2 = { x: uz, z: -ux };
+    const dHint = (hint.x - p1.x) * norm1.x + (hint.z - p1.z) * norm1.z;
+    const norm = dHint >= 0 ? norm1 : norm2;
+
+    const o1 = { x: p1.x + norm.x * radius, z: p1.z + norm.z * radius };
+    const dC = (cA.x - o1.x) * norm.x + (cA.z - o1.z) * norm.z;
+    const D1 = rA + radius;
+    if (Math.abs(dC) > D1) return null;
+
+    const distAlong = Math.sqrt(Math.max(0, D1 * D1 - dC * dC));
+    const proj = { x: cA.x - norm.x * dC, z: cA.z - norm.z * dC };
+    const sol1 = { x: proj.x + ux * distAlong, y: cA.y, z: proj.z + uz * distAlong };
+    const sol2 = { x: proj.x - ux * distAlong, y: cA.y, z: proj.z - uz * distAlong };
+
+    const d1 = Math.hypot(sol1.x - hint.x, sol1.z - hint.z);
+    const d2 = Math.hypot(sol2.x - hint.x, sol2.z - hint.z);
+    const center = d1 < d2 ? sol1 : sol2;
+
+    const touchCirc = {
+      x: cA.x + ((center.x - cA.x) / D1) * rA,
+      y: cA.y,
+      z: cA.z + ((center.z - cA.z) / D1) * rA
+    };
+    const touchLine = {
+      x: center.x - norm.x * radius,
+      y: cA.y,
+      z: center.z - norm.z * radius
+    };
+
+    const thetaA = (Math.atan2(touchCirc.z - center.z, touchCirc.x - center.x) * 180 / Math.PI + 360) % 360;
+    const thetaB = (Math.atan2(touchLine.z - center.z, touchLine.x - center.x) * 180 / Math.PI + 360) % 360;
+
+    let startAngleDeg = thetaA;
+    let endAngleDeg = thetaB;
+    let diff = (endAngleDeg - startAngleDeg + 360) % 360;
+    if (diff > 180) {
+      startAngleDeg = thetaB;
+      endAngleDeg = thetaA;
+    }
+
+    return {
+      center: new THREE.Vector3(center.x, center.y, center.z),
+      radius,
+      startAngleDeg,
+      endAngleDeg,
+      touchA: new THREE.Vector3(touchCirc.x, touchCirc.y, touchCirc.z),
+      touchB: new THREE.Vector3(touchLine.x, touchLine.y, touchLine.z)
+    };
+  }
+
+  // Case 3: Both entities are lines -> standard fillet
+  if (lineA && lineB) {
+    const fil = computeFilletBetweenEntities(entA, entB, radius);
+    if (fil && fil.filletArcData) {
+      const c = fil.filletArcData.center;
+      return {
+        center: new THREE.Vector3(c[0], c[1], c[2]),
+        radius: fil.filletArcData.radius,
+        startAngleDeg: fil.filletArcData.startAngleDeg,
+        endAngleDeg: fil.filletArcData.endAngleDeg,
+        touchA: fil.touchA,
+        touchB: fil.touchB
+      };
+    }
+  }
+
+  return null;
 }
 
 
