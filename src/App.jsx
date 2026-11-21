@@ -8279,9 +8279,9 @@ export default function App() {
           onClick={() => setIsLeftPanelCollapsed(true)}
           style={{
             position: 'absolute',
-            top: '5px',
-            right: '4px',
-            zIndex: 40,
+            top: '4px',
+            right: '6px',
+            zIndex: 48,
             width: '20px',
             height: '20px',
             background: '#e2e8f0',

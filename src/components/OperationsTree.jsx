@@ -353,14 +353,14 @@ export default function OperationsTree({
     setExpandedGeoms((prev) => ({ ...prev, [opId]: !prev[opId] }));
   };
 
-  // Mouse-Resizable Sidebar Width State
+  // Touch- & Mouse-Resizable Sidebar Width State
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     try {
       const saved = localStorage.getItem('mastercam_sidebar_width');
-      const parsed = saved ? parseInt(saved, 10) : 320;
-      return !isNaN(parsed) && parsed >= 220 && parsed <= 850 ? parsed : 320;
+      const parsed = saved ? parseInt(saved, 10) : 280;
+      return !isNaN(parsed) && parsed >= 180 && parsed <= 850 ? parsed : 280;
     } catch {
-      return 320;
+      return 280;
     }
   });
   const [isResizing, setIsResizing] = useState(false);
@@ -369,13 +369,14 @@ export default function OperationsTree({
   const [isWindowMenuOpen, setIsWindowMenuOpen] = useState(false);
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
+    const handlePointerMove = (e) => {
       if (!isResizing) return;
-      const newWidth = Math.min(Math.max(e.clientX, 220), Math.min(window.innerWidth * 0.7, 850));
+      const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : sidebarWidth);
+      const newWidth = Math.min(Math.max(clientX, 180), Math.min(window.innerWidth * 0.75, 750));
       setSidebarWidth(newWidth);
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       if (isResizing) {
         setIsResizing(false);
         try {
@@ -387,8 +388,11 @@ export default function OperationsTree({
     };
 
     if (isResizing) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
+      window.addEventListener('pointercancel', handlePointerUp);
+      window.addEventListener('touchmove', handlePointerMove, { passive: true });
+      window.addEventListener('touchend', handlePointerUp);
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
     } else {
@@ -397,12 +401,20 @@ export default function OperationsTree({
     }
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+      window.removeEventListener('touchmove', handlePointerMove);
+      window.removeEventListener('touchend', handlePointerUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
   }, [isResizing, sidebarWidth]);
+
+  const treeScale = Math.min(Math.max((sidebarWidth - 180) / 200 + 0.85, 0.8), 1.25);
+  const treeFontSize = Math.max(9.5, (11 * treeScale).toFixed(1));
+  const treeHeaderFontSize = Math.max(10.5, (12 * treeScale).toFixed(1));
+  const treeIconSize = Math.max(13, Math.round(15 * treeScale));
 
   // Recent Functions Search Filter
   const [recentSearch, setRecentSearch] = useState('');
@@ -583,7 +595,7 @@ export default function OperationsTree({
         flexDirection: 'column',
         height: '100%',
         width: `${sidebarWidth}px`,
-        minWidth: '220px',
+        minWidth: '180px',
         maxWidth: '850px',
         flexShrink: 0,
         backgroundColor: '#ffffff',
@@ -593,7 +605,11 @@ export default function OperationsTree({
         userSelect: 'none',
         overflow: 'hidden',
         position: 'relative',
-        transition: isResizing ? 'none' : 'width 0.05s ease'
+        transition: isResizing ? 'none' : 'width 0.05s ease',
+        '--tree-scale': treeScale,
+        '--tree-font-size': `${treeFontSize}px`,
+        '--tree-header-font-size': `${treeHeaderFontSize}px`,
+        '--tree-icon-size': `${treeIconSize}px`
       }}
       aria-label="Mastercam Toolpaths Manager"
     >
@@ -606,6 +622,7 @@ export default function OperationsTree({
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 8px',
+          paddingRight: '32px',
           borderBottom: '1px solid #cbd5e1',
           background: '#f1f5f9',
           position: 'relative',
@@ -2145,18 +2162,45 @@ export default function OperationsTree({
         />
       )}
 
-      {/* 7. Mouse-Draggable Horizontal Resizer Divider */}
+      {/* 7. Mouse- and Touch-Draggable Horizontal Resizer Divider */}
       <div
         className="sidebar-resizer"
-        onMouseDown={(e) => {
+        onPointerDown={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          try {
+            e.target.setPointerCapture(e.pointerId);
+          } catch {}
           setIsResizing(true);
         }}
+        onPointerMove={(e) => {
+          if (!isResizing) return;
+          const newWidth = Math.min(Math.max(e.clientX, 180), Math.min(window.innerWidth * 0.75, 750));
+          setSidebarWidth(newWidth);
+        }}
+        onPointerUp={(e) => {
+          if (isResizing) {
+            setIsResizing(false);
+            try {
+              e.target.releasePointerCapture(e.pointerId);
+            } catch {}
+            try {
+              localStorage.setItem('mastercam_sidebar_width', sidebarWidth.toString());
+            } catch {}
+          }
+        }}
+        onPointerCancel={(e) => {
+          if (isResizing) {
+            setIsResizing(false);
+            try {
+              e.target.releasePointerCapture(e.pointerId);
+            } catch {}
+          }
+        }}
         onDoubleClick={() => {
-          setSidebarWidth(320);
+          setSidebarWidth(280);
           try {
-            localStorage.setItem('mastercam_sidebar_width', '320');
+            localStorage.setItem('mastercam_sidebar_width', '280');
           } catch {}
         }}
         title="Click & drag to resize sidebar (Double-click to reset)"
@@ -2164,14 +2208,28 @@ export default function OperationsTree({
           position: 'absolute',
           top: 0,
           right: 0,
-          width: '6px',
+          width: '12px',
           height: '100%',
           cursor: 'col-resize',
-          zIndex: 40,
+          zIndex: 45,
           backgroundColor: isResizing ? '#0284c7' : 'transparent',
+          touchAction: 'none',
           userSelect: 'none'
         }}
-      />
+      >
+        {/* Subtle vertical grip border indicator */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: '1px',
+            width: '2px',
+            height: '100%',
+            backgroundColor: isResizing ? '#0284c7' : 'transparent',
+            pointerEvents: 'none'
+          }}
+        />
+      </div>
     </aside>
   );
 }

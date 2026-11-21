@@ -236,6 +236,73 @@ export default function RibbonBar({
   }, []);
 
   const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(false);
+  const [ribbonContentHeight, setRibbonContentHeight] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mastercam_ribbon_height');
+      return saved ? parseInt(saved, 10) : 94;
+    } catch {
+      return 94;
+    }
+  });
+  const [isResizingRibbon, setIsResizingRibbon] = useState(false);
+  const resizeStartY = useRef(0);
+  const resizeStartHeight = useRef(94);
+
+  const handleRibbonResizeStart = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      e.target.setPointerCapture(e.pointerId);
+    } catch {}
+    setIsResizingRibbon(true);
+    resizeStartY.current = e.clientY;
+    resizeStartHeight.current = isRibbonCollapsed ? 42 : ribbonContentHeight;
+  };
+
+  const handleRibbonResizeMove = useCallback((e) => {
+    if (!isResizingRibbon) return;
+    const deltaY = e.clientY - resizeStartY.current;
+    const newHeight = Math.min(Math.max(resizeStartHeight.current + deltaY, 44), 180);
+    setRibbonContentHeight(newHeight);
+    if (isRibbonCollapsed && newHeight > 54) {
+      setIsRibbonCollapsed(false);
+    }
+  }, [isResizingRibbon, isRibbonCollapsed]);
+
+  const handleRibbonResizeEnd = useCallback((e) => {
+    if (isResizingRibbon) {
+      setIsResizingRibbon(false);
+      try {
+        if (e && e.target && e.target.releasePointerCapture) {
+          e.target.releasePointerCapture(e.pointerId);
+        }
+      } catch {}
+      try {
+        localStorage.setItem('mastercam_ribbon_height', ribbonContentHeight.toString());
+      } catch {}
+    }
+  }, [isResizingRibbon, ribbonContentHeight]);
+
+  useEffect(() => {
+    if (!isResizingRibbon) return;
+    const onMove = (e) => handleRibbonResizeMove(e);
+    const onUp = (e) => handleRibbonResizeEnd(e);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, [isResizingRibbon, handleRibbonResizeMove, handleRibbonResizeEnd]);
+
+  const ribbonScale = Math.min(Math.max((ribbonContentHeight - 20) / 74, 0.65), 1.35);
+  const btnLargeHeight = Math.round(64 * ribbonScale);
+  const btnIconSize = Math.max(16, Math.round(26 * ribbonScale));
+  const fontSize = Math.max(8.5, (10.5 * ribbonScale).toFixed(1));
+  const smallBtnHeight = Math.max(15, Math.round(19 * ribbonScale));
+  const stackedColHeight = Math.round(64 * ribbonScale);
 
   useEffect(() => {
     // Check scroll state after tab changes or resize
@@ -309,7 +376,18 @@ export default function RibbonBar({
   };
 
   return (
-    <nav className="ribbon-container" aria-label="Application Ribbon Navigation">
+    <nav
+      className="ribbon-container"
+      aria-label="Application Ribbon Navigation"
+      style={{
+        '--ribbon-dyn-scale': ribbonScale,
+        '--ribbon-btn-large-height': `${btnLargeHeight}px`,
+        '--ribbon-icon-size': `${btnIconSize}px`,
+        '--ribbon-font-size': `${fontSize}px`,
+        '--ribbon-small-btn-height': `${smallBtnHeight}px`,
+        '--ribbon-stacked-height': `${stackedColHeight}px`,
+      }}
+    >
       {/* Hidden file input for 3D CAD models (All 25 supported formats) */}
       <input
         ref={fileInputRef}
@@ -337,9 +415,21 @@ export default function RibbonBar({
         onChange={handleNCFileChange}
       />
 
-      {/* Ribbon Navigation Tabs */}
-      <div className="ribbon-tabs" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+      {/* Ribbon Navigation Tabs Bar */}
+      <div className="ribbon-tabs" style={{ display: 'flex', alignItems: 'center', width: '100%', position: 'relative', overflow: 'hidden' }}>
+        {/* Scrollable Tabs Row */}
+        <div
+          className="ribbon-tabs-scroll"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            overflowX: 'auto',
+            flex: 1,
+            minWidth: 0,
+            scrollbarWidth: 'none',
+            paddingRight: onChangeViewMode ? '145px' : '45px'
+          }}
+        >
           {tabs.map((tab) => (
             <button
               key={tab}
@@ -358,92 +448,111 @@ export default function RibbonBar({
           ))}
         </div>
 
-        {/* Workspace Mode Switcher (2D Design Board | Split View | 3D Machine) */}
-        {onChangeViewMode && (
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '5px', paddingRight: '8px' }}>
-            <button
-              onClick={() => onChangeViewMode('2d')}
-              style={{
-                width: '30px',
-                height: '26px',
-                background: workspaceViewMode === '2d' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(30, 41, 59, 0.6)',
-                color: workspaceViewMode === '2d' ? '#38bdf8' : '#94a3b8',
-                border: workspaceViewMode === '2d' ? '1px solid #38bdf8' : '1px solid #334155',
-                borderRadius: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              title="2D CAD Design Board"
-            >
-              <Palette size={15} />
-            </button>
+        {/* Pinned Right Controls: 2D/3D Mode Switcher & Fixed Arrow Collapse/Expand Button */}
+        <div
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            paddingRight: '6px',
+            paddingLeft: '8px',
+            background: 'var(--ribbon-header-bg, #f1f5f9)',
+            boxShadow: '-4px 0 6px rgba(0,0,0,0.06)',
+            zIndex: 60,
+            flexShrink: 0
+          }}
+        >
+          {/* Workspace Mode Switcher (2D Design Board | Split View | 3D Machine) */}
+          {onChangeViewMode && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <button
+                onClick={() => onChangeViewMode('2d')}
+                style={{
+                  width: '28px',
+                  height: '22px',
+                  background: workspaceViewMode === '2d' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(30, 41, 59, 0.6)',
+                  color: workspaceViewMode === '2d' ? '#38bdf8' : '#94a3b8',
+                  border: workspaceViewMode === '2d' ? '1px solid #38bdf8' : '1px solid #334155',
+                  borderRadius: '3px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                title="2D CAD Design Board"
+              >
+                <Palette size={13} />
+              </button>
 
-            <button
-              onClick={() => onChangeViewMode('split')}
-              style={{
-                width: '30px',
-                height: '26px',
-                background: workspaceViewMode === 'split' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(30, 41, 59, 0.6)',
-                color: workspaceViewMode === 'split' ? '#c084fc' : '#94a3b8',
-                border: workspaceViewMode === 'split' ? '1px solid #c084fc' : '1px solid #334155',
-                borderRadius: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              title="Split View: 2D Design Board & 3D Machine Simulation"
-            >
-              <Columns2 size={15} />
-            </button>
+              <button
+                onClick={() => onChangeViewMode('split')}
+                style={{
+                  width: '28px',
+                  height: '22px',
+                  background: workspaceViewMode === 'split' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(30, 41, 59, 0.6)',
+                  color: workspaceViewMode === 'split' ? '#c084fc' : '#94a3b8',
+                  border: workspaceViewMode === 'split' ? '1px solid #c084fc' : '1px solid #334155',
+                  borderRadius: '3px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Split View: 2D Design Board & 3D Machine Simulation"
+              >
+                <Columns2 size={13} />
+              </button>
 
-            <button
-              onClick={() => onChangeViewMode('3d')}
-              style={{
-                width: '30px',
-                height: '26px',
-                background: workspaceViewMode === '3d' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(30, 41, 59, 0.6)',
-                color: workspaceViewMode === '3d' ? '#38bdf8' : '#94a3b8',
-                border: workspaceViewMode === '3d' ? '1px solid #38bdf8' : '1px solid #334155',
-                borderRadius: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              title="3D Machine Viewport"
-            >
-              <Box size={15} />
-            </button>
-          </div>
-        )}
-        {/* Ribbon Collapse / Expand Toggle Arrow Button */}
-        <div style={{ marginLeft: onChangeViewMode ? '6px' : 'auto', display: 'flex', alignItems: 'center', paddingRight: '8px' }}>
+              <button
+                onClick={() => onChangeViewMode('3d')}
+                style={{
+                  width: '28px',
+                  height: '22px',
+                  background: workspaceViewMode === '3d' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(30, 41, 59, 0.6)',
+                  color: workspaceViewMode === '3d' ? '#38bdf8' : '#94a3b8',
+                  border: workspaceViewMode === '3d' ? '1px solid #38bdf8' : '1px solid #334155',
+                  borderRadius: '3px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                title="3D Machine Viewport"
+              >
+                <Box size={13} />
+              </button>
+            </div>
+          )}
+
+          {/* Mastercam Style Collapse / Expand Toggle Arrow Button (Pinned at top right) */}
           <button
             type="button"
             onClick={() => setIsRibbonCollapsed((prev) => !prev)}
             style={{
-              width: '28px',
-              height: '24px',
-              background: isRibbonCollapsed ? 'rgba(37, 99, 235, 0.12)' : 'transparent',
-              color: isRibbonCollapsed ? '#2563eb' : '#64748b',
-              border: isRibbonCollapsed ? '1px solid #93c5fd' : '1px solid transparent',
-              borderRadius: '4px',
+              width: '22px',
+              height: '22px',
+              background: isRibbonCollapsed ? '#e2e8f0' : 'transparent',
+              color: isRibbonCollapsed ? '#0284c7' : '#475569',
+              border: '1px solid #cbd5e1',
+              borderRadius: '3px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
               transition: 'all 0.15s ease'
             }}
             title={isRibbonCollapsed ? "Show Ribbon Bar (Ctrl+F1)" : "Hide Ribbon Bar (Ctrl+F1)"}
             aria-label={isRibbonCollapsed ? "Show Ribbon Bar" : "Hide Ribbon Bar"}
           >
-            {isRibbonCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+            {isRibbonCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
           </button>
         </div>
       </div>
@@ -466,6 +575,7 @@ export default function RibbonBar({
         <div
           ref={ribbonContentRef}
           className="ribbon-content"
+          style={{ height: `${ribbonContentHeight}px` }}
           onScroll={checkRibbonScroll}
           onWheel={(e) => {
             if (e.deltaY !== 0) {
@@ -2136,6 +2246,76 @@ export default function RibbonBar({
         )}
       </div>
       )}
+
+      {/* Draggable Bottom Resizer Bar with Centered Arrow Toggle Pill */}
+      <div
+        className="ribbon-bottom-resizer"
+        onPointerDown={handleRibbonResizeStart}
+        onPointerMove={handleRibbonResizeMove}
+        onPointerUp={handleRibbonResizeEnd}
+        onPointerCancel={handleRibbonResizeEnd}
+        onDoubleClick={() => {
+          setRibbonContentHeight(94);
+          try { localStorage.setItem('mastercam_ribbon_height', '94'); } catch {}
+        }}
+        style={{
+          width: '100%',
+          height: '10px',
+          cursor: 'row-resize',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: isResizingRibbon ? '#0284c7' : 'var(--border-subtle, #cbd5e1)',
+          position: 'relative',
+          touchAction: 'none',
+          userSelect: 'none',
+          zIndex: 80,
+          transition: isResizingRibbon ? 'none' : 'background-color 0.15s ease'
+        }}
+        title="Click & drag to resize ribbon height (Double-click to reset, Click arrow to toggle)"
+      >
+        {/* Subtle horizontal grip line */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '4px',
+            left: '20%',
+            right: '20%',
+            height: '1px',
+            backgroundColor: 'rgba(148, 163, 184, 0.4)',
+            pointerEvents: 'none'
+          }}
+        />
+
+        {/* Centered Arrow Button Pill */}
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsRibbonCollapsed((prev) => !prev);
+          }}
+          style={{
+            height: '16px',
+            padding: '0 16px',
+            borderRadius: '8px',
+            backgroundColor: '#ffffff',
+            border: '1px solid #cbd5e1',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#475569',
+            zIndex: 82,
+            transition: 'all 0.15s ease'
+          }}
+          title={isRibbonCollapsed ? "Expand Ribbon Bar" : "Collapse Ribbon Bar"}
+          aria-label={isRibbonCollapsed ? "Expand Ribbon Bar" : "Collapse Ribbon Bar"}
+        >
+          {isRibbonCollapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+        </button>
+      </div>
     </nav>
   );
 }
