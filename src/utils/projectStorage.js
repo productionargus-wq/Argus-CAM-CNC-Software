@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import {
   createWireframeCircle,
+  createWireframePolyline,
   createWireframeRect,
   createWireframeLine,
   createWireframeArc,
@@ -21,6 +22,8 @@ const RECENT_PROJECTS_KEY = 'argus_cam_recent_projects_v1';
 const PARAMETRIC_CAD_TYPES = new Set([
   'circle',
   'arc',
+  'polyline',
+  'curve',
   'rect',
   'rectangle',
   'line',
@@ -184,14 +187,25 @@ export function deserializeCustomGeometry(serializedList = []) {
         const y = 0;
         const r = item.radius ?? ud.radius ?? (item.diameter ? item.diameter / 2 : 25.0);
         obj = createWireframeCircle(r, y, [cx, cz], 0, 360, 'G17', { color: col, name: item.name });
-      } else if (cadType === 'arc') {
-        const cx = centerObj?.x ?? pos.x ?? 0;
-        const cy = centerObj?.y ?? pos.y ?? 0;
-        const cz = centerObj?.z ?? pos.z ?? 0;
-        const r = item.radius ?? ud.radius ?? 25.0;
-        const sAngle = item.startAngleDeg ?? ud.startAngleDeg ?? 0;
-        const eAngle = item.endAngleDeg ?? ud.endAngleDeg ?? 180;
-        obj = createWireframeArc([cx, cy, cz], r, sAngle, eAngle, { color: col, name: item.name });
+      } else if (cadType === 'arc' || cadType === 'polyline' || cadType === 'curve') {
+        const rawPts = item.points || ud.points;
+        const hasPoints = Array.isArray(rawPts) && rawPts.length >= 2;
+        const hasCenterAndRadius = Boolean(centerObj && (item.radius || ud.radius));
+
+        if (hasPoints && (!hasCenterAndRadius || (!item.startAngleDeg && !ud.startAngleDeg && !item.endAngleDeg && !ud.endAngleDeg))) {
+          // Reconstruct trimmed polyline arc from exact vertices
+          obj = createWireframePolyline(rawPts, { color: col, name: item.name, type: 'arc', cadType: 'arc' });
+        } else if (hasCenterAndRadius) {
+          const cx = centerObj?.x ?? pos.x ?? 0;
+          const cy = 0;
+          const cz = centerObj?.z ?? pos.z ?? 0;
+          const r = item.radius ?? ud.radius ?? 25.0;
+          const sAngle = item.startAngleDeg ?? ud.startAngleDeg ?? 0;
+          const eAngle = item.endAngleDeg ?? ud.endAngleDeg ?? 180;
+          obj = createWireframeArc([cx, cy, cz], r, sAngle, eAngle, { color: col, name: item.name });
+        } else if (hasPoints) {
+          obj = createWireframePolyline(rawPts, { color: col, name: item.name, type: 'arc', cadType: 'arc' });
+        }
       } else if (cadType === 'rect' || cadType === 'rectangle') {
         const cx = centerObj?.x ?? pos.x ?? 0;
         const cz = centerObj?.z ?? pos.z ?? 0;
