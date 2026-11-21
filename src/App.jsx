@@ -4214,7 +4214,7 @@ export default function App() {
       solidsList: newSolids,
       customGeometry: []
     });
-    setCameraCommand({ preset: 'iso', timestamp: Date.now() });
+    setCameraCommand({ preset: 'fit', timestamp: Date.now() });
 
     // Immediate session flush to IndexedDB
     saveWorkspaceSession({

@@ -287,6 +287,8 @@ export default function Viewport3D({
   const clipPlaneHelperRef = useRef(null);
   const cplaneHelperGroupRef = useRef(null);
   const normalMaterialRef = useRef(new THREE.MeshNormalMaterial());
+  const orbitTargetRef = useRef(new THREE.Vector3(0, 49, 0));
+  const sphericalRef = useRef(new THREE.Spherical(340, Math.PI / 3.4, Math.PI / 4));
 
   // Backplot & Solid Verify Simulation State & Refs
   const [isBackplotPlaying, setIsBackplotPlaying] = useState(false);
@@ -693,7 +695,7 @@ export default function Viewport3D({
     // Camera setup
     const width = container.clientWidth;
     const height = container.clientHeight;
-    const camera = new THREE.PerspectiveCamera(45, width / height, 1, 3000);
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.5, 50000);
     camera.position.set(220, 180, 260);
     camera.lookAt(0, 45, 0);
     cameraRef.current = camera;
@@ -905,7 +907,7 @@ export default function Viewport3D({
     let pickDownY = 0;
     let prevMouseX = 0;
     let prevMouseY = 0;
-    let spherical = new THREE.Spherical(340, Math.PI / 3.4, Math.PI / 4);
+    let spherical = sphericalRef.current;
 
     const isSelectionArmed = () =>
       isChainingActiveRef.current ||
@@ -1712,13 +1714,20 @@ export default function Viewport3D({
 
       if (isDragging) {
         spherical.theta -= deltaX * 0.008;
-        spherical.phi = Math.max(0.1, Math.min(Math.PI / 2.05, spherical.phi - deltaY * 0.008));
-        camera.position.setFromSpherical(spherical);
-        camera.lookAt(0, 45, 0);
+        spherical.phi = Math.max(0.01, Math.min(Math.PI - 0.01, spherical.phi - deltaY * 0.008));
+        camera.up.set(0, 1, 0);
+        const offset = new THREE.Vector3().setFromSpherical(spherical);
+        camera.position.copy(orbitTargetRef.current).add(offset);
+        camera.lookAt(orbitTargetRef.current);
         return;
       } else if (isPanning) {
-        camera.position.x -= deltaX * 0.4;
-        camera.position.y += deltaY * 0.4;
+        const panFactor = Math.max(0.05, (spherical.radius / 700) * 0.4);
+        const panX = -deltaX * panFactor;
+        const panY = deltaY * panFactor;
+        const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
+        const up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
+        camera.position.addScaledVector(right, panX).addScaledVector(up, panY);
+        orbitTargetRef.current.addScaledVector(right, panX).addScaledVector(up, panY);
         return;
       }
 
@@ -2461,9 +2470,13 @@ export default function Viewport3D({
 
     const onWheel = (e) => {
       e.preventDefault();
-      spherical.radius = Math.max(80, Math.min(800, spherical.radius + e.deltaY * 0.4));
-      camera.position.setFromSpherical(spherical);
-      camera.lookAt(0, 45, 0);
+      const zoomFactor = spherical.radius * 0.0015 + 0.2;
+      const zoomDelta = e.deltaY * zoomFactor;
+      spherical.radius = Math.max(10, Math.min(50000, spherical.radius + zoomDelta));
+      const offset = new THREE.Vector3().setFromSpherical(spherical);
+      camera.position.copy(orbitTargetRef.current).add(offset);
+      camera.lookAt(orbitTargetRef.current);
+      setCamDist(spherical.radius);
     };
 
     const onMouseLeave = () => {
@@ -2553,35 +2566,106 @@ export default function Viewport3D({
   const snapView = (preset) => {
     if (!cameraRef.current) return;
     const cam = cameraRef.current;
-    if (preset === 'iso') {
-      cam.position.set(220, 180, 260);
+    const spherical = sphericalRef.current;
+    const target = orbitTargetRef.current;
+
+    // Helper to compute bounding box of active model and custom geometry
+    const computeSceneBounds = () => {
+      const box = new THREE.Box3();
+      if (partHolderGroupRef.current && partHolderGroupRef.current.children.length > 0) {
+        partHolderGroupRef.current.updateMatrixWorld(true);
+        box.expandByObject(partHolderGroupRef.current);
+      }
+      if (customGeoGroupRef.current && customGeoGroupRef.current.children.length > 0) {
+        customGeoGroupRef.current.updateMatrixWorld(true);
+        box.expandByObject(customGeoGroupRef.current);
+      }
+      return box;
+    };
+
+    if (preset === 'fit') {
+      const box = computeSceneBounds();
+      if (!box.isEmpty()) {
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z, 20);
+
+        target.copy(center);
+
+        const fov = (cam.fov * Math.PI) / 180;
+        let dist = (maxDim / 2) / Math.tan(fov / 2);
+        dist = Math.max(120, dist * 1.45); // 45% margin for comfortable framing
+
+        spherical.radius = dist;
+        if (spherical.phi < 0.05 || isNaN(spherical.phi)) {
+          spherical.theta = Math.PI / 4;
+          spherical.phi = Math.PI / 3.4;
+        }
+        cam.far = Math.max(50000, dist * 10);
+        cam.near = Math.max(0.5, dist / 2000);
+        cam.updateProjectionMatrix();
+      } else {
+        target.set(0, 49, 0);
+        spherical.radius = 340;
+        spherical.theta = Math.PI / 4;
+        spherical.phi = Math.PI / 3.4;
+      }
+      setCurrentViewName('Fit Extents');
+    } else if (preset === 'iso') {
+      cam.up.set(0, 1, 0);
+      spherical.theta = Math.PI / 4;
+      spherical.phi = Math.PI / 3.4;
       setCurrentViewName('Isometric');
     } else if (preset === 'top') {
-      cam.position.set(0, 360, 0.001);
+      cam.up.set(0, 0, -1);
+      spherical.theta = 0;
+      spherical.phi = 0.001;
       setCurrentViewName('Top');
     } else if (preset === 'front') {
-      cam.position.set(0, 50, 360);
+      cam.up.set(0, 1, 0);
+      spherical.theta = 0;
+      spherical.phi = Math.PI / 2;
       setCurrentViewName('Front');
     } else if (preset === 'right') {
-      cam.position.set(360, 50, 0);
+      cam.up.set(0, 1, 0);
+      spherical.theta = Math.PI / 2;
+      spherical.phi = Math.PI / 2;
       setCurrentViewName('Right');
     } else if (preset === 'bottom') {
-      cam.position.set(0, -360, 0.001);
+      cam.up.set(0, 0, 1);
+      spherical.theta = 0;
+      spherical.phi = Math.PI - 0.001;
       setCurrentViewName('Bottom');
     } else if (preset === 'left') {
-      cam.position.set(-360, 50, 0);
+      cam.up.set(0, 1, 0);
+      spherical.theta = -Math.PI / 2;
+      spherical.phi = Math.PI / 2;
       setCurrentViewName('Left');
     } else if (preset === 'back') {
-      cam.position.set(0, 50, -360);
+      cam.up.set(0, 1, 0);
+      spherical.theta = Math.PI;
+      spherical.phi = Math.PI / 2;
       setCurrentViewName('Back');
-    } else if (preset === 'fit') {
-      cam.position.set(200, 150, 240);
-    } else if (preset === 'unzoom_50') cam.position.multiplyScalar(1.5);
-    else if (preset === 'unzoom_80') cam.position.multiplyScalar(1.8);
+    } else if (preset === 'unzoom_50') {
+      spherical.radius = Math.min(50000, spherical.radius * 1.5);
+    } else if (preset === 'unzoom_80') {
+      spherical.radius = Math.min(50000, spherical.radius * 1.8);
+    }
 
-    const centerY = currentModel ? 45 : 0;
-    cam.lookAt(0, centerY, 0);
-    setCamDist(cam.position.distanceTo(new THREE.Vector3(0, centerY, 0)));
+    if (preset === 'top') {
+      cam.up.set(0, 0, -1);
+      cam.position.set(target.x, target.y + spherical.radius, target.z);
+    } else if (preset === 'bottom') {
+      cam.up.set(0, 0, 1);
+      cam.position.set(target.x, target.y - spherical.radius, target.z);
+    } else {
+      cam.up.set(0, 1, 0);
+      const offset = new THREE.Vector3().setFromSpherical(spherical);
+      cam.position.copy(target).add(offset);
+    }
+    cam.lookAt(target);
+    cam.updateMatrixWorld();
+    setCamDist(spherical.radius);
   };
 
   useEffect(() => {
@@ -2649,6 +2733,11 @@ export default function Viewport3D({
     if (onMetricsCalculated) {
       onMetricsCalculated(metrics);
     }
+
+    // Automatically frame newly loaded model extents
+    setTimeout(() => {
+      snapView('fit');
+    }, 50);
   }, [currentModel, customGeometry]);
 
   // 4. Update Part Transforms (Position, Rotation, Scale)
@@ -4834,7 +4923,7 @@ export default function Viewport3D({
             onChangeSelectedEntities?.([]);
             setSelectedSolidFaceIds([]);
           }}
-          onZoomExtents={() => applyCameraPreset('fit')}
+          onZoomExtents={() => snapView('fit')}
           onOpenColorMask={onOpenSelectAllModal}
           onSwitchToLevels={onSwitchToLevels}
           onSwitchToPlanes={onSwitchToPlanes}
