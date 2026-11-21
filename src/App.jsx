@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
-import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box, CheckCircle2, AlertTriangle, AlertCircle, Info, FolderOpen, Undo2, Redo2 } from 'lucide-react';
+import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box, CheckCircle2, AlertTriangle, AlertCircle, Info, FolderOpen, Undo2, Redo2, ChevronDown, ChevronUp } from 'lucide-react';
 import TitleBar from './components/TitleBar';
 import RibbonBar from './components/RibbonBar';
 import OperationsTree from './components/OperationsTree';
@@ -283,6 +283,7 @@ export default function App() {
     openMobileTab,
     closeMobileDrawer
   } = useMobileLayout();
+  const [isMobileRibbonOpen, setIsMobileRibbonOpen] = useState(false);
   const [projectDescriptor, setProjectDescriptor] = useState('Mastercam 5-Axis Multi-Surface Machining Project for DMU 50 VMC');
   const [projectCreatedDate, setProjectCreatedDate] = useState(() => new Date(Date.now() - 3600000 * 24 * 2));
   const [projectLastModifiedDate, setProjectLastModifiedDate] = useState(() => new Date());
@@ -7670,51 +7671,105 @@ export default function App() {
   return (
     <div id="root" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {isMobile ? (
-        <header className="h-12 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-3 text-slate-200 select-none z-30 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-black text-white text-xs shadow-md">
+        <header className="h-9 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-2 text-slate-200 select-none z-30 shrink-0">
+          {/* Left Brand & Project */}
+          <div className="flex items-center gap-1.5">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-black text-white text-[11px] shadow">
               A
             </div>
-            <div className="leading-tight">
-              <div className="text-xs font-bold text-white tracking-wide truncate max-w-[150px]">
-                {currentProjectName || 'Argus CAM Mobile'}
-              </div>
-              <div className="text-[9px] text-cyan-400 font-medium">
-                {activeMachine?.name ? activeMachine.name.split(' ')[0] : 'Fanuc 5-Axis'}
+            <div className="leading-tight truncate max-w-[120px]">
+              <div className="text-[11px] font-bold text-white tracking-wide truncate">
+                {currentProjectName || 'Argus CAM'}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
+
+          {/* Center: Camera Quick Snaps */}
+          <div className="flex items-center gap-1 bg-slate-950/60 p-0.5 rounded border border-slate-800">
+            <button
+              onClick={() => handleSnapCamera('top')}
+              className="px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 hover:text-white rounded hover:bg-slate-800 active:scale-95"
+              title="Top View (G17)"
+            >
+              Top
+            </button>
+            <button
+              onClick={() => handleSnapCamera('front')}
+              className="px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 hover:text-white rounded hover:bg-slate-800 active:scale-95"
+              title="Front View"
+            >
+              Front
+            </button>
+            <button
+              onClick={() => handleSnapCamera('iso')}
+              className="px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 hover:text-white rounded hover:bg-slate-800 active:scale-95"
+              title="Isometric View"
+            >
+              Iso
+            </button>
+            <button
+              onClick={() => handleSnapCamera('fit')}
+              className="px-1.5 py-0.5 text-[10px] font-semibold text-cyan-400 hover:text-cyan-300 rounded hover:bg-slate-800 active:scale-95"
+              title="Fit to Extents"
+            >
+              Fit
+            </button>
+          </div>
+
+          {/* Right: Show/Hide Ribbon Toggle & File Actions */}
+          <div className="flex items-center gap-1">
+            {/* Show / Hide Ribbon Button */}
+            <button
+              onClick={() => setIsMobileRibbonOpen((prev) => !prev)}
+              className={`px-2 py-0.5 rounded text-[11px] font-semibold border flex items-center gap-1 transition-all active:scale-95 ${
+                isMobileRibbonOpen 
+                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.3)]' 
+                  : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700'
+              }`}
+              title="Show / Hide Mastercam Ribbon Bar"
+            >
+              {isMobileRibbonOpen ? (
+                <>
+                  <ChevronUp size={12} className="text-cyan-400" />
+                  <span>Hide</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown size={12} />
+                  <span>Ribbon</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={handleOpenViaNativeDialog}
-              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium border border-slate-700 flex items-center gap-1 active:scale-95"
+              className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium border border-slate-700 flex items-center gap-1 active:scale-95"
               title="Open STEP / IGES / CAD File"
             >
-              <FolderOpen size={13} className="text-cyan-400" />
+              <FolderOpen size={11} className="text-cyan-400" />
               Open
             </button>
             <button
               onClick={handleUndo}
               disabled={historyIndex <= 0}
-              className={`p-1.5 rounded bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 ${historyIndex <= 0 ? 'opacity-40' : ''}`}
+              className={`p-1 rounded bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 ${historyIndex <= 0 ? 'opacity-40' : ''}`}
               title="Undo"
             >
-              <Undo2 size={14} />
+              <Undo2 size={12} />
             </button>
             <button
               onClick={handleRedo}
               disabled={historyIndex >= history.length - 1}
-              className={`p-1.5 rounded bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 ${historyIndex >= history.length - 1 ? 'opacity-40' : ''}`}
+              className={`p-1 rounded bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 ${historyIndex >= history.length - 1 ? 'opacity-40' : ''}`}
               title="Redo"
             >
-              <Redo2 size={14} />
+              <Redo2 size={12} />
             </button>
           </div>
         </header>
       ) : (
-        <>
-          {/* 1. TitleBar */}
-          <TitleBar
+        /* 1. TitleBar */
+        <TitleBar
         currentProject={currentProjectName}
         activeMachine={activeMachine}
         theme={theme}
@@ -7743,9 +7798,12 @@ export default function App() {
         onNotify={showToast}
         onRenameProject={handleRenameProject}
       />
+      )}
 
       {/* 2. Ribbon Bar with Dynamic Context-Aware Toolbars */}
-      <RibbonBar
+      {(!isMobile || isMobileRibbonOpen) && (
+        <div className={isMobile ? "absolute top-9 left-0 right-0 z-50 bg-slate-900/98 backdrop-blur-xl border-b border-cyan-500/30 shadow-2xl overflow-x-auto max-h-[145px]" : ""}>
+          <RibbonBar
         activeTab={activeRibbonTab}
         onSelectTab={(tab) => {
           setActiveRibbonTab(tab);
@@ -7999,7 +8057,15 @@ export default function App() {
         onChangeViewMode={setWorkspaceViewMode}
         onStartFlowlineWizard={() => handleFlowlineWizardStep('wizard_new_file', 1)}
       />
-      </>
+          {isMobile && (
+            <div 
+              onClick={() => setIsMobileRibbonOpen(false)}
+              className="w-full py-0.5 bg-slate-950/80 hover:bg-slate-900 border-t border-slate-800 flex items-center justify-center text-[10px] text-slate-400 hover:text-cyan-400 cursor-pointer select-none"
+            >
+              <ChevronUp size={12} className="mr-1" /> Tap to Collapse Ribbon
+            </div>
+          )}
+        </div>
       )}
 
       {/* Flowline 3-Axis Guided Wizard Bar */}
@@ -8015,7 +8081,7 @@ export default function App() {
       )}
 
       {/* 3. Main CAD/CAM Workspace */}
-      <div className="workspace-body">
+      <div className="workspace-body" style={{ marginLeft: isMobile && isLandscape ? '48px' : '0' }}>
         {/* Left Operations / Levels / Solids / Planes Manager Tree (Desktop only, drawer on mobile) */}
         {!isMobile && (
         <OperationsTree
@@ -8341,6 +8407,7 @@ export default function App() {
             </div>
             <div style={{ flex: 1, height: '100%' }}>
               <Viewport3D
+                isMobile={isMobile}
                 currentModel={currentModel}
                 partMetrics={partMetrics}
                 stockConfig={stockConfig}
@@ -8475,6 +8542,7 @@ export default function App() {
               onCancel={handleCancelSurfaceExtrude}
             />
             <Viewport3D
+              isMobile={isMobile}
               currentModel={currentModel}
               partMetrics={partMetrics}
               stockConfig={stockConfig}
@@ -8605,16 +8673,18 @@ export default function App() {
       </div>
 
       {/* 4. Mastercam Viewsheets Strip */}
-      <ViewsheetBar
-        isVisible={isViewsheetsVisible}
-        viewsheets={viewsheets}
-        activeViewsheetId={activeViewsheetId}
-        onSelectViewsheet={handleSelectViewsheet}
-        onAddViewsheet={handleAddViewsheet}
-        onDeleteViewsheet={handleDeleteViewsheet}
-        onRenameViewsheet={handleRenameViewsheet}
-        onSaveBookmark={handleSaveViewsheetBookmark}
-      />
+      {!isMobile && (
+        <ViewsheetBar
+          isVisible={isViewsheetsVisible}
+          viewsheets={viewsheets}
+          activeViewsheetId={activeViewsheetId}
+          onSelectViewsheet={handleSelectViewsheet}
+          onAddViewsheet={handleAddViewsheet}
+          onDeleteViewsheet={handleDeleteViewsheet}
+          onRenameViewsheet={handleRenameViewsheet}
+          onSaveBookmark={handleSaveViewsheetBookmark}
+        />
+      )}
 
       {/* 5. Bottom Status Bar (Desktop only) */}
       {!isMobile && (
@@ -9810,6 +9880,7 @@ export default function App() {
           isDrawerOpen={isMobileDrawerOpen}
           operationsCount={operations.length}
           hasModel={Boolean(currentModel || customGeometry.length > 0)}
+          isLandscape={isLandscape}
         />
       )}
 
@@ -9817,6 +9888,7 @@ export default function App() {
         <MobileBottomSheet
           isOpen={isMobileDrawerOpen && activeMobileTab !== 'viewport'}
           onClose={closeMobileDrawer}
+          isLandscape={isLandscape}
           title={
             activeMobileTab === 'cad' ? 'CAD Drawing Tools' :
             activeMobileTab === 'toolpaths' ? '3D Toolpath Strategies' :

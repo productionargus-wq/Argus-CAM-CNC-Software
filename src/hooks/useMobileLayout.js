@@ -29,10 +29,36 @@ export function useMobileLayout() {
     };
   }, []);
 
-  const isMobile = windowDimensions.width < 768;
-  const isTablet = windowDimensions.width >= 768 && windowDimensions.width < 1024;
+  const hasTouch = typeof navigator !== 'undefined' && (
+    navigator.maxTouchPoints > 0 || 
+    'ontouchstart' in window ||
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')
+  );
+
+  const isNativeCapacitor = typeof window !== 'undefined' && Boolean(
+    window.Capacitor?.isNativePlatform?.() || 
+    window.Capacitor?.getPlatform?.() === 'android' ||
+    window.Capacitor?.getPlatform?.() === 'ios'
+  );
+
   const isLandscape = windowDimensions.width > windowDimensions.height;
-  const hasTouch = typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window);
+
+  // On phones in landscape, height is typically 320px - 450px, width 640px - 950px.
+  // In portrait, width is 320px - 500px.
+  const isMobileLandscape = isLandscape && (
+    windowDimensions.height <= 550 || 
+    (hasTouch && windowDimensions.height < 650)
+  );
+  const isMobilePortrait = !isLandscape && windowDimensions.width < 768;
+
+  const isMobile = Boolean(
+    isNativeCapacitor || 
+    isMobileLandscape || 
+    isMobilePortrait || 
+    (hasTouch && windowDimensions.width < 1024 && windowDimensions.height < 650)
+  );
+
+  const isTablet = hasTouch && !isMobile && windowDimensions.width < 1280;
 
   const openMobileTab = (tab) => {
     setActiveMobileTab(tab);

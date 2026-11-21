@@ -154,6 +154,7 @@ export default function Viewport3D({
   activePlane = 'Top (G17)',
   planes = [],
   theme = 'light',
+  isMobile = false,
   isBackplotActive = false,
   backplotMode = 'backplot',
   onCloseBackplot = null,
@@ -4761,7 +4762,7 @@ export default function Viewport3D({
       )}
 
       {/* Unified Mastercam Floating AutoCursor & Selection Methods Pill */}
-      {!isBackplotActive && (
+      {!isBackplotActive && !isMobile && (
         <AutoCursorBar
           snapMode={propSnapMode}
           onSelectSnapMode={(mode) => {
@@ -5046,7 +5047,7 @@ export default function Viewport3D({
       )}
 
       {/* Docked Vertical QuickMask Bar (Right Edge of Viewport matching Image 2) */}
-      {!isBackplotActive && (
+      {!isBackplotActive && !isMobile && (
         <QuickMaskBar
           activeMask={selectionMask}
           onSelectMask={handleQuickMaskSelect}
