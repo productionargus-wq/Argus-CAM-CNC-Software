@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
   Layers, Settings, Play, ShieldAlert, FileText, CheckCircle2,
   Box, Scissors, Compass, Sliders, Eye, RefreshCw, Zap,
@@ -7,7 +7,7 @@ import {
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
   Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge,
   Copy, Cpu, Activity, Type, DollarSign, Tablet, PenTool, Edit3, Columns2,
-  Clipboard, Ruler, Search, ChevronDown, CornerDownRight, X, Circle, Square,
+  Clipboard, Ruler, Search, ChevronDown, ChevronLeft, ChevronRight, CornerDownRight, X, Circle, Square,
   MousePointer
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
@@ -222,6 +222,35 @@ export default function RibbonBar({
   const fileInputRef = useRef(null);
   const mcamFileInputRef = useRef(null);
   const ncFileInputRef = useRef(null);
+  const ribbonContentRef = useRef(null);
+
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkRibbonScroll = useCallback(() => {
+    const el = ribbonContentRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 6);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6);
+  }, []);
+
+  useEffect(() => {
+    // Check scroll state after tab changes or resize
+    const timer = setTimeout(checkRibbonScroll, 60);
+    window.addEventListener('resize', checkRibbonScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', checkRibbonScroll);
+    };
+  }, [checkRibbonScroll, activeTab]);
+
+  const handleScrollRibbon = (direction) => {
+    const el = ribbonContentRef.current;
+    if (!el) return;
+    const delta = direction === 'left' ? -280 : 280;
+    el.scrollBy({ left: delta, behavior: 'smooth' });
+    setTimeout(checkRibbonScroll, 320);
+  };
 
   const [pointStyleSymbol, setPointStyleSymbol] = useState('*');
   const [showPointStyleMenu, setShowPointStyleMenu] = useState(false);
@@ -392,7 +421,30 @@ export default function RibbonBar({
       </div>
 
       {/* Ribbon Action Groups - Dynamically swaps based on activeTab */}
-      <div className="ribbon-content">
+      <div className="ribbon-content-wrapper">
+        {canScrollLeft && (
+          <button
+            type="button"
+            className="ribbon-scroll-btn ribbon-scroll-left"
+            onClick={() => handleScrollRibbon('left')}
+            title="Scroll Ribbon Left"
+            aria-label="Scroll Ribbon Left"
+          >
+            <ChevronLeft size={16} />
+          </button>
+        )}
+
+        <div
+          ref={ribbonContentRef}
+          className="ribbon-content"
+          onScroll={checkRibbonScroll}
+          onWheel={(e) => {
+            if (e.deltaY !== 0) {
+              e.currentTarget.scrollLeft += e.deltaY;
+              checkRibbonScroll();
+            }
+          }}
+        >
         {/* ==================== 1. FILE TAB ==================== */}
         {activeTab === 'File' && (
           <>
@@ -2039,6 +2091,19 @@ export default function RibbonBar({
               }
             }}
           />
+        )}
+        </div>
+
+        {canScrollRight && (
+          <button
+            type="button"
+            className="ribbon-scroll-btn ribbon-scroll-right"
+            onClick={() => handleScrollRibbon('right')}
+            title="Scroll Ribbon Right"
+            aria-label="Scroll Ribbon Right"
+          >
+            <ChevronRight size={16} />
+          </button>
         )}
       </div>
     </nav>
