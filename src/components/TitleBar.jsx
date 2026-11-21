@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, FolderOpen, RotateCcw, RotateCw, Printer, HelpCircle, Minus, Square, X, Cpu, Sun, Moon } from 'lucide-react';
+import { Save, FolderOpen, RotateCcw, RotateCw, Printer, HelpCircle, Minus, Square, X, Cpu, Sun, Moon, Sparkles } from 'lucide-react';
 
 export default function TitleBar({
   currentProject = "Part1.mcam",
@@ -15,7 +15,9 @@ export default function TitleBar({
   canUndo = false,
   canRedo = false,
   onNotify,
-  onRenameProject
+  onRenameProject,
+  isAIActive = false,
+  onToggleAI = null
 }) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(currentProject);
@@ -119,6 +121,29 @@ export default function TitleBar({
           >
             {theme === 'light' ? <Moon size={13} /> : <Sun size={13} />}
           </button>
+          {onToggleAI && (
+            <button
+              className="quick-btn"
+              onClick={() => onToggleAI(!isAIActive)}
+              title={isAIActive ? 'Turn off Argus AI Assistant' : 'Turn on Argus AI Voice Assistant'}
+              style={{
+                marginLeft: '6px',
+                background: isAIActive ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
+                color: isAIActive ? '#38bdf8' : '#94a3b8',
+                border: isAIActive ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid transparent',
+                borderRadius: '3px',
+                padding: '2px 5px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                fontSize: '11px',
+                fontWeight: 600
+              }}
+            >
+              <Sparkles size={12} color={isAIActive ? '#38bdf8' : '#38bdf8'} />
+              <span>AI</span>
+            </button>
+          )}
         </div>
       </div>
 

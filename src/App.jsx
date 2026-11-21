@@ -107,6 +107,7 @@ import SolidExtrudePanel from './components/SolidExtrudePanel';
 import AnalyzeDynamicDialog from './components/AnalyzeDynamicDialog';
 import StatusBar from './components/StatusBar';
 import ViewsheetBar from './components/ViewsheetBar';
+import AIVoiceButton from './components/AIVoiceButton';
 import {
   createImpellerGeometry,
   createAerospaceBracket,
@@ -306,6 +307,7 @@ export default function App() {
     dimensions: false
   });
   const [cameraCommand, setCameraCommand] = useState(null);
+  const [isAIActive, setIsAIActive] = useState(false);
   const [partTransform, setPartTransform] = useState({
     position: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0 },
@@ -7700,6 +7702,8 @@ export default function App() {
         canRedo={historyIndex < history.length - 1}
         onNotify={showToast}
         onRenameProject={handleRenameProject}
+        isAIActive={isAIActive}
+        onToggleAI={setIsAIActive}
       />
 
       {/* 2. Mastercam Ribbon Bar with Built-in Arrow Collapse/Expand Button */}
@@ -9813,10 +9817,26 @@ export default function App() {
         activeWcs={activeWcs}
       />
 
+      {/* Floating Circular AI Voice Assistant Orb */}
+      <AIVoiceButton
+        isAIActive={isAIActive}
+        onToggleAI={setIsAIActive}
+        onSnapCamera={handleSnapCamera}
+        onUpdateTransform={handleCommitPartTransform}
+        partTransform={partTransform}
+        partMetrics={partMetrics}
+        onExecuteCommand={handleExecuteCommand}
+        setIsBackplotActive={setIsBackplotActive}
+        setRenderMode={setRenderMode}
+        onToggleTheme={handleToggleTheme}
+        operations={operations}
+        showToast={showToast}
+      />
+
       {/* Floating Modern Toast Notification Stack */}
       <div style={{
         position: 'fixed',
-        bottom: '32px',
+        bottom: '104px',
         right: '16px',
         zIndex: 99999,
         display: 'flex',
