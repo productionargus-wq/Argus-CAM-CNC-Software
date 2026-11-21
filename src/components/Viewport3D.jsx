@@ -2679,14 +2679,30 @@ export default function Viewport3D({
       if (!container) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
+      if (w > 0 && h > 0) {
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      }
     };
     window.addEventListener('resize', handleResize);
 
+    // Dynamic container ResizeObserver to automatically resize on panel toggle / splitter drag / mobile orientation
+    let resizeObserver;
+    if (typeof ResizeObserver !== 'undefined' && container) {
+      resizeObserver = new ResizeObserver(() => {
+        handleResize();
+      });
+      resizeObserver.observe(container);
+    }
+    // Initial sync
+    handleResize();
+
     return () => {
       cancelAnimationFrame(animationId);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       window.removeEventListener('resize', handleResize);
       dom.removeEventListener('mousedown', onMouseDown);
       dom.removeEventListener('dblclick', onDoubleClick);

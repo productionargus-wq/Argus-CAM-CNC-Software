@@ -8475,7 +8475,7 @@ export default function App() {
         )}
 
         {workspaceViewMode === '3d' && (
-          <div style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', minWidth: 0 }}>
+          <div style={{ position: 'relative', flex: 1, width: '100%', height: '100%', display: 'flex', minWidth: 0 }}>
             <ChainingPalette
               isOpen={isChainingPaletteOpen}
               chainMode={chainingConfig.chainMode}
