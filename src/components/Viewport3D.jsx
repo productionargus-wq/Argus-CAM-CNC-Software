@@ -1274,9 +1274,11 @@ export default function Viewport3D({
 
         if (lengthCommit < 0.5) return false;
 
+        const lineY = bitanCommit ? 0 : p1Final.y;
+        const lineY2 = bitanCommit ? 0 : p2Commit.y;
         newEntity = createWireframeLine(
-          [p1Final.x, p1Final.y, p1Final.z],
-          [p2Commit.x, p2Commit.y, p2Commit.z],
+          [p1Final.x, lineY, p1Final.z],
+          [p2Commit.x, lineY2, p2Commit.z],
           { color: 0x38bdf8, name: `Wireframe_${tool === 'line_perp' ? 'Perp' : tool === 'line_parallel' ? 'Parallel' : 'Line'}_${Date.now()}` }
         );
         if (onDrawingUpdateRef.current) {

@@ -180,7 +180,8 @@ export function deserializeCustomGeometry(serializedList = []) {
       if (cadType === 'circle') {
         const cx = centerObj?.x ?? pos.x ?? 0;
         const cz = centerObj?.z ?? pos.z ?? 0;
-        const y = centerObj?.y ?? pos.y ?? 0;
+        // Always use y=0 for sketch plane - stale y=35 from old circles must be corrected
+        const y = 0;
         const r = item.radius ?? ud.radius ?? (item.diameter ? item.diameter / 2 : 25.0);
         obj = createWireframeCircle(r, y, [cx, cz], 0, 360, 'G17', { color: col, name: item.name });
       } else if (cadType === 'arc') {
@@ -202,8 +203,9 @@ export function deserializeCustomGeometry(serializedList = []) {
       } else if (cadType === 'line') {
         const p1Raw = item.p1 || ud.p1;
         const p2Raw = item.p2 || ud.p2;
-        const p1 = p1Raw ? [p1Raw.x || 0, p1Raw.y || 0, p1Raw.z || 0] : [-25, 0, 0];
-        const p2 = p2Raw ? [p2Raw.x || 0, p2Raw.y || 0, p2Raw.z || 0] : [25, 0, 0];
+        // Clamp Y to 0: stale lines stored with y=35 from old bugs must be corrected
+        const p1 = p1Raw ? [p1Raw.x ?? 0, 0, p1Raw.z ?? 0] : [-25, 0, 0];
+        const p2 = p2Raw ? [p2Raw.x ?? 0, 0, p2Raw.z ?? 0] : [25, 0, 0];
         obj = createWireframeLine(p1, p2, { color: col, name: item.name });
       } else if (cadType === 'spline') {
         const ctrl = item.controlPoints || ud.controlPoints;

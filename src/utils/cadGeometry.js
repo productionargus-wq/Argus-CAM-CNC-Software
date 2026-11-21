@@ -3128,8 +3128,8 @@ export function createWireframePolygon(
  * Creates a 3D wireframe line between two endpoints
  */
 export function createWireframeLine(
-  p1 = [-40, 35, 0],
-  p2 = [40, 35, 0],
+  p1 = [-40, 0, 0],
+  p2 = [40, 0, 0],
   options = {}
 ) {
   const points = [
