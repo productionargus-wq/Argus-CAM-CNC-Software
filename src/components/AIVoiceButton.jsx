@@ -31,6 +31,8 @@ export default function AIVoiceButton({
   const [typedInput, setTypedInput] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [wasInterrupted, setWasInterrupted] = useState(false);
+  const [selectedLang, setSelectedLang] = useState(() => aiVoiceEngine.getLanguage());
+  const [correctionInfo, setCorrectionInfo] = useState(null);
   const lastProcessedTranscriptRef = useRef('');
 
   // Sync mute state
@@ -72,7 +74,7 @@ export default function AIVoiceButton({
   const startListeningSession = () => {
     aiVoiceEngine.startListening(
       // onTranscript
-      ({ final, interim }) => {
+      ({ final, interim, alternatives }) => {
         if (interim) {
           setInterimText(interim);
 
@@ -88,7 +90,10 @@ export default function AIVoiceButton({
           lastProcessedTranscriptRef.current = final;
           setInterimText('');
           setTranscript(final);
-          handleExecuteVoiceCommand(final);
+          handleExecuteVoiceCommand({
+            transcript: final,
+            alternatives: alternatives || [final]
+          });
         }
       },
       // onStateChange
@@ -115,7 +120,8 @@ export default function AIVoiceButton({
   };
 
   // Dispatch and execute parsed command
-  const handleExecuteVoiceCommand = (commandText) => {
+  const handleExecuteVoiceCommand = (commandInput) => {
+    const commandText = typeof commandInput === 'string' ? commandInput : commandInput?.transcript || '';
     if (!commandText || !commandText.trim()) return;
 
     // If AI was speaking, immediately silence it
@@ -127,7 +133,17 @@ export default function AIVoiceButton({
       operations
     };
 
-    const result = processVoiceCommand(commandText, appContext);
+    const result = processVoiceCommand(commandInput, appContext);
+
+    // Track auto-correction for UI feedback
+    if (result.isCorrected && result.correctedFrom) {
+      setCorrectionInfo({
+        from: result.correctedFrom,
+        to: result.normalizedText
+      });
+    } else {
+      setCorrectionInfo(null);
+    }
 
     // Quick stop / interrupt command
     if (result.actionType === 'INTERRUPT') {
@@ -304,6 +320,34 @@ export default function AIVoiceButton({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {/* Dialect / Accent Selector */}
+              <select
+                value={selectedLang}
+                onChange={(e) => {
+                  const newLang = e.target.value;
+                  setSelectedLang(newLang);
+                  aiVoiceEngine.setLanguage(newLang);
+                  showToast?.(`Speech recognition accent set to ${newLang === 'en-IN' ? 'English (India)' : newLang === 'en-US' ? 'English (US)' : newLang === 'en-GB' ? 'English (UK)' : 'English (Australia)'}`, 'info');
+                }}
+                title="Select Spoken English Accent / Dialect"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '4px',
+                  color: '#38bdf8',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  padding: '2px 4px',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="en-IN" style={{ background: '#0f172a', color: '#f8fafc' }}>🇮🇳 India (en-IN)</option>
+                <option value="en-US" style={{ background: '#0f172a', color: '#f8fafc' }}>🇺🇸 US (en-US)</option>
+                <option value="en-GB" style={{ background: '#0f172a', color: '#f8fafc' }}>🇬🇧 UK (en-GB)</option>
+                <option value="en-AU" style={{ background: '#0f172a', color: '#f8fafc' }}>🇦🇺 AU (en-AU)</option>
+              </select>
+
               <button
                 onClick={() => setIsMuted(!isMuted)}
                 title={isMuted ? 'Unmute AI Voice' : 'Mute AI Voice'}
@@ -392,6 +436,25 @@ export default function AIVoiceButton({
               <span style={{ color: '#a855f7', fontWeight: '600' }}>AI: </span>
               {lastResponse}
             </div>
+            {correctionInfo && (
+              <div
+                style={{
+                  fontSize: '10px',
+                  color: '#38bdf8',
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  padding: '3px 7px',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  marginTop: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span>⚡</span>
+                <span>Auto-corrected: "<em>{correctionInfo.from}</em>" → "<strong>{correctionInfo.to}</strong>"</span>
+              </div>
+            )}
             {actionBadge && (
               <div style={{ marginTop: '4px' }}>
                 <span

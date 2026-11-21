@@ -26,6 +26,9 @@ class AIVoiceEngine {
     this.speechRate = 1.08;
     this.speechPitch = 1.0;
 
+    const savedLang = typeof localStorage !== 'undefined' ? localStorage.getItem('argus_ai_speech_lang') : null;
+    this.language = savedLang || 'en-IN'; // Default to English (India) for superior phonetic matching
+
     this.init();
   }
 
@@ -39,8 +42,21 @@ class AIVoiceEngine {
         this.recognition = new SpeechRecognition();
         this.recognition.continuous = true;
         this.recognition.interimResults = true;
-        this.recognition.lang = 'en-US';
-        this.recognition.maxAlternatives = 1;
+        this.recognition.lang = this.language;
+        this.recognition.maxAlternatives = 5; // Multi-hypothesis candidate ranking
+
+        // Inject JSGF grammar for CAD/CAM domain biasing if supported
+        const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList;
+        if (SpeechGrammarList) {
+          try {
+            const grammar = '#JSGF V1.0; grammar camCommands; public <camCommand> = move | rotate | top view | front view | isometric | right view | left view | bottom view | fit view | simulation | backplot | toolpaths | wireframe | shaded | dimensions | stop | wait ;';
+            const speechRecognitionList = new SpeechGrammarList();
+            speechRecognitionList.addFromString(grammar, 1);
+            this.recognition.grammars = speechRecognitionList;
+          } catch {
+            // ignore if not supported
+          }
+        }
 
         this.recognition.onstart = () => {
           this.isListening = true;
@@ -60,13 +76,26 @@ class AIVoiceEngine {
         this.recognition.onresult = (event) => {
           let interimTranscript = '';
           let finalTranscript = '';
+          const alternatives = [];
 
           for (let i = event.resultIndex; i < event.results.length; ++i) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
+            const res = event.results[i];
+            const transcript = res[0].transcript;
+            if (res.isFinal) {
               finalTranscript += transcript;
+              for (let j = 0; j < res.length; ++j) {
+                if (res[j]?.transcript) {
+                  alternatives.push(res[j].transcript);
+                }
+              }
             } else {
               interimTranscript += transcript;
+              // Also collect interim alternatives if present
+              for (let j = 0; j < res.length; ++j) {
+                if (res[j]?.transcript && !alternatives.includes(res[j].transcript)) {
+                  alternatives.push(res[j].transcript);
+                }
+              }
             }
           }
 
@@ -85,7 +114,8 @@ class AIVoiceEngine {
           if (this.onTranscriptCallback) {
             this.onTranscriptCallback({
               final: cleanFinal,
-              interim: cleanInterim
+              interim: cleanInterim,
+              alternatives: alternatives.length > 0 ? alternatives : [cleanFinal || cleanInterim]
             });
           }
         };
@@ -293,6 +323,42 @@ class AIVoiceEngine {
     }
     this.notifyStateChange();
     return this.muted;
+  }
+
+  setLanguage(lang) {
+    if (!lang) return;
+    this.language = lang;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('argus_ai_speech_lang', lang);
+      } catch {
+        // ignore
+      }
+    }
+    if (this.recognition) {
+      this.recognition.lang = lang;
+      if (this.isListening) {
+        try {
+          this.recognition.stop();
+          setTimeout(() => {
+            if (this.isListening) {
+              try {
+                this.recognition.start();
+              } catch {
+                // ignore
+              }
+            }
+          }, 150);
+        } catch {
+          // ignore
+        }
+      }
+    }
+    this.notifyStateChange({ language: lang });
+  }
+
+  getLanguage() {
+    return this.language || 'en-IN';
   }
 
   setMuted(val) {

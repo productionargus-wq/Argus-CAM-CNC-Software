@@ -8,6 +8,8 @@
  * - Self-echo detection helper
  */
 
+import { normalizeTranscript, selectBestAlternative } from './cadSpeechNormalizer.js';
+
 // Spoken numbers and phrases mapping
 const WORD_NUMBERS = {
   zero: 0,
@@ -75,7 +77,9 @@ function extractNumber(text) {
  */
 export function isRecognizableIntent(rawText) {
   if (!rawText || typeof rawText !== 'string') return false;
-  const t = rawText.toLowerCase().trim();
+  // Normalize phonetic mishearings first (e.g. 'more 20' -> 'move 20')
+  const { normalized } = normalizeTranscript(rawText);
+  const t = normalized.toLowerCase().trim();
 
   // Quick interrupt
   if (/\b(stop|wait|hold\s*on|pause|quiet|hush|cancel|shut\s*up)\b/i.test(t)) return true;
@@ -100,21 +104,48 @@ export function isRecognizableIntent(rawText) {
 
 /**
  * Parses user transcript into a CAD/CAM action
- * @param {string} rawTranscript - What the user said
+ * @param {string|object} rawInput - What the user said, or { transcript, alternatives }
  * @param {object} appContext - Current state (partTransform, partMetrics, operations, etc.)
- * @returns {object} { actionType, payload, speechText, toastText, success }
+ * @returns {object} { actionType, payload, speechText, toastText, success, normalizedText, correctedFrom, isCorrected }
  */
-export function processVoiceCommand(rawTranscript, appContext = {}) {
-  if (!rawTranscript || typeof rawTranscript !== 'string') {
+export function processVoiceCommand(rawInput, appContext = {}) {
+  let chosenRaw = '';
+  let candidates = [];
+
+  if (typeof rawInput === 'string') {
+    chosenRaw = rawInput;
+    candidates = [rawInput];
+  } else if (rawInput && typeof rawInput === 'object') {
+    candidates = rawInput.alternatives || [rawInput.transcript || rawInput.final || ''];
+    chosenRaw = selectBestAlternative(candidates);
+  }
+
+  if (!chosenRaw || !chosenRaw.trim()) {
     return {
       actionType: 'UNKNOWN',
       speechText: "I didn't catch that. Try saying show top view or rotate 180 degrees.",
       toastText: 'No voice command recognized',
-      success: false
+      success: false,
+      normalizedText: '',
+      correctedFrom: null,
+      isCorrected: false
     };
   }
 
-  const text = rawTranscript.toLowerCase().trim();
+  // Apply Phonetic & Context-Aware CAD Normalization
+  const { normalized, correctedFrom, isCorrected } = normalizeTranscript(chosenRaw);
+  const result = _evaluateCommand(normalized, appContext, chosenRaw);
+
+  return {
+    ...result,
+    normalizedText: normalized,
+    correctedFrom,
+    isCorrected
+  };
+}
+
+function _evaluateCommand(normalized, appContext, rawTranscript) {
+  const text = normalized.toLowerCase().trim();
 
   // -------------------------------------------------------------
   // 0. QUICK INTERRUPT / STOP (Barge-In Handlers)
