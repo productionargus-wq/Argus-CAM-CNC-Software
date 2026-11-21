@@ -10,8 +10,8 @@
     }
   ],
   "start_url": "/",
-  "background_color": "#090d16",
-  "theme_color": "#0f172a",
+  "background_color": "#f8fafc",
+  "theme_color": "#e2e8f0",
   "display": "standalone",
   "orientation": "landscape",
   "categories": ["productivity", "utilities", "business"]

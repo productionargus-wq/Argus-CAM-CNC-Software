@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
-import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box, CheckCircle2, AlertTriangle, AlertCircle, Info, FolderOpen, Undo2, Redo2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box, CheckCircle2, AlertTriangle, AlertCircle, Info, FolderOpen, Undo2, Redo2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import TitleBar from './components/TitleBar';
 import RibbonBar from './components/RibbonBar';
 import OperationsTree from './components/OperationsTree';
@@ -284,6 +284,7 @@ export default function App() {
     closeMobileDrawer
   } = useMobileLayout();
   const [isMobileRibbonOpen, setIsMobileRibbonOpen] = useState(false);
+  const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
   const [projectDescriptor, setProjectDescriptor] = useState('Mastercam 5-Axis Multi-Surface Machining Project for DMU 50 VMC');
   const [projectCreatedDate, setProjectCreatedDate] = useState(() => new Date(Date.now() - 3600000 * 24 * 2));
   const [projectLastModifiedDate, setProjectLastModifiedDate] = useState(() => new Date());
@@ -7670,106 +7671,8 @@ export default function App() {
 
   return (
     <div id="root" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {isMobile ? (
-        <header className="h-9 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-2 text-slate-200 select-none z-30 shrink-0">
-          {/* Left Brand & Project */}
-          <div className="flex items-center gap-1.5">
-            <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-black text-white text-[11px] shadow">
-              A
-            </div>
-            <div className="leading-tight truncate max-w-[120px]">
-              <div className="text-[11px] font-bold text-white tracking-wide truncate">
-                {currentProjectName || 'Argus CAM'}
-              </div>
-            </div>
-          </div>
-
-          {/* Center: Camera Quick Snaps */}
-          <div className="flex items-center gap-1 bg-slate-950/60 p-0.5 rounded border border-slate-800">
-            <button
-              onClick={() => handleSnapCamera('top')}
-              className="px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 hover:text-white rounded hover:bg-slate-800 active:scale-95"
-              title="Top View (G17)"
-            >
-              Top
-            </button>
-            <button
-              onClick={() => handleSnapCamera('front')}
-              className="px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 hover:text-white rounded hover:bg-slate-800 active:scale-95"
-              title="Front View"
-            >
-              Front
-            </button>
-            <button
-              onClick={() => handleSnapCamera('iso')}
-              className="px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 hover:text-white rounded hover:bg-slate-800 active:scale-95"
-              title="Isometric View"
-            >
-              Iso
-            </button>
-            <button
-              onClick={() => handleSnapCamera('fit')}
-              className="px-1.5 py-0.5 text-[10px] font-semibold text-cyan-400 hover:text-cyan-300 rounded hover:bg-slate-800 active:scale-95"
-              title="Fit to Extents"
-            >
-              Fit
-            </button>
-          </div>
-
-          {/* Right: Show/Hide Ribbon Toggle & File Actions */}
-          <div className="flex items-center gap-1">
-            {/* Show / Hide Ribbon Button */}
-            <button
-              onClick={() => setIsMobileRibbonOpen((prev) => !prev)}
-              className={`px-2 py-0.5 rounded text-[11px] font-semibold border flex items-center gap-1 transition-all active:scale-95 ${
-                isMobileRibbonOpen 
-                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.3)]' 
-                  : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700'
-              }`}
-              title="Show / Hide Mastercam Ribbon Bar"
-            >
-              {isMobileRibbonOpen ? (
-                <>
-                  <ChevronUp size={12} className="text-cyan-400" />
-                  <span>Hide</span>
-                </>
-              ) : (
-                <>
-                  <ChevronDown size={12} />
-                  <span>Ribbon</span>
-                </>
-              )}
-            </button>
-
-            <button
-              onClick={handleOpenViaNativeDialog}
-              className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium border border-slate-700 flex items-center gap-1 active:scale-95"
-              title="Open STEP / IGES / CAD File"
-            >
-              <FolderOpen size={11} className="text-cyan-400" />
-              Open
-            </button>
-            <button
-              onClick={handleUndo}
-              disabled={historyIndex <= 0}
-              className={`p-1 rounded bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 ${historyIndex <= 0 ? 'opacity-40' : ''}`}
-              title="Undo"
-            >
-              <Undo2 size={12} />
-            </button>
-            <button
-              onClick={handleRedo}
-              disabled={historyIndex >= history.length - 1}
-              className={`p-1 rounded bg-slate-800 border border-slate-700 text-slate-300 active:scale-95 ${historyIndex >= history.length - 1 ? 'opacity-40' : ''}`}
-              title="Redo"
-            >
-              <Redo2 size={12} />
-            </button>
-          </div>
-        </header>
-      ) : (
-        /* 1. TitleBar */
-        <TitleBar
+      {/* 1. Mastercam TitleBar (Exact 1:1 Web Application) */}
+      <TitleBar
         currentProject={currentProjectName}
         activeMachine={activeMachine}
         theme={theme}
@@ -7798,12 +7701,9 @@ export default function App() {
         onNotify={showToast}
         onRenameProject={handleRenameProject}
       />
-      )}
 
-      {/* 2. Ribbon Bar with Dynamic Context-Aware Toolbars */}
-      {(!isMobile || isMobileRibbonOpen) && (
-        <div className={isMobile ? "absolute top-9 left-0 right-0 z-50 bg-slate-900/98 backdrop-blur-xl border-b border-cyan-500/30 shadow-2xl overflow-x-auto max-h-[145px]" : ""}>
-          <RibbonBar
+      {/* 2. Mastercam Ribbon Bar with Built-in Arrow Collapse/Expand Button */}
+      <RibbonBar
         activeTab={activeRibbonTab}
         onSelectTab={(tab) => {
           setActiveRibbonTab(tab);
@@ -8057,16 +7957,6 @@ export default function App() {
         onChangeViewMode={setWorkspaceViewMode}
         onStartFlowlineWizard={() => handleFlowlineWizardStep('wizard_new_file', 1)}
       />
-          {isMobile && (
-            <div 
-              onClick={() => setIsMobileRibbonOpen(false)}
-              className="w-full py-0.5 bg-slate-950/80 hover:bg-slate-900 border-t border-slate-800 flex items-center justify-center text-[10px] text-slate-400 hover:text-cyan-400 cursor-pointer select-none"
-            >
-              <ChevronUp size={12} className="mr-1" /> Tap to Collapse Ribbon
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Flowline 3-Axis Guided Wizard Bar */}
       {!isMobile && (
@@ -8081,10 +7971,11 @@ export default function App() {
       )}
 
       {/* 3. Main CAD/CAM Workspace */}
-      <div className="workspace-body" style={{ marginLeft: isMobile && isLandscape ? '48px' : '0' }}>
-        {/* Left Operations / Levels / Solids / Planes Manager Tree (Desktop only, drawer on mobile) */}
-        {!isMobile && (
-        <OperationsTree
+      <div className="workspace-body" style={{ position: 'relative' }}>
+        {/* Left Operations / Levels / Solids / Planes Manager Tree with Hide/Show Arrow Button */}
+        {!isLeftPanelCollapsed ? (
+          <div style={{ position: 'relative', display: 'flex', height: '100%', flexShrink: 0 }}>
+            <OperationsTree
           operations={operations}
           onToggleOp={handleToggleOp}
           activeOpId={activeOpId}
@@ -8379,7 +8270,61 @@ export default function App() {
           onOkModifyLength={handleOkModifyLength}
           onCancelModifyLength={handleCancelModifyLength}
         />
-        )}
+        {/* Collapse Arrow Button on Left Panel */}
+        <button
+          onClick={() => setIsLeftPanelCollapsed(true)}
+          style={{
+            position: 'absolute',
+            top: '5px',
+            right: '4px',
+            zIndex: 40,
+            width: '20px',
+            height: '20px',
+            background: '#e2e8f0',
+            border: '1px solid #cbd5e1',
+            borderRadius: '3px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#475569',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+          }}
+          title="Hide Operations Tree"
+          aria-label="Hide Operations Tree"
+        >
+          <ChevronLeft size={13} />
+        </button>
+      </div>
+    ) : (
+      /* Floating Expand Arrow Button when Left Panel is Collapsed */
+      <button
+        onClick={() => setIsLeftPanelCollapsed(false)}
+        style={{
+          position: 'absolute',
+          top: '10px',
+          left: '0px',
+          zIndex: 9999,
+          width: '20px',
+          height: '32px',
+          background: '#f8fafc',
+          border: '1px solid #cbd5e1',
+          borderLeft: 'none',
+          borderRadius: '0 4px 4px 0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          color: '#0284c7',
+          boxShadow: '2px 2px 6px rgba(0,0,0,0.12)',
+          transition: 'all 0.15s ease'
+        }}
+        title="Show Operations Tree"
+        aria-label="Show Operations Tree"
+      >
+        <ChevronRight size={14} />
+      </button>
+    )}
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
         {workspaceViewMode === '2d' && (
@@ -8407,7 +8352,7 @@ export default function App() {
             </div>
             <div style={{ flex: 1, height: '100%' }}>
               <Viewport3D
-                isMobile={isMobile}
+                isMobile={false}
                 currentModel={currentModel}
                 partMetrics={partMetrics}
                 stockConfig={stockConfig}
@@ -8542,7 +8487,7 @@ export default function App() {
               onCancel={handleCancelSurfaceExtrude}
             />
             <Viewport3D
-              isMobile={isMobile}
+              isMobile={false}
               currentModel={currentModel}
               partMetrics={partMetrics}
               stockConfig={stockConfig}
@@ -8673,22 +8618,19 @@ export default function App() {
       </div>
 
       {/* 4. Mastercam Viewsheets Strip */}
-      {!isMobile && (
-        <ViewsheetBar
-          isVisible={isViewsheetsVisible}
-          viewsheets={viewsheets}
-          activeViewsheetId={activeViewsheetId}
-          onSelectViewsheet={handleSelectViewsheet}
-          onAddViewsheet={handleAddViewsheet}
-          onDeleteViewsheet={handleDeleteViewsheet}
-          onRenameViewsheet={handleRenameViewsheet}
-          onSaveBookmark={handleSaveViewsheetBookmark}
-        />
-      )}
+      <ViewsheetBar
+        isVisible={isViewsheetsVisible}
+        viewsheets={viewsheets}
+        activeViewsheetId={activeViewsheetId}
+        onSelectViewsheet={handleSelectViewsheet}
+        onAddViewsheet={handleAddViewsheet}
+        onDeleteViewsheet={handleDeleteViewsheet}
+        onRenameViewsheet={handleRenameViewsheet}
+        onSaveBookmark={handleSaveViewsheetBookmark}
+      />
 
-      {/* 5. Bottom Status Bar (Desktop only) */}
-      {!isMobile && (
-        <StatusBar
+      {/* 5. Bottom Status Bar */}
+      <StatusBar
           coords={coords}
           activeWcs={activeWcs}
           activeCPlane={activePlane}
@@ -8756,7 +8698,6 @@ export default function App() {
           }}
           theme={theme}
         />
-      )}
 
       {/* Mastercam Backstage File Menu UI */}
       <FileBackstageView
@@ -9872,171 +9813,11 @@ export default function App() {
         activeWcs={activeWcs}
       />
 
-      {/* Mobile Bottom Navigation & Sheets */}
-      {isMobile && (
-        <MobileNavBar
-          activeTab={activeMobileTab}
-          onSelectTab={openMobileTab}
-          isDrawerOpen={isMobileDrawerOpen}
-          operationsCount={operations.length}
-          hasModel={Boolean(currentModel || customGeometry.length > 0)}
-          isLandscape={isLandscape}
-        />
-      )}
-
-      {isMobile && (
-        <MobileBottomSheet
-          isOpen={isMobileDrawerOpen && activeMobileTab !== 'viewport'}
-          onClose={closeMobileDrawer}
-          isLandscape={isLandscape}
-          title={
-            activeMobileTab === 'cad' ? 'CAD Drawing Tools' :
-            activeMobileTab === 'toolpaths' ? '3D Toolpath Strategies' :
-            activeMobileTab === 'tree' ? 'Operations Tree' :
-            activeMobileTab === 'simulate' ? 'CNC Simulation & Verify' :
-            activeMobileTab === 'gcode' ? 'G-Code Post Processor' : 'Controls'
-          }
-          subtitle={
-            activeMobileTab === 'cad' ? 'Select 2D/3D Wireframe or Surface tool' :
-            activeMobileTab === 'toolpaths' ? 'Surface Finish Flowline, OptiRough, Contour, etc.' :
-            activeMobileTab === 'tree' ? `${operations.length} Operation(s) • Levels • Solids` :
-            activeMobileTab === 'simulate' ? '3D Toolpath Tracing & Volumetric Verify' :
-            activeMobileTab === 'gcode' ? (activeMachine?.name || 'Fanuc 5-Axis') : ''
-          }
-        >
-          {activeMobileTab === 'cad' && (
-            <MobileCADPanel
-              onSelectTool={(tool) => {
-                if (tool === 'extrude') {
-                  setActiveSurfaceTool('extrude');
-                  setIsChainingPaletteOpen(true);
-                } else {
-                  handleStartInteractiveSketch(tool);
-                }
-                closeMobileDrawer();
-              }}
-              onOpenDrafting={() => {
-                handleOpenDraftingModal('linear');
-                closeMobileDrawer();
-              }}
-              onOpenTransform={() => {
-                handleOpenTransformModal('translate');
-                closeMobileDrawer();
-              }}
-              onClose={closeMobileDrawer}
-            />
-          )}
-
-          {activeMobileTab === 'toolpaths' && (
-            <MobileToolpathsPanel
-              onOpenFlowline={() => openSurfaceFinishSelection('flowline', null)}
-              onOpenOptiRough={() => handleQuickAddOp('optirough')}
-              onOpenContour={() => openSurfaceFinishSelection('contour', null)}
-              onOpenPocket={() => openSurfaceFinishSelection('pocket', null)}
-              onOpenDrill={() => handleQuickAddOp('drill')}
-              onOpenSwarf={() => handleQuickAddOp('swarf')}
-              onClose={closeMobileDrawer}
-            />
-          )}
-
-          {activeMobileTab === 'tree' && (
-            <div className="max-h-[65vh] overflow-y-auto">
-              <OperationsTree
-                operations={operations}
-                onToggleOp={handleToggleOp}
-                activeOpId={activeOpId}
-                onSelectOp={setActiveOpId}
-                onEditOp={handleEditOp}
-                onAddOp={handleQuickAddOp}
-                onRegenerate={handleRegenerateAll}
-                onOpenStockModal={() => setIsStockModalOpen(true)}
-                onOpenAFR={() => setIsAFRModalOpen(true)}
-                activeManagerTab={activeManagerTab}
-                onSelectManagerTab={setActiveManagerTab}
-                levels={levels}
-                onToggleLevel={handleToggleLevel}
-                activeLevelId={levels.find((l) => l.active)?.id || 1}
-                onSetActiveLevel={handleSetActiveLevel}
-                onAddLevel={handleAddLevel}
-                planes={planesList}
-                activePlane={activePlane}
-                onSelectPlane={handleSelectPlane}
-                onOpenCPlanesModal={() => setIsCPlanesModalOpen(true)}
-                onDeletePlane={handleDeletePlane}
-                solids={solidsList}
-                activeSolidId={solidsList.find((s) => s.active)?.id || 1}
-                onSelectSolid={(id) => setSolidsList((prev) => prev.map((s) => ({ ...s, active: s.id === id })))}
-                onToggleSolidVisibility={handleToggleSolidVisibility}
-                onOpenSolidsModal={handleOpenSolidsModal}
-                onStartBackplot={handleStartBackplot}
-                onStartVerify={handleStartVerify}
-                activeMachine={activeMachine}
-                stockConfig={stockConfig}
-                currentProjectName={currentProjectName}
-                onOpenPostModal={() => setIsPostModalOpen(true)}
-                onOpenToolManager={() => setIsToolManagerOpen(true)}
-                onOpenHSMFilter={() => setIsHSMFilterModalOpen(true)}
-                onOpenHelpGuide={() => setIsHelpGuideOpen(true)}
-                onOpenWireframeModal={handleOpenWireframeModal}
-                onOpenChaining={() => setIsMastercamChainingModalOpen(true)}
-                onOpenMachineConfig={() => setIsMachineConfigModalOpen(true)}
-                onOpenFeedsSpeeds={handleOpenFeedsSpeeds}
-                onMoveOpUp={(id) => handleMoveOp(id, -1)}
-                onMoveOpDown={(id) => handleMoveOp(id, 1)}
-                onDeleteOp={handleDeleteOpById}
-                onToggleLockOp={handleToggleLockOp}
-                onToggleGhostOp={handleToggleGhostOp}
-              />
-            </div>
-          )}
-
-          {activeMobileTab === 'simulate' && (
-            <MobileSimulatePanel
-              isBackplotActive={isBackplotActive}
-              onToggleBackplot={() => {
-                if (isBackplotActive) {
-                  setIsBackplotActive(false);
-                } else {
-                  handleStartBackplot('all');
-                }
-              }}
-              onStepForward={() => {}}
-              onStepBack={() => {}}
-              onReset={() => {
-                setIsBackplotActive(false);
-              }}
-              backplotProgress={0}
-              onOpenVerifyModal={() => {
-                setIsSimModalOpen(true);
-                closeMobileDrawer();
-              }}
-              onClose={closeMobileDrawer}
-            />
-          )}
-
-          {activeMobileTab === 'gcode' && (
-            <MobileGCodePanel
-              gcode=""
-              onPostProcess={() => {
-                setIsPostModalOpen(true);
-                closeMobileDrawer();
-              }}
-              onDownload={() => {
-                setIsGCodeViewerOpen(true);
-                closeMobileDrawer();
-              }}
-              projectName={currentProjectName}
-            />
-          )}
-        </MobileBottomSheet>
-      )}
-
       {/* Floating Modern Toast Notification Stack */}
       <div style={{
         position: 'fixed',
-        bottom: isMobile ? '76px' : '32px',
+        bottom: '32px',
         right: '16px',
-        left: isMobile ? '16px' : 'auto',
         zIndex: 99999,
         display: 'flex',
         flexDirection: 'column',

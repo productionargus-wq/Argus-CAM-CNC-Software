@@ -7,7 +7,7 @@ import {
   Trash2, Plus, Sparkles, Orbit, Grid, Crosshair, HelpCircle,
   Save, Clock, Disc, ArrowUp, ArrowDown, Camera, Sun, Moon, Gauge,
   Copy, Cpu, Activity, Type, DollarSign, Tablet, PenTool, Edit3, Columns2,
-  Clipboard, Ruler, Search, ChevronDown, ChevronLeft, ChevronRight, CornerDownRight, X, Circle, Square,
+  Clipboard, Ruler, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, CornerDownRight, X, Circle, Square,
   MousePointer
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
@@ -235,6 +235,8 @@ export default function RibbonBar({
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6);
   }, []);
 
+  const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(false);
+
   useEffect(() => {
     // Check scroll state after tab changes or resize
     const timer = setTimeout(checkRibbonScroll, 60);
@@ -346,6 +348,7 @@ export default function RibbonBar({
                   onOpenFileBackstage();
                 } else {
                   onSelectTab(tab);
+                  setIsRibbonCollapsed(false);
                 }
               }}
               className={`ribbon-tab ${tab === 'File' ? 'file-tab' : ''} ${activeTab === tab ? 'active' : ''}`}
@@ -419,9 +422,34 @@ export default function RibbonBar({
             </button>
           </div>
         )}
+        {/* Ribbon Collapse / Expand Toggle Arrow Button */}
+        <div style={{ marginLeft: onChangeViewMode ? '6px' : 'auto', display: 'flex', alignItems: 'center', paddingRight: '8px' }}>
+          <button
+            type="button"
+            onClick={() => setIsRibbonCollapsed((prev) => !prev)}
+            style={{
+              width: '28px',
+              height: '24px',
+              background: isRibbonCollapsed ? 'rgba(37, 99, 235, 0.12)' : 'transparent',
+              color: isRibbonCollapsed ? '#2563eb' : '#64748b',
+              border: isRibbonCollapsed ? '1px solid #93c5fd' : '1px solid transparent',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            title={isRibbonCollapsed ? "Show Ribbon Bar (Ctrl+F1)" : "Hide Ribbon Bar (Ctrl+F1)"}
+            aria-label={isRibbonCollapsed ? "Show Ribbon Bar" : "Hide Ribbon Bar"}
+          >
+            {isRibbonCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+          </button>
+        </div>
       </div>
 
       {/* Ribbon Action Groups - Dynamically swaps based on activeTab */}
+      {!isRibbonCollapsed && (
       <div className="ribbon-content-wrapper">
         {canScrollLeft && (
           <button
@@ -2107,6 +2135,7 @@ export default function RibbonBar({
           </button>
         )}
       </div>
+      )}
     </nav>
   );
 }
