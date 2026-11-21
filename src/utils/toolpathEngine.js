@@ -1324,26 +1324,42 @@ export function buildToolpathMeshes(toolpathData, linkedRapidLines = null) {
   const { cuttingLines = [], rapidLines = [] } = toolpathData || {};
   const effectiveRapidLines = Array.isArray(linkedRapidLines) ? linkedRapidLines : rapidLines;
 
-  const cutPoints = [];
-  cuttingLines.forEach(([p1, p2]) => {
-    cutPoints.push(p1.x, p1.y, p1.z);
-    cutPoints.push(p2.x, p2.y, p2.z);
-  });
-
-  const rapidPoints = [];
-  effectiveRapidLines.forEach(([p1, p2]) => {
-    rapidPoints.push(p1.x, p1.y, p1.z);
-    rapidPoints.push(p2.x, p2.y, p2.z);
-  });
-
   const cutGeo = new THREE.BufferGeometry();
-  if (cutPoints.length > 0) {
-    cutGeo.setAttribute('position', new THREE.Float32BufferAttribute(cutPoints, 3));
+  const cLen = cuttingLines.length;
+  if (cLen > 0) {
+    const cutFloats = new Float32Array(cLen * 6);
+    let idx = 0;
+    for (let i = 0; i < cLen; i++) {
+      const seg = cuttingLines[i];
+      const p1 = seg[0];
+      const p2 = seg[1];
+      cutFloats[idx++] = p1.x;
+      cutFloats[idx++] = p1.y;
+      cutFloats[idx++] = p1.z;
+      cutFloats[idx++] = p2.x;
+      cutFloats[idx++] = p2.y;
+      cutFloats[idx++] = p2.z;
+    }
+    cutGeo.setAttribute('position', new THREE.BufferAttribute(cutFloats, 3));
   }
 
   const rapidGeo = new THREE.BufferGeometry();
-  if (rapidPoints.length > 0) {
-    rapidGeo.setAttribute('position', new THREE.Float32BufferAttribute(rapidPoints, 3));
+  const rLen = effectiveRapidLines.length;
+  if (rLen > 0) {
+    const rapidFloats = new Float32Array(rLen * 6);
+    let idx = 0;
+    for (let i = 0; i < rLen; i++) {
+      const seg = effectiveRapidLines[i];
+      const p1 = seg[0];
+      const p2 = seg[1];
+      rapidFloats[idx++] = p1.x;
+      rapidFloats[idx++] = p1.y;
+      rapidFloats[idx++] = p1.z;
+      rapidFloats[idx++] = p2.x;
+      rapidFloats[idx++] = p2.y;
+      rapidFloats[idx++] = p2.z;
+    }
+    rapidGeo.setAttribute('position', new THREE.BufferAttribute(rapidFloats, 3));
   }
 
   return { cutGeo, rapidGeo };

@@ -360,6 +360,7 @@ export default function Viewport3D({
   const flowlinePreviewGroupRef = useRef(null);
   const surfacePreviewGroupRef = useRef(null);
   const analyzeDynamicGroupRef = useRef(null);
+  const toolpathMeshCacheRef = useRef(new Map());
   const isAnalyzeDynamicActiveRef = useRef(isAnalyzeDynamicActive);
   const analyzeDynamicScaleRef = useRef(analyzeDynamicScale);
   const onAnalyzeDynamicUpdateRef = useRef(onAnalyzeDynamicUpdate);
@@ -1741,14 +1742,17 @@ export default function Viewport3D({
         let hitPoint = null;
         let surfaceNormal = new THREE.Vector3(0, 1, 0);
 
-        const hits = raycaster.intersectObjects(scene.children, true);
+        const queryTargets = [];
+        if (partHolderGroupRef.current) queryTargets.push(partHolderGroupRef.current);
+        if (customGeoGroupRef.current) queryTargets.push(customGeoGroupRef.current);
+        const hits = queryTargets.length > 0 ? raycaster.intersectObjects(queryTargets, true) : [];
         const validHit = hits.find(h => {
           let p = h.object;
           while (p) {
-            if (p.name === 'Analyze_Dynamic_Group' || p.name === 'Transform_Manipulator_Group') return false;
+            if (p.name === 'Analyze_Dynamic_Group' || p.name === 'Transform_Manipulator_Group' || p.name?.startsWith('op_')) return false;
             p = p.parent;
           }
-          return h.object.type === 'Mesh' || h.object.type === 'Line' || h.object.type === 'LineSegments';
+          return h.object.type === 'Mesh' || h.object.type === 'Line';
         });
 
         if (validHit) {
@@ -3453,35 +3457,46 @@ export default function Viewport3D({
       };
 
     operations.forEach((op) => {
-      const assignedTool =
-        tools.find((t) => String(t.id) === String(op.toolId)) ||
-        tools.find((t) => Number(t.number) === Number(op.tool?.number || op.toolNumber)) ||
-        tools[0] ||
-        { diameter: 10 };
-      const effectiveModel = buildEffectiveDriveModel(currentModel, customGeometry, op);
-      const opBounds = resolveOperationDriveBounds(effectiveModel, op, bounds);
-      const toolpathData = generateToolpathForOperation(op, opBounds, assignedTool, effectiveModel, stockConfig);
+      const opSig = `${op.id}_${op.strategyKey || op.badgeClass}_${op.toolId}_${op.toolNumber}_${op.stepover || op.stepoverPct || ''}_${op.stepdown || op.totalDepth || ''}_${op.rapidHeight || ''}_${(op.driveFaceIds || []).join(',')}_${(op.checkFaceIds || []).join(',')}_${op.updatedAt || op._version || 0}`;
 
-      if (toolpathData) {
-        const keepGeneratorRapids = [
-          'drill', 'spotdrill', 'tap', 'probe',
-          'swarf', 'multi_parallel', '5axis_parallel',
-          'multi_morph', '5axis_morph', 'multiaxis_morph',
-          'rotary_4axis', '4axis_rotary', 'multi_rotary',
-          '5axis_curve', '5axis_deburr', '5axis_rough', 'multiaxis_drill', '5axis_drill',
-          '5axis_port', '5axis_blade'
-        ].includes(op.badgeClass) || [
-          '5axis_swarf', '5axis_parallel', '5axis_morph', 'rotary_4axis', 'multiaxis_morph',
-          '5axis_curve', '5axis_deburr', '5axis_rough', 'multiaxis_drill', '5axis_drill', '5axis_port', '5axis_blade'
-        ].includes(op.strategyKey);
-        let linkedRapidLines = null;
-        if (!keepGeneratorRapids && toolpathData.cuttingLines?.length > 0) {
-          const { segments } = buildLinkedOperationSegments(toolpathData, op, opBounds, assignedTool);
-          linkedRapidLines = segments
-            .filter((s) => s.isRapid)
-            .map((s) => [s.p1, s.p2]);
+      let cached = toolpathMeshCacheRef.current.get(opSig);
+      if (!cached) {
+        const assignedTool =
+          tools.find((t) => String(t.id) === String(op.toolId)) ||
+          tools.find((t) => Number(t.number) === Number(op.tool?.number || op.toolNumber)) ||
+          tools[0] ||
+          { diameter: 10 };
+        const effectiveModel = buildEffectiveDriveModel(currentModel, customGeometry, op);
+        const opBounds = resolveOperationDriveBounds(effectiveModel, op, bounds);
+        const toolpathData = generateToolpathForOperation(op, opBounds, assignedTool, effectiveModel, stockConfig);
+
+        if (toolpathData) {
+          const keepGeneratorRapids = [
+            'drill', 'spotdrill', 'tap', 'probe',
+            'swarf', 'multi_parallel', '5axis_parallel',
+            'multi_morph', '5axis_morph', 'multiaxis_morph',
+            'rotary_4axis', '4axis_rotary', 'multi_rotary',
+            '5axis_curve', '5axis_deburr', '5axis_rough', 'multiaxis_drill', '5axis_drill',
+            '5axis_port', '5axis_blade'
+          ].includes(op.badgeClass) || [
+            '5axis_swarf', '5axis_parallel', '5axis_morph', 'rotary_4axis', 'multiaxis_morph',
+            '5axis_curve', '5axis_deburr', '5axis_rough', 'multiaxis_drill', '5axis_drill', '5axis_port', '5axis_blade'
+          ].includes(op.strategyKey);
+          let linkedRapidLines = null;
+          if (!keepGeneratorRapids && toolpathData.cuttingLines?.length > 0) {
+            const { segments } = buildLinkedOperationSegments(toolpathData, op, opBounds, assignedTool);
+            linkedRapidLines = segments
+              .filter((s) => s.isRapid)
+              .map((s) => [s.p1, s.p2]);
+          }
+          const { cutGeo, rapidGeo } = buildToolpathMeshes(toolpathData, linkedRapidLines);
+          cached = { cutGeo, rapidGeo, toolpathData };
+          toolpathMeshCacheRef.current.set(opSig, cached);
         }
-        const { cutGeo, rapidGeo } = buildToolpathMeshes(toolpathData, linkedRapidLines);
+      }
+
+      if (cached) {
+        const { cutGeo, rapidGeo, toolpathData } = cached;
         // Workpiece geometry (both partHolderGroup and customGeoGroup) sits at Y = 49 + partTransform.y.
         // Align all toolpath wireframes directly to the workpiece height.
         const visualYOffset = 49 + (partTransform?.position?.y || 0);

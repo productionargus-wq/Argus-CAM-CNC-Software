@@ -194,9 +194,14 @@ export function buildFlowlineUVPatch(face, flowlineData = {}) {
         return swapUV ? evalRaw(vNorm, uNorm) : evalRaw(uNorm, vNorm);
       },
       sampleLine(vNorm, uStartNorm, uEndNorm, steps = 20) {
+        // Industry CAM Optimization: When cut is along cylinder axis (u is axial when !swapUV),
+        // toolpath is a purely linear vector (G01) requiring only 1 step (2 points).
+        // When circumferential (swapUV), tessellate arc based on chordal deviation.
+        const isAxial = !swapUV;
+        const effSteps = isAxial ? 1 : Math.max(4, Math.min(steps, Math.ceil(uSpan / 2.0)));
         const pts = [];
-        for (let s = 0; s <= steps; s++) {
-          const u = uStartNorm + (uEndNorm - uStartNorm) * (s / steps);
+        for (let s = 0; s <= effSteps; s++) {
+          const u = uStartNorm + (uEndNorm - uStartNorm) * (s / effSteps);
           pts.push(this.evaluate(u, vNorm));
         }
         return [pts];
@@ -272,9 +277,10 @@ export function buildFlowlineUVPatch(face, flowlineData = {}) {
       const vc = clamp(vMin + vNorm * (vMax - vMin), vMin + 1e-4, vMax - 1e-4);
       const spans = intersectScanline2DTriangles(tris2D, vc);
       if (spans.length === 0) {
+        const effSteps = isPlanar ? 1 : steps;
         const pts = [];
-        for (let s = 0; s <= steps; s++) {
-          const u = uStartNorm + (uEndNorm - uStartNorm) * (s / steps);
+        for (let s = 0; s <= effSteps; s++) {
+          const u = uStartNorm + (uEndNorm - uStartNorm) * (s / effSteps);
           pts.push(this.evaluate(u, vNorm));
         }
         return [pts];
@@ -285,7 +291,9 @@ export function buildFlowlineUVPatch(face, flowlineData = {}) {
       return orderedSpans.map(([sMin, sMax]) => {
         const ua = forward ? sMin : sMax;
         const ub = forward ? sMax : sMin;
-        const segSteps = isPlanar ? Math.max(2, Math.ceil((ub - ua) / Math.max(2.0, uSpan / steps))) : steps;
+        // Industry CAM Optimization: Flat planar passes are exact straight lines (1 step = 2 points).
+        // Freeform surface patches are sampled with curvature steps.
+        const segSteps = isPlanar ? 1 : Math.max(2, Math.min(steps, Math.ceil(Math.abs(ub - ua) / Math.max(1.5, uSpan / steps))));
         const pts = [];
         for (let s = 0; s <= segSteps; s++) {
           const uc = ua + (ub - ua) * (s / segSteps);
@@ -411,6 +419,42 @@ function offsetSampleToCutterPoint(sample, tool, params) {
   }
   pt.y += Math.max(0, n.y) * driveStock;
   return pt;
+}
+
+/**
+ * Mastercam-grade 3D Ramer-Douglas-Peucker Line/Arc Tolerance Filter.
+ * Compresses collinear and near-collinear points within total tolerance (default 0.025 mm),
+ * matching industrial Mastercam CNC filter parameters and preventing UI thread exhaustion.
+ */
+export function simplifyCutterPolyline3D(pts, tol = 0.025) {
+  if (!pts || pts.length <= 2) return pts;
+  const tolSq = Math.max(1e-6, tol * tol);
+  const res = [pts[0]];
+  let anchor = pts[0];
+
+  for (let i = 1; i < pts.length - 1; i++) {
+    const cur = pts[i];
+    const next = pts[i + 1];
+    const lx = next.x - anchor.x;
+    const ly = next.y - anchor.y;
+    const lz = next.z - anchor.z;
+    const lenSq = lx * lx + ly * ly + lz * lz;
+    if (lenSq < 1e-8) continue;
+    const dot = (cur.x - anchor.x) * lx + (cur.y - anchor.y) * ly + (cur.z - anchor.z) * lz;
+    const t = Math.max(0, Math.min(1, dot / lenSq));
+    const px = anchor.x + lx * t;
+    const py = anchor.y + ly * t;
+    const pz = anchor.z + lz * t;
+    const dx = cur.x - px;
+    const dy = cur.y - py;
+    const dz = cur.z - pz;
+    if (dx * dx + dy * dy + dz * dz > tolSq) {
+      res.push(cur);
+      anchor = cur;
+    }
+  }
+  res.push(pts[pts.length - 1]);
+  return res;
 }
 
 /**
@@ -547,6 +591,18 @@ export function generateSurfaceFlowlineToolpath(bounds, tool = {}, params = {}, 
   if (!Number.isFinite(globalTopY)) globalTopY = bounds?.max?.y ?? 25;
 
   let prevEnd = null;
+  const relevantCheckFaces = (checkGouge && Array.isArray(checkFaces) && checkFaces.length > 0 && bounds)
+    ? checkFaces.filter((cf) => {
+        if (!cf.bounds) return true;
+        const clr = toolRadius + (Number(params.stockToLeaveCheck) || 0) + 1.0;
+        return (
+          cf.bounds.max.x >= bounds.min.x - clr &&
+          cf.bounds.min.x <= bounds.max.x + clr &&
+          cf.bounds.max.z >= bounds.min.z - clr &&
+          cf.bounds.min.z <= bounds.max.z + clr
+        );
+      })
+    : (checkFaces || []);
 
   for (const face of driveFaces) {
     const patch = buildFlowlineUVPatch(face, fd);
@@ -588,9 +644,9 @@ export function generateSurfaceFlowlineToolpath(bounds, tool = {}, params = {}, 
     for (const poly of facePassLines) {
       let cutterPts = poly.map((sample) => offsetSampleToCutterPoint(sample, tool, params));
 
-      if (checkGouge && checkFaces.length > 0) {
+      if (checkGouge && relevantCheckFaces.length > 0) {
         cutterPts = cutterPts.map((pt) =>
-          checkPointAgainstObstacleFaces(pt, toolRadius, params.stockToLeaveCheck ?? 0, checkFaces)
+          checkPointAgainstObstacleFaces(pt, toolRadius, params.stockToLeaveCheck ?? 0, relevantCheckFaces)
         );
       }
 
@@ -600,6 +656,11 @@ export function generateSurfaceFlowlineToolpath(bounds, tool = {}, params = {}, 
         cutterPts = cutterPts.map((pt) =>
           new THREE.Vector3(pt.x, clamp(pt.y, zBotLimit, zTopLimit), pt.z)
         );
+      }
+
+      // Mastercam Collinear Line/Arc Tolerance Filter: reduces straight lines to 2 points
+      if (cutterPts.length > 2) {
+        cutterPts = simplifyCutterPolyline3D(cutterPts, fp.totalTolerance || 0.025);
       }
 
       if (cutterPts.length < 2) continue;

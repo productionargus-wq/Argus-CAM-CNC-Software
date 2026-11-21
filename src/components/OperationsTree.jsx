@@ -1732,7 +1732,7 @@ export default function OperationsTree({
                                   <span>
                                     {(() => {
                                       const cuts = op.toolpathData?.cuttingLines?.length || op.cuttingLines?.length || (op.waypoints?.length ? op.waypoints.length * 2 : 0);
-                                      const sizeKb = cuts > 0 ? ((cuts * 0.052) + 8.4).toFixed(1) : '314.2';
+                                      const sizeKb = op.ncFileSizeKb || (cuts > 0 ? ((cuts * 0.052) + 8.4).toFixed(1) : '314.2');
                                       const ncBase = currentProjectName ? currentProjectName.replace(/\.[^/.]+$/, '') : 'Base Structure-ALU';
                                       return `Toolpath - ${sizeKb}K - ${ncBase}.NC - Program ${String(idx + 1).padStart(4, '0')}`;
                                     })()}

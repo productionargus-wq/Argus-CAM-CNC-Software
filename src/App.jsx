@@ -1179,8 +1179,14 @@ export default function App() {
     const nextPartTransform = overrideState.partTransform !== undefined ? overrideState.partTransform : partTransformRef.current;
     const nextSolids = overrideState.solidsList !== undefined ? overrideState.solidsList : solidsListRef.current;
 
+    const sanitizedOps = (nextOps || []).map((op) => {
+      if (!op) return op;
+      const { toolpathData, waypoints, ...rest } = op;
+      return rest;
+    });
+
     return {
-      operations: JSON.parse(JSON.stringify(nextOps || [])),
+      operations: JSON.parse(JSON.stringify(sanitizedOps)),
       partTransform: { ...(nextPartTransform || { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } }) },
       solidsList: [...(nextSolids || [])],
       customGeometry: cloneCustomGeometryList(nextCustomGeo || [])
