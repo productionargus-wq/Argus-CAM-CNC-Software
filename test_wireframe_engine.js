@@ -169,6 +169,47 @@ console.log('\n[5] Testing performDynamicTrim...');
   assert(circleTrimRes.keptSegments.length > 0, 'Should keep surviving arcs of the circle');
   assert(circleTrimRes.keptSegments[0].points.length > 2, 'Kept segment should preserve smooth arc points');
   console.log(`  ✓ Circle Dynamic Trim: Preserved ${circleTrimRes.keptSegments.length} smooth curved arc(s) after snipping boundary segment`);
+
+  // Test 5c: Dynamic Trim on Lobe C with tangent boundary line & tangent blend arc (CAD Contact Junctions)
+  const lobeCPts = [];
+  for (let i = 0; i <= 64; i++) {
+    const a = (i / 64) * Math.PI * 2;
+    lobeCPts.push(new THREE.Vector3(60 + Math.cos(a) * 20, 0, -40 + Math.sin(a) * 20));
+  }
+  const lobeCEnt = {
+    uuid: 'lobe-c-circle',
+    name: 'Wireframe_Circle_LobeC',
+    userData: { type: 'circle', cadType: 'circle', points: lobeCPts, radius: 20, center: { x: 60, y: 0, z: -40 } }
+  };
+  const innerBoreEnt = {
+    uuid: 'lobe-c-bore',
+    name: 'Wireframe_Circle_LobeC_Bore',
+    userData: { type: 'circle', cadType: 'circle', radius: 10, center: { x: 60, y: 0, z: -40 }, points: lobeCPts.map(p => new THREE.Vector3(60 + (p.x - 60) * 0.5, 0, -40 + (p.z + 40) * 0.5)) }
+  };
+  // Tangent line touching Lobe C at bottom contact point (75.27, 0, -27.09)
+  const tanLine = {
+    uuid: 'tan-line-bottom',
+    userData: {
+      cadType: 'line',
+      points: [new THREE.Vector3(30.55, 0, 25.82), new THREE.Vector3(75.274, 0, -27.089)]
+    }
+  };
+  // Tangent blend arc touching Lobe C at (59.00, 0, -20.02)
+  const tanArc = {
+    uuid: 'tan-saddle-arc',
+    userData: {
+      cadType: 'arc',
+      points: [new THREE.Vector3(59.00, 0, -20.02), new THREE.Vector3(65.0, 0, -10.0), new THREE.Vector3(59.00, 0, 20.02)]
+    }
+  };
+  // Drag scissor stroke across the inner arc of Lobe C (starts outside X=30, drags inside to X=60)
+  const scissorDragStart = new THREE.Vector3(30, 0, -35);
+  const scissorDragEnd = new THREE.Vector3(60, 0, -35);
+  const lobeCTrimRes = performDynamicTrim(scissorDragStart, scissorDragEnd, [innerBoreEnt, lobeCEnt, tanLine, tanArc]);
+  assert(lobeCTrimRes !== null, 'Should successfully trim Lobe C');
+  assert(lobeCTrimRes.targetEntity.uuid === 'lobe-c-circle', 'Should target outer Lobe C circle, skipping untrimmable bore');
+  assert(lobeCTrimRes.keptSegments.length > 0, 'Should preserve outer surviving arc of Lobe C');
+  console.log(`  ✓ Lobe C Dynamic Trim: Snipped inner arc and kept outer arc (${lobeCTrimRes.keptSegments[0].points.length} vertices), correctly resolved CAD contact junctions`);
 }
 
 // 6. Test computeFilletBetweenEntities

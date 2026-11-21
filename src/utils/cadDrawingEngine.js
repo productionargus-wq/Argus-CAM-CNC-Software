@@ -1175,6 +1175,7 @@ export function performDynamicTrim(scissorStart, scissorEnd, allEntities = []) {
           segIndex: i,
           hitPoint: hit.point,
           hitT: hit.u,
+          strokeT: hit.t,
           pts
         });
         break;
@@ -1182,171 +1183,290 @@ export function performDynamicTrim(scissorStart, scissorEnd, allEntities = []) {
     }
   });
 
-  if (!hitCandidates.length) return null;
+  // If no direct crossing detected, check if stroke was clicked or stroked close to an entity
+  if (!hitCandidates.length) {
+    const strokeSamples = [
+      scissorStart,
+      scissorEnd,
+      new THREE.Vector3().lerpVectors(scissorStart, scissorEnd, 0.5)
+    ];
 
-  const target = hitCandidates[0];
-  const { entity, pts, hitPoint } = target;
-  const N = pts.length;
-  if (N < 2) return null;
+    allEntities.forEach((entity) => {
+      if (!isSelectableWireframeEntity(entity)) return;
+      const pts = extractPointsFromCadEntity(entity);
+      if (pts.length < 2) return;
 
-  const isClosed = pts[0].distanceTo(pts[N - 1]) < 1e-3 || entity.userData?.type === 'circle' || entity.userData?.cadType === 'circle';
+      let bestDist = Infinity;
+      let bestSeg = 0;
+      let bestT = 0;
+      let bestPt = null;
 
-  // Compute cumulative distance along the target curve
-  const cumDist = [0];
-  for (let i = 0; i < N - 1; i++) {
-    cumDist.push(cumDist[i] + pts[i].distanceTo(pts[i + 1]));
-  }
-  const totalLength = cumDist[N - 1];
-  if (totalLength < 1e-4) return null;
-
-  // Helper to get point at fractional parameter u in [0, 1]
-  const getPointAtParam = (u) => {
-    const s = Math.max(0, Math.min(1, u)) * totalLength;
-    for (let i = 0; i < N - 1; i++) {
-      if (s >= cumDist[i] - 1e-6 && s <= cumDist[i + 1] + 1e-6) {
-        const segLen = cumDist[i + 1] - cumDist[i];
-        const t = segLen > 1e-6 ? (s - cumDist[i]) / segLen : 0;
-        return new THREE.Vector3().lerpVectors(pts[i], pts[i + 1], Math.max(0, Math.min(1, t)));
-      }
-    }
-    return pts[N - 1].clone();
-  };
-
-  // Helper to extract all vertices on the curve between uA and uB (uA <= uB)
-  const extractSubCurve = (uA, uB) => {
-    if (uA >= uB) return [];
-    const pA = getPointAtParam(uA);
-    const pB = getPointAtParam(uB);
-    const sA = uA * totalLength;
-    const sB = uB * totalLength;
-    const subPts = [pA];
-
-    for (let i = 0; i < N; i++) {
-      const s = cumDist[i];
-      if (s > sA + 1e-3 && s < sB - 1e-3) {
-        subPts.push(pts[i].clone());
-      }
-    }
-    subPts.push(pB);
-    return subPts;
-  };
-
-  // Calculate normalized parameter of scissor cut hitPoint
-  const scissorSegIdx = target.segIndex;
-  const scissorSegLen = cumDist[scissorSegIdx + 1] - cumDist[scissorSegIdx];
-  const scissorS = cumDist[scissorSegIdx] + target.hitT * scissorSegLen;
-  const scissorU = Math.max(0, Math.min(1, scissorS / totalLength));
-
-  // 2. Find all intersections of this target entity with ALL OTHER entities in the model
-  const cutParams = [];
-  const otherEntities = allEntities.filter((e) => e.uuid !== entity.uuid && isSelectableWireframeEntity(e));
-
-  for (let i = 0; i < N - 1; i++) {
-    const pA = pts[i];
-    const pB = pts[i + 1];
-    const segLen = pA.distanceTo(pB);
-    if (segLen < 1e-4) continue;
-
-    otherEntities.forEach((other) => {
-      const otherPts = extractPointsFromCadEntity(other);
-      for (let j = 0; j < otherPts.length - 1; j++) {
-        const xRes = findLineIntersection2D(pA, pB, otherPts[j], otherPts[j + 1]);
-        if (xRes && xRes.isSegmentA && xRes.isSegmentB) {
-          const cutS = cumDist[i] + xRes.t * segLen;
-          const cutU = Math.max(0, Math.min(1, cutS / totalLength));
-          cutParams.push(cutU);
+      for (const samplePt of strokeSamples) {
+        for (let i = 0; i < pts.length - 1; i++) {
+          const a = pts[i];
+          const b = pts[i + 1];
+          const dx = b.x - a.x;
+          const dz = (b.z ?? b.y) - (a.z ?? a.y);
+          const lenSq = dx * dx + dz * dz;
+          if (lenSq < 1e-8) continue;
+          const t = Math.max(0, Math.min(1, (((samplePt.x - a.x) * dx) + (((samplePt.z ?? samplePt.y) - (a.z ?? a.y)) * dz)) / lenSq));
+          const px = a.x + t * dx;
+          const pz = (a.z ?? a.y) + t * dz;
+          const d = Math.hypot(samplePt.x - px, (samplePt.z ?? samplePt.y) - pz);
+          if (d < bestDist) {
+            bestDist = d;
+            bestSeg = i;
+            bestT = t;
+            bestPt = new THREE.Vector3(px, pts[0].y ?? 0, pz);
+          }
         }
+      }
+      if (bestDist < 6.0) { // within 6mm pick aperture
+        hitCandidates.push({
+          entity,
+          segIndex: bestSeg,
+          hitPoint: bestPt,
+          hitT: bestT,
+          strokeT: 0,
+          pts
+        });
       }
     });
   }
 
-  // Remove duplicates and sort
-  const sortedCuts = [...new Set(cutParams.map((u) => Number(u.toFixed(5))))]
-    .filter((u) => u > 1e-4 && u < 1 - 1e-4)
-    .sort((a, b) => a - b);
+  if (!hitCandidates.length) return null;
 
-  const keptSegments = [];
+  // Sort candidates by strokeT so the first crossed entity is evaluated first
+  hitCandidates.sort((a, b) => (a.strokeT ?? 0) - (b.strokeT ?? 0));
 
-  if (isClosed) {
-    // If fewer than 2 cuts, cannot partition a closed loop
-    if (sortedCuts.length < 2) return null;
+  const tryTrimCandidate = (target) => {
+    const { entity, pts, hitPoint } = target;
+    const N = pts.length;
+    if (N < 2) return null;
 
-    const intervals = [];
-    const K = sortedCuts.length;
-    for (let k = 0; k < K - 1; k++) {
-      intervals.push({ uA: sortedCuts[k], uB: sortedCuts[k + 1], wrapped: false });
+    const isClosed = pts[0].distanceTo(pts[N - 1]) < 1e-3 || entity.userData?.type === 'circle' || entity.userData?.cadType === 'circle';
+
+    // Compute cumulative distance along the target curve
+    const cumDist = [0];
+    for (let i = 0; i < N - 1; i++) {
+      cumDist.push(cumDist[i] + pts[i].distanceTo(pts[i + 1]));
     }
-    intervals.push({ uA: sortedCuts[K - 1], uB: sortedCuts[0], wrapped: true });
+    const totalLength = cumDist[N - 1];
+    if (totalLength < 1e-4) return null;
 
-    let snipIndex = -1;
-    for (let k = 0; k < intervals.length; k++) {
-      const { uA, uB, wrapped } = intervals[k];
-      if (!wrapped) {
-        if (scissorU >= uA - 1e-3 && scissorU <= uB + 1e-3) {
+    // Helper to get point at fractional parameter u in [0, 1]
+    const getPointAtParam = (u) => {
+      const s = Math.max(0, Math.min(1, u)) * totalLength;
+      for (let i = 0; i < N - 1; i++) {
+        if (s >= cumDist[i] - 1e-6 && s <= cumDist[i + 1] + 1e-6) {
+          const segLen = cumDist[i + 1] - cumDist[i];
+          const t = segLen > 1e-6 ? (s - cumDist[i]) / segLen : 0;
+          return new THREE.Vector3().lerpVectors(pts[i], pts[i + 1], Math.max(0, Math.min(1, t)));
+        }
+      }
+      return pts[N - 1].clone();
+    };
+
+    // Helper to extract all vertices on the curve between uA and uB (uA <= uB)
+    const extractSubCurve = (uA, uB) => {
+      if (uA >= uB) return [];
+      const pA = getPointAtParam(uA);
+      const pB = getPointAtParam(uB);
+      const sA = uA * totalLength;
+      const sB = uB * totalLength;
+      const subPts = [pA];
+
+      for (let i = 0; i < N; i++) {
+        const s = cumDist[i];
+        if (s > sA + 1e-3 && s < sB - 1e-3) {
+          subPts.push(pts[i].clone());
+        }
+      }
+      subPts.push(pB);
+      return subPts;
+    };
+
+    // Calculate normalized parameter of scissor cut hitPoint
+    const scissorSegIdx = target.segIndex;
+    const scissorSegLen = cumDist[scissorSegIdx + 1] - cumDist[scissorSegIdx];
+    const scissorS = cumDist[scissorSegIdx] + target.hitT * scissorSegLen;
+    const scissorU = Math.max(0, Math.min(1, scissorS / totalLength));
+
+    // 2. Find all intersections of this target entity with ALL OTHER entities in the model
+    const cutParams = [];
+    const otherEntities = allEntities.filter((e) => e !== entity && isSelectableWireframeEntity(e));
+
+    // A) Segment-to-segment crossings
+    for (let i = 0; i < N - 1; i++) {
+      const pA = pts[i];
+      const pB = pts[i + 1];
+      const segLen = pA.distanceTo(pB);
+      if (segLen < 1e-4) continue;
+
+      otherEntities.forEach((other) => {
+        const otherPts = extractPointsFromCadEntity(other);
+        for (let j = 0; j < otherPts.length - 1; j++) {
+          const xRes = findLineIntersection2D(pA, pB, otherPts[j], otherPts[j + 1]);
+          if (xRes && xRes.isSegmentA && xRes.isSegmentB) {
+            const cutS = cumDist[i] + xRes.t * segLen;
+            const cutU = Math.max(0, Math.min(1, cutS / totalLength));
+            cutParams.push(cutU);
+          }
+        }
+      });
+    }
+
+    // B) CAD Junctions: Touching Endpoints of other entities (within 1.5mm snap tolerance)
+    // Handles tangent lines, tangent arcs, and joined entities that touch the target curve
+    otherEntities.forEach((other) => {
+      const otherPts = extractPointsFromCadEntity(other);
+      if (otherPts.length < 2) return;
+
+      const checkPts = [otherPts[0], otherPts[otherPts.length - 1]];
+      checkPts.forEach((endPt) => {
+        let bestDist = Infinity;
+        let bestS = 0;
+        for (let i = 0; i < N - 1; i++) {
+          const a = pts[i];
+          const b = pts[i + 1];
+          const dx = b.x - a.x;
+          const dz = (b.z ?? b.y) - (a.z ?? a.y);
+          const lenSq = dx * dx + dz * dz;
+          if (lenSq < 1e-8) continue;
+          const t = Math.max(0, Math.min(1, (((endPt.x - a.x) * dx) + (((endPt.z ?? endPt.y) - (a.z ?? a.y)) * dz)) / lenSq));
+          const px = a.x + t * dx;
+          const pz = (a.z ?? a.y) + t * dz;
+          const d = Math.hypot(endPt.x - px, (endPt.z ?? endPt.y) - pz);
+          if (d < bestDist) {
+            bestDist = d;
+            bestS = cumDist[i] + t * (cumDist[i + 1] - cumDist[i]);
+          }
+        }
+        if (bestDist <= 1.5) { // Within CAD contact snap tolerance
+          const cutU = Math.max(0, Math.min(1, bestS / totalLength));
+          cutParams.push(cutU);
+        }
+      });
+    });
+
+    // Remove duplicates and sort
+    const sortedCuts = [];
+    const rawSorted = [...new Set(cutParams.map((u) => Number(u.toFixed(5))))]
+      .filter((u) => isClosed ? (u > 1e-4 && u < 1 - 1e-4) : (u > 0.005 && u < 0.995))
+      .sort((a, b) => a - b);
+
+    rawSorted.forEach((u) => {
+      if (sortedCuts.length === 0 || Math.abs(u - sortedCuts[sortedCuts.length - 1]) > 0.005) {
+        sortedCuts.push(u);
+      }
+    });
+
+    const keptSegments = [];
+
+    if (isClosed) {
+      // If fewer than 2 cuts, cannot partition a closed loop
+      if (sortedCuts.length < 2) return null;
+
+      const intervals = [];
+      const K = sortedCuts.length;
+      for (let k = 0; k < K - 1; k++) {
+        intervals.push({ uA: sortedCuts[k], uB: sortedCuts[k + 1], wrapped: false });
+      }
+      intervals.push({ uA: sortedCuts[K - 1], uB: sortedCuts[0], wrapped: true });
+
+      let snipIndex = -1;
+      for (let k = 0; k < intervals.length; k++) {
+        const { uA, uB, wrapped } = intervals[k];
+        if (!wrapped) {
+          if (scissorU >= uA - 1e-3 && scissorU <= uB + 1e-3) {
+            snipIndex = k;
+            break;
+          }
+        } else {
+          if (scissorU >= uA - 1e-3 || scissorU <= uB + 1e-3) {
+            snipIndex = k;
+            break;
+          }
+        }
+      }
+
+      if (snipIndex === -1) {
+        let minIntervalDist = Infinity;
+        intervals.forEach((iv, idx) => {
+          let mid = !iv.wrapped ? (iv.uA + iv.uB) / 2 : ((iv.uA + 1 + iv.uB) / 2) % 1;
+          let d = Math.abs(scissorU - mid);
+          if (d > 0.5) d = 1 - d;
+          if (d < minIntervalDist) {
+            minIntervalDist = d;
+            snipIndex = idx;
+          }
+        });
+      }
+
+      for (let k = 0; k < intervals.length; k++) {
+        if (k === snipIndex) continue;
+        const { uA, uB, wrapped } = intervals[k];
+        let subPts = [];
+        if (!wrapped) {
+          subPts = extractSubCurve(uA, uB);
+        } else {
+          const part1 = extractSubCurve(uA, 1.0);
+          const part2 = extractSubCurve(0.0, uB);
+          subPts = [...part1.slice(0, -1), ...part2];
+        }
+
+        if (subPts.length >= 2) {
+          keptSegments.push({
+            p1: subPts[0],
+            p2: subPts[subPts.length - 1],
+            points: subPts
+          });
+        }
+      }
+    } else {
+      // Open curve (Line or Arc)
+      const allBounds = [0, ...sortedCuts, 1];
+      let snipIndex = 0;
+      for (let k = 0; k < allBounds.length - 1; k++) {
+        if (scissorU >= allBounds[k] - 1e-3 && scissorU <= allBounds[k + 1] + 1e-3) {
           snipIndex = k;
           break;
         }
-      } else {
-        if (scissorU >= uA - 1e-3 || scissorU <= uB + 1e-3) {
-          snipIndex = k;
-          break;
+      }
+
+      for (let k = 0; k < allBounds.length - 1; k++) {
+        if (k === snipIndex) continue;
+        const uA = allBounds[k];
+        const uB = allBounds[k + 1];
+        const subPts = extractSubCurve(uA, uB);
+        if (subPts.length >= 2) {
+          keptSegments.push({
+            p1: subPts[0],
+            p2: subPts[subPts.length - 1],
+            points: subPts
+          });
         }
       }
     }
 
-    if (snipIndex === -1) snipIndex = 0;
+    if (keptSegments.length === 0) return null;
 
-    for (let k = 0; k < intervals.length; k++) {
-      if (k === snipIndex) continue;
-      const { uA, uB, wrapped } = intervals[k];
-      let subPts = [];
-      if (!wrapped) {
-        subPts = extractSubCurve(uA, uB);
-      } else {
-        const part1 = extractSubCurve(uA, 1.0);
-        const part2 = extractSubCurve(0.0, uB);
-        subPts = [...part1.slice(0, -1), ...part2];
-      }
+    return {
+      targetEntity: entity,
+      hitPoint,
+      keptSegments
+    };
+  };
 
-      if (subPts.length >= 2) {
-        keptSegments.push({
-          p1: subPts[0],
-          p2: subPts[subPts.length - 1],
-          points: subPts
-        });
-      }
-    }
-  } else {
-    // Open curve (Line or Arc)
-    const allBounds = [0, ...sortedCuts, 1];
-    let snipIndex = 0;
-    for (let k = 0; k < allBounds.length - 1; k++) {
-      if (scissorU >= allBounds[k] - 1e-3 && scissorU <= allBounds[k + 1] + 1e-3) {
-        snipIndex = k;
-        break;
-      }
-    }
-
-    for (let k = 0; k < allBounds.length - 1; k++) {
-      if (k === snipIndex) continue;
-      const uA = allBounds[k];
-      const uB = allBounds[k + 1];
-      const subPts = extractSubCurve(uA, uB);
-      if (subPts.length >= 2) {
-        keptSegments.push({
-          p1: subPts[0],
-          p2: subPts[subPts.length - 1],
-          points: subPts
-        });
-      }
+  // Try each candidate in order of stroke collision until a trimmable entity is found
+  for (const cand of hitCandidates) {
+    const res = tryTrimCandidate(cand);
+    if (res && res.keptSegments.length > 0) {
+      return res;
     }
   }
 
-  return {
-    targetEntity: entity,
-    hitPoint,
-    keptSegments
-  };
+  return null;
 }
 
 /**
