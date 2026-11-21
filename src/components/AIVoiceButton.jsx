@@ -35,6 +35,51 @@ export default function AIVoiceButton({
   const [correctionInfo, setCorrectionInfo] = useState(null);
   const lastProcessedTranscriptRef = useRef('');
 
+  // Mobile Draggable Orb Positioning
+  const [buttonPos, setButtonPos] = useState({ bottom: 48, right: 60 });
+  const isDraggingOrb = useRef(false);
+  const dragStartCoord = useRef({ x: 0, y: 0 });
+  const dragStartOffset = useRef({ bottom: 48, right: 60 });
+  const hasMovedSignificant = useRef(false);
+
+  const handleOrbPointerDown = (e) => {
+    isDraggingOrb.current = true;
+    hasMovedSignificant.current = false;
+    dragStartCoord.current = { x: e.clientX, y: e.clientY };
+    dragStartOffset.current = { ...buttonPos };
+    try {
+      e.target.setPointerCapture(e.pointerId);
+    } catch {}
+  };
+
+  const handleOrbPointerMove = (e) => {
+    if (!isDraggingOrb.current) return;
+    const dx = e.clientX - dragStartCoord.current.x;
+    const dy = e.clientY - dragStartCoord.current.y;
+    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+      hasMovedSignificant.current = true;
+    }
+    const maxRight = Math.max(10, window.innerWidth - 75);
+    const maxBottom = Math.max(10, window.innerHeight - 75);
+    const newRight = Math.min(Math.max(dragStartOffset.current.right - dx, 12), maxRight);
+    const newBottom = Math.min(Math.max(dragStartOffset.current.bottom - dy, 32), maxBottom);
+    setButtonPos({ bottom: newBottom, right: newRight });
+  };
+
+  const handleOrbPointerUp = (e) => {
+    if (isDraggingOrb.current) {
+      isDraggingOrb.current = false;
+      try {
+        if (e && e.target && e.target.releasePointerCapture) {
+          e.target.releasePointerCapture(e.pointerId);
+        }
+      } catch {}
+      if (!hasMovedSignificant.current) {
+        onToggleAI(!isAIActive);
+      }
+    }
+  };
+
   // Sync mute state
   useEffect(() => {
     aiVoiceEngine.setMuted(isMuted);
@@ -275,9 +320,9 @@ export default function AIVoiceButton({
     <div
       style={{
         position: 'fixed',
-        bottom: '38px',
-        right: '24px',
-        zIndex: 9999,
+        bottom: `${buttonPos.bottom}px`,
+        right: `${buttonPos.right}px`,
+        zIndex: 10000,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-end',
@@ -291,6 +336,9 @@ export default function AIVoiceButton({
           style={{
             pointerEvents: 'auto',
             width: '320px',
+            maxWidth: 'calc(100vw - 32px)',
+            maxHeight: 'calc(100vh - 80px)',
+            overflowY: 'auto',
             background: 'rgba(15, 23, 42, 0.94)',
             backdropFilter: 'blur(16px)',
             border: '1.5px solid rgba(56, 189, 248, 0.35)',
@@ -557,45 +605,39 @@ export default function AIVoiceButton({
         </div>
       )}
 
-      {/* Floating Circular AI Orb Button */}
+      {/* Floating Circular AI Orb Button (Touch- & Mouse-Draggable) */}
       <button
-        onClick={() => onToggleAI(!isAIActive)}
-        title={isAIActive ? 'Turn off Argus AI' : 'Click to activate Argus AI (Voice Controlled)'}
+        type="button"
+        onPointerDown={handleOrbPointerDown}
+        onPointerMove={handleOrbPointerMove}
+        onPointerUp={handleOrbPointerUp}
+        onPointerCancel={handleOrbPointerUp}
+        title={isAIActive ? 'Turn off Argus AI Assistant' : 'Tap or drag: Activate Argus AI Voice Assistant'}
+        aria-label="Argus AI Assistant"
         style={{
           pointerEvents: 'auto',
           width: '56px',
           height: '56px',
           borderRadius: '50%',
           border: isAIActive
-            ? '2px solid #38bdf8'
-            : '2px solid rgba(2, 132, 199, 0.5)',
+            ? '2.5px solid #38bdf8'
+            : '2px solid rgba(56, 189, 248, 0.7)',
           background: isAIActive
             ? 'radial-gradient(circle at 35% 35%, #0284c7, #0f172a 90%)'
-            : 'radial-gradient(circle at 35% 35%, #1e293b, #090d16 90%)',
+            : 'radial-gradient(circle at 35% 35%, #0f172a, #0284c7 120%)',
           boxShadow: isAIActive
-            ? '0 0 24px rgba(56, 189, 248, 0.75), 0 8px 24px rgba(0, 0, 0, 0.5)'
-            : '0 4px 16px rgba(0, 0, 0, 0.35)',
-          cursor: 'pointer',
+            ? '0 0 26px rgba(56, 189, 248, 0.8), 0 8px 24px rgba(0, 0, 0, 0.5)'
+            : '0 4px 18px rgba(0, 0, 0, 0.4), 0 0 12px rgba(56, 189, 248, 0.4)',
+          cursor: 'grab',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          outline: 'none'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.08)';
-          if (!isAIActive) {
-            e.currentTarget.style.boxShadow = '0 0 16px rgba(56, 189, 248, 0.5)';
-            e.currentTarget.style.borderColor = '#38bdf8';
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          if (!isAIActive) {
-            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.35)';
-            e.currentTarget.style.borderColor = 'rgba(2, 132, 199, 0.5)';
-          }
+          transition: 'box-shadow 0.25s ease, border-color 0.25s ease',
+          outline: 'none',
+          touchAction: 'none',
+          userSelect: 'none'
         }}
       >
         {/* Animated Sound Wave Outer Glow Ring when Active */}
@@ -608,20 +650,32 @@ export default function AIVoiceButton({
               right: '-6px',
               bottom: '-6px',
               borderRadius: '50%',
-              border: '2px solid rgba(56, 189, 248, 0.45)',
+              border: '2px solid rgba(56, 189, 248, 0.65)',
               animation: 'aiPulseRing 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1)'
             }}
           />
         )}
 
-        {/* Center Icon */}
+        {/* Center Sparkles Icon */}
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {isAIActive ? (
-            <Sparkles size={24} className="text-cyan-300" style={{ animation: 'spinSlow 12s linear infinite' }} />
+            <Sparkles size={22} className="text-cyan-300" style={{ animation: 'spinSlow 12s linear infinite' }} />
           ) : (
-            <Sparkles size={22} className="text-cyan-500" />
+            <Sparkles size={20} className="text-cyan-400" />
           )}
         </div>
+
+        {/* Small "AI" text label */}
+        <span style={{
+          fontSize: '9px',
+          fontWeight: 800,
+          color: isAIActive ? '#38bdf8' : '#e0f2fe',
+          letterSpacing: '0.5px',
+          lineHeight: 1,
+          marginTop: '1px'
+        }}>
+          AI
+        </span>
       </button>
 
       {/* Embedded CSS Animations */}

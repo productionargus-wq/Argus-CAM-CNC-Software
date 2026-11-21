@@ -23,6 +23,7 @@
     "@capacitor/android": "^8.6.2",
     "@capacitor/cli": "^8.6.2",
     "@capacitor/core": "^8.6.2",
+    "@capacitor/ios": "^8.6.2",
     "clipper-lib": "^6.4.2",
     "gcode-parser": "^2.2.0",
     "lucide-react": "^1.16.0",

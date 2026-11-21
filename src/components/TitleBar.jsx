@@ -128,19 +128,22 @@ export default function TitleBar({
               title={isAIActive ? 'Turn off Argus AI Assistant' : 'Turn on Argus AI Voice Assistant'}
               style={{
                 marginLeft: '6px',
-                background: isAIActive ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
-                color: isAIActive ? '#38bdf8' : '#94a3b8',
-                border: isAIActive ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid transparent',
+                background: isAIActive ? '#0284c7' : '#e0f2fe',
+                color: isAIActive ? '#ffffff' : '#0369a1',
+                border: isAIActive ? '1px solid #0284c7' : '1px solid #7dd3fc',
                 borderRadius: '3px',
-                padding: '2px 5px',
+                padding: '2px 6px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '3px',
                 fontSize: '11px',
-                fontWeight: 600
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: isAIActive ? '0 0 8px rgba(56, 189, 248, 0.6)' : 'none',
+                transition: 'all 0.15s ease'
               }}
             >
-              <Sparkles size={12} color={isAIActive ? '#38bdf8' : '#38bdf8'} />
+              <Sparkles size={12} color={isAIActive ? '#ffffff' : '#0284c7'} />
               <span>AI</span>
             </button>
           )}

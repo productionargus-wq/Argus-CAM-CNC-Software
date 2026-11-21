@@ -28,6 +28,8 @@ export default function RibbonBar({
   onSelectTab,
   theme = 'light',
   onToggleTheme,
+  isAIActive = false,
+  onToggleAI = null,
   onOpenPostModal,
   onOpenSimModal,
   onOpenStockModal,
@@ -529,6 +531,35 @@ export default function RibbonBar({
                 <Box size={13} />
               </button>
             </div>
+          )}
+
+          {/* AI Assistant Quick Toggle Button */}
+          {onToggleAI && (
+            <button
+              type="button"
+              onClick={() => onToggleAI(!isAIActive)}
+              style={{
+                height: '22px',
+                padding: '0 6px',
+                background: isAIActive ? '#0284c7' : '#ffffff',
+                color: isAIActive ? '#ffffff' : '#0284c7',
+                border: isAIActive ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                borderRadius: '3px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '11px',
+                boxShadow: isAIActive ? '0 0 10px rgba(56, 189, 248, 0.6)' : '0 1px 2px rgba(0,0,0,0.08)',
+                transition: 'all 0.15s ease'
+              }}
+              title={isAIActive ? "Turn off Argus AI Assistant" : "Activate Argus AI Voice Assistant"}
+              aria-label="Argus AI Assistant"
+            >
+              <Sparkles size={12} color={isAIActive ? '#ffffff' : '#0284c7'} />
+              <span>AI</span>
+            </button>
           )}
 
           {/* Mastercam Style Collapse / Expand Toggle Arrow Button (Pinned at top right) */}

@@ -7713,6 +7713,8 @@ export default function App() {
       {/* 2. Mastercam Ribbon Bar with Built-in Arrow Collapse/Expand Button */}
       <RibbonBar
         activeTab={activeRibbonTab}
+        isAIActive={isAIActive}
+        onToggleAI={setIsAIActive}
         onSelectTab={(tab) => {
           setActiveRibbonTab(tab);
           if (tab === 'Toolpaths') {
