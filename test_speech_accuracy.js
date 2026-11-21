@@ -56,7 +56,14 @@ const cmdMulti = processVoiceCommand({
 });
 assertTest('processVoiceCommand with alternatives chooses best CAM command', cmdMulti.actionType === "TRANSLATE_PART" && cmdMulti.payload?.dx === 20, JSON.stringify(cmdMulti));
 
-// 7. Dialect & Language support
+// 7. Pan Commands
+const cmdPanLeft = processVoiceCommand("pan left");
+assertTest('"pan left" produces CAMERA_PAN left', cmdPanLeft.actionType === "CAMERA_PAN" && cmdPanLeft.payload?.direction === "left", JSON.stringify(cmdPanLeft));
+
+const cmdPanRight = processVoiceCommand("pan right 50");
+assertTest('"pan right 50" produces CAMERA_PAN right with amount 50', cmdPanRight.actionType === "CAMERA_PAN" && cmdPanRight.payload?.direction === "right" && cmdPanRight.payload?.amount === 50, JSON.stringify(cmdPanRight));
+
+// 8. Dialect & Language support
 aiVoiceEngine.setLanguage('en-IN');
 assertTest('aiVoiceEngine language is en-IN', aiVoiceEngine.getLanguage() === 'en-IN', aiVoiceEngine.getLanguage());
 

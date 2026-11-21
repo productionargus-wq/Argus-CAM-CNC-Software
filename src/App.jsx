@@ -5329,9 +5329,13 @@ export default function App() {
     );
   };
 
-  // Camera snap
-  const handleSnapCamera = (preset) => {
-    setCameraCommand({ preset, timestamp: Date.now() });
+  // Camera snap & Pan
+  const handleSnapCamera = (cmd) => {
+    if (typeof cmd === 'object' && cmd !== null) {
+      setCameraCommand({ ...cmd, timestamp: Date.now() });
+    } else {
+      setCameraCommand({ preset: cmd, timestamp: Date.now() });
+    }
   };
 
   // Mastercam Viewsheet Bookmark Handlers

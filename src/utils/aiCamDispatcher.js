@@ -263,6 +263,24 @@ function _evaluateCommand(normalized, appContext, rawTranscript) {
     };
   }
 
+  // Camera Pan (Pan Left, Pan Right, Pan Up, Pan Down)
+  if (/\b(pan|pan\s*camera|pan\s*view)\b/i.test(text)) {
+    let direction = 'left';
+    if (/\b(right)\b/i.test(text)) direction = 'right';
+    else if (/\b(up|above|higher)\b/i.test(text)) direction = 'up';
+    else if (/\b(down|below|lower)\b/i.test(text)) direction = 'down';
+    else if (/\b(left)\b/i.test(text)) direction = 'left';
+
+    const dist = extractNumber(text) ?? 35;
+    return {
+      actionType: 'CAMERA_PAN',
+      payload: { direction, amount: dist },
+      speechText: `Panning view ${direction}.`,
+      toastText: `Camera Pan: ${direction.charAt(0).toUpperCase() + direction.slice(1)}`,
+      success: true
+    };
+  }
+
   // -------------------------------------------------------------
   // 2. WORKPIECE ROTATION
   // -------------------------------------------------------------

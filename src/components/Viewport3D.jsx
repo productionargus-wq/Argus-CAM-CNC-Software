@@ -2814,6 +2814,29 @@ export default function Viewport3D({
   useEffect(() => {
     if (cameraCommand?.preset) {
       snapView(cameraCommand.preset);
+    } else if (cameraCommand?.pan) {
+      const { direction = 'left', amount = 35 } = cameraCommand.pan;
+      const cam = cameraRef.current;
+      const target = orbitTargetRef.current;
+      const spherical = sphericalRef.current;
+      if (cam && target) {
+        cam.updateMatrixWorld();
+        const right = new THREE.Vector3().setFromMatrixColumn(cam.matrix, 0);
+        const up = new THREE.Vector3().setFromMatrixColumn(cam.matrix, 1);
+        const panFactor = Math.max(0.1, (spherical.radius / 300) * (amount / 30));
+        let panX = 0;
+        let panY = 0;
+        if (direction === 'left') panX = -25 * panFactor;
+        else if (direction === 'right') panX = 25 * panFactor;
+        else if (direction === 'up') panY = 25 * panFactor;
+        else if (direction === 'down') panY = -25 * panFactor;
+
+        cam.position.addScaledVector(right, panX).addScaledVector(up, panY);
+        target.addScaledVector(right, panX).addScaledVector(up, panY);
+        cam.lookAt(target);
+        cam.updateMatrixWorld();
+        setCurrentViewName(`Pan ${direction.charAt(0).toUpperCase() + direction.slice(1)}`);
+      }
     }
   }, [cameraCommand]);
 

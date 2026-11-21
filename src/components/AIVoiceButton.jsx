@@ -175,6 +175,12 @@ export default function AIVoiceButton({
           }
           break;
 
+        case 'CAMERA_PAN':
+          if (onSnapCamera && result.payload) {
+            onSnapCamera({ pan: result.payload });
+          }
+          break;
+
         case 'ROTATE_PART':
           if (onUpdateTransform && result.payload) {
             const { axis = 'z', degrees = 180 } = result.payload;
@@ -481,6 +487,8 @@ export default function AIVoiceButton({
               { label: '📐 Top View', cmd: 'show top view' },
               { label: '🔄 Rotate 180°', cmd: 'rotate 180 degree' },
               { label: '↔️ Move 20mm', cmd: 'move 20 mm on x' },
+              { label: '👈 Pan Left', cmd: 'pan left' },
+              { label: '👉 Pan Right', cmd: 'pan right' },
               { label: '🌐 Isometric', cmd: 'isometric view' },
               { label: '▶️ Simulate', cmd: 'start simulation' }
             ].map((chip) => (
