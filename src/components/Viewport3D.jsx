@@ -844,7 +844,7 @@ export default function Viewport3D({
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
 
-      const topY = partMetrics?.box?.max?.y ?? 35;
+      const topY = partMetrics?.box?.max?.y ?? 0;
       const worldY = 49 + topY;
       sketchPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, worldY, 0));
 

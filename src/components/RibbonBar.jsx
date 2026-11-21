@@ -217,7 +217,8 @@ export default function RibbonBar({
   onExtractAllEdges,
   onExtractOneEdge,
   onBreakManyPieces,
-  onJoinEntities
+  onJoinEntities,
+  onProjectWireframe
 }) {
   const fileInputRef = useRef(null);
   const mcamFileInputRef = useRef(null);
@@ -1421,8 +1422,8 @@ export default function RibbonBar({
                 <div className="ribbon-col-stacked" style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '4px' }}>
                   <button
                     className="ribbon-btn-small"
-                    onClick={() => onOpenWireframeModal ? onOpenWireframeModal('project') : onAddWireframe('project')}
-                    title="Project - Project 2D wireframe onto 3D surface or plane"
+                    onClick={() => onProjectWireframe ? onProjectWireframe() : (onOpenWireframeModal ? onOpenWireframeModal('project') : onAddWireframe('project'))}
+                    title="Project - Project and flatten wireframe curves onto active CPlane (Z=0)"
                   >
                     <ArrowDown size={12} color="#a855f7" />
                     <span>Project</span>

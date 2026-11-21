@@ -7007,6 +7007,67 @@ export default function App() {
     showToast(`Join Entities: Combined ${wireframes.length} wireframe elements into closed contour chain`, 'success');
   };
 
+  const handleProjectWireframeToCPlane = (targetZ = 0) => {
+    const list = customGeometryRef.current || [];
+    let count = 0;
+    const nextList = list.map((ent) => {
+      if (!ent) return ent;
+      const isWire = ent.name?.startsWith('Wireframe_') ||
+                     ent.name?.startsWith('Drill_') ||
+                     ent.name?.startsWith('Hole_') ||
+                     ['line', 'circle', 'arc', 'rectangle', 'bolt_circle', 'point', 'spline'].includes(ent.userData?.type || ent.userData?.cadType) ||
+                     ent.type === 'Line' ||
+                     ent.type === 'LineSegments' ||
+                     ent.isGroup;
+      if (!isWire) return ent;
+
+      const cloned = ent.clone();
+      if (cloned.geometry) {
+        cloned.geometry = cloned.geometry.clone();
+        const pos = cloned.geometry.attributes?.position;
+        if (pos) {
+          for (let i = 0; i < pos.count; i++) {
+            pos.setY(i, targetZ);
+          }
+          pos.needsUpdate = true;
+          cloned.geometry.computeBoundingBox?.();
+          cloned.geometry.computeBoundingSphere?.();
+        }
+      }
+      if (cloned.children && cloned.children.length > 0) {
+        cloned.children.forEach((child) => {
+          if (child.geometry) {
+            child.geometry = child.geometry.clone();
+            const pos = child.geometry.attributes?.position;
+            if (pos) {
+              for (let i = 0; i < pos.count; i++) {
+                pos.setY(i, targetZ);
+              }
+              pos.needsUpdate = true;
+              child.geometry.computeBoundingBox?.();
+              child.geometry.computeBoundingSphere?.();
+            }
+          }
+        });
+      }
+      if (cloned.userData) {
+        if (cloned.userData.center) cloned.userData.center.y = targetZ;
+        if (Array.isArray(cloned.userData.points)) {
+          cloned.userData.points.forEach((p) => { if (p) p.y = targetZ; });
+        }
+      }
+      count++;
+      return cloned;
+    });
+
+    if (count > 0) {
+      commitCustomGeometry(nextList, true);
+      showToast(`Mastercam Project: Flattened ${count} wireframe entities flat to CPlane Top (Z=${targetZ})`, 'success');
+    } else {
+      showToast('No wireframe entities found to project', 'info');
+    }
+  };
+
   // Surface Creation & Mastercam Surface Extrude Handlers
   const syncPartMetricsFromCustomSurfaces = (entityList = []) => {
     if (currentModel) return;
@@ -7847,6 +7908,7 @@ export default function App() {
         onExtractOneEdge={handleExtractOneEdge}
         onBreakManyPieces={handleBreakManyPieces}
         onJoinEntities={handleJoinEntities}
+        onProjectWireframe={handleProjectWireframeToCPlane}
         onAddSurface={handleAddSurface}
         onClearSurfaces={handleClearSurfaces}
         onAddSolid={handleAddSolid}
