@@ -1,11 +1,14 @@
 /**
  * aiCamDispatcher.js
- * Natural Language Command Processor for Argus Master CAM.
- * Parses user voice transcripts or text input and executes corresponding
- * CAD/CAM operations, returning spoken feedback and execution status.
+ * Advanced Natural Language Command Processor for Argus Master CAM.
+ * Features:
+ * - Real-time conversational CAD/CAM intent parsing
+ * - Barge-In / Quick Interrupt keyword handling (stop, wait, hold on, quiet)
+ * - Comprehensive synonym mapping (plan view, bird's eye, half turn, CNC axes)
+ * - Self-echo detection helper
  */
 
-// Number word to digit converter
+// Spoken numbers and phrases mapping
 const WORD_NUMBERS = {
   zero: 0,
   one: 1,
@@ -18,9 +21,14 @@ const WORD_NUMBERS = {
   eight: 8,
   nine: 9,
   ten: 10,
+  fifteen: 15,
   twenty: 20,
+  twentyfive: 25,
+  'twenty five': 25,
   thirty: 30,
   forty: 40,
+  'forty five': 45,
+  fortyfive: 45,
   fifty: 50,
   sixty: 60,
   seventy: 70,
@@ -28,13 +36,24 @@ const WORD_NUMBERS = {
   ninety: 90,
   hundred: 100,
   'one eighty': 180,
-  'three sixty': 360
+  'one-eighty': 180,
+  oneeighty: 180,
+  'two seventy': 270,
+  'two-seventy': 270,
+  'three sixty': 360,
+  'three-sixty': 360
 };
 
 /**
- * Extracts a numeric value from text, supporting digits and common words
+ * Extracts a numeric value from text, supporting digits, word numbers, and turn fractions
  */
 function extractNumber(text) {
+  // Check for turn fractions
+  if (/\b(half\s*turn)\b/i.test(text)) return 180;
+  if (/\b(quarter\s*turn)\b/i.test(text)) return 90;
+  if (/\b(three\s*quarter\s*turn)\b/i.test(text)) return 270;
+  if (/\b(full\s*turn|full\s*circle)\b/i.test(text)) return 360;
+
   // Check direct numbers like 180, -25, 45.5
   const directMatch = text.match(/-?\d+(\.\d+)?/);
   if (directMatch) {
@@ -49,6 +68,34 @@ function extractNumber(text) {
   }
 
   return null;
+}
+
+/**
+ * Tests whether text contains a recognizable CAD/CAM intent
+ */
+export function isRecognizableIntent(rawText) {
+  if (!rawText || typeof rawText !== 'string') return false;
+  const t = rawText.toLowerCase().trim();
+
+  // Quick interrupt
+  if (/\b(stop|wait|hold\s*on|pause|quiet|hush|cancel|shut\s*up)\b/i.test(t)) return true;
+
+  // Views
+  if (/\b(top|front|right|left|bottom|back|rear|iso|isometric|fit|zoom|overhead|plan\s*view|bird'?s?\s*eye)\b/i.test(t)) return true;
+
+  // Rotations
+  if (/\b(rotate|turn|spin|flip|upside\s*down)\b/i.test(t)) return true;
+
+  // Translations
+  if (/\b(move|translate|shift|nudge|slide|offset|center|origin)\b/i.test(t)) return true;
+
+  // CAM actions
+  if (/\b(simulate|simulation|backplot|toolpath|regenerate|g\s*code|tools?|stock)\b/i.test(t)) return true;
+
+  // Inspection
+  if (/\b(dimension|dimensions|size|bound|bounds|how\s*big|how\s*many|operations?)\b/i.test(t)) return true;
+
+  return false;
 }
 
 /**
@@ -70,9 +117,24 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
   const text = rawTranscript.toLowerCase().trim();
 
   // -------------------------------------------------------------
+  // 0. QUICK INTERRUPT / STOP (Barge-In Handlers)
+  // -------------------------------------------------------------
+  if (/^(stop|wait|hold\s*on|pause|quiet|hush|be\s*quiet|shut\s*up|cancel)$/i.test(text) ||
+      /\b(stop\s*talking|be\s*quiet|hold\s*on\s*a\s*sec)\b/i.test(text)) {
+    return {
+      actionType: 'INTERRUPT',
+      payload: {},
+      speechText: '', // Silent cutoff
+      toastText: 'AI Speech Cancelled',
+      success: true
+    };
+  }
+
+  // -------------------------------------------------------------
   // 1. CAMERA VIEW PRESETS
   // -------------------------------------------------------------
-  if (/\b(top\s*view|show\s*top|switch\s*to\s*top|view\s*top)\b/i.test(text)) {
+  // Top / Plan / Overhead View
+  if (/\b(top\s*view|show\s*top|switch\s*to\s*top|view\s*top|plan\s*view|overhead\s*view|bird'?s?\s*eye|g17)\b/i.test(text)) {
     return {
       actionType: 'CAMERA_VIEW',
       payload: { preset: 'top' },
@@ -82,7 +144,8 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     };
   }
 
-  if (/\b(front\s*view|show\s*front|switch\s*to\s*front)\b/i.test(text)) {
+  // Front / Elevation View
+  if (/\b(front\s*view|show\s*front|switch\s*to\s*front|elevation\s*view|g19)\b/i.test(text)) {
     return {
       actionType: 'CAMERA_VIEW',
       payload: { preset: 'front' },
@@ -92,7 +155,8 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     };
   }
 
-  if (/\b(isometric|iso\s*view|show\s*isometric|show\s*iso|switch\s*to\s*iso)\b/i.test(text)) {
+  // Isometric / 3D View
+  if (/\b(isometric|iso\s*view|show\s*isometric|show\s*iso|switch\s*to\s*iso|3d\s*view|axonometric|perspective)\b/i.test(text)) {
     return {
       actionType: 'CAMERA_VIEW',
       payload: { preset: 'iso' },
@@ -102,7 +166,8 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     };
   }
 
-  if (/\b(right\s*view|show\s*right|switch\s*to\s*right)\b/i.test(text)) {
+  // Right Side View
+  if (/\b(right\s*view|right\s*side|show\s*right|switch\s*to\s*right|g18)\b/i.test(text)) {
     return {
       actionType: 'CAMERA_VIEW',
       payload: { preset: 'right' },
@@ -112,7 +177,8 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     };
   }
 
-  if (/\b(left\s*view|show\s*left|switch\s*to\s*left)\b/i.test(text)) {
+  // Left Side View
+  if (/\b(left\s*view|left\s*side|show\s*left|switch\s*to\s*left)\b/i.test(text)) {
     return {
       actionType: 'CAMERA_VIEW',
       payload: { preset: 'left' },
@@ -122,7 +188,8 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     };
   }
 
-  if (/\b(bottom\s*view|show\s*bottom|switch\s*to\s*bottom)\b/i.test(text)) {
+  // Bottom / Underside View
+  if (/\b(bottom\s*view|show\s*bottom|switch\s*to\s*bottom|underneath|underside)\b/i.test(text)) {
     return {
       actionType: 'CAMERA_VIEW',
       payload: { preset: 'bottom' },
@@ -132,7 +199,8 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     };
   }
 
-  if (/\b(back\s*view|show\s*back|switch\s*to\s*back|rear\s*view)\b/i.test(text)) {
+  // Back / Rear View
+  if (/\b(back\s*view|show\s*back|switch\s*to\s*back|rear\s*view|from\s*behind)\b/i.test(text)) {
     return {
       actionType: 'CAMERA_VIEW',
       payload: { preset: 'back' },
@@ -142,7 +210,8 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     };
   }
 
-  if (/\b(fit\s*(to\s*)?(screen|view|all|extents)|zoom\s*extents|fit\s*all)\b/i.test(text)) {
+  // Fit Extents / Frame Part
+  if (/\b(fit\s*(to\s*)?(screen|view|all|extents)|zoom\s*extents|fit\s*all|frame\s*part|zoom\s*to\s*fit)\b/i.test(text)) {
     return {
       actionType: 'CAMERA_VIEW',
       payload: { preset: 'fit' },
@@ -152,6 +221,7 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     };
   }
 
+  // Zoom Out
   if (/\b(zoom\s*out|unzoom)\b/i.test(text)) {
     return {
       actionType: 'CAMERA_VIEW',
@@ -165,9 +235,9 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
   // -------------------------------------------------------------
   // 2. WORKPIECE ROTATION
   // -------------------------------------------------------------
-  if (/\b(rotate|turn|spin)\b/i.test(text) || /\b(upside\s*down)\b/i.test(text)) {
-    // Check for "upside down"
-    if (/\bupside\s*down\b/i.test(text)) {
+  if (/\b(rotate|turn|spin|flip)\b/i.test(text) || /\b(upside\s*down)\b/i.test(text)) {
+    // Check for "upside down" or "flip over"
+    if (/\b(upside\s*down|flip\s*over)\b/i.test(text)) {
       return {
         actionType: 'ROTATE_PART',
         payload: { axis: 'x', degrees: 180 },
@@ -177,21 +247,21 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
       };
     }
 
-    const degrees = extractNumber(text) ?? 90; // Default to 90 if unspecified
+    const degrees = extractNumber(text) ?? 90; // Default to 90° if unspecified
 
     // Determine axis: x, y, or z (default z for rotary table)
     let axis = 'z';
-    if (/\b(x\s*axis|x|around\s*x|on\s*x)\b/i.test(text)) {
+    if (/\b(x\s*axis|x|around\s*x|on\s*x|tilt|pitch)\b/i.test(text)) {
       axis = 'x';
-    } else if (/\b(y\s*axis|y|around\s*y|on\s*y)\b/i.test(text)) {
+    } else if (/\b(y\s*axis|y|around\s*y|on\s*y|roll)\b/i.test(text)) {
       axis = 'y';
-    } else if (/\b(z\s*axis|z|around\s*z|on\s*z)\b/i.test(text)) {
+    } else if (/\b(z\s*axis|z|around\s*z|on\s*z|table|yaw)\b/i.test(text)) {
       axis = 'z';
     }
 
     // Direction (counter-clockwise or negative)
     let finalDegrees = degrees;
-    if (/\b(counter\s*clockwise|anticlockwise|negative|left)\b/i.test(text) && finalDegrees > 0) {
+    if (/\b(counter\s*clockwise|anticlockwise|negative|left|reverse)\b/i.test(text) && finalDegrees > 0) {
       finalDegrees = -finalDegrees;
     }
 
@@ -205,9 +275,9 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
   }
 
   // -------------------------------------------------------------
-  // 3. WORKPIECE TRANSLATION / MOVE
+  // 3. WORKPIECE TRANSLATION / MOVE / NUDGE
   // -------------------------------------------------------------
-  if (/\b(move|translate|shift|offset)\b/i.test(text)) {
+  if (/\b(move|translate|shift|nudge|slide|offset)\b/i.test(text)) {
     // Check if user says "move to origin" or "center"
     if (/\b(origin|center)\b/i.test(text)) {
       return {
@@ -225,7 +295,20 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     let dy = 0;
     let dz = 0;
 
-    if (/\b(up|above|higher)\b/i.test(text)) {
+    // Check CNC axis notation like "+X", "-X", "positive X", "negative Z"
+    if (/(?:^|[\s,])(\+x|plus\s*x|positive\s*x)\b/i.test(text)) {
+      dx = Math.abs(dist);
+    } else if (/(?:^|[\s,])(-x|-\s*x|minus\s*x|negative\s*x)\b/i.test(text)) {
+      dx = -Math.abs(dist);
+    } else if (/(?:^|[\s,])(\+y|plus\s*y|positive\s*y)\b/i.test(text)) {
+      dy = Math.abs(dist);
+    } else if (/(?:^|[\s,])(-y|-\s*y|minus\s*y|negative\s*y)\b/i.test(text)) {
+      dy = -Math.abs(dist);
+    } else if (/(?:^|[\s,])(\+z|plus\s*z|positive\s*z)\b/i.test(text)) {
+      dz = Math.abs(dist);
+    } else if (/(?:^|[\s,])(-z|-\s*z|minus\s*z|negative\s*z)\b/i.test(text)) {
+      dz = -Math.abs(dist);
+    } else if (/\b(up|above|higher)\b/i.test(text)) {
       dy = dist;
     } else if (/\b(down|below|lower)\b/i.test(text)) {
       dy = -dist;
@@ -233,9 +316,9 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
       dx = dist;
     } else if (/\b(left)\b/i.test(text)) {
       dx = -dist;
-    } else if (/\b(forward|front)\b/i.test(text)) {
+    } else if (/\b(forward|front|closer)\b/i.test(text)) {
       dz = dist;
-    } else if (/\b(back|backward|rear)\b/i.test(text)) {
+    } else if (/\b(back|backward|rear|away)\b/i.test(text)) {
       dz = -dist;
     } else if (/\b(x\s*axis|x)\b/i.test(text)) {
       dx = dist;
@@ -244,7 +327,6 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     } else if (/\b(z\s*axis|z)\b/i.test(text)) {
       dz = dist;
     } else {
-      // Default to X axis
       dx = dist;
     }
 
@@ -260,7 +342,7 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
   // -------------------------------------------------------------
   // 4. RESET / CENTER
   // -------------------------------------------------------------
-  if (/\b(reset\s*(part|material|workpiece|rotation|position|transform)|zero\s*out)\b/i.test(text)) {
+  if (/\b(reset\s*(part|material|workpiece|rotation|position|transform)|zero\s*out|center\s*(it|part|workpiece))\b/i.test(text)) {
     return {
       actionType: 'RESET_TRANSFORM',
       payload: { reset: 'all' },
@@ -293,7 +375,7 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     };
   }
 
-  if (/\b(generate\s*toolpath|regenerate|calc\s*toolpath|compute\s*toolpath)\b/i.test(text)) {
+  if (/\b(generate\s*toolpath|regenerate|calc\s*toolpath|compute\s*toolpath|calculate\s*toolpaths?)\b/i.test(text)) {
     return {
       actionType: 'CAM_ACTION',
       payload: { command: 'regenerate_toolpaths' },
@@ -303,7 +385,7 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     };
   }
 
-  if (/\b(tool\s*manager|tools\s*list|open\s*tools|show\s*tools)\b/i.test(text)) {
+  if (/\b(tool\s*manager|tools?\s*list|open\s*tools?|show\s*tools?|tool\s*library)\b/i.test(text)) {
     return {
       actionType: 'MODAL_OPEN',
       payload: { modal: 'tool_manager' },
@@ -323,7 +405,7 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     };
   }
 
-  if (/\b(g\s*code|show\s*g\s*code|open\s*g\s*code|nc\s*code)\b/i.test(text)) {
+  if (/\b(g\s*code|show\s*g\s*code|open\s*g\s*code|nc\s*code|view\s*g\s*code)\b/i.test(text)) {
     return {
       actionType: 'MODAL_OPEN',
       payload: { modal: 'gcode_viewer' },
@@ -399,7 +481,7 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
   // -------------------------------------------------------------
   // 7. INSPECTION & WORKPIECE QUERIES
   // -------------------------------------------------------------
-  if (/\b(dimensions|size|bounding\s*box|how\s*big|workpiece\s*size)\b/i.test(text)) {
+  if (/\b(dimensions?|size|bounding\s*box|how\s*big|workpiece\s*size|measure\s*(part|workpiece))\b/i.test(text)) {
     const dims = appContext?.partMetrics?.dimensions;
     if (dims) {
       const x = Math.round(dims.x);
@@ -423,7 +505,7 @@ export function processVoiceCommand(rawTranscript, appContext = {}) {
     }
   }
 
-  if (/\b(operations|how\s*many\s*operations|toolpaths\s*count)\b/i.test(text)) {
+  if (/\b(operations|how\s*many\s*operations|toolpaths?\s*count|list\s*operations)\b/i.test(text)) {
     const count = appContext?.operations?.length ?? 0;
     return {
       actionType: 'INFO_QUERY',

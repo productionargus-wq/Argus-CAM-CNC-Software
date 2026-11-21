@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Mic, MicOff, Volume2, VolumeX, X, Play, RotateCw, Move, CornerDownLeft } from 'lucide-react';
+import { Sparkles, Mic, MicOff, Volume2, VolumeX, X, Play, RotateCw, Move, CornerDownLeft, Zap } from 'lucide-react';
 import aiVoiceEngine from '../utils/aiVoiceEngine';
-import { processVoiceCommand } from '../utils/aiCamDispatcher';
+import { processVoiceCommand, isRecognizableIntent } from '../utils/aiCamDispatcher';
 
 export default function AIVoiceButton({
   isAIActive,
@@ -30,6 +30,7 @@ export default function AIVoiceButton({
   const [isExpanded, setIsExpanded] = useState(false);
   const [typedInput, setTypedInput] = useState('');
   const [isMuted, setIsMuted] = useState(false);
+  const [wasInterrupted, setWasInterrupted] = useState(false);
   const lastProcessedTranscriptRef = useRef('');
 
   // Sync mute state
@@ -43,14 +44,15 @@ export default function AIVoiceButton({
       setIsExpanded(true);
       setTranscript('');
       setInterimText('');
+      setWasInterrupted(false);
       setLastResponse('Listening for your command...');
       setActionBadge('');
 
+      // Full-Duplex: Start listening immediately so user can interrupt the greeting
+      startListeningSession();
+
       // Greet the user with spoken audio
-      aiVoiceEngine.speak('Argus AI active. How can I help with your CAM model?', () => {
-        // After greeting completes, start listening
-        startListeningSession();
-      });
+      aiVoiceEngine.speak('Argus AI active. How can I help with your CAM model?');
     } else {
       // Turn off
       aiVoiceEngine.stopSpeaking();
@@ -58,6 +60,7 @@ export default function AIVoiceButton({
       setIsExpanded(false);
       setTranscript('');
       setInterimText('');
+      setWasInterrupted(false);
     }
 
     return () => {
@@ -72,6 +75,13 @@ export default function AIVoiceButton({
       ({ final, interim }) => {
         if (interim) {
           setInterimText(interim);
+
+          // Fast Barge-In Trigger: If user is uttering a recognizable command while AI is speaking
+          if (aiVoiceEngine.isSpeaking && isRecognizableIntent(interim)) {
+            aiVoiceEngine.stopSpeaking(true);
+            setWasInterrupted(true);
+            setLastResponse(`Listening: "${interim}"...`);
+          }
         }
 
         if (final && final !== lastProcessedTranscriptRef.current) {
@@ -84,6 +94,9 @@ export default function AIVoiceButton({
       // onStateChange
       (state) => {
         setEngineState((prev) => ({ ...prev, ...state }));
+        if (state.interrupted) {
+          setWasInterrupted(true);
+        }
       },
       // onError
       (error) => {
@@ -91,6 +104,12 @@ export default function AIVoiceButton({
         if (error === 'not-allowed') {
           showToast?.('Microphone access denied. You can also type commands into Argus AI.', 'warning');
         }
+      },
+      // onInterrupted callback
+      () => {
+        setWasInterrupted(true);
+        setLastResponse('Interrupted AI — Listening to you...');
+        setTimeout(() => setWasInterrupted(false), 3500);
       }
     );
   };
@@ -98,6 +117,9 @@ export default function AIVoiceButton({
   // Dispatch and execute parsed command
   const handleExecuteVoiceCommand = (commandText) => {
     if (!commandText || !commandText.trim()) return;
+
+    // If AI was speaking, immediately silence it
+    aiVoiceEngine.stopSpeaking();
 
     const appContext = {
       partTransform,
@@ -107,11 +129,22 @@ export default function AIVoiceButton({
 
     const result = processVoiceCommand(commandText, appContext);
 
+    // Quick stop / interrupt command
+    if (result.actionType === 'INTERRUPT') {
+      setLastResponse('Ready for your command...');
+      setActionBadge('AI Interrupted & Silenced');
+      setWasInterrupted(true);
+      setTimeout(() => setWasInterrupted(false), 2500);
+      return;
+    }
+
     setLastResponse(result.speechText);
     setActionBadge(result.toastText);
 
     // Speak confirmation response
-    aiVoiceEngine.speak(result.speechText);
+    if (result.speechText) {
+      aiVoiceEngine.speak(result.speechText);
+    }
 
     if (result.toastText && showToast) {
       showToast(result.toastText, result.success ? 'success' : 'info');
@@ -305,21 +338,24 @@ export default function AIVoiceButton({
           {/* Active Listening / Audio wave status */}
           <div
             style={{
-              background: 'rgba(2, 132, 199, 0.1)',
-              border: '1px solid rgba(56, 189, 248, 0.2)',
+              background: wasInterrupted ? 'rgba(234, 179, 8, 0.15)' : 'rgba(2, 132, 199, 0.1)',
+              border: wasInterrupted ? '1px solid rgba(234, 179, 8, 0.4)' : '1px solid rgba(56, 189, 248, 0.2)',
               borderRadius: '8px',
               padding: '8px 12px',
               fontSize: '11px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              transition: 'all 0.2s ease'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Mic size={14} className="text-cyan-400" />
-              <span style={{ color: '#bae6fd', fontWeight: '500' }}>
-                {engineState.isSpeaking
-                  ? 'Speaking response...'
+              {wasInterrupted ? <Zap size={14} className="text-amber-400" /> : <Mic size={14} className="text-cyan-400" />}
+              <span style={{ color: wasInterrupted ? '#fde047' : '#bae6fd', fontWeight: '500' }}>
+                {wasInterrupted
+                  ? 'Interrupted AI — Listening to you...'
+                  : engineState.isSpeaking
+                  ? 'Speaking response (speak to interrupt)...'
                   : interimText
                   ? `Hearing: "${interimText}"`
                   : 'Listening... speak a command'}
@@ -327,10 +363,10 @@ export default function AIVoiceButton({
             </div>
             {/* Equalizer Wavebars */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', height: '14px' }}>
-              <span style={{ width: '2px', height: '100%', background: '#38bdf8', borderRadius: '1px', animation: 'wave 0.8s infinite ease-in-out' }} />
-              <span style={{ width: '2px', height: '70%', background: '#38bdf8', borderRadius: '1px', animation: 'wave 0.6s infinite ease-in-out' }} />
-              <span style={{ width: '2px', height: '90%', background: '#38bdf8', borderRadius: '1px', animation: 'wave 0.9s infinite ease-in-out' }} />
-              <span style={{ width: '2px', height: '60%', background: '#38bdf8', borderRadius: '1px', animation: 'wave 0.7s infinite ease-in-out' }} />
+              <span style={{ width: '2px', height: '100%', background: wasInterrupted ? '#eab308' : '#38bdf8', borderRadius: '1px', animation: 'wave 0.8s infinite ease-in-out' }} />
+              <span style={{ width: '2px', height: '70%', background: wasInterrupted ? '#eab308' : '#38bdf8', borderRadius: '1px', animation: 'wave 0.6s infinite ease-in-out' }} />
+              <span style={{ width: '2px', height: '90%', background: wasInterrupted ? '#eab308' : '#38bdf8', borderRadius: '1px', animation: 'wave 0.9s infinite ease-in-out' }} />
+              <span style={{ width: '2px', height: '60%', background: wasInterrupted ? '#eab308' : '#38bdf8', borderRadius: '1px', animation: 'wave 0.7s infinite ease-in-out' }} />
             </div>
           </div>
 

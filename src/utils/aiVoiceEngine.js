@@ -1,9 +1,10 @@
 /**
  * aiVoiceEngine.js
- * Browser-native Web Speech API wrapper for Argus Master CAM.
- * Provides bi-directional voice interaction:
- * - Speech Recognition (STT via SpeechRecognition / webkitSpeechRecognition)
- * - Speech Synthesis (TTS via window.speechSynthesis)
+ * Advanced Browser-native Web Speech API wrapper for Argus Master CAM.
+ * Provides Full-Duplex Voice Interaction:
+ * - Simultaneous Speech Recognition & Speech Synthesis
+ * - Real-Time Barge-In / Interruption Handling: Instantly cancels AI speech when user talks
+ * - Self-Echo Cancellation: Rejects speaker acoustic feedback
  */
 
 class AIVoiceEngine {
@@ -15,11 +16,14 @@ class AIVoiceEngine {
     this.isSupported = false;
     this.selectedVoice = null;
     this.voices = [];
+    this.currentSpeakingText = '';
+    this.recentSpokenPhrases = [];
     this.onTranscriptCallback = null;
     this.onStateChangeCallback = null;
     this.onErrorCallback = null;
+    this.onInterruptedCallback = null;
     this.muted = false;
-    this.speechRate = 1.05;
+    this.speechRate = 1.08;
     this.speechPitch = 1.0;
 
     this.init();
@@ -43,6 +47,16 @@ class AIVoiceEngine {
           this.notifyStateChange();
         };
 
+        // Instant interruption hook when sound is detected
+        if ('onspeechstart' in this.recognition) {
+          this.recognition.onspeechstart = () => {
+            // When user starts speaking while AI is speaking, handle potential barge-in
+            if (this.isSpeaking) {
+              this.handlePotentialBargeIn();
+            }
+          };
+        }
+
         this.recognition.onresult = (event) => {
           let interimTranscript = '';
           let finalTranscript = '';
@@ -56,10 +70,22 @@ class AIVoiceEngine {
             }
           }
 
+          const cleanInterim = interimTranscript.trim();
+          const cleanFinal = finalTranscript.trim();
+
+          // Interruption check: If AI is speaking and user talks with non-empty transcript
+          if (this.isSpeaking && (cleanInterim || cleanFinal)) {
+            const detected = cleanInterim || cleanFinal;
+            if (!this.isEchoOfAISpeech(detected)) {
+              // Real user interruption!
+              this.stopSpeaking(true);
+            }
+          }
+
           if (this.onTranscriptCallback) {
             this.onTranscriptCallback({
-              final: finalTranscript.trim(),
-              interim: interimTranscript.trim()
+              final: cleanFinal,
+              interim: cleanInterim
             });
           }
         };
@@ -96,7 +122,7 @@ class AIVoiceEngine {
     if (this.synthesis) {
       const loadVoices = () => {
         this.voices = this.synthesis.getVoices() || [];
-        // Prefer natural English voices (Google US English, Microsoft Jenny/Guy/David/Zira, Samantha)
+        // Prefer natural English voices
         this.selectedVoice =
           this.voices.find((v) => /Google US English|Microsoft.*Natural|Jenny|David|Guy|Samantha/i.test(v.name)) ||
           this.voices.find((v) => v.lang.startsWith('en')) ||
@@ -110,21 +136,56 @@ class AIVoiceEngine {
     }
   }
 
-  notifyStateChange() {
+  handlePotentialBargeIn() {
+    // If speaking, prepare to yield if distinct user tokens follow
+    if (this.isSpeaking) {
+      this.notifyStateChange({ potentialBargeIn: true });
+    }
+  }
+
+  /**
+   * Checks if an incoming transcript is just an echo of recent AI speech
+   */
+  isEchoOfAISpeech(text) {
+    if (!text || !this.currentSpeakingText) return false;
+    const cleanIn = text.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cleanAI = this.currentSpeakingText.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    if (cleanIn.length < 3) return false;
+
+    // Direct substring match with what AI is saying
+    if (cleanAI.includes(cleanIn) || cleanIn.includes(cleanAI)) {
+      return true;
+    }
+
+    // Check recent phrases
+    for (const phrase of this.recentSpokenPhrases) {
+      const cleanP = phrase.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (cleanP && (cleanP.includes(cleanIn) || cleanIn.includes(cleanP))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  notifyStateChange(extra = {}) {
     if (this.onStateChangeCallback) {
       this.onStateChangeCallback({
         isListening: this.isListening,
         isSpeaking: this.isSpeaking,
         isSupported: this.isSupported,
-        muted: this.muted
+        muted: this.muted,
+        ...extra
       });
     }
   }
 
-  startListening(onTranscript, onStateChange, onError) {
+  startListening(onTranscript, onStateChange, onError, onInterrupted) {
     if (onTranscript) this.onTranscriptCallback = onTranscript;
     if (onStateChange) this.onStateChangeCallback = onStateChange;
     if (onError) this.onErrorCallback = onError;
+    if (onInterrupted) this.onInterruptedCallback = onInterrupted;
 
     if (!this.recognition) {
       if (this.onErrorCallback) this.onErrorCallback('Speech recognition is not supported in this browser.');
@@ -137,7 +198,7 @@ class AIVoiceEngine {
       this.notifyStateChange();
       return true;
     } catch {
-      // Might already be started
+      // Might already be active
       return true;
     }
   }
@@ -161,8 +222,14 @@ class AIVoiceEngine {
     }
 
     try {
-      // Cancel any ongoing speech to avoid overlapping
+      // Cancel any ongoing speech
       this.synthesis.cancel();
+
+      this.currentSpeakingText = text;
+      this.recentSpokenPhrases.push(text);
+      if (this.recentSpokenPhrases.length > 5) {
+        this.recentSpokenPhrases.shift();
+      }
 
       const utterance = new SpeechSynthesisUtterance(text);
       if (this.selectedVoice) {
@@ -178,13 +245,14 @@ class AIVoiceEngine {
 
       utterance.onend = () => {
         this.isSpeaking = false;
+        this.currentSpeakingText = '';
         this.notifyStateChange();
         if (onEnd) onEnd();
       };
 
       utterance.onerror = (e) => {
-        console.warn('[AIVoiceEngine] Synthesis error:', e);
         this.isSpeaking = false;
+        this.currentSpeakingText = '';
         this.notifyStateChange();
         if (onEnd) onEnd();
       };
@@ -193,12 +261,13 @@ class AIVoiceEngine {
     } catch (err) {
       console.warn('[AIVoiceEngine] Error during speech synthesis:', err);
       this.isSpeaking = false;
+      this.currentSpeakingText = '';
       this.notifyStateChange();
       if (onEnd) onEnd();
     }
   }
 
-  stopSpeaking() {
+  stopSpeaking(wasInterrupted = false) {
     if (this.synthesis) {
       try {
         this.synthesis.cancel();
@@ -206,8 +275,15 @@ class AIVoiceEngine {
         // ignore
       }
     }
+    const hadBeenSpeaking = this.isSpeaking;
     this.isSpeaking = false;
-    this.notifyStateChange();
+    this.currentSpeakingText = '';
+
+    if (hadBeenSpeaking && wasInterrupted && this.onInterruptedCallback) {
+      this.onInterruptedCallback();
+    }
+
+    this.notifyStateChange({ interrupted: wasInterrupted });
   }
 
   toggleMute() {
