@@ -753,11 +753,15 @@ body {
   width: 100%;
   height: 100%;
   display: block;
-  cursor: crosshair;
 }
 
 .canvas-container canvas {
-  cursor: crosshair !important;
+  cursor: inherit;
+}
+
+.canvas-container.cursor-trim,
+.canvas-container.cursor-trim canvas {
+  cursor: var(--scissors-cursor, crosshair) !important;
 }
 
 /* Viewport HUD Overlays */

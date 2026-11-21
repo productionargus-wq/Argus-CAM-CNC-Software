@@ -21,6 +21,7 @@ import {
   getCADTemplate,
   exportBoardToSVG
 } from '../utils/cncBoardEngine';
+import { MASTERCAM_SCISSORS_CURSOR, isTrimTool } from '../utils/cadCursors';
 
 export default function CNCDesignBoard({
   boardShapes = [],
@@ -873,7 +874,11 @@ export default function CNCDesignBoard({
             height: '100%',
             position: 'relative',
             overflow: 'hidden',
-            cursor: activeTool === 'select' ? (isDraggingShape ? 'grabbing' : 'default') : 'crosshair',
+            cursor: isTrimTool(activeTool)
+              ? MASTERCAM_SCISSORS_CURSOR
+              : activeTool === 'select'
+              ? (isDraggingShape ? 'grabbing' : 'default')
+              : 'crosshair',
             background: isLight ? '#f8fafc' : '#0a0f1d'
           }}
         >

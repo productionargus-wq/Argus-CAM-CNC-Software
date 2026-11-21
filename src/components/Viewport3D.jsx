@@ -25,6 +25,7 @@ import {
 } from '../utils/cadSelectionEngine';
 import AutoCursorBar from './AutoCursorBar';
 import QuickMaskBar from './QuickMaskBar';
+import { MASTERCAM_SCISSORS_CURSOR, isTrimTool } from '../utils/cadCursors';
 import {
   parseSTLFile,
   calculatePartMetrics,
@@ -4212,6 +4213,21 @@ export default function Viewport3D({
     || isChainingActive
     || Boolean(surfaceSelectionSession?.active);
 
+  const isTrimActive = isSketchModeActive && (isTrimTool(activeSketchTool) || isTrimTool(sketchTool));
+
+  const activeViewportCursor = useMemo(() => {
+    if (isTrimActive) return MASTERCAM_SCISSORS_CURSOR;
+    if (isSelectCursorArmed) return 'crosshair';
+    if (isSketchModeActive) return 'crosshair';
+    return 'default';
+  }, [isTrimActive, isSelectCursorArmed, isSketchModeActive]);
+
+  useEffect(() => {
+    if (rendererRef.current?.domElement) {
+      rendererRef.current.domElement.style.setProperty('cursor', activeViewportCursor, 'important');
+    }
+  }, [activeViewportCursor]);
+
   const showSolidFaceGuideOverlay = Boolean(surfaceSelectionSession?.active)
     || (!isBackplotActive && isSelectModeActive && solidFilterMode === 'solid_face');
 
@@ -4315,8 +4331,11 @@ export default function Viewport3D({
     >
       <div
         ref={mountRef}
-        className="canvas-container"
-        style={{ cursor: isSelectCursorArmed ? 'crosshair' : 'default' }}
+        className={`canvas-container ${isTrimActive ? 'cursor-trim' : ''}`}
+        style={{
+          cursor: activeViewportCursor,
+          '--scissors-cursor': MASTERCAM_SCISSORS_CURSOR
+        }}
       />
 
       {/* Window / Containment Marquee Overlay */}
@@ -4773,26 +4792,34 @@ export default function Viewport3D({
             position: 'fixed',
             left: mouseScreenPos.x + 15,
             top: mouseScreenPos.y + 15,
-            background: sketchPromptText.includes('Tangent')
+            background: isTrimActive
+              ? (isLight ? '#fff1f2' : 'rgba(88, 28, 28, 0.92)')
+              : sketchPromptText.includes('Tangent')
               ? '#ecfdf5'
               : sketchPromptText.includes('Quadrant')
               ? '#f0f9ff'
               : sketchPromptText.includes('On Curve')
               ? '#ecfeff'
               : isLight ? 'rgba(255, 255, 255, 0.96)' : 'rgba(15, 23, 42, 0.92)',
-            border: sketchPromptText.includes('Tangent')
+            border: isTrimActive
+              ? '1.5px solid #ef4444'
+              : sketchPromptText.includes('Tangent')
               ? '1.5px solid #10b981'
               : sketchPromptText.includes('Quadrant')
               ? '1.5px solid #0284c7'
               : sketchPromptText.includes('On Curve')
               ? '1.5px solid #0891b2'
               : isLight ? '1px solid #cbd5e1' : '1px solid #334155',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            boxShadow: isTrimActive
+              ? '0 4px 14px rgba(239, 68, 68, 0.25)'
+              : '0 4px 12px rgba(0, 0, 0, 0.15)',
             padding: '3px 9px',
             borderRadius: '4px',
             fontSize: '11.5px',
             fontWeight: 700,
-            color: sketchPromptText.includes('Tangent')
+            color: isTrimActive
+              ? (isLight ? '#991b1b' : '#fca5a5')
+              : sketchPromptText.includes('Tangent')
               ? '#065f46'
               : sketchPromptText.includes('Quadrant')
               ? '#0369a1'
@@ -4807,6 +4834,7 @@ export default function Viewport3D({
             gap: '6px'
           }}
         >
+          {isTrimActive && <Scissors size={14} color="#ef4444" />}
           {sketchPromptText}
         </div>
       )}
