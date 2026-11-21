@@ -174,6 +174,30 @@ export function deserializeCustomGeometry(serializedList = []) {
     if (item.object3dJson) {
       try {
         obj = new THREE.ObjectLoader().parse(item.object3dJson);
+        // Sanitize legacy non-zero Y elevation on Top (G17) sketch plane wireframe
+        const isWireframe = item.name?.startsWith('Wireframe_') || item.name?.startsWith('Hole_') || item.userData?.type === 'bolt_hole_circle' || PARAMETRIC_CAD_TYPES.has(cadType);
+        if (obj && isWireframe) {
+          if (Math.abs(obj.position.y) > 0.01) obj.position.y = 0;
+          obj.traverse((child) => {
+            if (child.isMesh && child.geometry?.type === 'SphereGeometry') {
+              child.position.y = 0;
+            } else if (child.geometry?.attributes?.position) {
+              const posAttr = child.geometry.attributes.position;
+              let mod = false;
+              for (let i = 0; i < posAttr.count; i++) {
+                if (Math.abs(posAttr.getY(i)) > 0.01) {
+                  posAttr.setY(i, 0);
+                  mod = true;
+                }
+              }
+              if (mod) {
+                posAttr.needsUpdate = true;
+                child.geometry.computeBoundingBox?.();
+                child.geometry.computeBoundingSphere?.();
+              }
+            }
+          });
+        }
       } catch (err) {
         console.warn('Failed to parse Object3D JSON for custom entity, falling back to parametric rebuild:', item.name, err);
       }

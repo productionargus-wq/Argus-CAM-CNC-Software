@@ -2920,7 +2920,7 @@ export function createBoundingWireframe(bounds, offset = { x: 0, y: 0, z: 0 }) {
  */
 export function createWireframeCircle(
   radius = 35,
-  y = 30,
+  y = 0,
   center = [0, 0],
   startAngleDeg = 0,
   sweepAngleDeg = 360,
@@ -2974,7 +2974,7 @@ export function createWireframeCircle(
 export function createBoltHoleCircle(
   pcd = 60,
   numHoles = 6,
-  y = 35,
+  y = 0,
   center = [0, 0],
   startAngleDeg = 0,
   holeRadius = 3.5,
@@ -3286,7 +3286,7 @@ export function createDrillPointsGrid(bounds, cornerOffset = 8) {
 /**
  * Creates a circular arc curve between start and end angles
  */
-export function createWireframeArc(center = [0, 49, 0], radius = 25, startAngleDeg = 0, endAngleDeg = 180, options = {}) {
+export function createWireframeArc(center = [0, 0, 0], radius = 25, startAngleDeg = 0, endAngleDeg = 180, options = {}) {
   const points = [];
   const segments = 48;
   const startRad = (startAngleDeg * Math.PI) / 180;

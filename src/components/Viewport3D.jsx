@@ -1297,7 +1297,7 @@ export default function Viewport3D({
           onDrawingUpdateRef.current({ tool: 'point', point: finalPt, completed: true });
         }
       } else if (tool === 'bolt_circle') {
-        newEntity = createBoltHoleCircle(60, 6, finalPt.y, [finalPt.x, finalPt.z], 0, 3.5, { color: 0x38bdf8 });
+        newEntity = createBoltHoleCircle(60, 6, 0, [finalPt.x, finalPt.z], 0, 3.5, { color: 0x38bdf8 });
         if (onDrawingUpdateRef.current) {
           onDrawingUpdateRef.current({ tool: 'bolt_circle', center: finalPt, pcd: 60, holes: 6, completed: true });
         }
@@ -1454,7 +1454,7 @@ export default function Viewport3D({
           }
 
           if (tool === 'bolt_circle') {
-            const bolt = createBoltHoleCircle(60, 6, finalPt.y, [finalPt.x, finalPt.z], 0, 3.5, { color: 0x38bdf8 });
+            const bolt = createBoltHoleCircle(60, 6, 0, [finalPt.x, finalPt.z], 0, 3.5, { color: 0x38bdf8 });
             if (onAddCustomEntityRef.current) onAddCustomEntityRef.current(bolt);
             return;
           }
@@ -1495,7 +1495,12 @@ export default function Viewport3D({
           }
 
           if (tool === 'dynamic_trim') {
-            dynamicTrimStrokeRef.current = { start: finalPt.clone(), screenStart: { x: e.clientX, y: e.clientY } };
+            dynamicTrimStrokeRef.current = {
+              start: finalPt.clone(),
+              lastSweepPt: finalPt.clone(),
+              screenStart: { x: e.clientX, y: e.clientY },
+              snipCount: 0
+            };
             isDrawingDrag = true;
             setSketchPromptText('Drag scissor stroke across wireframe entities to snip');
             return;
@@ -1535,7 +1540,7 @@ export default function Viewport3D({
                 );
                 if (solved) {
                   const newArc = createWireframeArc(
-                    [solved.center.x, solved.center.y, solved.center.z],
+                    [solved.center.x, 0, solved.center.z],
                     solved.radius,
                     solved.startAngleDeg,
                     solved.endAngleDeg,
@@ -2111,10 +2116,51 @@ export default function Viewport3D({
                 }
               }
             } else if (curTool === 'dynamic_trim' && dynamicTrimStrokeRef.current) {
-              if (sketchGhostGroupRef.current) {
-                sketchGhostGroupRef.current.clear();
-                const ghost = createGhostPreview('dynamic_trim', dynamicTrimStrokeRef.current.start, finalPt);
-                sketchGhostGroupRef.current.add(ghost);
+              const stroke = dynamicTrimStrokeRef.current;
+              const currentPt = getSketchIntersection(e) || finalPt;
+              if (currentPt) {
+                // Update ghost red dashed line preview
+                if (sketchGhostGroupRef.current) {
+                  sketchGhostGroupRef.current.clear();
+                  const ghost = createGhostPreview('dynamic_trim', stroke.start, currentPt);
+                  sketchGhostGroupRef.current.add(ghost);
+                }
+
+                // Live dynamic scissor trimming on drag:
+                // When cursor moves >= 1.5mm, test if the sweep path from lastPt to currentPt crosses any entity!
+                const lastPt = stroke.lastSweepPt || stroke.start;
+                const sweepDist = lastPt.distanceTo(currentPt);
+                if (sweepDist >= 1.5) {
+                  const entities = customGeometryRef.current || [];
+                  const trimRes = performDynamicTrim(lastPt, currentPt, entities);
+                  if (trimRes && trimRes.targetEntity) {
+                    const newCurves = trimRes.keptSegments.map((seg, idx) => {
+                      if (seg.points && seg.points.length > 2) {
+                        return createWireframePolyline(seg.points, {
+                          name: `${trimRes.targetEntity.name || 'Wireframe'}_Trimmed_${idx + 1}`,
+                          color: 0x38bdf8,
+                          type: 'arc',
+                          cadType: 'arc'
+                        });
+                      }
+                      return createWireframeLine([seg.p1.x, seg.p1.y, seg.p1.z], [seg.p2.x, seg.p2.y, seg.p2.z], {
+                        name: `${trimRes.targetEntity.name || 'Wireframe'}_Trimmed_${idx + 1}`,
+                        color: 0x38bdf8
+                      });
+                    });
+                    const nextList = entities.filter((ent) => ent !== trimRes.targetEntity).concat(newCurves);
+                    customGeometryRef.current = nextList;
+                    if (onReplaceCustomGeometryRef.current) {
+                      onReplaceCustomGeometryRef.current(nextList);
+                    }
+                    stroke.snipCount = (stroke.snipCount || 0) + 1;
+                    stroke.lastSweepPt = currentPt.clone();
+                    stroke.start = currentPt.clone();
+                    setDimensionFeedback(`Trimmed: ${trimRes.targetEntity.name || 'Entity'}`);
+                  } else {
+                    stroke.lastSweepPt = currentPt.clone();
+                  }
+                }
               }
             } else {
               const hasFullLock =
@@ -2353,16 +2399,25 @@ export default function Viewport3D({
 
       if (isSketchModeRef.current) {
         if (activeSketchToolRef.current === 'dynamic_trim' && dynamicTrimStrokeRef.current) {
-          const scissorStart = dynamicTrimStrokeRef.current.start;
-          const resolved = resolveSnappedPoint(e);
-          const scissorEnd = resolved?.finalPt || getSketchIntersection(e);
+          const stroke = dynamicTrimStrokeRef.current;
+          const scissorStart = stroke.start;
+          const scissorEnd = getSketchIntersection(e) || stroke.lastSweepPt;
           dynamicTrimStrokeRef.current = null;
           isDrawingDrag = false;
           if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
 
-          if (scissorStart && scissorEnd && scissorStart.distanceTo(scissorEnd) > 1.0) {
+          // If no live snips occurred yet during drag, or user single-clicked on an entity
+          if ((stroke.snipCount || 0) === 0) {
             const entities = customGeometryRef.current || [];
-            const trimRes = performDynamicTrim(scissorStart, scissorEnd, entities);
+            let trimRes = null;
+            if (scissorStart && scissorEnd && scissorStart.distanceTo(scissorEnd) > 1.0) {
+              trimRes = performDynamicTrim(scissorStart, scissorEnd, entities);
+            } else if (scissorStart) {
+              // Single click snip: test a small pick segment through the click point
+              const delta = new THREE.Vector3(2.5, 0, 2.5);
+              trimRes = performDynamicTrim(scissorStart.clone().sub(delta), scissorStart.clone().add(delta), entities);
+            }
+
             if (trimRes && trimRes.targetEntity) {
               const newCurves = trimRes.keptSegments.map((seg, idx) => {
                 if (seg.points && seg.points.length > 2) {
@@ -2379,9 +2434,11 @@ export default function Viewport3D({
                 });
               });
               const nextList = entities.filter((ent) => ent !== trimRes.targetEntity).concat(newCurves);
+              customGeometryRef.current = nextList;
               if (onReplaceCustomGeometryRef.current) {
                 onReplaceCustomGeometryRef.current(nextList);
               }
+              setDimensionFeedback(`Trimmed: ${trimRes.targetEntity.name || 'Entity'}`);
             }
           }
           setSketchPromptText(getDefaultPromptForTool('dynamic_trim'));

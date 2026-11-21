@@ -541,7 +541,7 @@ export default function App() {
     startAngle: 0.0,
     sweepAngle: 360.0,
     holeDiameter: 6.8,
-    center: { x: 0, y: 35, z: 0 }
+    center: { x: 0, y: 0, z: 0 }
   });
 
   const [lineRelParams, setLineRelParams] = useState({
@@ -5608,7 +5608,7 @@ export default function App() {
     const boltCircle = createBoltHoleCircle(
       pcd,
       numHoles,
-      center.y ?? 35,
+      center.y ?? 0,
       [center.x ?? 0, center.z ?? 0],
       startAngle,
       holeDiameter / 2,
