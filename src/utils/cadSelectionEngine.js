@@ -22,7 +22,17 @@ export function getCustomEntityCategory(entity) {
   const name = String(entity.name || '').toLowerCase();
 
   if (name.startsWith('drafting_') || cadType.includes('dimension')) return 'drafting';
-  if (cadType === 'solid' || name.startsWith('solid_')) return 'solid';
+  if (
+    cadType === 'solid' ||
+    name.startsWith('solid_') ||
+    name.endsWith('.step') ||
+    name.endsWith('.mcam') ||
+    name.includes('workpiece') ||
+    ud.partName ||
+    ud.filename
+  ) {
+    return 'solid';
+  }
   if (
     name.startsWith('surface_') ||
     name.startsWith('cad_surface') ||
@@ -728,7 +738,7 @@ export function hitTestCornerPointAtScreenPoint(entities = [], camera, screenPt,
  */
 export function hitTestEntityAtScreenPoint(entities = [], camera, screenPt, width, height, options = {}) {
   const {
-    tolerancePx = 11,
+    tolerancePx = 16,
     worldYOffset = 49,
     mask = 'all',
     solidFilter = 'all',

@@ -6858,8 +6858,28 @@ export default function App() {
 
   const selectedEntitiesList = useMemo(() => {
     const idSet = new Set(selectedEntityIds);
-    return (customGeometry || []).filter((ent) => ent && idSet.has(getCustomEntityId(ent)));
-  }, [customGeometry, selectedEntityIds]);
+    const customMatches = (customGeometry || []).filter((ent) => ent && idSet.has(getCustomEntityId(ent)));
+    if (customMatches.length > 0) return customMatches;
+    if (currentModel) {
+      const modelId = getCustomEntityId(currentModel);
+      if (
+        idSet.has('model_workpiece') ||
+        idSet.has(modelId) ||
+        (currentModel.uuid && idSet.has(currentModel.uuid)) ||
+        (currentModel.name && idSet.has(currentModel.name))
+      ) {
+        return [currentModel];
+      }
+      let matchedMesh = null;
+      currentModel.traverse((child) => {
+        if (child.isMesh && (idSet.has(child.uuid) || idSet.has(getCustomEntityId(child)))) {
+          matchedMesh = child;
+        }
+      });
+      if (matchedMesh) return [matchedMesh];
+    }
+    return [];
+  }, [customGeometry, selectedEntityIds, currentModel]);
 
   const handleToggleSelectMode = (nextVal) => {
     const enabled = typeof nextVal === 'boolean' ? nextVal : !isSelectModeActive;
@@ -8950,7 +8970,7 @@ export default function App() {
           activeWcs={activeWcs}
           activeCPlane={activePlane}
           activeTPlane="Top"
-          selectedCount={selectedEntityIds.length || (currentModel ? 1 : 0)}
+          selectedCount={selectedEntityIds.length}
           isSectionView={clippingPlane?.enabled}
           onToggleSectionView={() => setClippingPlane(cp => ({ ...cp, enabled: !cp?.enabled }))}
           unitSystem={unitSystem}

@@ -990,7 +990,12 @@ export default function Viewport3D({
         return;
       }
       if (!onChangeSelectedEntitiesRef.current) return;
-      const matchedIds = matchedEntities.map(getCustomEntityId).filter(Boolean);
+      const matchedIds = matchedEntities.map((ent) => {
+        if (ent === currentModel || ent?.name === currentModel?.name) {
+          return 'model_workpiece';
+        }
+        return getCustomEntityId(ent);
+      }).filter(Boolean);
       if (toggleSingle && matchedIds.length === 1 && additive) {
         const curSet = new Set(selectedEntityIdsRef.current || []);
         if (curSet.has(matchedIds[0])) curSet.delete(matchedIds[0]);
@@ -2208,6 +2213,119 @@ export default function Viewport3D({
       }
     };
 
+    const handleSingleEntityClick = (e, curX, curY, rect, additive, target = 'selection') => {
+      const entities = customGeometryRef.current || [];
+
+      // 1. Highest priority: Corner / Vertex point
+      const cornerHit = hitTestCornerPointAtScreenPoint(entities, camera, { x: curX, y: curY }, rect.width, rect.height);
+      let picked = cornerHit ? cornerHit.entity : null;
+
+      // 2. Wireframe curve / CAD shape (with generous 16px tolerance)
+      if (!picked) {
+        picked = hitTestEntityAtScreenPoint(
+          entities,
+          camera,
+          { x: curX, y: curY },
+          rect.width,
+          rect.height,
+          resolveSelectionFilterOpts({ tolerancePx: 16 })
+        );
+      }
+
+      // 3. Fallback: if restrictive solidFilter (e.g. solid_face) prevented picking wireframe, retry with all filters relaxed
+      if (!picked && entities.length > 0) {
+        picked = hitTestEntityAtScreenPoint(
+          entities,
+          camera,
+          { x: curX, y: curY },
+          rect.width,
+          rect.height,
+          { ...resolveSelectionFilterOpts({ tolerancePx: 18 }), mask: 'all', solidFilter: 'all' }
+        );
+      }
+
+      // 3b. Wireframe plane-intersection fallback (for 3D circles/arcs at various elevations)
+      if (!picked) {
+        const wirePick = resolvePickOnWireframe(e);
+        if (wirePick?.entity) picked = wirePick.entity;
+      }
+
+      if (target === 'chaining') {
+        if (picked && onSelectChainEntityRef.current) {
+          onSelectChainEntityRef.current(picked);
+        }
+        return;
+      }
+
+      // 4. Solid Face raycast
+      let pickedFace = null;
+      if (!picked) {
+        const faceHit = raycastSolidFaceAtClient(e.clientX, e.clientY);
+        if (faceHit?.hitFace) {
+          pickedFace = faceHit;
+        }
+      }
+
+      if (pickedFace) {
+        const { faceIds, modeLabel } = resolveSolidFaceSelectionAction(
+          solidFaceCatalogRef.current,
+          pickedFace.hitFace,
+          { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey || e.metaKey, altKey: e.altKey, clickCount: 1, rayHits: pickedFace.hits }
+        );
+        setFaceSelectionModeNote(modeLabel);
+        const session = surfaceSelectionSessionRef.current;
+        if (session?.active && session.onPickFaces) {
+          session.onPickFaces(faceIds, modeLabel, {
+            clickCount: 1,
+            hasModifier: additive,
+            role: session.role
+          });
+        } else {
+          setSelectedSolidFaceIds((prev) => {
+            if (!additive && faceIds.length === 1) {
+              return prev.length === 1 && prev[0] === faceIds[0] ? [] : faceIds;
+            }
+            return [...new Set([...prev, ...faceIds])];
+          });
+          if (onChangeSelectedEntitiesRef.current) {
+            const faceEntityIds = faceIds.map((id) => `face_${id}`);
+            if (additive) {
+              const combined = [...new Set([...(selectedEntityIdsRef.current || []), ...faceEntityIds])];
+              onChangeSelectedEntitiesRef.current(combined);
+            } else {
+              onChangeSelectedEntitiesRef.current(faceEntityIds);
+            }
+          }
+        }
+        return;
+      }
+
+      // 5. Solid Body / Workpiece 3D Model (partHolderGroup)
+      if (!picked && partHolderGroupRef.current && partHolderGroupRef.current.children.length > 0) {
+        const ndc = new THREE.Vector2(
+          (curX / rect.width) * 2 - 1,
+          -(curY / rect.height) * 2 + 1
+        );
+        const bodyRay = new THREE.Raycaster();
+        bodyRay.setFromCamera(ndc, camera);
+        const bodyMeshes = [];
+        partHolderGroupRef.current.traverse((child) => {
+          if (child.isMesh && child.visible !== false && !child.userData?.isHelper) {
+            bodyMeshes.push(child);
+          }
+        });
+        const hits = bodyRay.intersectObjects(bodyMeshes, false);
+        if (hits && hits.length > 0) {
+          picked = currentModel || hits[0].object;
+        }
+      }
+
+      applyMatchedEntities(picked ? [picked] : [], 'selection', additive, true);
+      if (!picked && !additive) {
+        setSelectedSolidFaceIds([]);
+      }
+    };
+
     const onMouseUp = (e) => {
       isDragging = false;
       isPanning = false;
@@ -2258,9 +2376,19 @@ export default function Viewport3D({
                 }
                 return [...new Set([...prev, ...faceIds])];
               });
+              if (onChangeSelectedEntitiesRef.current) {
+                const faceEntityIds = faceIds.map((id) => `face_${id}`);
+                if (additive) {
+                  const combined = [...new Set([...(selectedEntityIdsRef.current || []), ...faceEntityIds])];
+                  onChangeSelectedEntitiesRef.current(combined);
+                } else {
+                  onChangeSelectedEntitiesRef.current(faceEntityIds);
+                }
+              }
             }
+            return;
           }
-          return;
+          // If no solid face was hit under cursor, fall through to allow selecting wireframe curve or workpiece!
         }
       }
 
@@ -2305,39 +2433,7 @@ export default function Viewport3D({
         setSelectionMarquee(null);
 
         if (dragDist < 6) {
-          const cornerHit = hitTestCornerPointAtScreenPoint(entities, camera, { x: curX, y: curY }, rect.width, rect.height);
-          let picked = cornerHit ? cornerHit.entity : hitTestEntityAtScreenPoint(
-            entities,
-            camera,
-            { x: curX, y: curY },
-            rect.width,
-            rect.height,
-            resolveSelectionFilterOpts()
-          );
-          if (target === 'chaining') {
-            if (picked && onSelectChainEntityRef.current) {
-              onSelectChainEntityRef.current(picked);
-            }
-          } else {
-            if (!picked) {
-              const faceHit = raycastSolidFaceAtClient(e.clientX, e.clientY);
-              if (faceHit?.hitFace) {
-                const { faceIds } = resolveSolidFaceSelectionAction(
-                  solidFaceCatalogRef.current,
-                  faceHit.hitFace,
-                  { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey || e.metaKey, altKey: e.altKey, clickCount: 1, rayHits: faceHit.hits }
-                );
-                setSelectedSolidFaceIds((prev) => {
-                  if (!additive && faceIds.length === 1) {
-                    return prev.length === 1 && prev[0] === faceIds[0] ? [] : faceIds;
-                  }
-                  return [...new Set([...prev, ...faceIds])];
-                });
-                return;
-              }
-            }
-            applyMatchedEntities(picked ? [picked] : [], 'selection', additive, true);
-          }
+          handleSingleEntityClick(e, curX, curY, rect, additive, target || 'selection');
           return;
         }
 
@@ -2366,36 +2462,13 @@ export default function Viewport3D({
       if (e.button === 0 && !isBasePointPickActiveRef.current && isSelectionArmed() && !isChainingActiveRef.current) {
         const effMethod = getEffectiveMethod();
         const clickDist = Math.hypot(e.clientX - pickDownX, e.clientY - pickDownY);
-        if (clickDist < 6 && (effMethod === 'single' || effMethod === 'chain' || effMethod === 'area')) {
+        if (clickDist < 6) {
           const rect = dom.getBoundingClientRect();
           const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
           const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
           const additive = !!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current);
           const entities = customGeometryRef.current || [];
 
-          if (effMethod === 'single') {
-            const cornerHit = hitTestCornerPointAtScreenPoint(entities, camera, { x: curX, y: curY }, rect.width, rect.height);
-            let picked = cornerHit ? cornerHit.entity : hitTestEntityAtScreenPoint(entities, camera, { x: curX, y: curY }, rect.width, rect.height, resolveSelectionFilterOpts());
-            if (!picked) {
-              const faceHit = raycastSolidFaceAtClient(e.clientX, e.clientY);
-              if (faceHit?.hitFace) {
-                const { faceIds } = resolveSolidFaceSelectionAction(
-                  solidFaceCatalogRef.current,
-                  faceHit.hitFace,
-                  { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey || e.metaKey, altKey: e.altKey, clickCount: 1, rayHits: faceHit.hits }
-                );
-                setSelectedSolidFaceIds((prev) => {
-                  if (!additive && faceIds.length === 1) {
-                    return prev.length === 1 && prev[0] === faceIds[0] ? [] : faceIds;
-                  }
-                  return [...new Set([...prev, ...faceIds])];
-                });
-                return;
-              }
-            }
-            applyMatchedEntities(picked ? [picked] : [], 'selection', additive, true);
-            return;
-          }
           if (effMethod === 'chain') {
             const chainHits = hitTestChainAtScreenPoint(
               entities,
@@ -2413,6 +2486,8 @@ export default function Viewport3D({
             applyMatchedEntities(areaHits, 'selection', additive);
             return;
           }
+          handleSingleEntityClick(e, curX, curY, rect, additive, 'selection');
+          return;
         }
       }
 
@@ -3989,7 +4064,38 @@ export default function Viewport3D({
         addEntityHighlight(entity, 0x38bdf8, true);
       }
     });
-  }, [selectedEntityIds, hoveredEntityId, customGeometry]);
+
+    // Mastercam Solid Body Workpiece highlight when model/workpiece is selected
+    if (currentModel && partHolderGroupRef.current) {
+      const modelId = getCustomEntityId(currentModel);
+      const isModelSelected =
+        selectedSet.has('model_workpiece') ||
+        selectedSet.has(modelId) ||
+        (currentModel.uuid && selectedSet.has(currentModel.uuid)) ||
+        (currentModel.name && selectedSet.has(currentModel.name));
+
+      currentModel.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+          const childId = getCustomEntityId(child);
+          const isChildSelected = isModelSelected || selectedSet.has(childId) || selectedSet.has(child.uuid);
+          if (isChildSelected) {
+            try {
+              const edges = new THREE.EdgesGeometry(child.geometry, 25);
+              const edgeMat = new THREE.LineBasicMaterial({ color: 0xfacc15, linewidth: 2.5 });
+              const line = new THREE.LineSegments(edges, edgeMat);
+              child.updateWorldMatrix(true, false);
+              line.position.copy(child.position);
+              line.rotation.copy(child.rotation);
+              line.scale.copy(child.scale);
+              group.add(line);
+            } catch (err) {
+              console.warn('Could not generate solid selection outline:', err);
+            }
+          }
+        }
+      });
+    }
+  }, [selectedEntityIds, hoveredEntityId, customGeometry, currentModel]);
 
   // 11a-2. Render Live Parametric Cyan Surface Extrude Preview
   useEffect(() => {
@@ -4616,8 +4722,28 @@ export default function Viewport3D({
 
   const selectedEntitiesList = useMemo(() => {
     const idSet = new Set(selectedEntityIds || []);
-    return (customGeometry || []).filter((ent) => ent && idSet.has(getCustomEntityId(ent)));
-  }, [customGeometry, selectedEntityIds]);
+    const customMatches = (customGeometry || []).filter((ent) => ent && idSet.has(getCustomEntityId(ent)));
+    if (customMatches.length > 0) return customMatches;
+    if (currentModel) {
+      const modelId = getCustomEntityId(currentModel);
+      if (
+        idSet.has('model_workpiece') ||
+        idSet.has(modelId) ||
+        (currentModel.uuid && idSet.has(currentModel.uuid)) ||
+        (currentModel.name && idSet.has(currentModel.name))
+      ) {
+        return [currentModel];
+      }
+      let matchedMesh = null;
+      currentModel.traverse((child) => {
+        if (child.isMesh && (idSet.has(child.uuid) || idSet.has(getCustomEntityId(child)))) {
+          matchedMesh = child;
+        }
+      });
+      if (matchedMesh) return [matchedMesh];
+    }
+    return [];
+  }, [customGeometry, selectedEntityIds, currentModel]);
 
   const selectionSummary = useMemo(
     () => summarizeSelectedEntities(selectedEntitiesList),
