@@ -35,7 +35,7 @@ export default function ModifyLengthPanel({
       <div
         style={{
           height: '28px',
-          padding: '0 8px',
+          padding: '0 32px 0 8px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',

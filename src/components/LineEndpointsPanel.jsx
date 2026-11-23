@@ -55,7 +55,7 @@ export default function LineEndpointsPanel({
       <div
         style={{
           height: '28px',
-          padding: '0 8px',
+          padding: '0 32px 0 8px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -279,19 +279,19 @@ export default function LineEndpointsPanel({
           {entityExpanded && (
             <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {/* Type Radio Group */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '11px', color: '#64748b' }}>Type:</span>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#1e293b', cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="lineType"
-                    checked={lineType === 'freeform'}
-                    onChange={() => onChangeLineType && onChangeLineType('freeform')}
-                  />
-                  Freeform
-                </label>
-                <div style={{ paddingLeft: '20px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#475569', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>Type:</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: '4px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#1e293b', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="lineType"
+                      checked={lineType === 'freeform'}
+                      onChange={() => onChangeLineType && onChangeLineType('freeform')}
+                    />
+                    Freeform
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: lineType === 'freeform' ? '#334155' : '#94a3b8', cursor: lineType === 'freeform' ? 'pointer' : 'default' }}>
                     <input
                       type="checkbox"
                       checked={isTangent}
@@ -322,8 +322,8 @@ export default function LineEndpointsPanel({
               </div>
 
               {/* Method Radio Group */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
-                <span style={{ fontSize: '11px', color: '#64748b' }}>Method:</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>Method:</span>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#1e293b', cursor: 'pointer' }}>
                   <input
                     type="radio"
@@ -342,20 +342,20 @@ export default function LineEndpointsPanel({
                   />
                   Midpoint
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#1e293b', cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="lineMethod"
-                    checked={lineMethod === 'multi_line'}
-                    onChange={() => {
-                      if (onChangeLineMethod) onChangeLineMethod('multi_line');
-                      if (onToggleContinuous) onToggleContinuous(true);
-                    }}
-                  />
-                  Multi-line
-                </label>
-                <div style={{ paddingLeft: '20px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#0284c7', fontWeight: 600, cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: '4px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#1e293b', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="lineMethod"
+                      checked={lineMethod === 'multi_line'}
+                      onChange={() => {
+                        if (onChangeLineMethod) onChangeLineMethod('multi_line');
+                        if (onToggleContinuous) onToggleContinuous(true);
+                      }}
+                    />
+                    Multi-line
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#0284c7', fontWeight: 500, cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={isLineContinuous}
@@ -398,42 +398,50 @@ export default function LineEndpointsPanel({
           </div>
 
           {endpointsExpanded && (
-            <div style={{ padding: '6px 8px', display: 'flex', gap: '6px' }}>
+            <div style={{ padding: '6px 8px', display: 'flex', gap: '8px' }}>
               <button
                 type="button"
                 onClick={() => onSelectEndpoint && onSelectEndpoint(1)}
                 style={{
-                  width: '26px',
-                  height: '24px',
+                  flex: 1,
+                  height: '26px',
                   borderRadius: '3px',
-                  border: activeEndpoint === 1 ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                  border: activeEndpoint === 1 ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
                   background: activeEndpoint === 1 ? '#e0f2fe' : '#f8fafc',
                   color: activeEndpoint === 1 ? '#0284c7' : '#475569',
                   fontSize: '11px',
-                  fontWeight: 700,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
                   cursor: 'pointer'
                 }}
-                title="Endpoint 1"
+                title="Select Endpoint 1 (Start Point)"
               >
-                1
+                <span>1: Start Point</span>
               </button>
               <button
                 type="button"
                 onClick={() => onSelectEndpoint && onSelectEndpoint(2)}
                 style={{
-                  width: '26px',
-                  height: '24px',
+                  flex: 1,
+                  height: '26px',
                   borderRadius: '3px',
-                  border: activeEndpoint === 2 ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                  border: activeEndpoint === 2 ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
                   background: activeEndpoint === 2 ? '#e0f2fe' : '#f8fafc',
                   color: activeEndpoint === 2 ? '#0284c7' : '#475569',
                   fontSize: '11px',
-                  fontWeight: 700,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
                   cursor: 'pointer'
                 }}
-                title="Endpoint 2"
+                title="Select Endpoint 2 (End Point)"
               >
-                2
+                <span>2: End Point</span>
               </button>
             </div>
           )}
@@ -470,37 +478,35 @@ export default function LineEndpointsPanel({
           {dimensionsExpanded && (
             <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {/* Length */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                <span style={{ fontSize: '11px', color: '#475569', width: '52px' }}>Length:</span>
-                <SketchNumericInput
-                  value={Number(length) || 0}
-                  min={0.01}
-                  step={1}
-                  decimals={4}
-                  allowNegative={false}
-                  onChangeNumber={(num) => onChangeLength && onChangeLength(num)}
-                  isLocked={isLengthLocked}
-                  onToggleLock={onToggleLengthLock}
-                  lockTitle={isLengthLocked ? 'Unlock Length' : 'Lock Length'}
-                />
-              </div>
+              <SketchNumericInput
+                label="Length:"
+                labelWidth="56px"
+                value={Number(length) || 0}
+                min={0.01}
+                step={1}
+                decimals={4}
+                allowNegative={false}
+                onChangeNumber={(num) => onChangeLength && onChangeLength(num)}
+                isLocked={isLengthLocked}
+                onToggleLock={onToggleLengthLock}
+                lockTitle={isLengthLocked ? 'Unlock Length' : 'Lock Length'}
+              />
 
               {/* Angle */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                <span style={{ fontSize: '11px', color: '#475569', width: '52px' }}>Angle:</span>
-                <SketchNumericInput
-                  value={Number(angle) || 0}
-                  min={-360}
-                  max={360}
-                  step={5}
-                  decimals={2}
-                  allowNegative={true}
-                  onChangeNumber={(num) => onChangeAngle && onChangeAngle(num)}
-                  isLocked={isAngleLocked}
-                  onToggleLock={onToggleAngleLock}
-                  lockTitle={isAngleLocked ? 'Unlock Angle' : 'Lock Angle'}
-                />
-              </div>
+              <SketchNumericInput
+                label="Angle:"
+                labelWidth="56px"
+                value={Number(angle) || 0}
+                min={-360}
+                max={360}
+                step={5}
+                decimals={2}
+                allowNegative={true}
+                onChangeNumber={(num) => onChangeAngle && onChangeAngle(num)}
+                isLocked={isAngleLocked}
+                onToggleLock={onToggleAngleLock}
+                lockTitle={isAngleLocked ? 'Unlock Angle' : 'Lock Angle'}
+              />
             </div>
           )}
         </div>

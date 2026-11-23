@@ -2207,23 +2207,25 @@ export default function OperationsTree({
       )}
 
       {/* ================= 4. HORIZONTAL SCROLLBAR CONTROLS ================= */}
-      <div
-        style={{
-          height: '14px',
-          background: '#f1f5f9',
-          borderTop: '1px solid #cbd5e1',
-          borderBottom: '1px solid #cbd5e1',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 2px'
-        }}
-      >
-        <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><ChevronLeft size={10} /></button>
-        <div style={{ flex: 1, height: '4px', background: '#cbd5e1', borderRadius: '2px', margin: '0 4px', position: 'relative' }}>
-          <div style={{ width: '35%', height: '100%', background: '#94a3b8', borderRadius: '2px' }} />
+      {!isWireframeTool && (
+        <div
+          style={{
+            height: '14px',
+            background: '#f1f5f9',
+            borderTop: '1px solid #cbd5e1',
+            borderBottom: '1px solid #cbd5e1',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 2px'
+          }}
+        >
+          <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><ChevronLeft size={10} /></button>
+          <div style={{ flex: 1, height: '4px', background: '#cbd5e1', borderRadius: '2px', margin: '0 4px', position: 'relative' }}>
+            <div style={{ width: '35%', height: '100%', background: '#94a3b8', borderRadius: '2px' }} />
+          </div>
+          <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><ChevronRight size={10} /></button>
         </div>
-        <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><ChevronRight size={10} /></button>
-      </div>
+      )}
 
       {/* ================= 5. MASTERCAM BOTTOM TABS STRIP (MATCHING IMAGES 1, 2, 3) ================= */}
       <div
@@ -2236,7 +2238,9 @@ export default function OperationsTree({
           borderTop: '1px solid #cbd5e1',
           padding: '0 2px',
           gap: '2px',
-          flexShrink: 0
+          flexShrink: 0,
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
         }}
       >
         {tabs.map((tab) => {

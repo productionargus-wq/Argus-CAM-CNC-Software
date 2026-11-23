@@ -3225,6 +3225,13 @@ export default function Viewport3D({
       // Blank canvas with no model and no measured entities
       setInternalPartMetrics(null);
       if (onMetricsCalculated) onMetricsCalculated(null);
+      if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+      if (snapIndicatorGroupRef.current) snapIndicatorGroupRef.current.clear();
+      if (chainHighlightGroupRef.current) chainHighlightGroupRef.current.clear();
+      if (selectionHighlightGroupRef.current) disposeGroupMeshes(selectionHighlightGroupRef.current);
+      if (faceHighlightGroupRef.current) faceHighlightGroupRef.current.clear();
+      if (dimensionGroupRef.current) dimensionGroupRef.current.clear();
+      if (arcCentersGroupRef.current) arcCentersGroupRef.current.clear();
       return;
     }
 
