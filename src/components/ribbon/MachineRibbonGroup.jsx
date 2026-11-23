@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, CornerDownRight, Check } from 'lucide-react';
 import { MACHINE_RIBBON_CONFIG } from '../../config/machineRibbonConfig';
 import {
@@ -23,23 +24,50 @@ export default function MachineRibbonGroup({
   machineDirectory = DEFAULT_MACHINE_DIRECTORY
 }) {
   const [openDropdownId, setOpenDropdownId] = useState(null);
-  const dropdownRef = useRef(null);
+  const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0 });
+  const dropdownMenuRef = useRef(null);
+  const activeButtonRef = useRef(null);
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or window resize/scroll
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (
+        dropdownMenuRef.current &&
+        !dropdownMenuRef.current.contains(event.target) &&
+        activeButtonRef.current &&
+        !activeButtonRef.current.contains(event.target)
+      ) {
         setOpenDropdownId(null);
       }
     }
+    function handleScrollOrResize() {
+      setOpenDropdownId(null);
+    }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('resize', handleScrollOrResize);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleScrollOrResize);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+    };
   }, []);
 
   const handleButtonClick = (item, e) => {
     e.stopPropagation();
     if (item.hasDropdown && !item.actionOnly) {
-      setOpenDropdownId(openDropdownId === item.id ? null : item.id);
+      if (openDropdownId === item.id) {
+        setOpenDropdownId(null);
+      } else {
+        const btn = e.currentTarget;
+        activeButtonRef.current = btn;
+        const rect = btn.getBoundingClientRect();
+        setDropdownCoords({
+          top: rect.bottom + 2,
+          left: Math.max(8, Math.min(rect.left, window.innerWidth - 440))
+        });
+        setOpenDropdownId(item.id);
+      }
       return;
     }
     if (onAction && item.action) {
@@ -61,19 +89,20 @@ export default function MachineRibbonGroup({
     const menuIds = machineMenuByCategory?.[category] || DEFAULT_MENU_IDS_BY_CATEGORY[category] || [];
     const activeCatMatches = activeMachine?.category === category || (item.id === 'design' && activeMachine?.id === 'design');
 
-    return (
+    return createPortal(
       <div
+        ref={dropdownMenuRef}
         className="ribbon-dropdown-menu"
         data-testid={`machine-dropdown-${category}`}
         style={{
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          zIndex: 1200,
+          position: 'fixed',
+          top: `${dropdownCoords.top}px`,
+          left: `${dropdownCoords.left}px`,
+          zIndex: 99999,
           background: '#ffffff',
           border: '1px solid #94a3b8',
           borderRadius: '2px',
-          boxShadow: '0 6px 18px rgba(0, 0, 0, 0.18)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
           minWidth: '410px',
           maxWidth: '540px',
           padding: '4px 0',
@@ -196,12 +225,13 @@ export default function MachineRibbonGroup({
             Active: <strong>{activeMachine?.name}</strong> ({activeMachine?.controller})
           </div>
         )}
-      </div>
+      </div>,
+      document.body
     );
   };
 
   return (
-    <div className="machine-ribbon-bar" style={{ display: 'flex', alignItems: 'stretch', height: '100%' }} ref={dropdownRef}>
+    <div className="machine-ribbon-bar" style={{ display: 'flex', alignItems: 'stretch', height: '100%' }}>
       {MACHINE_RIBBON_CONFIG.map((group) => (
         <div key={group.id} className="ribbon-group" style={{ position: 'relative' }}>
           <div className="ribbon-group-items">
@@ -237,18 +267,19 @@ export default function MachineRibbonGroup({
                           </button>
 
                           {/* Flyout Submenu for Stacked Items */}
-                          {sub.hasDropdown && isDropdownOpen && sub.dropdownItems && (
+                          {sub.hasDropdown && isDropdownOpen && sub.dropdownItems && createPortal(
                             <div
+                              ref={dropdownMenuRef}
                               className="ribbon-dropdown-menu"
                               style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                zIndex: 1200,
+                                position: 'fixed',
+                                top: `${dropdownCoords.top}px`,
+                                left: `${dropdownCoords.left}px`,
+                                zIndex: 99999,
                                 background: '#ffffff',
                                 border: '1px solid #cbd5e1',
                                 borderRadius: '4px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
                                 minWidth: '160px',
                                 padding: '4px 0'
                               }}
@@ -275,7 +306,8 @@ export default function MachineRibbonGroup({
                                   {opt.label}
                                 </button>
                               ))}
-                            </div>
+                            </div>,
+                            document.body
                           )}
                         </div>
                       );
@@ -338,18 +370,19 @@ export default function MachineRibbonGroup({
 
                   {/* Flyout Submenu for Large Buttons */}
                   {item.hasDropdown && isDropdownOpen && item.supportsMachineMenu && renderMachineTypeDropdown(item)}
-                  {item.hasDropdown && isDropdownOpen && !item.supportsMachineMenu && item.dropdownItems && (
+                  {item.hasDropdown && isDropdownOpen && !item.supportsMachineMenu && item.dropdownItems && createPortal(
                     <div
+                      ref={dropdownMenuRef}
                       className="ribbon-dropdown-menu"
                       style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        zIndex: 1200,
+                        position: 'fixed',
+                        top: `${dropdownCoords.top}px`,
+                        left: `${dropdownCoords.left}px`,
+                        zIndex: 99999,
                         background: '#ffffff',
                         border: '1px solid #cbd5e1',
                         borderRadius: '4px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
                         minWidth: '200px',
                         padding: '4px 0'
                       }}
@@ -376,7 +409,8 @@ export default function MachineRibbonGroup({
                           {opt.label}
                         </button>
                       ))}
-                    </div>
+                    </div>,
+                    document.body
                   )}
                 </div>
               );

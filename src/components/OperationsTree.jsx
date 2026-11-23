@@ -4,7 +4,7 @@ import {
   Trash2, Lock, FileCode, PlusCircle, ChevronDown, ChevronRight, Sliders,
   Layers, Box, Compass, Check, Plus, Play, Sparkles, HelpCircle,
   Scissors, ArrowUp, ArrowDown, RotateCcw, ArrowUpDown, Crosshair,
-  Wrench, CircleDot, Circle, Clock, Search, Ghost
+  Wrench, CircleDot, Circle, Clock, Search, Ghost, ChevronLeft, X, Pin, Settings
 } from 'lucide-react';
 import ToolpathsContextMenu from './ToolpathsContextMenu';
 import CircleCenterPointPanel from './CircleCenterPointPanel';
@@ -588,8 +588,8 @@ export default function OperationsTree({
         <span style={{ fontSize: '11px', transform: 'rotate(90deg)', whiteSpace: 'nowrap', fontWeight: 600, color: '#0284c7', marginTop: '30px' }}>
           Toolpaths
         </span>
-        <span style={{ fontSize: '12px', color: '#64748b', marginTop: 'auto', marginBottom: '12px' }} title="Restore Panel">
-          â–¶
+        <span style={{ fontSize: '12px', color: '#64748b', marginTop: 'auto', marginBottom: '12px', display: 'flex', alignItems: 'center' }} title="Restore Panel">
+          <ChevronRight size={14} />
         </span>
       </aside>
     );
@@ -654,29 +654,31 @@ export default function OperationsTree({
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '11px' }}>
           <span
             onClick={() => setIsWindowMenuOpen((prev) => !prev)}
-            style={{ cursor: 'pointer', padding: '0 2px' }}
+            style={{ cursor: 'pointer', padding: '0 2px', display: 'flex', alignItems: 'center' }}
             title="Window Options"
           >
-            â–¾
+            <ChevronDown size={12} />
           </span>
           <span
             onClick={() => setIsPinned((prev) => !prev)}
             style={{
               cursor: 'pointer',
               padding: '0 2px',
+              display: 'flex',
+              alignItems: 'center',
               transform: isPinned ? 'rotate(45deg)' : 'rotate(0deg)',
               color: isPinned ? '#0284c7' : '#94a3b8'
             }}
             title={isPinned ? "Pinned (Click to Unpin)" : "Unpinned (Click to Pin)"}
           >
-            ðŸ“Œ
+            <Pin size={12} />
           </span>
           <span
             onClick={() => setIsCollapsed(true)}
-            style={{ cursor: 'pointer', fontSize: '12px', padding: '0 2px' }}
+            style={{ cursor: 'pointer', fontSize: '12px', padding: '0 2px', display: 'flex', alignItems: 'center' }}
             title="Close / Collapse Panel"
           >
-            âœ•
+            <X size={13} />
           </span>
         </div>
 
@@ -700,10 +702,10 @@ export default function OperationsTree({
           >
             <div
               onClick={() => { setIsPinned(true); setIsWindowMenuOpen(false); }}
-              style={{ padding: '6px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}
+              style={{ padding: '6px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             >
               <span>Dock Left</span>
-              {isPinned && <span style={{ color: '#0284c7' }}>âœ“</span>}
+              {isPinned && <Check size={12} color="#0284c7" />}
             </div>
             <div
               onClick={() => { setSidebarWidth(320); setIsWindowMenuOpen(false); }}
@@ -1533,7 +1535,7 @@ export default function OperationsTree({
                       title="Tool settings & feed rate rules"
                     >
                       <div style={{ position: 'absolute', left: '-14px', top: '9px', width: '12px', borderTop: '1px dotted #94a3b8' }} />
-                      <span style={{ fontSize: '11px' }}>âš™ï¸</span>
+                      <Settings size={12} style={{ flexShrink: 0 }} />
                       <span>Tool settings - Default feeds &amp; speeds</span>
                     </div>
                     <div
@@ -1542,8 +1544,8 @@ export default function OperationsTree({
                       title="Stock setup bounding box"
                     >
                       <div style={{ position: 'absolute', left: '-14px', top: '9px', width: '12px', borderTop: '1px dotted #94a3b8' }} />
-                      <span style={{ fontSize: '11px' }}>ðŸ“¦</span>
-                      <span>Stock setup - [{stockConfig?.rawDimensions?.x || stockConfig?.dimensions?.x || 120} Ã— {stockConfig?.rawDimensions?.y || stockConfig?.dimensions?.y || 80} Ã— {stockConfig?.rawDimensions?.z || stockConfig?.dimensions?.z || 25} mm]</span>
+                      <Box size={12} style={{ flexShrink: 0 }} />
+                      <span>Stock setup - [{stockConfig?.rawDimensions?.x || stockConfig?.dimensions?.x || 120} x {stockConfig?.rawDimensions?.y || stockConfig?.dimensions?.y || 80} x {stockConfig?.rawDimensions?.z || stockConfig?.dimensions?.z || 25} mm]</span>
                     </div>
                   </div>
                 )}
@@ -1688,7 +1690,7 @@ export default function OperationsTree({
 
                               {/* Checkmark when operation is selected */}
                               {isSelected && (
-                                <span style={{ color: '#16a34a', fontWeight: 900, fontSize: '11px', marginRight: '1px', lineHeight: 1 }} title="Selected for backplot, verification and posting">âœ“</span>
+                                <span style={{ color: '#16a34a', fontWeight: 900, fontSize: '11px', marginRight: '1px', lineHeight: 1 }} title="Selected for backplot, verification and posting"><Check size={11} color="#16a34a" strokeWidth={3} /></span>
                               )}
 
                               {/* Mastercam Folder Icon with Green/Yellow tab (Image 1) */}
@@ -2213,11 +2215,11 @@ export default function OperationsTree({
           padding: '0 2px'
         }}
       >
-        <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0 }}>â—€</button>
+        <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><ChevronLeft size={10} /></button>
         <div style={{ flex: 1, height: '4px', background: '#cbd5e1', borderRadius: '2px', margin: '0 4px', position: 'relative' }}>
           <div style={{ width: '35%', height: '100%', background: '#94a3b8', borderRadius: '2px' }} />
         </div>
-        <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0 }}>â–¶</button>
+        <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><ChevronRight size={10} /></button>
       </div>
 
       {/* ================= 5. MASTERCAM BOTTOM TABS STRIP (MATCHING IMAGES 1, 2, 3) ================= */}
