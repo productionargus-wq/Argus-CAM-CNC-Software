@@ -1876,6 +1876,30 @@ export default function App() {
         return;
       }
 
+      // Mastercam Standard Shortcut: Alt+F1 Screen Fit
+      if (e.altKey && (e.key === 'F1' || e.code === 'F1')) {
+        e.preventDefault();
+        setCameraCommand({ preset: 'fit', ts: Date.now() });
+        showToast('Screen Fit (Alt+F1)', 'info', 1200);
+        return;
+      }
+
+      // Mastercam Standard Shortcut: F1 Zoom (Zoom in)
+      if (!e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'F1' || e.code === 'F1')) {
+        e.preventDefault();
+        setCameraCommand({ preset: 'zoom_in', ts: Date.now() });
+        showToast('Zoom (F1)', 'info', 1000);
+        return;
+      }
+
+      // Mastercam Standard Shortcut: F2 Unzoom (Zoom out)
+      if (!e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'F2' || e.code === 'F2')) {
+        e.preventDefault();
+        setCameraCommand({ preset: 'zoom_out', ts: Date.now() });
+        showToast('Unzoom (F2)', 'info', 1000);
+        return;
+      }
+
       if (isCtrlOrMeta && (lowerKey === 'z' || e.code === 'KeyZ')) {
         if (shouldBypassAppUndoRedo(target)) return;
 

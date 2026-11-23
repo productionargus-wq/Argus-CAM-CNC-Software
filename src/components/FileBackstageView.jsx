@@ -1061,42 +1061,6 @@ export default function FileBackstageView({
                   </div>
                 </div>
 
-                {/* Stock Dimensions */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                    Initial Stock Dimensions ({newUnitSystem === 'imperial' ? 'Inches' : 'mm'}):
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                    <div>
-                      <span style={{ fontSize: '11px', color: '#64748b' }}>Width X:</span>
-                      <input
-                        type="number"
-                        value={newStockDim.x}
-                        onChange={(e) => setNewStockDim({ ...newStockDim, x: Number(e.target.value) })}
-                        style={{ width: '100%', padding: '6px 8px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                      />
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '11px', color: '#64748b' }}>Depth Y:</span>
-                      <input
-                        type="number"
-                        value={newStockDim.y}
-                        onChange={(e) => setNewStockDim({ ...newStockDim, y: Number(e.target.value) })}
-                        style={{ width: '100%', padding: '6px 8px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                      />
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '11px', color: '#64748b' }}>Height Z:</span>
-                      <input
-                        type="number"
-                        value={newStockDim.z}
-                        onChange={(e) => setNewStockDim({ ...newStockDim, z: Number(e.target.value) })}
-                        style={{ width: '100%', padding: '6px 8px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                   <button
                     type="submit"

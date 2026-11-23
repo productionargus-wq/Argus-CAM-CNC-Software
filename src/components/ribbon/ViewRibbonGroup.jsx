@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, CornerDownRight } from 'lucide-react';
 import { VIEW_RIBBON_CONFIG } from '../../config/viewRibbonConfig';
 import { VIEW_ICON_MAP } from '../icons/ViewIcons';
+import RibbonPortalMenu from './RibbonPortalMenu';
 
 export default function ViewRibbonGroup({
   onAction,
@@ -17,6 +18,7 @@ export default function ViewRibbonGroup({
   isViewsheetsVisible = true
 }) {
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [dropdownAnchorRect, setDropdownAnchorRect] = useState(null);
   const containerRef = useRef(null);
 
   // Close flyout dropdowns when clicking outside
@@ -24,6 +26,7 @@ export default function ViewRibbonGroup({
     const handleOutsideClick = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setOpenDropdownId(null);
+        setDropdownAnchorRect(null);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -32,11 +35,19 @@ export default function ViewRibbonGroup({
 
   const handleDropdownToggle = (id, e) => {
     e.stopPropagation();
-    setOpenDropdownId((prev) => (prev === id ? null : id));
+    if (openDropdownId === id) {
+      setOpenDropdownId(null);
+      setDropdownAnchorRect(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setDropdownAnchorRect(rect);
+      setOpenDropdownId(id);
+    }
   };
 
   const handleItemClick = (action, id, payload = null) => {
     setOpenDropdownId(null);
+    setDropdownAnchorRect(null);
     if (onAction) {
       onAction(action, id, payload);
     }
@@ -104,20 +115,15 @@ export default function ViewRibbonGroup({
                           </button>
 
                           {/* Flyout Dropdown */}
-                          {subItem.hasDropdown && isDropdownOpen && subItem.dropdownItems && (
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                zIndex: 120,
-                                background: '#ffffff',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '3px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                minWidth: '160px',
-                                padding: '3px 0'
+                          {subItem.hasDropdown && subItem.dropdownItems && (
+                            <RibbonPortalMenu
+                              isOpen={isDropdownOpen}
+                              anchorRect={dropdownAnchorRect}
+                              onClose={() => {
+                                setOpenDropdownId(null);
+                                setDropdownAnchorRect(null);
                               }}
+                              minWidth="160px"
                             >
                               {subItem.dropdownItems.map((opt) => (
                                 <button
@@ -140,7 +146,7 @@ export default function ViewRibbonGroup({
                                   {opt.label}
                                 </button>
                               ))}
-                            </div>
+                            </RibbonPortalMenu>
                           )}
                         </div>
                       );
@@ -380,20 +386,15 @@ export default function ViewRibbonGroup({
                   </button>
 
                   {/* Flyout Dropdown */}
-                  {item.hasDropdown && isDropdownOpen && item.dropdownItems && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        zIndex: 120,
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '3px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        minWidth: '170px',
-                        padding: '4px 0'
+                  {item.hasDropdown && item.dropdownItems && (
+                    <RibbonPortalMenu
+                      isOpen={isDropdownOpen}
+                      anchorRect={dropdownAnchorRect}
+                      onClose={() => {
+                        setOpenDropdownId(null);
+                        setDropdownAnchorRect(null);
                       }}
+                      minWidth="170px"
                     >
                       {item.dropdownItems.map((opt) => (
                         <button
@@ -416,7 +417,7 @@ export default function ViewRibbonGroup({
                           {opt.label}
                         </button>
                       ))}
-                    </div>
+                    </RibbonPortalMenu>
                   )}
                 </div>
               );

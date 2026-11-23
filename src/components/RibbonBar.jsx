@@ -22,6 +22,7 @@ import MachineRibbonGroup from './ribbon/MachineRibbonGroup';
 import ViewRibbonGroup from './ribbon/ViewRibbonGroup';
 import ToolpathsRibbonGroup from './ribbon/ToolpathsRibbonGroup';
 import HomeAttributesColorDropdown from './ribbon/HomeAttributesColorDropdown';
+import RibbonPortalMenu from './ribbon/RibbonPortalMenu';
 
 export default function RibbonBar({
   activeTab,
@@ -326,10 +327,13 @@ export default function RibbonBar({
 
   const [pointStyleSymbol, setPointStyleSymbol] = useState('*');
   const [showPointStyleMenu, setShowPointStyleMenu] = useState(false);
+  const [pointStyleAnchor, setPointStyleAnchor] = useState(null);
   const [lineStyleText, setLineStyleText] = useState('───');
   const [showLineStyleMenu, setShowLineStyleMenu] = useState(false);
+  const [lineStyleAnchor, setLineStyleAnchor] = useState(null);
   const [lineWidth, setLineWidth] = useState('1px');
   const [showLineWidthMenu, setShowLineWidthMenu] = useState(false);
+  const [lineWidthAnchor, setLineWidthAnchor] = useState(null);
 
   const tabs = [
     'File', 'Home', 'Wireframe', 'Surfaces', 'Solids',
@@ -851,7 +855,16 @@ export default function RibbonBar({
                   {/* Point Style Dropdown */}
                   <div style={{ position: 'relative' }}>
                     <button
-                      onClick={() => setShowPointStyleMenu((prev) => !prev)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (showPointStyleMenu) {
+                          setShowPointStyleMenu(false);
+                          setPointStyleAnchor(null);
+                        } else {
+                          setPointStyleAnchor(e.currentTarget.getBoundingClientRect());
+                          setShowPointStyleMenu(true);
+                        }
+                      }}
                       className="ribbon-combo-select"
                       style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 5px', height: '22px' }}
                       title="Point Style (*, +, o, .)"
@@ -859,25 +872,45 @@ export default function RibbonBar({
                       <span style={{ fontSize: '13px', fontWeight: 800, color: '#0284c7', lineHeight: 1 }}>{pointStyleSymbol}</span>
                       <ChevronDown size={11} color="#64748b" />
                     </button>
-                    {showPointStyleMenu && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 1000, background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '70px' }}>
-                        {['*', '+', 'o', '•'].map((sym) => (
-                          <button
-                            key={sym}
-                            onClick={() => { setPointStyleSymbol(sym); setShowPointStyleMenu(false); }}
-                            style={{ background: pointStyleSymbol === sym ? '#e0f2fe' : 'none', border: 'none', padding: '3px 8px', textAlign: 'center', fontSize: '12px', fontWeight: 700, cursor: 'pointer', borderRadius: '3px' }}
-                          >
-                            {sym}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <RibbonPortalMenu
+                      isOpen={showPointStyleMenu}
+                      anchorRect={pointStyleAnchor}
+                      onClose={() => {
+                        setShowPointStyleMenu(false);
+                        setPointStyleAnchor(null);
+                      }}
+                      minWidth="70px"
+                      style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}
+                    >
+                      {['*', '+', 'o', '•'].map((sym) => (
+                        <button
+                          key={sym}
+                          onClick={() => {
+                            setPointStyleSymbol(sym);
+                            setShowPointStyleMenu(false);
+                            setPointStyleAnchor(null);
+                          }}
+                          style={{ background: pointStyleSymbol === sym ? '#e0f2fe' : 'none', border: 'none', padding: '3px 8px', textAlign: 'center', fontSize: '12px', fontWeight: 700, cursor: 'pointer', borderRadius: '3px' }}
+                        >
+                          {sym}
+                        </button>
+                      ))}
+                    </RibbonPortalMenu>
                   </div>
 
                   {/* Line Style Dropdown */}
                   <div style={{ position: 'relative' }}>
                     <button
-                      onClick={() => setShowLineStyleMenu((prev) => !prev)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (showLineStyleMenu) {
+                          setShowLineStyleMenu(false);
+                          setLineStyleAnchor(null);
+                        } else {
+                          setLineStyleAnchor(e.currentTarget.getBoundingClientRect());
+                          setShowLineStyleMenu(true);
+                        }
+                      }}
                       className="ribbon-combo-select"
                       style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 5px', height: '22px' }}
                       title="Line Style (Solid, Hidden, Center, Phantom)"
@@ -885,30 +918,50 @@ export default function RibbonBar({
                       <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#334155', fontWeight: 700 }}>{lineStyleText}</span>
                       <ChevronDown size={11} color="#64748b" />
                     </button>
-                    {showLineStyleMenu && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 1000, background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '95px' }}>
-                        {[
-                          { label: '───', name: 'Solid' },
-                          { label: '- - -', name: 'Hidden' },
-                          { label: '─ · ─', name: 'Center' },
-                          { label: '─ ·· ─', name: 'Phantom' }
-                        ].map((st) => (
-                          <button
-                            key={st.name}
-                            onClick={() => { setLineStyleText(st.label); setShowLineStyleMenu(false); }}
-                            style={{ background: lineStyleText === st.label ? '#e0f2fe' : 'none', border: 'none', padding: '3px 8px', textAlign: 'left', fontSize: '11px', cursor: 'pointer', borderRadius: '3px' }}
-                          >
-                            {st.label} {st.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <RibbonPortalMenu
+                      isOpen={showLineStyleMenu}
+                      anchorRect={lineStyleAnchor}
+                      onClose={() => {
+                        setShowLineStyleMenu(false);
+                        setLineStyleAnchor(null);
+                      }}
+                      minWidth="95px"
+                      style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}
+                    >
+                      {[
+                        { label: '───', name: 'Solid' },
+                        { label: '- - -', name: 'Hidden' },
+                        { label: '─ · ─', name: 'Center' },
+                        { label: '─ ·· ─', name: 'Phantom' }
+                      ].map((st) => (
+                        <button
+                          key={st.name}
+                          onClick={() => {
+                            setLineStyleText(st.label);
+                            setShowLineStyleMenu(false);
+                            setLineStyleAnchor(null);
+                          }}
+                          style={{ background: lineStyleText === st.label ? '#e0f2fe' : 'none', border: 'none', padding: '3px 8px', textAlign: 'left', fontSize: '11px', cursor: 'pointer', borderRadius: '3px' }}
+                        >
+                          {st.label} {st.name}
+                        </button>
+                      ))}
+                    </RibbonPortalMenu>
                   </div>
 
                   {/* Line Width Dropdown (Matching Image 3) */}
                   <div style={{ position: 'relative' }}>
                     <button
-                      onClick={() => setShowLineWidthMenu((prev) => !prev)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (showLineWidthMenu) {
+                          setShowLineWidthMenu(false);
+                          setLineWidthAnchor(null);
+                        } else {
+                          setLineWidthAnchor(e.currentTarget.getBoundingClientRect());
+                          setShowLineWidthMenu(true);
+                        }
+                      }}
                       className="ribbon-combo-select"
                       style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 5px', height: '22px' }}
                       title="Line Width (Thin, Medium, Thick)"
@@ -918,23 +971,34 @@ export default function RibbonBar({
                       </span>
                       <ChevronDown size={11} color="#64748b" />
                     </button>
-                    {showLineWidthMenu && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 1000, background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '90px' }}>
-                        {[
-                          { label: '― Thin (1px)', val: '1px' },
-                          { label: '━ Medium (2px)', val: '2px' },
-                          { label: '█ Thick (3px)', val: '3px' }
-                        ].map((w) => (
-                          <button
-                            key={w.val}
-                            onClick={() => { setLineWidth(w.val); setShowLineWidthMenu(false); }}
-                            style={{ background: lineWidth === w.val ? '#e0f2fe' : 'none', border: 'none', padding: '3px 8px', textAlign: 'left', fontSize: '11px', cursor: 'pointer', borderRadius: '3px' }}
-                          >
-                            {w.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <RibbonPortalMenu
+                      isOpen={showLineWidthMenu}
+                      anchorRect={lineWidthAnchor}
+                      onClose={() => {
+                        setShowLineWidthMenu(false);
+                        setLineWidthAnchor(null);
+                      }}
+                      minWidth="90px"
+                      style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}
+                    >
+                      {[
+                        { label: '― Thin (1px)', val: '1px' },
+                        { label: '━ Medium (2px)', val: '2px' },
+                        { label: '█ Thick (3px)', val: '3px' }
+                      ].map((w) => (
+                        <button
+                          key={w.val}
+                          onClick={() => {
+                            setLineWidth(w.val);
+                            setShowLineWidthMenu(false);
+                            setLineWidthAnchor(null);
+                          }}
+                          style={{ background: lineWidth === w.val ? '#e0f2fe' : 'none', border: 'none', padding: '3px 8px', textAlign: 'left', fontSize: '11px', cursor: 'pointer', borderRadius: '3px' }}
+                        >
+                          {w.label}
+                        </button>
+                      ))}
+                    </RibbonPortalMenu>
                   </div>
 
                   {/* 3D / 2D Toggle Button */}

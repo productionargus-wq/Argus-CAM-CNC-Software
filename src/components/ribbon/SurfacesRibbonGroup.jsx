@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { SURFACES_RIBBON_CONFIG } from '../../config/surfacesRibbonConfig';
 import { SURFACES_ICON_MAP } from '../icons/SurfacesIcons';
+import RibbonPortalMenu from './RibbonPortalMenu';
 
 /**
  * Dynamic, schema-driven Surfaces Ribbon Group
@@ -9,6 +10,7 @@ import { SURFACES_ICON_MAP } from '../icons/SurfacesIcons';
  */
 export default function SurfacesRibbonGroup({ onAction, activeAction = null }) {
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [dropdownAnchorRect, setDropdownAnchorRect] = useState(null);
   const dropdownRef = useRef(null);
 
   // Close dropdown on outside click
@@ -16,6 +18,7 @@ export default function SurfacesRibbonGroup({ onAction, activeAction = null }) {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setOpenDropdownId(null);
+        setDropdownAnchorRect(null);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -25,8 +28,14 @@ export default function SurfacesRibbonGroup({ onAction, activeAction = null }) {
   const handleButtonClick = (item, e) => {
     e.stopPropagation();
     if (item.hasDropdown && !item.actionOnly) {
-      // Toggle dropdown menu
-      setOpenDropdownId(openDropdownId === item.id ? null : item.id);
+      if (openDropdownId === item.id) {
+        setOpenDropdownId(null);
+        setDropdownAnchorRect(null);
+      } else {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setDropdownAnchorRect(rect);
+        setOpenDropdownId(item.id);
+      }
     }
     if (onAction && item.action) {
       onAction(item.action, item.id);
@@ -36,6 +45,7 @@ export default function SurfacesRibbonGroup({ onAction, activeAction = null }) {
   const handleDropdownSubItemClick = (parentItem, subItem, e) => {
     e.stopPropagation();
     setOpenDropdownId(null);
+    setDropdownAnchorRect(null);
     if (onAction) {
       onAction(subItem.action || parentItem.action, subItem.id);
     }
@@ -78,21 +88,15 @@ export default function SurfacesRibbonGroup({ onAction, activeAction = null }) {
                           </button>
 
                           {/* Flyout Submenu for Stacked Items */}
-                          {sub.hasDropdown && isDropdownOpen && sub.dropdownItems && (
-                            <div
-                              className="ribbon-dropdown-menu"
-                              style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                zIndex: 1200,
-                                background: '#ffffff',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '4px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                minWidth: '160px',
-                                padding: '4px 0'
+                          {sub.hasDropdown && sub.dropdownItems && (
+                            <RibbonPortalMenu
+                              isOpen={isDropdownOpen}
+                              anchorRect={dropdownAnchorRect}
+                              onClose={() => {
+                                setOpenDropdownId(null);
+                                setDropdownAnchorRect(null);
                               }}
+                              minWidth="160px"
                             >
                               {sub.dropdownItems.map((opt) => (
                                 <button
@@ -116,7 +120,7 @@ export default function SurfacesRibbonGroup({ onAction, activeAction = null }) {
                                   {opt.label}
                                 </button>
                               ))}
-                            </div>
+                            </RibbonPortalMenu>
                           )}
                         </div>
                       );
@@ -175,21 +179,15 @@ export default function SurfacesRibbonGroup({ onAction, activeAction = null }) {
                   </button>
 
                   {/* Flyout Submenu for Large Buttons */}
-                  {item.hasDropdown && isDropdownOpen && item.dropdownItems && (
-                    <div
-                      className="ribbon-dropdown-menu"
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        zIndex: 1200,
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '4px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
-                        minWidth: '180px',
-                        padding: '4px 0'
+                  {item.hasDropdown && item.dropdownItems && (
+                    <RibbonPortalMenu
+                      isOpen={isDropdownOpen}
+                      anchorRect={dropdownAnchorRect}
+                      onClose={() => {
+                        setOpenDropdownId(null);
+                        setDropdownAnchorRect(null);
                       }}
+                      minWidth="180px"
                     >
                       {item.dropdownItems.map((opt) => (
                         <button
@@ -213,7 +211,7 @@ export default function SurfacesRibbonGroup({ onAction, activeAction = null }) {
                           {opt.label}
                         </button>
                       ))}
-                    </div>
+                    </RibbonPortalMenu>
                   )}
                 </div>
               );

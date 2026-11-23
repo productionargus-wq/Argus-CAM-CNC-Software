@@ -2918,6 +2918,12 @@ export default function Viewport3D({
       spherical.theta = Math.PI;
       spherical.phi = Math.PI / 2;
       setCurrentViewName('Back');
+    } else if (preset === 'zoom_in' || preset === 'zoom') {
+      spherical.radius = Math.max(10, spherical.radius * 0.75);
+      setCurrentViewName('Zoom (F1)');
+    } else if (preset === 'zoom_out' || preset === 'unzoom') {
+      spherical.radius = Math.min(50000, spherical.radius * 1.35);
+      setCurrentViewName('Unzoom (F2)');
     } else if (preset === 'unzoom_50') {
       spherical.radius = Math.min(50000, spherical.radius * 1.5);
     } else if (preset === 'unzoom_80') {
@@ -4576,6 +4582,24 @@ export default function Viewport3D({
           e.preventDefault();
           onChangeSelectedEntitiesRef.current(entities.map(getCustomEntityId).filter(Boolean));
         }
+        return;
+      }
+
+      if (e.altKey && (e.key === 'F1' || e.code === 'F1')) {
+        e.preventDefault();
+        snapView('fit');
+        return;
+      }
+
+      if (!e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'F1' || e.code === 'F1')) {
+        e.preventDefault();
+        snapView('zoom_in');
+        return;
+      }
+
+      if (!e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'F2' || e.code === 'F2')) {
+        e.preventDefault();
+        snapView('zoom_out');
         return;
       }
 

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { TOOLPATHS_RIBBON_CONFIG } from '../../config/toolpathsRibbonConfig';
 import { TOOLPATHS_ICON_MAP } from '../icons/ToolpathsIcons';
+import RibbonPortalMenu from './RibbonPortalMenu';
 
 export default function ToolpathsRibbonGroup({
   onAction,
@@ -10,6 +11,8 @@ export default function ToolpathsRibbonGroup({
 }) {
   const [openGalleryId, setOpenGalleryId] = useState(null);
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [galleryAnchorRect, setGalleryAnchorRect] = useState(null);
+  const [dropdownAnchorRect, setDropdownAnchorRect] = useState(null);
   const containerRef = useRef(null);
 
   // Close galleries and dropdowns when clicking outside
@@ -18,6 +21,8 @@ export default function ToolpathsRibbonGroup({
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setOpenGalleryId(null);
         setOpenDropdownId(null);
+        setGalleryAnchorRect(null);
+        setDropdownAnchorRect(null);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -26,19 +31,37 @@ export default function ToolpathsRibbonGroup({
 
   const handleGalleryToggle = (groupId, e) => {
     e.stopPropagation();
-    setOpenGalleryId((prev) => (prev === groupId ? null : groupId));
-    setOpenDropdownId(null);
+    if (openGalleryId === groupId) {
+      setOpenGalleryId(null);
+      setGalleryAnchorRect(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setGalleryAnchorRect(rect);
+      setOpenGalleryId(groupId);
+      setOpenDropdownId(null);
+      setDropdownAnchorRect(null);
+    }
   };
 
   const handleDropdownToggle = (id, e) => {
     e.stopPropagation();
-    setOpenDropdownId((prev) => (prev === id ? null : id));
-    setOpenGalleryId(null);
+    if (openDropdownId === id) {
+      setOpenDropdownId(null);
+      setDropdownAnchorRect(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setDropdownAnchorRect(rect);
+      setOpenDropdownId(id);
+      setOpenGalleryId(null);
+      setGalleryAnchorRect(null);
+    }
   };
 
   const handleItemClick = (action, id, opType = null) => {
     setOpenGalleryId(null);
     setOpenDropdownId(null);
+    setGalleryAnchorRect(null);
+    setDropdownAnchorRect(null);
     if (onAction) {
       onAction(action, id, opType);
     }
@@ -174,69 +197,65 @@ export default function ToolpathsRibbonGroup({
                 </div>
 
                 {/* Floating Gallery Dropdown Popover */}
-                {isGalleryOpen && (
+                <RibbonPortalMenu
+                  isOpen={isGalleryOpen}
+                  anchorRect={galleryAnchorRect}
+                  onClose={() => {
+                    setOpenGalleryId(null);
+                    setGalleryAnchorRect(null);
+                  }}
+                  minWidth="300px"
+                  style={{
+                    padding: '8px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '4px'
+                  }}
+                >
                   <div
                     style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      zIndex: 1500,
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '4px',
-                      boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
-                      padding: '8px',
-                      minWidth: '280px',
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(2, 1fr)',
-                      gap: '4px'
+                      gridColumn: 'span 2',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      borderBottom: '1px solid #f1f5f9',
+                      paddingBottom: '4px',
+                      marginBottom: '4px'
                     }}
                   >
-                    <div
+                    {group.title} Toolpath Suite Gallery
+                  </div>
+
+                  {group.galleryMoreItems.map((moreItem) => (
+                    <button
+                      key={moreItem.id}
+                      onClick={() => handleItemClick(moreItem.action, moreItem.id, moreItem.opType)}
                       style={{
-                        gridColumn: 'span 2',
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        borderBottom: '1px solid #f1f5f9',
-                        paddingBottom: '4px',
-                        marginBottom: '4px'
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 8px',
+                        border: '1px solid transparent',
+                        borderRadius: '3px',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f0f9ff';
+                        e.currentTarget.style.borderColor = '#bae6fd';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.borderColor = 'transparent';
                       }}
                     >
-                      {group.title} Toolpath Suite Gallery
-                    </div>
-
-                    {group.galleryMoreItems.map((moreItem) => (
-                      <button
-                        key={moreItem.id}
-                        onClick={() => handleItemClick(moreItem.action, moreItem.id, moreItem.opType)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '5px 8px',
-                          border: '1px solid transparent',
-                          borderRadius: '3px',
-                          background: 'transparent',
-                          cursor: 'pointer',
-                          textAlign: 'left'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#f0f9ff';
-                          e.currentTarget.style.borderColor = '#bae6fd';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.borderColor = 'transparent';
-                        }}
-                      >
-                        {renderIcon(moreItem.icon, 18)}
-                        <span style={{ fontSize: '11px', color: '#0f172a' }}>{moreItem.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                      {renderIcon(moreItem.icon, 18)}
+                      <span style={{ fontSize: '11px', color: '#0f172a' }}>{moreItem.label}</span>
+                    </button>
+                  ))}
+                </RibbonPortalMenu>
               </div>
 
               <div style={{ textAlign: 'center', marginTop: '2px' }}>
@@ -318,20 +337,15 @@ export default function ToolpathsRibbonGroup({
                       </button>
 
                       {/* Dropdown Popover */}
-                      {item.hasDropdown && isDropdownOpen && item.dropdownItems && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '100%',
-                            left: 0,
-                            zIndex: 1500,
-                            background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '3px',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                            minWidth: '170px',
-                            padding: '4px 0'
+                      {item.hasDropdown && item.dropdownItems && (
+                        <RibbonPortalMenu
+                          isOpen={isDropdownOpen}
+                          anchorRect={dropdownAnchorRect}
+                          onClose={() => {
+                            setOpenDropdownId(null);
+                            setDropdownAnchorRect(null);
                           }}
+                          minWidth="180px"
                         >
                           {item.dropdownItems.map((opt) => (
                             <button
@@ -354,7 +368,7 @@ export default function ToolpathsRibbonGroup({
                               {opt.label}
                             </button>
                           ))}
-                        </div>
+                        </RibbonPortalMenu>
                       )}
                     </div>
                   );

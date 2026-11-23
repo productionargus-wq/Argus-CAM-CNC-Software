@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
+import RibbonPortalMenu from './RibbonPortalMenu';
 
 // Mastercam Standard 16 CAD Colors
 export const MASTERCAM_STANDARD_COLORS = [
@@ -28,33 +29,32 @@ export default function HomeAttributesColorDropdown({
   onChangeColor
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
+  const [anchorRect, setAnchorRect] = useState(null);
   const nativeColorInputRef = useRef(null);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
-    }
+  const toggleOpen = (e) => {
+    e.stopPropagation();
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      setIsOpen(false);
+      setAnchorRect(null);
+    } else {
+      setAnchorRect(e.currentTarget.getBoundingClientRect());
+      setIsOpen(true);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  };
 
   const handleSelectColor = (col) => {
     onChangeColor?.(col);
     setIsOpen(false);
+    setAnchorRect(null);
   };
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', display: 'inline-block' }}>
+    <div style={{ position: 'relative', display: 'inline-block' }}>
       {/* Dropdown Toggle Button Matching Mastercam Home Attributes (Image 3) */}
       <button
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={toggleOpen}
         title="Default and Standard Colors Palette (Attributes)"
         style={{
           display: 'flex',
@@ -106,137 +106,133 @@ export default function HomeAttributesColorDropdown({
         style={{ display: 'none' }}
       />
 
-      {/* Dropdown Palette Popup (Exact Replica of Mastercam Image 3) */}
-      {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            zIndex: 9999,
-            marginTop: '3px',
-            background: '#ffffff',
-            border: '1px solid #94a3b8',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.22)',
-            padding: '6px',
-            borderRadius: '2px',
-            width: '210px',
-            fontFamily: "'Segoe UI', Tahoma, sans-serif",
-            userSelect: 'none'
-          }}
-        >
-          {/* Section 1: Default Colors Header */}
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-            Default Colors
-          </div>
-
-          {/* 10 x 6 Default Colors Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(10, 1fr)',
-            gap: '2px',
-            marginBottom: '8px'
-          }}>
-            {MASTERCAM_DEFAULT_COLORS.map((hex, idx) => {
-              const isSelected = activeColor?.toLowerCase() === hex.toLowerCase();
-              return (
-                <div
-                  key={`${hex}-${idx}`}
-                  onClick={() => handleSelectColor(hex)}
-                  title={hex}
-                  style={{
-                    width: '16px',
-                    height: '16px',
-                    backgroundColor: hex,
-                    border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
-                    borderRadius: '1px',
-                    cursor: 'pointer',
-                    boxSizing: 'border-box'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.zIndex = 2; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.zIndex = 1; }}
-                />
-              );
-            })}
-          </div>
-
-          {/* Section 2: Standard Colors Header */}
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-            Standard Colors
-          </div>
-
-          {/* 8 x 2 Standard Colors Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(8, 1fr)',
-            gap: '2px',
-            marginBottom: '8px'
-          }}>
-            {MASTERCAM_STANDARD_COLORS.map((hex, idx) => {
-              const isSelected = activeColor?.toLowerCase() === hex.toLowerCase();
-              return (
-                <div
-                  key={`std-${hex}-${idx}`}
-                  onClick={() => handleSelectColor(hex)}
-                  title={hex}
-                  style={{
-                    width: '19px',
-                    height: '16px',
-                    backgroundColor: hex,
-                    border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
-                    borderRadius: '1px',
-                    cursor: 'pointer',
-                    boxSizing: 'border-box'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.zIndex = 2; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.zIndex = 1; }}
-                />
-              );
-            })}
-          </div>
-
-          {/* Divider */}
-          <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0 6px' }} />
-
-          {/* Section 3: More Colors... Button */}
-          <button
-            type="button"
-            onClick={() => nativeColorInputRef.current?.click()}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '3px 6px',
-              background: 'transparent',
-              border: 'none',
-              borderRadius: '2px',
-              cursor: 'pointer',
-              fontSize: '11px',
-              color: '#1e293b',
-              textAlign: 'left'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            {/* 4-quadrant mini color swatch icon */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 6px)',
-              gap: '1px',
-              border: '1px solid #94a3b8',
-              padding: '1px',
-              background: '#ffffff'
-            }}>
-              <div style={{ width: '5px', height: '5px', background: '#ef4444' }} />
-              <div style={{ width: '5px', height: '5px', background: '#22c55e' }} />
-              <div style={{ width: '5px', height: '5px', background: '#3b82f6' }} />
-              <div style={{ width: '5px', height: '5px', background: '#f59e0b' }} />
-            </div>
-            <span>More Colors...</span>
-          </button>
+      {/* Dropdown Palette Popup (Exact Replica of Mastercam Image 3 via Portal) */}
+      <RibbonPortalMenu
+        isOpen={isOpen}
+        anchorRect={anchorRect}
+        onClose={() => {
+          setIsOpen(false);
+          setAnchorRect(null);
+        }}
+        minWidth="210px"
+        style={{
+          padding: '6px',
+          width: '210px',
+          fontFamily: "'Segoe UI', Tahoma, sans-serif",
+          userSelect: 'none'
+        }}
+      >
+        {/* Section 1: Default Colors Header */}
+        <div style={{ fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+          Default Colors
         </div>
-      )}
+
+        {/* 10 x 6 Default Colors Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(10, 1fr)',
+          gap: '2px',
+          marginBottom: '8px'
+        }}>
+          {MASTERCAM_DEFAULT_COLORS.map((hex, idx) => {
+            const isSelected = activeColor?.toLowerCase() === hex.toLowerCase();
+            return (
+              <div
+                key={`${hex}-${idx}`}
+                onClick={() => handleSelectColor(hex)}
+                title={hex}
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  backgroundColor: hex,
+                  border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                  borderRadius: '1px',
+                  cursor: 'pointer',
+                  boxSizing: 'border-box'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.zIndex = 2; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.zIndex = 1; }}
+              />
+            );
+          })}
+        </div>
+
+        {/* Section 2: Standard Colors Header */}
+        <div style={{ fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+          Standard Colors
+        </div>
+
+        {/* 8 x 2 Standard Colors Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(8, 1fr)',
+          gap: '2px',
+          marginBottom: '6px'
+        }}>
+          {MASTERCAM_STANDARD_COLORS.map((hex, idx) => {
+            const isSelected = activeColor?.toLowerCase() === hex.toLowerCase();
+            return (
+              <div
+                key={`std-${hex}-${idx}`}
+                onClick={() => handleSelectColor(hex)}
+                title={hex}
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  backgroundColor: hex,
+                  border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                  borderRadius: '1px',
+                  cursor: 'pointer',
+                  boxSizing: 'border-box'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.zIndex = 2; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.zIndex = 1; }}
+              />
+            );
+          })}
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0 6px' }} />
+
+        {/* Section 3: More Colors... Button */}
+        <button
+          type="button"
+          onClick={() => nativeColorInputRef.current?.click()}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '3px 6px',
+            background: 'transparent',
+            border: 'none',
+            borderRadius: '2px',
+            cursor: 'pointer',
+            fontSize: '11px',
+            color: '#1e293b',
+            textAlign: 'left'
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+        >
+          {/* 4-quadrant mini color swatch icon */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 6px)',
+            gap: '1px',
+            border: '1px solid #94a3b8',
+            padding: '1px',
+            background: '#ffffff'
+          }}>
+            <div style={{ width: '5px', height: '5px', background: '#ef4444' }} />
+            <div style={{ width: '5px', height: '5px', background: '#22c55e' }} />
+            <div style={{ width: '5px', height: '5px', background: '#3b82f6' }} />
+            <div style={{ width: '5px', height: '5px', background: '#f59e0b' }} />
+          </div>
+          <span>More Colors...</span>
+        </button>
+      </RibbonPortalMenu>
     </div>
   );
 }
