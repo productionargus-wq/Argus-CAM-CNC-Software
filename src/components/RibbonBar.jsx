@@ -2125,6 +2125,10 @@ export default function RibbonBar({
                 onSnapCamera('fit');
                 return;
               }
+              if (action === 'view_pan_canvas') {
+                if (onStartInteractiveSketch) onStartInteractiveSketch('pan');
+                return;
+              }
               if (action === 'view_unzoom_50' && onSnapCamera) {
                 onSnapCamera('unzoom_50');
                 return;

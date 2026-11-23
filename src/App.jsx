@@ -5751,6 +5751,13 @@ export default function App() {
       showToast('Window Select Mode (V): Drag L->R to enclose or R->L to cross shapes', 'info');
       return;
     }
+    if (tool === 'pan') {
+      setIsSelectModeActive(false);
+      setIsSketchModeActive(true);
+      setDrawingToolSync('pan');
+      showToast('Pan View: Click and drag anywhere to pan the canvas (or use Middle Mouse / Space+Drag)', 'info');
+      return;
+    }
     setIsSelectModeActive(false);
     setIsSketchModeActive(true);
     if (tool === 'circle') {

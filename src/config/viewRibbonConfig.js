@@ -20,6 +20,14 @@ export const VIEW_RIBBON_CONFIG = [
         tooltip: 'Fit Entire Geometry into Viewport (Alt+F1)'
       },
       {
+        id: 'pan_canvas',
+        type: 'large',
+        label: 'Pan',
+        icon: 'ViewPanHand',
+        action: 'view_pan_canvas',
+        tooltip: 'Pan Canvas in any direction (Middle-drag / Space+drag / Click & drag)'
+      },
+      {
         id: 'zoom_stack',
         type: 'stack',
         rows: 3,

@@ -297,6 +297,7 @@ export default function Viewport3D({
   const normalMaterialRef = useRef(new THREE.MeshNormalMaterial());
   const orbitTargetRef = useRef(new THREE.Vector3(0, 49, 0));
   const sphericalRef = useRef(new THREE.Spherical(340, Math.PI / 3.4, Math.PI / 4));
+  const isSpacePressedRef = useRef(false);
 
   // Backplot & Solid Verify Simulation State & Refs
   const [isBackplotPlaying, setIsBackplotPlaying] = useState(false);
@@ -745,10 +746,10 @@ export default function Viewport3D({
     scene.add(dirLight2);
     dirLight2Ref.current = dirLight2;
 
-    // Machine Bed Grid
+    // Machine Bed Grid (Infinite Dynamic CAD Grid)
     const gridHelper = new THREE.GridHelper(
-      400,
-      40,
+      6000,
+      600,
       isLightInit ? 0x94a3b8 : 0x334155,
       isLightInit ? 0xcbd5e1 : 0x1e293b
     );
@@ -910,6 +911,11 @@ export default function Viewport3D({
     // Mouse Drag Orbit, Pan & 7-Mode CAD Selection (Automatic, Chain, Window, Polygon, Single, Area, Vector)
     let isDragging = false;
     let isPanning = false;
+    let isSpaceHeld = false;
+    let rightMouseDownX = 0;
+    let rightMouseDownY = 0;
+    let isRightDragPanning = false;
+    let isMiddleDragPanning = false;
     let isDrawingDrag = false;
     let isMarqueeDrag = false;
     let isVectorDrag = false;
@@ -1105,6 +1111,7 @@ export default function Viewport3D({
         case 'spline_curves':
         case 'spline_blend':
           return 'Click canvas to add spline node (Enter to finish)';
+        case 'pan': return 'Click and drag to pan canvas in any direction (Middle mouse or Space+Drag also pans)';
         case 'rect': return 'Select position of first corner';
         case 'polygon': return 'Select center position for regular polygon';
         case 'ellipse': return 'Select first corner or center of ellipse';
@@ -1393,28 +1400,30 @@ export default function Viewport3D({
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
 
-      if (e.button === 2) {
-        if (isSketchModeRef.current && sketchAnchorRef.current) {
-          sketchAnchorRef.current = null;
-          setSketchAnchor(null);
-          setDimensionFeedback(null);
-          if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
-          setSketchPromptText(getDefaultPromptForTool(activeSketchToolRef.current));
-          return;
-        }
-        if ((polygonPointsRef.current?.length || 0) >= 3) {
-          completePolygonSelection(!!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current));
-          return;
-        }
-        if ((polygonPointsRef.current?.length || 0) > 0 || vectorStartRef.current) {
-          cancelInteractiveSelection();
-          return;
-        }
+      // 1. Middle Mouse Button (e.button === 1) -> Direct Pan in all views
+      if (e.button === 1) {
+        e.preventDefault();
+        isMiddleDragPanning = true;
         isPanning = true;
+        dom.style.cursor = 'grabbing';
         return;
       }
-      if (e.button === 1) {
-        isDragging = true;
+
+      // 2. Spacebar + Left Click OR Dedicated Pan Tool -> Direct Pan
+      if (e.button === 0 && (isSpacePressedRef.current || isSpaceHeld || activeSketchToolRef.current === 'pan' || sketchTool === 'pan')) {
+        e.preventDefault();
+        isPanning = true;
+        dom.style.cursor = 'grabbing';
+        return;
+      }
+
+      // 3. Right Mouse Button (e.button === 2) -> Pan on drag, cancel on single-click release
+      if (e.button === 2) {
+        rightMouseDownX = e.clientX;
+        rightMouseDownY = e.clientY;
+        isRightDragPanning = false;
+        isPanning = true;
+        dom.style.cursor = 'grabbing';
         return;
       }
 
@@ -1751,6 +1760,12 @@ export default function Viewport3D({
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
 
+      if ((e.buttons & 2) && !isRightDragPanning) {
+        if (Math.hypot(e.clientX - rightMouseDownX, e.clientY - rightMouseDownY) > 3) {
+          isRightDragPanning = true;
+        }
+      }
+
       if ((isVectorDrag || vectorStartRef.current) && getEffectiveMethod() === 'vector') {
         const rect = dom.getBoundingClientRect();
         const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
@@ -1807,13 +1822,23 @@ export default function Viewport3D({
         camera.lookAt(orbitTargetRef.current);
         return;
       } else if (isPanning) {
-        const panFactor = Math.max(0.05, (spherical.radius / 700) * 0.4);
-        const panX = -deltaX * panFactor;
-        const panY = deltaY * panFactor;
+        // Direct manipulation 1:1 screen-to-world pan with infinite range
+        const fovRad = (camera.fov * Math.PI) / 180;
+        const visibleHeight = 2 * Math.tan(fovRad / 2) * spherical.radius;
+        const worldPerPixel = visibleHeight / Math.max(1, dom.clientHeight);
+        const panX = -deltaX * worldPerPixel;
+        const panY = deltaY * worldPerPixel;
         const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
         const up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
         camera.position.addScaledVector(right, panX).addScaledVector(up, panY);
         orbitTargetRef.current.addScaledVector(right, panX).addScaledVector(up, panY);
+        camera.updateMatrixWorld();
+
+        // Dynamically shift grid to extend seamlessly to infinity
+        if (gridHelperRef.current) {
+          gridHelperRef.current.position.x = Math.floor(orbitTargetRef.current.x / 100) * 100;
+          gridHelperRef.current.position.z = Math.floor(orbitTargetRef.current.z / 100) * 100;
+        }
         return;
       }
 
@@ -2437,8 +2462,38 @@ export default function Viewport3D({
     };
 
     const onMouseUp = (e) => {
+      const wasRightDrag = isRightDragPanning;
       isDragging = false;
       isPanning = false;
+      isMiddleDragPanning = false;
+      isRightDragPanning = false;
+
+      dom.style.cursor = isSpaceHeld
+        ? 'grab'
+        : (activeSketchToolRef.current === 'pan' ? 'grab' : activeViewportCursor);
+
+      if (e.button === 2) {
+        if (wasRightDrag) {
+          return;
+        }
+        if (isSketchModeRef.current && sketchAnchorRef.current) {
+          sketchAnchorRef.current = null;
+          setSketchAnchor(null);
+          setDimensionFeedback(null);
+          if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+          setSketchPromptText(getDefaultPromptForTool(activeSketchToolRef.current));
+          return;
+        }
+        if ((polygonPointsRef.current?.length || 0) >= 3) {
+          completePolygonSelection(!!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current));
+          return;
+        }
+        if ((polygonPointsRef.current?.length || 0) > 0 || vectorStartRef.current) {
+          cancelInteractiveSelection();
+          return;
+        }
+        return;
+      }
 
       if (e.button === 0 && !isBasePointPickActiveRef.current && isSolidFaceSelectActive() && e.target === dom) {
         const clickDist = Math.hypot(e.clientX - pickDownX, e.clientY - pickDownY);
@@ -2698,9 +2753,47 @@ export default function Viewport3D({
 
     const onWheel = (e) => {
       e.preventDefault();
+
+      const rect = dom.getBoundingClientRect();
+      const ndc = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      );
+      raycaster.setFromCamera(ndc, camera);
+
+      const topY = partMetrics?.box?.max?.y ?? 0;
+      const worldY = 49 + topY;
+      sketchPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, worldY, 0));
+
+      const planePtBefore = new THREE.Vector3();
+      const hasPlaneHit = raycaster.ray.intersectPlane(sketchPlane, planePtBefore);
+
       const zoomFactor = spherical.radius * 0.0015 + 0.2;
       const zoomDelta = e.deltaY * zoomFactor;
-      spherical.radius = Math.max(10, Math.min(50000, spherical.radius + zoomDelta));
+      const oldRadius = spherical.radius;
+      const newRadius = Math.max(10, Math.min(100000, oldRadius + zoomDelta));
+      const zoomRatio = newRadius / oldRadius;
+      spherical.radius = newRadius;
+
+      // Zoom-to-cursor: shift target so cursor location stays fixed under cursor
+      if (hasPlaneHit && Math.abs(zoomRatio - 1) > 0.0005) {
+        const target = orbitTargetRef.current;
+        target.x += (planePtBefore.x - target.x) * (1 - zoomRatio);
+        target.z += (planePtBefore.z - target.z) * (1 - zoomRatio);
+      }
+
+      if (gridHelperRef.current) {
+        gridHelperRef.current.position.x = Math.floor(orbitTargetRef.current.x / 100) * 100;
+        gridHelperRef.current.position.z = Math.floor(orbitTargetRef.current.z / 100) * 100;
+      }
+
+      const isTop = Math.abs(camera.up.z) > 0.5 || spherical.phi < 0.05;
+      if (isTop) {
+        camera.up.set(0, 0, -1);
+      } else {
+        camera.up.set(0, 1, 0);
+      }
+
       const offset = new THREE.Vector3().setFromSpherical(spherical);
       camera.position.copy(orbitTargetRef.current).add(offset);
       camera.lookAt(orbitTargetRef.current);
@@ -3080,6 +3173,10 @@ export default function Viewport3D({
         target.addScaledVector(right, panX).addScaledVector(up, panY);
         cam.lookAt(target);
         cam.updateMatrixWorld();
+        if (gridHelperRef.current) {
+          gridHelperRef.current.position.x = Math.floor(target.x / 100) * 100;
+          gridHelperRef.current.position.z = Math.floor(target.z / 100) * 100;
+        }
         setCurrentViewName(`Pan ${direction.charAt(0).toUpperCase() + direction.slice(1)}`);
       }
     }
@@ -4721,6 +4818,46 @@ export default function Viewport3D({
         return;
       }
 
+      // Keyboard Arrow Panning (Left, Right, Up, Down to infinity)
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) && !isBackplotActive) {
+        e.preventDefault();
+        const cam = cameraRef.current;
+        const target = orbitTargetRef.current;
+        const spherical = sphericalRef.current;
+        if (cam && target) {
+          cam.updateMatrixWorld();
+          const right = new THREE.Vector3().setFromMatrixColumn(cam.matrix, 0);
+          const up = new THREE.Vector3().setFromMatrixColumn(cam.matrix, 1);
+          const fovRad = (cam.fov * Math.PI) / 180;
+          const visibleHeight = 2 * Math.tan(fovRad / 2) * spherical.radius;
+          const step = (visibleHeight / 16) * (e.shiftKey ? 2.5 : 1);
+          let panX = 0;
+          let panY = 0;
+          if (e.key === 'ArrowLeft') panX = -step;
+          else if (e.key === 'ArrowRight') panX = step;
+          else if (e.key === 'ArrowUp') panY = step;
+          else if (e.key === 'ArrowDown') panY = -step;
+
+          cam.position.addScaledVector(right, panX).addScaledVector(up, panY);
+          target.addScaledVector(right, panX).addScaledVector(up, panY);
+          cam.lookAt(target);
+          cam.updateMatrixWorld();
+          if (gridHelperRef.current) {
+            gridHelperRef.current.position.x = Math.floor(target.x / 100) * 100;
+            gridHelperRef.current.position.z = Math.floor(target.z / 100) * 100;
+          }
+        }
+        return;
+      }
+
+      // Spacebar hold activates Pan Hand cursor
+      if (e.code === 'Space' && !e.repeat && !isBackplotActive) {
+        isSpacePressedRef.current = true;
+        if (rendererRef.current?.domElement) {
+          rendererRef.current.domElement.style.setProperty('cursor', 'grab', 'important');
+        }
+      }
+
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
       if (key === 'v' && !isBackplotActive) {
@@ -4867,8 +5004,21 @@ export default function Viewport3D({
       }
     };
 
+    const handleCadSelectionKeyUp = (e) => {
+      if (e.code === 'Space') {
+        isSpacePressedRef.current = false;
+        if (rendererRef.current?.domElement) {
+          rendererRef.current.domElement.style.setProperty('cursor', activeViewportCursor, 'important');
+        }
+      }
+    };
+
     window.addEventListener('keydown', handleCadSelectionAndSketchKeys);
-    return () => window.removeEventListener('keydown', handleCadSelectionAndSketchKeys);
+    window.addEventListener('keyup', handleCadSelectionKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleCadSelectionAndSketchKeys);
+      window.removeEventListener('keyup', handleCadSelectionKeyUp);
+    };
   }, [isSketchModeActive, isBackplotActive, onChangeSketchTool, onToggleSketchMode]);
 
   const selectedEntitiesList = useMemo(() => {
@@ -4910,10 +5060,11 @@ export default function Viewport3D({
 
   const activeViewportCursor = useMemo(() => {
     if (isTrimActive) return MASTERCAM_SCISSORS_CURSOR;
+    if (activeSketchTool === 'pan' || sketchTool === 'pan') return 'grab';
     if (isSelectCursorArmed) return 'crosshair';
     if (isSketchModeActive) return 'crosshair';
     return 'default';
-  }, [isTrimActive, isSelectCursorArmed, isSketchModeActive]);
+  }, [isTrimActive, activeSketchTool, sketchTool, isSelectCursorArmed, isSketchModeActive]);
 
   useEffect(() => {
     if (rendererRef.current?.domElement) {
@@ -5460,6 +5611,10 @@ export default function Viewport3D({
             setSelectedSolidFaceIds([]);
           }}
           onZoomExtents={() => snapView('fit')}
+          onPanView={() => {
+            setActiveSketchTool('pan');
+            if (onChangeSketchTool) onChangeSketchTool('pan');
+          }}
           onOpenColorMask={onOpenSelectAllModal}
           onSwitchToLevels={onSwitchToLevels}
           onSwitchToPlanes={onSwitchToPlanes}
