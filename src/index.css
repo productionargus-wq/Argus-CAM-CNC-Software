@@ -1806,11 +1806,20 @@ dialog::backdrop {
   padding: 3px 10px;
   border-radius: 999px;
   backdrop-filter: blur(10px);
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
   user-select: none;
   font-size: 11px;
   font-family: Inter, system-ui, sans-serif;
   position: relative;
+  opacity: 0.38;
+  transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.24s ease, border-color 0.24s ease;
+}
+
+.autocursor-hud-bar:hover,
+.autocursor-hud-bar:focus-within,
+.autocursor-hud-bar.is-active {
+  opacity: 1;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.16);
 }
 
 .autocursor-hud-bar.is-light {

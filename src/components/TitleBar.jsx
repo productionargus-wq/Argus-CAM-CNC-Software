@@ -201,9 +201,6 @@ export default function TitleBar({
             [{currentProject}]
           </span>
         )}
-        <span className="titlebar-badge" data-testid="titlebar-machine-badge">
-          {activeMachine?.name || 'No Machine Selected'}
-        </span>
       </div>
 
       <div className="titlebar-right">

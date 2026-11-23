@@ -190,8 +190,11 @@ export default function AutoCursorBar({
 }) {
   const [openMenu, setOpenMenu] = useState(null); // 'autocursor' | 'xyz' | 'settings' | 'method' | 'containment' | null
   const [xyzInput, setXyzInput] = useState({ x: '0', y: '0', z: '0' });
+  const [isHovered, setIsHovered] = useState(false);
   const barRef = useRef(null);
   const isLight = theme !== 'dark';
+
+  const isActive = isHovered || openMenu !== null || selectedCount > 0 || polygonPointCount > 0;
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -234,9 +237,11 @@ export default function AutoCursorBar({
       ref={barRef}
       className="autocursor-pill-wrapper"
       data-testid="canvas-selection-hud"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Main Floating Mastercam AutoCursor + Selection Methods Pill */}
-      <div className={`autocursor-hud-bar ${isLight ? 'is-light' : 'is-dark'}`}>
+      <div className={`autocursor-hud-bar ${isLight ? 'is-light' : 'is-dark'} ${isActive ? 'is-active' : ''}`}>
         {/* 1. Snap Lock */}
         <button
           type="button"
