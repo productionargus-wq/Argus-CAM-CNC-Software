@@ -836,6 +836,7 @@ export default function Viewport3D({
     // Drafting Dimension Callouts Group
     const dimensionGroup = new THREE.Group();
     dimensionGroup.position.set(0, 49, 0);
+    dimensionGroup.visible = false;
     scene.add(dimensionGroup);
     dimensionGroupRef.current = dimensionGroup;
 
@@ -3122,14 +3123,9 @@ export default function Viewport3D({
         }
       }
 
-      const defaultMetrics = {
-        center: { x: 0, y: 0, z: 0 },
-        dimensions: { x: 100, y: 25, z: 80 },
-        box: { min: { x: -50, y: 0, z: -40 }, max: { x: 50, y: 0, z: 40 } },
-        triangles: 0
-      };
-      setInternalPartMetrics(defaultMetrics);
-      if (onMetricsCalculated) onMetricsCalculated(defaultMetrics);
+      // Blank canvas with no model and no measured entities
+      setInternalPartMetrics(null);
+      if (onMetricsCalculated) onMetricsCalculated(null);
       return;
     }
 
@@ -3549,11 +3545,19 @@ export default function Viewport3D({
 
   // 8. Update Dynamic Stock Box Mesh
   useEffect(() => {
-    if (!sceneRef.current || !partMetrics) return;
+    if (!sceneRef.current) return;
     const scene = sceneRef.current;
 
-    if (stockMeshRef.current) scene.remove(stockMeshRef.current);
-    if (stockWireframeRef.current) scene.remove(stockWireframeRef.current);
+    if (stockMeshRef.current) {
+      scene.remove(stockMeshRef.current);
+      stockMeshRef.current = null;
+    }
+    if (stockWireframeRef.current) {
+      scene.remove(stockWireframeRef.current);
+      stockWireframeRef.current = null;
+    }
+
+    if (!partMetrics || !currentModel || layerVisibility.stock === false) return;
 
     const dim = partMetrics.dimensions;
     const { sides: allowSides, top: allowTop } = resolveStockAllowances(stockConfig);
@@ -3620,15 +3624,20 @@ export default function Viewport3D({
     wireframe.visible = layerVisibility.stock !== false;
     scene.add(wireframe);
     stockWireframeRef.current = wireframe;
-  }, [stockConfig, partMetrics, layerVisibility.stock]);
+  }, [stockConfig, partMetrics, currentModel, layerVisibility.stock]);
 
   // 9. Build 3D Drafting Dimension Lines & Angle Indicators (Images 1 & 2)
   useEffect(() => {
-    if (!dimensionGroupRef.current || !partMetrics) return;
+    if (!dimensionGroupRef.current) return;
     const group = dimensionGroupRef.current;
     while (group.children.length > 0) {
       group.remove(group.children[0]);
     }
+
+    const showDims = Boolean(layerVisibility.dimensions);
+    group.visible = showDims;
+
+    if (!showDims || !partMetrics || !currentModel) return;
 
     const bounds = partMetrics.box;
     const min = bounds.min;
@@ -3787,7 +3796,7 @@ export default function Viewport3D({
       new THREE.Vector3(crossCenter.x, topY, crossCenter.z + crossSize)
     ]);
     group.add(new THREE.LineSegments(crossGeo, blueCadMat));
-  }, [partMetrics, isDraftingActive, layerVisibility.dimensions]);
+  }, [partMetrics, currentModel, isDraftingActive, layerVisibility.dimensions]);
 
   // 10. Dynamically Generate and Render Real Toolpaths from CAM Operations
   useEffect(() => {

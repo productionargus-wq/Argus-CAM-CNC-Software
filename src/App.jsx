@@ -5172,29 +5172,26 @@ export default function App() {
       // Mastercam clean blank canvas
       setCurrentModel(null);
       setSolidsList([]);
-      setPartMetrics({
-        center: { x: 0, y: 0, z: 0 },
-        dimensions: { x: 100, y: 25, z: 80 },
-        box: new THREE.Box3(
-          new THREE.Vector3(-50, 0, -40),
-          new THREE.Vector3(50, 25, 40)
-        ),
-        triangles: 0
-      });
+      setPartMetrics(null);
       const stockDims = customDimensions || { x: 120, y: 30, z: 90 };
       setStockConfig((prev) => ({
         ...prev,
         dimensions: stockDims,
         rawDimensions: stockDims
       }));
-      setLayerVisibility((prev) => ({
-        ...prev,
+      setLayerVisibility({
+        part: true,
+        wireframe: true,
+        surfaces: true,
         fixture: false,
         bed: false,
         stock: false,
-        wcs: true
-      }));
-      setActiveRibbonTab('Toolpaths');
+        toolpaths: false,
+        rapids: false,
+        wcs: true,
+        dimensions: false
+      });
+      setActiveRibbonTab('Wireframe');
       setIsSketchModeActive(false);
       setCameraCommand({ preset: 'top' });
       if (unitSystem) setUnitSystem(unitSystem);
