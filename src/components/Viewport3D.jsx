@@ -423,6 +423,7 @@ export default function Viewport3D({
   const isLineTangentRef = useRef(isLineTangent);
   const isLineContinuousRef = useRef(isLineContinuous);
   isLineContinuousRef.current = isLineContinuous;
+  const activeSidesRef = useRef(6);
   const onDrawingUpdateRef = useRef(onDrawingUpdate);
   const gridSnapRef = useRef(true);
   const gridStepRef = useRef(5.0);
@@ -1195,6 +1196,7 @@ export default function Viewport3D({
     const commitInteractiveEntity = (anchor, finalPt) => {
       const tool = activeSketchToolRef.current;
       let newEntity = null;
+      let p2Commit = null;
 
       if (tool === 'circle') {
         const radius = (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0)
@@ -1299,7 +1301,7 @@ export default function Viewport3D({
           }
         }
 
-        let p2Commit, lengthCommit, angleCommit;
+        let lengthCommit, angleCommit;
         if (bitanCommit) {
           // Mastercam style: use exact bitangent endpoints, never override with angle/length locks
           p2Commit = p2Final.clone();
@@ -2066,7 +2068,7 @@ export default function Viewport3D({
               }
             } else if (tool === 'polygon') {
               const r = Math.max(1, anchor.distanceTo(finalPt));
-              const sides = activeSidesRef.current || 6;
+              const sides = activeSidesRef?.current || 6;
               const ghost = createGhostPreview('polygon', anchor, finalPt, { sides, radius: r });
               sketchGhostGroupRef.current.add(ghost);
               setDimensionFeedback(`Polygon (${sides} sides): Radius ${r.toFixed(2)} mm`);
