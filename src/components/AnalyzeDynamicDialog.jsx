@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
-  HelpCircle, Check, X, ArrowLeftRight, Minus, Move
+  HelpCircle, Check, X, ArrowLeftRight, Minus
 } from 'lucide-react';
 
 /**
- * Mastercam Analyze Dynamic Floating Palette (Image 4 replica)
+ * Mastercam Analyze Dynamic Floating Palette (Image 1 replica)
  * Floats non-blockingly over the 3D viewport.
  */
 export default function AnalyzeDynamicDialog({
@@ -20,15 +20,15 @@ export default function AnalyzeDynamicDialog({
 
   if (!isOpen) return null;
 
-  const pt = data?.point || { x: 34.565, y: -18.661, z: 0.0 };
-  const tg = data?.tangent || { x: 0.0, y: -1.0, z: 0.0 };
-  const angle = data?.angle ?? 270.0;
+  const pt = data?.point || { x: -23.576, y: -2.841, z: 0.0 };
+  const nrm = data?.normal || data?.tangent || { x: 0.0, y: 0.0, z: -1.0 };
+  const angle = data?.angle ?? -90.0;
   const radius = data?.radius ?? 'Flat (infinite)';
   const diameter = data?.diameter ?? 'Flat (infinite)';
-  const colorIndex = data?.colorIndex ?? 1;
-  const colorR = data?.colorR ?? 0;
-  const colorG = data?.colorG ?? 0;
-  const colorB = data?.colorB ?? 128;
+  const colorIndex = data?.colorIndex ?? 136;
+  const colorR = data?.colorR ?? 255;
+  const colorG = data?.colorG ?? 128;
+  const colorB = data?.colorB ?? 64;
 
   const handleScaleChange = (val) => {
     const num = parseFloat(val) || 1.0;
@@ -43,7 +43,7 @@ export default function AnalyzeDynamicDialog({
         top: '60px',
         left: '260px',
         zIndex: 120,
-        width: '260px',
+        width: '220px',
         background: '#ffffff',
         border: '1px solid #94a3b8',
         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.22)',
@@ -54,7 +54,25 @@ export default function AnalyzeDynamicDialog({
         userSelect: 'none'
       }}
     >
-      {/* 1. Title Bar matching Image 4 */}
+      {/* Floating Prompt Guidance Banner matching Image 1 */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '-24px',
+          right: '-110px',
+          background: '#ffffff',
+          border: '1px solid #cbd5e1',
+          padding: '2px 8px',
+          fontSize: '11px',
+          color: '#334155',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        Position arrow and click to accept
+      </div>
+
+      {/* 1. Title Bar matching Image 1 */}
       <div
         style={{
           display: 'flex',
@@ -89,123 +107,131 @@ export default function AnalyzeDynamicDialog({
 
       {!isMinimized && (
         <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {/* Reverse Vector Direction Button (<-->) matching Image 4 */}
+          {/* Reverse Vector Direction Button (<-->) with blue/orange arrows matching Image 1 */}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <button
               type="button"
               onClick={onReverseVector}
-              title="Reverse Normal / Tangent Vector Direction"
+              title="Reverse Normal Vector Direction"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                padding: '3px 12px',
+                padding: '3px 14px',
                 background: '#f8fafc',
                 border: '1px solid #cbd5e1',
                 borderRadius: '2px',
                 cursor: 'pointer'
               }}
             >
-              <ArrowLeftRight size={16} color="#0284c7" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: '13px' }}>←</span>
+                <div style={{ width: '12px', height: '2px', background: '#475569' }} />
+                <span style={{ color: '#ea580c', fontWeight: 700, fontSize: '13px' }}>→</span>
+              </div>
             </button>
           </div>
 
-          {/* Coordinate Table: Point & Tangent (Matching Image 4) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          {/* Coordinate Table: Point & Normal (Matching Image 1) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 14px 1fr', gap: '4px', alignItems: 'center' }}>
             {/* Point */}
             <div>
-              <div style={{ fontWeight: 600, color: '#475569', marginBottom: '2px' }}>Point</div>
+              <div style={{ fontWeight: 600, color: '#475569', textAlign: 'center', marginBottom: '2px' }}>Point</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 <input
                   type="text"
                   readOnly
                   value={Number(pt.x).toFixed(3)}
-                  style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#f8fafc' }}
+                  style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'right' }}
                 />
                 <input
                   type="text"
                   readOnly
                   value={Number(pt.y).toFixed(3)}
-                  style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#f8fafc' }}
+                  style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'right' }}
                 />
                 <input
                   type="text"
                   readOnly
                   value={Number(pt.z).toFixed(3)}
-                  style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#f8fafc' }}
+                  style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'right' }}
                 />
               </div>
             </div>
 
-            {/* Tangent */}
+            {/* Labels X, Y, Z */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'center', color: '#64748b', fontSize: '10px', marginTop: '14px' }}>
+              <div>X</div>
+              <div>Y</div>
+              <div>Z</div>
+            </div>
+
+            {/* Normal */}
             <div>
-              <div style={{ fontWeight: 600, color: '#475569', marginBottom: '2px' }}>Tangent</div>
+              <div style={{ fontWeight: 600, color: '#475569', textAlign: 'center', marginBottom: '2px' }}>Normal</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                  <span style={{ fontSize: '10px', color: '#64748b', width: '12px' }}>X</span>
-                  <input
-                    type="text"
-                    readOnly
-                    value={Number(tg.x).toFixed(1)}
-                    style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#f8fafc' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                  <span style={{ fontSize: '10px', color: '#64748b', width: '12px' }}>Y</span>
-                  <input
-                    type="text"
-                    readOnly
-                    value={Number(tg.y).toFixed(1)}
-                    style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#f8fafc' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                  <span style={{ fontSize: '10px', color: '#64748b', width: '12px' }}>Z</span>
-                  <input
-                    type="text"
-                    readOnly
-                    value={Number(tg.z).toFixed(1)}
-                    style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#f8fafc' }}
-                  />
-                </div>
+                <input
+                  type="text"
+                  readOnly
+                  value={Number(nrm.x).toFixed(1)}
+                  style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'right' }}
+                />
+                <input
+                  type="text"
+                  readOnly
+                  value={Number(nrm.y).toFixed(1)}
+                  style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'right' }}
+                />
+                <input
+                  type="text"
+                  readOnly
+                  value={Number(nrm.z).toFixed(1)}
+                  style={{ width: '100%', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'right' }}
+                />
               </div>
             </div>
           </div>
 
           {/* Angle & Curvature */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ color: '#475569' }}>Angle:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: '12px', color: '#0284c7' }}>∠</span>
+              </div>
               <input
                 type="text"
                 readOnly
                 value={Number(angle).toFixed(1)}
-                style={{ width: '100px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#f8fafc' }}
+                style={{ flex: 1, padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'right' }}
               />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ color: '#475569' }}>Radius:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: '10px', color: '#b91c1c' }}>↗</span>
+              </div>
               <input
                 type="text"
                 readOnly
                 value={radius}
-                style={{ width: '100px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#f8fafc' }}
+                style={{ flex: 1, padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'center' }}
               />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ color: '#475569' }}>Diameter:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: '10px', color: '#b91c1c' }}>↔</span>
+              </div>
               <input
                 type="text"
                 readOnly
                 value={diameter}
-                style={{ width: '100px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#f8fafc' }}
+                style={{ flex: 1, padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'center' }}
               />
             </div>
           </div>
 
-          {/* Current Color & RGB Components matching Image 4 */}
+          {/* Current Color & RGB Components matching Image 1 */}
           <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ color: '#475569' }}>Current color:</span>
@@ -214,11 +240,11 @@ export default function AnalyzeDynamicDialog({
                   type="text"
                   readOnly
                   value={colorIndex}
-                  style={{ width: '40px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', textAlign: 'center' }}
+                  style={{ width: '38px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'center' }}
                 />
                 <div
                   style={{
-                    width: '18px',
+                    width: '20px',
                     height: '18px',
                     background: `rgb(${colorR}, ${colorG}, ${colorB})`,
                     border: '1px solid #64748b'
@@ -233,7 +259,7 @@ export default function AnalyzeDynamicDialog({
                 type="text"
                 readOnly
                 value={colorR}
-                style={{ width: '60px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', textAlign: 'right' }}
+                style={{ width: '50px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'right' }}
               />
             </div>
 
@@ -243,7 +269,7 @@ export default function AnalyzeDynamicDialog({
                 type="text"
                 readOnly
                 value={colorG}
-                style={{ width: '60px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', textAlign: 'right' }}
+                style={{ width: '50px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'right' }}
               />
             </div>
 
@@ -253,14 +279,14 @@ export default function AnalyzeDynamicDialog({
                 type="text"
                 readOnly
                 value={colorB}
-                style={{ width: '60px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', textAlign: 'right' }}
+                style={{ width: '50px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', background: '#e0f2fe', textAlign: 'right' }}
               />
             </div>
           </div>
 
-          {/* Arrow Scale Factor (Yellow box matching Image 4) */}
+          {/* Arrow Scale Factor (Yellow box matching Image 1) */}
           <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ color: '#475569' }}>Arrow scale factor:</span>
+            <span style={{ color: '#475569' }}>Arrow scale factor</span>
             <input
               type="number"
               step="0.1"
@@ -270,22 +296,22 @@ export default function AnalyzeDynamicDialog({
                 width: '60px',
                 padding: '2px 4px',
                 fontSize: '11px',
-                border: '1px solid #cbd5e1',
-                background: '#fef9c3', // Light yellow matching Image 4
+                border: '1px solid #ca8a04',
+                background: '#fef08a', // Light yellow matching Image 1
                 fontWeight: 600,
                 textAlign: 'center'
               }}
             />
           </div>
 
-          {/* Bottom Action Controls (Image 4): Green Checkmark, Help ? */}
+          {/* Bottom Action Controls (Image 1): Green Checkmark, Help ? */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', borderTop: '1px solid #e2e8f0', paddingTop: '6px' }}>
             <button
               type="button"
               onClick={onClose}
               title="OK (Accept and Close)"
               style={{
-                padding: '3px 12px',
+                padding: '3px 14px',
                 background: '#f1f5f9',
                 border: '1px solid #cbd5e1',
                 borderRadius: '2px',

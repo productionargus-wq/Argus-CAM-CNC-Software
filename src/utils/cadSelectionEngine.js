@@ -691,7 +691,40 @@ export function hitTestChainAtScreenPoint(entities = [], camera, width, height, 
 }
 
 /**
- * Picks the closest single CAD entity under a viewport CSS pixel coordinate (curves, points, and surfaces).
+ * Detects if the clicked screen coordinate is near a corner, endpoint, or vertex of any entity.
+ */
+export function hitTestCornerPointAtScreenPoint(entities = [], camera, screenPt, width, height, options = {}) {
+  const { tolerancePx = 12, worldYOffset = 49 } = options;
+  if (!camera || !screenPt || width <= 0 || height <= 0) return null;
+
+  let bestCorner = null;
+  let bestDist = tolerancePx;
+
+  (entities || []).forEach((entity) => {
+    if (!entity || entity.visible === false) return;
+    const { points } = sampleEntityWorldGeometry(entity, worldYOffset);
+    points.forEach((pt, idx) => {
+      const sp = projectPointToViewport(pt, camera, width, height);
+      if (!sp.visible) return;
+      const d = Math.hypot(screenPt.x - sp.x, screenPt.y - sp.y);
+      if (d < bestDist) {
+        bestDist = d;
+        bestCorner = {
+          point: pt.clone(),
+          screenPt: sp,
+          entity,
+          vertexIndex: idx,
+          isEndpoint: idx === 0 || idx === points.length - 1
+        };
+      }
+    });
+  });
+
+  return bestCorner;
+}
+
+/**
+ * Picks the closest single CAD entity under a viewport CSS pixel coordinate (curves, points, surfaces, and solids).
  */
 export function hitTestEntityAtScreenPoint(entities = [], camera, screenPt, width, height, options = {}) {
   const {
@@ -699,7 +732,8 @@ export function hitTestEntityAtScreenPoint(entities = [], camera, screenPt, widt
     worldYOffset = 49,
     mask = 'all',
     solidFilter = 'all',
-    layerVisibility = null
+    layerVisibility = null,
+    additionalMeshes = []
   } = options;
 
   if (!camera || !screenPt || width <= 0 || height <= 0) return null;
@@ -739,7 +773,7 @@ export function hitTestEntityAtScreenPoint(entities = [], camera, screenPt, widt
 
   if (bestWire) return bestWire;
 
-  // 2. Fallback: Three.js Raycaster against extruded surfaces / custom solids (in world Y = +worldYOffset)
+  // 2. Fallback: Three.js Raycaster against extruded surfaces / custom solids / workpiece solid meshes
   const ndc = new THREE.Vector2(
     (screenPt.x / width) * 2 - 1,
     -(screenPt.y / height) * 2 + 1
@@ -750,6 +784,7 @@ export function hitTestEntityAtScreenPoint(entities = [], camera, screenPt, widt
   let closestSurface = null;
   let closestRayDist = Infinity;
 
+  // Test custom surfaces and custom solids
   visibleEntities.forEach((entity) => {
     const cat = getCustomEntityCategory(entity);
     if (cat !== 'surface' && cat !== 'solid') return;
@@ -775,6 +810,15 @@ export function hitTestEntityAtScreenPoint(entities = [], camera, screenPt, widt
       closestSurface = entity;
     }
   });
+
+  // Test additional solid meshes (e.g. part workpiece)
+  if (Array.isArray(additionalMeshes) && additionalMeshes.length > 0) {
+    const hits = raycaster.intersectObjects(additionalMeshes, true);
+    if (hits.length > 0 && hits[0].distance < closestRayDist) {
+      closestRayDist = hits[0].distance;
+      closestSurface = hits[0].object;
+    }
+  }
 
   return closestSurface;
 }

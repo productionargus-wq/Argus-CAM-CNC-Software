@@ -19,6 +19,7 @@ import {
   hitTestEntitiesByArea,
   hitTestChainAtScreenPoint,
   hitTestEntityAtScreenPoint,
+  hitTestCornerPointAtScreenPoint,
   matchesSelectionMask,
   matchesTopologyFilter,
   summarizeSelectedEntities
@@ -977,6 +978,7 @@ export default function Viewport3D({
       mask: selectionMaskRef.current || 'all',
       solidFilter: solidFilterModeRef.current || 'all',
       layerVisibility: layerVisibilityRef.current,
+      additionalMeshes: partHolderGroupRef.current ? [partHolderGroupRef.current] : [],
       ...extra
     });
 
@@ -2303,7 +2305,8 @@ export default function Viewport3D({
         setSelectionMarquee(null);
 
         if (dragDist < 6) {
-          const picked = hitTestEntityAtScreenPoint(
+          const cornerHit = hitTestCornerPointAtScreenPoint(entities, camera, { x: curX, y: curY }, rect.width, rect.height);
+          let picked = cornerHit ? cornerHit.entity : hitTestEntityAtScreenPoint(
             entities,
             camera,
             { x: curX, y: curY },
@@ -2316,6 +2319,23 @@ export default function Viewport3D({
               onSelectChainEntityRef.current(picked);
             }
           } else {
+            if (!picked) {
+              const faceHit = raycastSolidFaceAtClient(e.clientX, e.clientY);
+              if (faceHit?.hitFace) {
+                const { faceIds } = resolveSolidFaceSelectionAction(
+                  solidFaceCatalogRef.current,
+                  faceHit.hitFace,
+                  { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey || e.metaKey, altKey: e.altKey, clickCount: 1, rayHits: faceHit.hits }
+                );
+                setSelectedSolidFaceIds((prev) => {
+                  if (!additive && faceIds.length === 1) {
+                    return prev.length === 1 && prev[0] === faceIds[0] ? [] : faceIds;
+                  }
+                  return [...new Set([...prev, ...faceIds])];
+                });
+                return;
+              }
+            }
             applyMatchedEntities(picked ? [picked] : [], 'selection', additive, true);
           }
           return;
@@ -2354,7 +2374,25 @@ export default function Viewport3D({
           const entities = customGeometryRef.current || [];
 
           if (effMethod === 'single') {
-            const picked = hitTestEntityAtScreenPoint(entities, camera, { x: curX, y: curY }, rect.width, rect.height, resolveSelectionFilterOpts());
+            const cornerHit = hitTestCornerPointAtScreenPoint(entities, camera, { x: curX, y: curY }, rect.width, rect.height);
+            let picked = cornerHit ? cornerHit.entity : hitTestEntityAtScreenPoint(entities, camera, { x: curX, y: curY }, rect.width, rect.height, resolveSelectionFilterOpts());
+            if (!picked) {
+              const faceHit = raycastSolidFaceAtClient(e.clientX, e.clientY);
+              if (faceHit?.hitFace) {
+                const { faceIds } = resolveSolidFaceSelectionAction(
+                  solidFaceCatalogRef.current,
+                  faceHit.hitFace,
+                  { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey || e.metaKey, altKey: e.altKey, clickCount: 1, rayHits: faceHit.hits }
+                );
+                setSelectedSolidFaceIds((prev) => {
+                  if (!additive && faceIds.length === 1) {
+                    return prev.length === 1 && prev[0] === faceIds[0] ? [] : faceIds;
+                  }
+                  return [...new Set([...prev, ...faceIds])];
+                });
+                return;
+              }
+            }
             applyMatchedEntities(picked ? [picked] : [], 'selection', additive, true);
             return;
           }
@@ -3902,7 +3940,35 @@ export default function Viewport3D({
         const ud = entity.userData || {};
         if (ud.center) {
           gripPts.push(ud.center.x || 0, (ud.center.y || 0) + 0.22, ud.center.z || 0);
+          // Quadrant arc center mark (Image 4)
+          const sz = 2.0;
+          const cx = ud.center.x || 0;
+          const cy = (ud.center.y || 0) + 0.25;
+          const cz = ud.center.z || 0;
+          const cGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(cx - sz, cy, cz), new THREE.Vector3(cx + sz, cy, cz),
+            new THREE.Vector3(cx, cy, cz - sz), new THREE.Vector3(cx, cy, cz + sz)
+          ]);
+          group.add(new THREE.LineSegments(cGeo, new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 })));
         }
+
+        const isLineEntity = ud.cadType === 'line' || ud.type === 'line' || (ud.p1 && ud.p2) || (points.length === 2);
+        if (isLineEntity && points.length >= 2) {
+          // Image 5: Green '+' on Endpoint 1 and Red '+' on Endpoint 2
+          const p1 = points[0];
+          const p2 = points[points.length - 1];
+          const crossSize = 1.4;
+          const mkCross = (pt, col) => {
+            const geo = new THREE.BufferGeometry().setFromPoints([
+              new THREE.Vector3(pt.x - crossSize, pt.y + 0.25, pt.z), new THREE.Vector3(pt.x + crossSize, pt.y + 0.25, pt.z),
+              new THREE.Vector3(pt.x, pt.y + 0.25, pt.z - crossSize), new THREE.Vector3(pt.x, pt.y + 0.25, pt.z + crossSize)
+            ]);
+            return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: col, linewidth: 3 }));
+          };
+          group.add(mkCross(p1, 0x16a34a)); // Endpoint 1: Green '+'
+          group.add(mkCross(p2, 0xdc2626)); // Endpoint 2: Red '+'
+        }
+
         const stride = points.length > 24 ? Math.max(1, Math.floor(points.length / 8)) : 1;
         for (let i = 0; i < points.length; i += stride) {
           gripPts.push(points[i].x, points[i].y + 0.22, points[i].z);

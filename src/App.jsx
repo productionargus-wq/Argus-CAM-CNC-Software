@@ -105,6 +105,7 @@ import SelectProbeModal from './components/SelectProbeModal';
 import ProbingDialogHUD from './components/ProbingDialogHUD';
 import SolidExtrudePanel from './components/SolidExtrudePanel';
 import AnalyzeDynamicDialog from './components/AnalyzeDynamicDialog';
+import MastercamEntityPropertiesDialog from './components/MastercamEntityPropertiesDialog';
 import StatusBar from './components/StatusBar';
 import ViewsheetBar from './components/ViewsheetBar';
 import AIVoiceButton from './components/AIVoiceButton';
@@ -743,6 +744,10 @@ export default function App() {
   const [isOperationModalOpen, setIsOperationModalOpen] = useState(false);
   const [isGCodeViewerOpen, setIsGCodeViewerOpen] = useState(false);
   const [isEntityAnalyzerOpen, setIsEntityAnalyzerOpen] = useState(false);
+  const [isEntityPropertiesOpen, setIsEntityPropertiesOpen] = useState(false);
+  const [inspectedEntity, setInspectedEntity] = useState(null);
+  const [selectionStepHUD, setSelectionStepHUD] = useState(null);
+  const [activeOpCreationWorkflow, setActiveOpCreationWorkflow] = useState(null);
   const [isDistanceCaliperOpen, setIsDistanceCaliperOpen] = useState(false);
   const [isSetupSheetOpen, setIsSetupSheetOpen] = useState(false);
   const [isHelpGuideOpen, setIsHelpGuideOpen] = useState(false);
@@ -1838,6 +1843,11 @@ export default function App() {
   const handleToggleSelectedToolpathRef = useRef(null);
   const handleToggleAllToolpathsRef = useRef(null);
   const activeOpIdRef = useRef(activeOpId);
+  const handleEndSelectionRef = useRef(null);
+  const handleCancelSelectionRef = useRef(null);
+  const handleOpenAnalyzeSelectionRef = useRef(null);
+  const selectionStepHUDRef = useRef(null);
+  const activeFacePickRoleRef = useRef(null);
   useEffect(() => {
     handleUndoRef.current = handleUndo;
     handleRedoRef.current = handleRedo;
@@ -1845,6 +1855,11 @@ export default function App() {
     handleToggleSelectedToolpathRef.current = handleToggleSelectedToolpath;
     handleToggleAllToolpathsRef.current = handleToggleAllToolpaths;
     activeOpIdRef.current = activeOpId;
+    handleEndSelectionRef.current = handleEndSelection;
+    handleCancelSelectionRef.current = handleCancelSelection;
+    handleOpenAnalyzeSelectionRef.current = handleOpenAnalyzeSelection;
+    selectionStepHUDRef.current = selectionStepHUD;
+    activeFacePickRoleRef.current = activeFacePickRole;
   });
 
   // Keyboard shortcut listener for Ctrl+Z, Ctrl+Y, Ctrl+N, Ctrl+O, Alt+T
@@ -1905,7 +1920,19 @@ export default function App() {
 
       if (e.key === 'F4' || e.code === 'F4') {
         e.preventDefault();
-        setIsEntityAnalyzerOpen(true);
+        handleOpenAnalyzeSelectionRef.current?.();
+        return;
+      }
+
+      if (e.key === 'Enter' && (selectionStepHUDRef.current || activeFacePickRoleRef.current)) {
+        e.preventDefault();
+        handleEndSelectionRef.current?.();
+        return;
+      }
+
+      if (e.key === 'Escape' && (selectionStepHUDRef.current || activeFacePickRoleRef.current)) {
+        e.preventDefault();
+        handleCancelSelectionRef.current?.();
         return;
       }
 
@@ -2439,7 +2466,57 @@ export default function App() {
     setLayerVisibility((prev) => ({ ...prev, toolpaths: true }));
   };
 
-  const handleQuickAddOp = (strategy) => {
+  const handleOpenAnalyzeSelection = (entity = null) => {
+    const target = entity || (selectedEntitiesList.length === 1 ? selectedEntitiesList[0] : null);
+    if (target) {
+      setInspectedEntity(target);
+      setIsEntityPropertiesOpen(true);
+    } else if (selectedEntitiesList.length > 1) {
+      setIsEntityAnalyzerOpen(true);
+    } else {
+      setInspectedEntity({ type: 'line', p1: { x: 17.413, y: -32.616, z: 0.0 }, p2: { x: 17.413, y: -98.628, z: 0.0 } });
+      setIsEntityPropertiesOpen(true);
+    }
+  };
+
+  const handleEndSelection = () => {
+    // 1. Solid face selection role (Drive / Check / Containment)
+    if (activeFacePickRole) {
+      const role = activeFacePickRole;
+      setActiveFacePickRole(null);
+      setSelectionStepHUD(null);
+      const count = role === 'check' ? surfaceSelectionDraft.checkFaceIds.length : surfaceSelectionDraft.driveFaceIds.length;
+      showToast(`Finished ${role} surfaces selection (${count} face(s)).`, 'success');
+      return;
+    }
+
+    // 2. Active op creation workflow (2D Chaining or Drill)
+    if (activeOpCreationWorkflow) {
+      const { strategy } = activeOpCreationWorkflow;
+      setActiveOpCreationWorkflow(null);
+      setIsChainingPaletteOpen(false);
+      setSelectionStepHUD(null);
+      setIsSelectModeActive(false);
+
+      executeAddOp(strategy);
+      showToast(`Geometry selected. Configuring ${strategy.toUpperCase()} parameters.`, 'success');
+      return;
+    }
+
+    setSelectionStepHUD(null);
+    setIsSelectModeActive(false);
+  };
+
+  const handleCancelSelection = () => {
+    setActiveFacePickRole(null);
+    setActiveOpCreationWorkflow(null);
+    setIsChainingPaletteOpen(false);
+    setSelectionStepHUD(null);
+    setIsSelectModeActive(false);
+    showToast('Selection canceled.', 'info');
+  };
+
+  const executeAddOp = (strategy) => {
     const numericIds = (operations || []).map((o) => Number(o.id)).filter((n) => Number.isFinite(n));
     const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
     let newOp;
@@ -2775,6 +2852,83 @@ export default function App() {
       setIsNewOperation(true);
       setIsMastercamToolpathModalOpen(true);
     }
+  };
+
+  const handleQuickAddOp = (strategy, options = {}) => {
+    const s = String(strategy || 'pocket').toLowerCase();
+    const { skipSelection = false } = options;
+
+    // 1. 3D Surface Toolpaths -> Toolpath/Surface Selection Modal
+    const is3DSurface = (
+      s === 'flowline' || s === 'surface_finish_flowline' ||
+      s === 'shallow' || s === 'surface_finish_shallow' ||
+      s === 'parallel' || s === 'surface_finish_parallel' || s === '3d_parallel' ||
+      s === 'parallel_steep' || s === 'surface_finish_parallel_steep' || s === '3d_parallel_steep' ||
+      s === 'pencil' || s === 'surface_finish_pencil' || s === '3d_pencil' ||
+      s === 'radial' || s === 'surface_finish_radial' || s === '3d_radial' ||
+      s === 'project' || s === 'surface_finish_project' || s === '3d_project' ||
+      s === 'leftover' || s === 'surface_finish_leftover' || s === '3d_leftover' || s === '3d_finish_leftover' ||
+      s === 'scallop' || s === 'surface_finish_scallop' || s === '3d_scallop' || s === 'equal_scallop' || s === '3d_equal_scallop' ||
+      s === 'blend' || s === 'surface_finish_blend' || s === '3d_blend' || s === '3d_finish_blend' ||
+      s === 'optirough' || s === 'surface_rough_optirough' ||
+      s === 'surface_rough_pocket' || s === 'pocket_rough' || s === 'rough_pocket' ||
+      s === 'surface_rough_parallel' || s === 'parallel_rough' || s === 'rough_parallel' ||
+      s === 'surface_rough_waterline' || s === 'waterline_rough' || s === 'rough_waterline' ||
+      s === 'contour_3d' || s === 'surface_finish_contour'
+    );
+
+    if (is3DSurface && !skipSelection) {
+      const mode = s.replace('surface_finish_', '').replace('surface_rough_', '').replace('3d_', '');
+      openSurfaceFinishSelection(mode, null);
+      setActiveFacePickRole('drive');
+      setSelectionStepHUD({
+        prompt: `Drive: Select drive surfaces for ${mode.toUpperCase()}`,
+        type: '3d',
+        strategy: s
+      });
+      showToast(`Drive Surfaces: Select solid surfaces in viewport, then click End Selection (Enter).`, 'info');
+      return;
+    }
+
+    // 2. Drill Toolpaths
+    const isDrill = (s === 'drill' || s === 'drilling' || s === 'point' || s === 'spotdrill' || s === 'spot_drill' || s === 'spot');
+    if (isDrill && !skipSelection && selectedEntityIds.length === 0) {
+      setActiveOpCreationWorkflow({ strategy: s, type: 'drill' });
+      setIsSelectModeActive(true);
+      setSelectionStepHUD({
+        prompt: `Drill: Select hole points, arc centers, or corners`,
+        type: 'drill',
+        strategy: s
+      });
+      showToast(`Drill: Select hole points or arc centers in viewport, then click End Selection (Enter).`, 'info');
+      return;
+    }
+
+    // 3. 2D Milling Toolpaths
+    const is2D = (
+      s === 'contour' || s === 'wireframe_contour' ||
+      s === 'pocket' || s === 'dynamic_mill' || s === 'adaptive' ||
+      s === 'face' || s === 'facing' ||
+      s === 'circlemill' || s === 'circle_mill' ||
+      s === 'engrave' || s === 'vcarve' ||
+      s === 'chamfer' || s === 'rest' || s === 'rest_milling'
+    );
+
+    if (is2D && !skipSelection && selectedExtrudeChains.length === 0 && selectedEntityIds.length === 0) {
+      setActiveOpCreationWorkflow({ strategy: s, type: '2d' });
+      setIsChainingPaletteOpen(true);
+      setChainingPromptText(`${s.toUpperCase()}: select chain 1`);
+      setSelectionStepHUD({
+        prompt: `${s.toUpperCase()}: Select wireframe chain 1 in viewport`,
+        type: '2d',
+        strategy: s
+      });
+      setIsSelectModeActive(true);
+      showToast(`${s.toUpperCase()}: Select wireframe chain in viewport, then click End Selection (Enter).`, 'info');
+      return;
+    }
+
+    executeAddOp(s);
   };
 
   const handleAddProbingOp = (cycleConfig) => {
@@ -7290,6 +7444,11 @@ export default function App() {
   };
 
   const handleConfirmChaining = () => {
+    if (activeOpCreationWorkflow) {
+      handleEndSelection();
+      return;
+    }
+
     if (isSolidExtrudeActive) {
       const curChains = selectedExtrudeChains.length > 0
         ? selectedExtrudeChains
@@ -8487,7 +8646,7 @@ export default function App() {
                 onBlankSelectedEntities={handleBlankSelectedEntities}
                 onRequestExtrudeSelection={handleExtrudeFromSelection}
                 onRequestTransformSelection={() => handleOpenTransformModal('translate')}
-                onAnalyzeSelection={() => setIsEntityAnalyzerOpen(true)}
+                onAnalyzeSelection={handleOpenAnalyzeSelection}
                 snapMode={snapMode}
                 onChangeSnapMode={setSnapMode}
                 isAutoCursorLocked={isAutoCursorLocked}
@@ -8531,6 +8690,97 @@ export default function App() {
 
         {workspaceViewMode === '3d' && (
           <div style={{ position: 'relative', flex: 1, width: '100%', height: '100%', display: 'flex', minWidth: 0 }}>
+            {/* Mastercam Interactive Selection Step HUD (Images 1, 3, 4, 5) */}
+            {(selectionStepHUD || activeFacePickRole) && (
+              <div
+                data-testid="selection-step-hud"
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 80,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'rgba(255, 255, 255, 0.96)',
+                  border: '1px solid #94a3b8',
+                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.22)',
+                  borderRadius: '3px',
+                  padding: '4px 12px',
+                  fontFamily: "'Segoe UI', Tahoma, sans-serif",
+                  fontSize: '11.5px',
+                  color: '#1e293b',
+                  userSelect: 'none'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontWeight: 600, color: '#0369a1' }}>
+                    {activeFacePickRole
+                      ? `Select ${activeFacePickRole === 'check' ? 'Check' : 'Drive'} solid surfaces in viewport`
+                      : (selectionStepHUD?.prompt || 'Select geometry in viewport')}
+                  </span>
+                  {activeFacePickRole && (
+                    <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '8px', fontSize: '10.5px', fontWeight: 600 }}>
+                      {activeFacePickRole === 'check' ? surfaceSelectionDraft.checkFaceIds.length : surfaceSelectionDraft.driveFaceIds.length} selected
+                    </span>
+                  )}
+                  {!activeFacePickRole && selectedEntityIds.length > 0 && (
+                    <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '8px', fontSize: '10.5px', fontWeight: 600 }}>
+                      {selectedEntityIds.length} selected
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ height: '16px', width: '1px', background: '#cbd5e1' }} />
+
+                <button
+                  type="button"
+                  onClick={handleEndSelection}
+                  title="End Selection (Enter)"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 10px',
+                    background: '#16a34a',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '2px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '11px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
+                  }}
+                >
+                  <Check size={13} strokeWidth={2.5} />
+                  <span>End Selection</span>
+                  <span style={{ opacity: 0.8, fontSize: '10px' }}>(Enter)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCancelSelection}
+                  title="Cancel Selection (Esc)"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 8px',
+                    background: '#f1f5f9',
+                    color: '#475569',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '2px',
+                    cursor: 'pointer',
+                    fontSize: '11px'
+                  }}
+                >
+                  <X size={13} color="#dc2626" />
+                  <span>Cancel</span>
+                  <span style={{ opacity: 0.7, fontSize: '10px' }}>(Esc)</span>
+                </button>
+              </div>
+            )}
             <ChainingPalette
               isOpen={isChainingPaletteOpen}
               chainMode={chainingConfig.chainMode}
@@ -8635,7 +8885,7 @@ export default function App() {
               onBlankSelectedEntities={handleBlankSelectedEntities}
               onRequestExtrudeSelection={handleExtrudeFromSelection}
               onRequestTransformSelection={() => handleOpenTransformModal('translate')}
-              onAnalyzeSelection={() => setIsEntityAnalyzerOpen(true)}
+              onAnalyzeSelection={handleOpenAnalyzeSelection}
               snapMode={snapMode}
               onChangeSnapMode={setSnapMode}
               isAutoCursorLocked={isAutoCursorLocked}
@@ -9689,6 +9939,14 @@ export default function App() {
           } : null);
           showToast('Reversed dynamic evaluation vector direction', 'info');
         }}
+      />
+
+      {/* Mastercam Arc & Line Properties Floating Palette (Images 4 & 5) */}
+      <MastercamEntityPropertiesDialog
+        isOpen={isEntityPropertiesOpen}
+        onClose={() => setIsEntityPropertiesOpen(false)}
+        entity={inspectedEntity}
+        onUpdateEntity={handleUpdateCustomEntityProps}
       />
 
       {/* 12. Entity Analyzer CAD Inspector Modal */}
