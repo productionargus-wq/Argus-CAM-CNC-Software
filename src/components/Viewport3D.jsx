@@ -4482,7 +4482,7 @@ export default function Viewport3D({
     const allPlanes = planes && planes.length > 0 ? planes : DEFAULT_PLANES;
     const currentPlane = allPlanes.find((p) => p.name === activePlane) || allPlanes[0];
     if (currentPlane) {
-      const helperGroup = buildCPlaneHelperGroup(currentPlane, 240, theme === 'light', layerVisibility.bed !== false);
+      const helperGroup = buildCPlaneHelperGroup(currentPlane, 240, theme === 'light', false);
       scene.add(helperGroup);
       cplaneHelperGroupRef.current = helperGroup;
     }
@@ -5109,12 +5109,31 @@ export default function Viewport3D({
     if (maskId === 'clear') {
       onChangeSelectionMask?.('all');
       onChangeSelectedEntities?.([]);
+      setSelectedSolidFaceIds([]);
       return;
     }
+    if (maskId === 'settings' || maskId === 'palette') {
+      if (onOpenSelectAllModal) onOpenSelectAllModal();
+      return;
+    }
+    if (maskId === 'levels') {
+      if (onSwitchToLevels) onSwitchToLevels();
+      const matched = getFilteredSelectableEntities('all').map(getCustomEntityId).filter(Boolean);
+      onChangeSelectedEntities?.(matched);
+      return;
+    }
+    if (maskId === 'groups') {
+      if (onOpenGroups) onOpenGroups();
+      return;
+    }
+
     const nextMask = selectionMask === maskId && maskId !== 'all' ? 'all' : maskId;
     onChangeSelectionMask?.(nextMask);
-    if (nextMask !== 'all' && nextMask !== 'colors' && onChangeSelectedEntities) {
-      const matchedIds = getFilteredSelectableEntities(nextMask).map(getCustomEntityId).filter(Boolean);
+    if (nextMask !== 'all' && onChangeSelectedEntities) {
+      let matchedIds = getFilteredSelectableEntities(nextMask).map(getCustomEntityId).filter(Boolean);
+      if (nextMask === 'solids' && currentModel) {
+        matchedIds = ['model_workpiece', ...matchedIds];
+      }
       onChangeSelectedEntities(matchedIds);
     }
   };

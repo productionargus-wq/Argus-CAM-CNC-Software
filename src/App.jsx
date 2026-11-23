@@ -174,7 +174,7 @@ import {
   computeModifyLength,
   computeCloseArc
 } from './utils/cadDrawingEngine';
-import { getCustomEntityId, transformCustomEntityClone } from './utils/cadSelectionEngine';
+import { getCustomEntityId, getCustomEntityCategory, transformCustomEntityClone } from './utils/cadSelectionEngine';
 import CNCDesignBoard from './components/CNCDesignBoard';
 import { convertBoardDiagramsToToolpaths, getCADTemplate } from './utils/cncBoardEngine';
 
@@ -1769,7 +1769,62 @@ export default function App() {
   const handleOpenAnalyzeSelectionRef = useRef(null);
   const selectionStepHUDRef = useRef(null);
   const activeFacePickRoleRef = useRef(null);
+  const selectedEntityIdsRef = useRef(selectedEntityIds);
+  const handleQuickMaskLineSelectRef = useRef(null);
+
+  const handleQuickMaskLineSelect = () => {
+    const list = customGeometryRef.current || customGeometry || [];
+    const lines = list.filter((ent) => {
+      if (!ent || ent.visible === false) return false;
+      const cat = getCustomEntityCategory(ent);
+      return cat === 'line' || cat === 'rect';
+    });
+
+    if (lines.length > 0) {
+      const lineIds = lines.map(getCustomEntityId).filter(Boolean);
+      const currentSelected = selectedEntityIdsRef.current || [];
+      const currentLineIdx = lines.findIndex((l) => currentSelected.includes(getCustomEntityId(l)));
+      let nextIds = [];
+      let label = '';
+
+      if (currentLineIdx === -1) {
+        nextIds = [lineIds[0]];
+        label = lines[0].name || `Line #${lineIds[0]}`;
+      } else if (currentLineIdx < lines.length - 1) {
+        const nextLine = lines[currentLineIdx + 1];
+        nextIds = [getCustomEntityId(nextLine)];
+        label = nextLine.name || `Line #${nextIds[0]}`;
+      } else if (currentSelected.length === 1 && lines.length > 1) {
+        nextIds = lineIds;
+        label = `All ${lines.length} Line(s)`;
+      } else {
+        nextIds = [lineIds[0]];
+        label = lines[0].name || `Line #${lineIds[0]}`;
+      }
+
+      setSelectionMask('lines');
+      setSelectedEntityIds(nextIds);
+      showToast(`Quick Mask (Ctrl+Q): Selected ${label}`, 'success', 1600);
+    } else {
+      const wireframes = list.filter((ent) => {
+        if (!ent || ent.visible === false) return false;
+        const cat = getCustomEntityCategory(ent);
+        return ['line', 'circle', 'rect', 'arc', 'spline'].includes(cat);
+      });
+      if (wireframes.length > 0) {
+        const wf = wireframes[0];
+        setSelectionMask('wireframe');
+        setSelectedEntityIds([getCustomEntityId(wf)]);
+        showToast(`Quick Mask (Ctrl+Q): Selected wireframe (${wf.name || 'Entity'})`, 'success', 1600);
+      } else {
+        showToast('Quick Mask (Ctrl+Q): No wireframe entities on canvas to select', 'info', 1600);
+      }
+    }
+  };
+
   useEffect(() => {
+    selectedEntityIdsRef.current = selectedEntityIds;
+    handleQuickMaskLineSelectRef.current = handleQuickMaskLineSelect;
     handleUndoRef.current = handleUndo;
     handleRedoRef.current = handleRedo;
     handleOpenViaNativeDialogRef.current = handleOpenViaNativeDialog;
@@ -1844,6 +1899,16 @@ export default function App() {
       if (isCtrlOrMeta && (lowerKey === 'o' || e.code === 'KeyO')) {
         e.preventDefault();
         handleOpenViaNativeDialogRef.current?.();
+        return;
+      }
+
+      // Mastercam Standard Shortcut: Ctrl+Q Quick Mask Wireframe (Line) Selection
+      if (isCtrlOrMeta && (lowerKey === 'q' || e.code === 'KeyQ')) {
+        if (target && (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        handleQuickMaskLineSelectRef.current?.();
         return;
       }
 

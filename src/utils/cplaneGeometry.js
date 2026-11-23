@@ -246,8 +246,8 @@ export function buildCPlaneHelperGroup(plane, size = 260, isLight = true, showGr
   const v = new THREE.Vector3(plane.vAxis.x, plane.vAxis.y, plane.vAxis.z).normalize();
   const n = new THREE.Vector3(plane.normal.x, plane.normal.y, plane.normal.z).normalize();
 
-  // 1. Oriented Grid (Optional in clean Mastercam blank mode)
-  if (showGrid) {
+  // 1. Oriented Grid (Disabled to keep canvas background clean without white gridlines)
+  if (showGrid === true) {
     const subGridColor = isLight ? 0xcbd5e1 : 0x1e293b;
     const gridHelper = new THREE.GridHelper(size, 26, 0x0284c7, subGridColor);
     gridHelper.position.set(0, 0, 0);

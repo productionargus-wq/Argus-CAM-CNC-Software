@@ -184,7 +184,7 @@ export default function SurfaceExtrudePanel({
             data-testid="extrude-apply-btn"
             onClick={onApply}
             disabled={!hasChains || isChainingOpen}
-            title="OK and Create New Operation"
+            title="OK and Create New Operation (Apply ✓+)"
             style={{
               width: '22px',
               height: '22px',
@@ -201,8 +201,10 @@ export default function SurfaceExtrudePanel({
               boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="2 12.5 6.5 17 14 7.5" />
+              <line x1="18.5" y1="4.5" x2="18.5" y2="13.5" />
+              <line x1="14" y1="9" x2="23" y2="9" />
             </svg>
           </button>
 

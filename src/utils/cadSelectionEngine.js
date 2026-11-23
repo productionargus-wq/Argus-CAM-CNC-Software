@@ -109,6 +109,8 @@ export function matchesSelectionMask(entity, mask = 'all') {
   if (mask === 'surfaces') return cat === 'surface';
   if (mask === 'solids') return cat === 'solid' || cat === 'surface';
   if (mask === 'drafting') return cat === 'drafting';
+  if (mask === 'levels' || mask === 'activeLevel') return true;
+  if (mask === 'groups') return true;
   if (mask === 'extents') return cat === 'drafting' || ['line', 'circle', 'rect', 'arc', 'spline'].includes(cat);
   if (typeof mask === 'string' && mask.startsWith('color:')) {
     const targetColor = mask.replace('color:', '').trim().toLowerCase();
