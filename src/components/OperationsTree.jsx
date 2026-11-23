@@ -142,13 +142,14 @@ export default function OperationsTree({
   onOkRect,
   onCancelRect,
   // Line Endpoints Props
-  lineParams = { length: 50, angle: 0, isLengthLocked: false, isAngleLocked: false, lineType: 'freeform', isTangent: false, lineMethod: 'two_endpoints', activeEndpoint: 1, axisOffset: 0 },
+  lineParams = { length: 50, angle: 0, isLengthLocked: false, isAngleLocked: false, lineType: 'freeform', isTangent: false, isLineContinuous: true, lineMethod: 'two_endpoints', activeEndpoint: 1, axisOffset: 0 },
   onChangeLineLength,
   onChangeLineAngle,
   onToggleLineLengthLock,
   onToggleLineAngleLock,
   onChangeLineType,
   onToggleLineTangent,
+  onToggleLineContinuous,
   onChangeLineMethod,
   onSelectLineEndpoint,
   onChangeLineAxisOffset,
@@ -780,6 +781,8 @@ export default function OperationsTree({
             onChangeLineType={onChangeLineType}
             isTangent={lineParams?.isTangent || false}
             onToggleTangent={onToggleLineTangent}
+            isLineContinuous={lineParams?.isLineContinuous ?? true}
+            onToggleContinuous={onToggleLineContinuous}
             lineMethod={lineParams?.lineMethod || 'two_endpoints'}
             onChangeLineMethod={onChangeLineMethod}
             activeEndpoint={lineParams?.activeEndpoint || 1}

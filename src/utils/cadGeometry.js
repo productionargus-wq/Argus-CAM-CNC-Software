@@ -3120,7 +3120,176 @@ export function createWireframePolygon(
   const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
   const line = new THREE.Line(geo, mat);
   line.name = options.name || `Wireframe_Polygon_${n}S_R${radius}`;
-  line.userData = { type: 'polygon', sides: n, radius, rotationDeg, center: [cx, y, cz] };
+  line.userData = { type: 'polygon', cadType: 'polygon', sides: n, radius, rotationDeg, center: [cx, y, cz] };
+  return line;
+}
+
+/**
+ * Creates an Obround (slot shape with rounded semi-circular ends)
+ */
+export function createWireframeObround(
+  width = 60,
+  height = 30,
+  y = 0,
+  center = [0, 0],
+  options = {}
+) {
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+  const w = Math.max(1, width);
+  const h = Math.max(1, height);
+  const points = [];
+  const segments = 24;
+
+  if (w >= h) {
+    const r = h / 2;
+    const straightLen = w - h;
+    const halfStraight = straightLen / 2;
+    // Right cap center: cx + halfStraight, cz
+    for (let i = 0; i <= segments; i++) {
+      const theta = -Math.PI / 2 + (i / segments) * Math.PI;
+      points.push(new THREE.Vector3(cx + halfStraight + Math.cos(theta) * r, y, cz + Math.sin(theta) * r));
+    }
+    // Left cap center: cx - halfStraight, cz
+    for (let i = 0; i <= segments; i++) {
+      const theta = Math.PI / 2 + (i / segments) * Math.PI;
+      points.push(new THREE.Vector3(cx - halfStraight + Math.cos(theta) * r, y, cz + Math.sin(theta) * r));
+    }
+  } else {
+    const r = w / 2;
+    const straightLen = h - w;
+    const halfStraight = straightLen / 2;
+    // Bottom cap center: cx, cz + halfStraight
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI;
+      points.push(new THREE.Vector3(cx + Math.cos(theta) * r, y, cz + halfStraight + Math.sin(theta) * r));
+    }
+    // Top cap center: cx, cz - halfStraight
+    for (let i = 0; i <= segments; i++) {
+      const theta = Math.PI + (i / segments) * Math.PI;
+      points.push(new THREE.Vector3(cx + Math.cos(theta) * r, y, cz - halfStraight + Math.sin(theta) * r));
+    }
+  }
+  // Close loop
+  if (points.length > 0) points.push(points[0].clone());
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0x38bdf8;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  line.name = options.name || `Wireframe_Obround_${Math.round(w)}x${Math.round(h)}`;
+  line.userData = { type: 'obround', cadType: 'obround', width: w, height: h, center: [cx, y, cz] };
+  return line;
+}
+
+/**
+ * Creates an Ellipse wireframe curve
+ */
+export function createWireframeEllipse(
+  radiusX = 40,
+  radiusZ = 25,
+  y = 0,
+  rotationDeg = 0,
+  center = [0, 0],
+  options = {}
+) {
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+  const rx = Math.max(0.5, radiusX);
+  const rz = Math.max(0.5, radiusZ);
+  const rotRad = (rotationDeg * Math.PI) / 180;
+  const cosRot = Math.cos(rotRad);
+  const sinRot = Math.sin(rotRad);
+  const points = [];
+  const segments = 64;
+
+  for (let i = 0; i <= segments; i++) {
+    const theta = (i / segments) * Math.PI * 2;
+    const px = Math.cos(theta) * rx;
+    const pz = Math.sin(theta) * rz;
+    const rotX = px * cosRot - pz * sinRot;
+    const rotZ = px * sinRot + pz * cosRot;
+    points.push(new THREE.Vector3(cx + rotX, y, cz + rotZ));
+  }
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0x38bdf8;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  line.name = options.name || `Wireframe_Ellipse_Rx${Math.round(rx)}_Rz${Math.round(rz)}`;
+  line.userData = { type: 'ellipse', cadType: 'ellipse', radiusX: rx, radiusZ: rz, rotationDeg, center: [cx, y, cz] };
+  return line;
+}
+
+/**
+ * Creates a 3D Helix wireframe curve
+ */
+export function createWireframeHelix(
+  radius = 25,
+  pitch = 10,
+  height = 50,
+  y = 0,
+  center = [0, 0],
+  options = {}
+) {
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+  const r = Math.max(1, radius);
+  const p = Math.max(0.5, pitch);
+  const h = Math.max(1, height);
+  const totalTurns = h / p;
+  const segmentsPerTurn = 36;
+  const totalSegments = Math.max(36, Math.round(totalTurns * segmentsPerTurn));
+  const points = [];
+
+  for (let i = 0; i <= totalSegments; i++) {
+    const frac = i / totalSegments;
+    const theta = frac * totalTurns * Math.PI * 2;
+    const curY = y + frac * h;
+    points.push(new THREE.Vector3(cx + Math.cos(theta) * r, curY, cz + Math.sin(theta) * r));
+  }
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0x38bdf8;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  line.name = options.name || `Wireframe_Helix_R${Math.round(r)}_P${Math.round(p)}_H${Math.round(h)}`;
+  line.userData = { type: 'helix', cadType: 'helix', radius: r, pitch: p, height: h, center: [cx, y, cz] };
+  return line;
+}
+
+/**
+ * Creates a 2D Archimedean Spiral wireframe curve
+ */
+export function createWireframeSpiral(
+  startRadius = 5,
+  endRadius = 40,
+  turns = 3,
+  y = 0,
+  center = [0, 0],
+  options = {}
+) {
+  const cx = center[0] || 0;
+  const cz = center[1] || 0;
+  const r0 = Math.max(0, startRadius);
+  const r1 = Math.max(r0 + 1, endRadius);
+  const nTurns = Math.max(0.5, turns);
+  const totalSegments = Math.round(nTurns * 48);
+  const points = [];
+
+  for (let i = 0; i <= totalSegments; i++) {
+    const frac = i / totalSegments;
+    const theta = frac * nTurns * Math.PI * 2;
+    const r = r0 + (r1 - r0) * frac;
+    points.push(new THREE.Vector3(cx + Math.cos(theta) * r, y, cz + Math.sin(theta) * r));
+  }
+
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const color = options.color || 0x38bdf8;
+  const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  const line = new THREE.Line(geo, mat);
+  line.name = options.name || `Wireframe_Spiral_R${Math.round(r0)}-${Math.round(r1)}_T${nTurns}`;
+  line.userData = { type: 'spiral', cadType: 'spiral', startRadius: r0, endRadius: r1, turns: nTurns, center: [cx, y, cz] };
   return line;
 }
 
@@ -3229,32 +3398,70 @@ export function extractEdgesFromModel(modelGroup, thresholdAngleDeg = 25) {
 }
 
 /**
- * Creates a 3D datum point marker with coordinate crosshair ticks
+ * Creates a 3D datum point marker with coordinate crosshair ticks (Mastercam style)
  */
-export function createPointMarker(coords = [0, 35, 0], name = "Wireframe_Datum_Point", color = 0xef4444) {
+export function createPointMarker(
+  coords = [0, 35, 0],
+  name = "Wireframe_Datum_Point",
+  color = 0x0284c7,
+  options = {}
+) {
   const group = new THREE.Group();
   group.name = name;
+  const pointColor = color || options.color || 0x0284c7;
+  const style = options.style || '+';
+  const tickLength = options.tickLength || 10;
 
-  // Center point sphere
-  const sphereGeo = new THREE.SphereGeometry(1.5, 16, 16);
-  const sphereMat = new THREE.MeshBasicMaterial({ color });
+  // Center point sphere / node
+  const sphereRadius = style === '•' ? 3.0 : 1.8;
+  const sphereGeo = new THREE.SphereGeometry(sphereRadius, 16, 16);
+  const sphereMat = new THREE.MeshBasicMaterial({ color: pointColor });
   const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+  sphere.renderOrder = 999;
   group.add(sphere);
 
-  // Crosshair ticks
-  const tickLength = 5;
-  const tickPoints = [
-    new THREE.Vector3(-tickLength, 0, 0), new THREE.Vector3(tickLength, 0, 0),
-    new THREE.Vector3(0, -tickLength, 0), new THREE.Vector3(0, tickLength, 0),
-    new THREE.Vector3(0, 0, -tickLength), new THREE.Vector3(0, 0, tickLength),
-  ];
-  const tickGeo = new THREE.BufferGeometry().setFromPoints(tickPoints);
-  const tickMat = new THREE.LineBasicMaterial({ color, linewidth: 1.5 });
-  const ticks = new THREE.LineSegments(tickGeo, tickMat);
-  group.add(ticks);
+  // Crosshair ticks in active C-plane (X and Z in standard Top view)
+  // No out-of-plane vertical Y tick so no 3D vertical spikes appear
+  if (style !== '•') {
+    const tickPoints = [
+      // Primary orthogonal crosshair (+)
+      new THREE.Vector3(-tickLength, 0, 0), new THREE.Vector3(tickLength, 0, 0),
+      new THREE.Vector3(0, 0, -tickLength), new THREE.Vector3(0, 0, tickLength),
+    ];
+
+    // Asterisk style (*): add 45° diagonal ticks
+    if (style === '*') {
+      const diag = tickLength * 0.7071;
+      tickPoints.push(
+        new THREE.Vector3(-diag, 0, -diag), new THREE.Vector3(diag, 0, diag),
+        new THREE.Vector3(-diag, 0, diag), new THREE.Vector3(diag, 0, -diag)
+      );
+    }
+
+    const tickGeo = new THREE.BufferGeometry().setFromPoints(tickPoints);
+    const tickMat = new THREE.LineBasicMaterial({ color: pointColor, linewidth: 2 });
+    const ticks = new THREE.LineSegments(tickGeo, tickMat);
+    ticks.renderOrder = 999;
+    group.add(ticks);
+
+    // Circle point style (o): add a ring around center point
+    if (style === 'o') {
+      const ringPts = [];
+      const ringRadius = 4.0;
+      for (let i = 0; i <= 32; i++) {
+        const theta = (i / 32) * Math.PI * 2;
+        ringPts.push(new THREE.Vector3(Math.cos(theta) * ringRadius, 0, Math.sin(theta) * ringRadius));
+      }
+      const ringGeo = new THREE.BufferGeometry().setFromPoints(ringPts);
+      const ringMat = new THREE.LineBasicMaterial({ color: pointColor, linewidth: 2 });
+      const ring = new THREE.Line(ringGeo, ringMat);
+      ring.renderOrder = 999;
+      group.add(ring);
+    }
+  }
 
   group.position.set(...coords);
-  group.userData = { type: 'datum_point', coords };
+  group.userData = { type: 'datum_point', cadType: 'point', coords, pointStyle: style };
   return group;
 }
 

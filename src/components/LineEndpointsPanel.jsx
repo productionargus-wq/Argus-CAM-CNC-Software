@@ -18,6 +18,8 @@ export default function LineEndpointsPanel({
   onChangeLineType,
   isTangent = false,
   onToggleTangent,
+  isLineContinuous = true,
+  onToggleContinuous,
   lineMethod = 'two_endpoints', // 'two_endpoints' | 'midpoint' | 'multi_line'
   onChangeLineMethod,
   activeEndpoint = 1,
@@ -345,10 +347,23 @@ export default function LineEndpointsPanel({
                     type="radio"
                     name="lineMethod"
                     checked={lineMethod === 'multi_line'}
-                    onChange={() => onChangeLineMethod && onChangeLineMethod('multi_line')}
+                    onChange={() => {
+                      if (onChangeLineMethod) onChangeLineMethod('multi_line');
+                      if (onToggleContinuous) onToggleContinuous(true);
+                    }}
                   />
                   Multi-line
                 </label>
+                <div style={{ paddingLeft: '20px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#0284c7', fontWeight: 600, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={isLineContinuous}
+                      onChange={(e) => onToggleContinuous && onToggleContinuous(e.target.checked)}
+                    />
+                    Continuous (Chain)
+                  </label>
+                </div>
               </div>
             </div>
           )}

@@ -335,6 +335,14 @@ export default function RibbonBar({
   const [showLineWidthMenu, setShowLineWidthMenu] = useState(false);
   const [lineWidthAnchor, setLineWidthAnchor] = useState(null);
 
+  // Wireframe Tab Dropdown States (Mastercam 2018 style)
+  const [showPointDropdown, setShowPointDropdown] = useState(false);
+  const [pointDropdownAnchor, setPointDropdownAnchor] = useState(null);
+  const [showRectDropdown, setShowRectDropdown] = useState(false);
+  const [rectDropdownAnchor, setRectDropdownAnchor] = useState(null);
+  const [showSplineDropdown, setShowSplineDropdown] = useState(false);
+  const [splineDropdownAnchor, setSplineDropdownAnchor] = useState(null);
+
   const tabs = [
     'File', 'Home', 'Wireframe', 'Surfaces', 'Solids',
     'Model Prep', 'Mesh', 'Drafting', 'Transform', 'Machine', 'View', 'Toolpaths'
@@ -1300,17 +1308,81 @@ export default function RibbonBar({
             {/* 1. Points */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button
-                  className={`ribbon-btn-large ${isSketchModeActive && (sketchTool === 'point' || sketchTool === 'drill') ? 'active' : ''}`}
-                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('point') : (onOpenWireframeModal && onOpenWireframeModal('datum'))}
-                  title="Point Position (P) - Place 3D coordinate point / datum on viewport or along curves"
-                >
-                  <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Plus size={22} color="#0284c7" strokeWidth={2.5} />
-                    <div style={{ position: 'absolute', width: '4px', height: '4px', background: '#0284c7', borderRadius: '50%' }} />
-                  </div>
-                  <span className="btn-label" style={{ fontWeight: 600 }}>Point<br />Position ▾</span>
-                </button>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    className={`ribbon-btn-large ${isSketchModeActive && (sketchTool === 'point' || sketchTool === 'drill' || sketchTool === 'point_dynamic' || sketchTool === 'point_segment' || sketchTool === 'point_endpoints') ? 'active' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (showPointDropdown) {
+                        setShowPointDropdown(false);
+                        setPointDropdownAnchor(null);
+                      } else {
+                        setPointDropdownAnchor(e.currentTarget.getBoundingClientRect());
+                        setShowPointDropdown(true);
+                      }
+                    }}
+                    title="Point Position (P) - Mastercam Points suite & dropdown"
+                  >
+                    <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Plus size={22} color="#0284c7" strokeWidth={2.5} />
+                      <div style={{ position: 'absolute', width: '4px', height: '4px', background: '#0284c7', borderRadius: '50%' }} />
+                    </div>
+                    <span className="btn-label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      <span>Point<br />Position</span>
+                      <ChevronDown size={10} color="#64748b" />
+                    </span>
+                  </button>
+
+                  <RibbonPortalMenu
+                    isOpen={showPointDropdown}
+                    anchorRect={pointDropdownAnchor}
+                    onClose={() => {
+                      setShowPointDropdown(false);
+                      setPointDropdownAnchor(null);
+                    }}
+                    minWidth="180px"
+                  >
+                    {[
+                      { id: 'point', label: 'Point Position', desc: 'Place coordinate point / datum on viewport' },
+                      { id: 'point_dynamic', label: 'Point Dynamic', desc: 'Place point along surface or curve normal' },
+                      { id: 'point_segment', label: 'Point Segment / Nodes', desc: 'Divide curve into equal distance segments' },
+                      { id: 'point_endpoints', label: 'Point Endpoints', desc: 'Place points at all endpoints/midpoints' },
+                      { id: 'point_coord', label: 'Point Coordinates...', desc: 'Specify exact XYZ coordinate datum' }
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setShowPointDropdown(false);
+                          setPointDropdownAnchor(null);
+                          if (item.id === 'point_coord') {
+                            onOpenWireframeModal?.('datum');
+                          } else {
+                            onStartInteractiveSketch?.(item.id);
+                          }
+                        }}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '6px 12px',
+                          fontSize: '11.5px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#1e293b',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        title={item.desc}
+                      >
+                        <div style={{ fontWeight: 600 }}>{item.label}</div>
+                        <div style={{ fontSize: '10px', color: '#64748b' }}>{item.desc}</div>
+                      </button>
+                    ))}
+                  </RibbonPortalMenu>
+                </div>
+
                 <button
                   className={`ribbon-btn-large ${isSketchModeActive && sketchTool === 'bolt_circle' ? 'active' : ''}`}
                   onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('bolt_circle') : (onOpenWireframeModal && onOpenWireframeModal('pcd'))}
@@ -1429,14 +1501,72 @@ export default function RibbonBar({
             {/* 4. Splines */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button
-                  className={`ribbon-btn-large ${isSketchModeActive && sketchTool === 'spline' ? 'active' : ''}`}
-                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('spline') : (onOpenWireframeModal && onOpenWireframeModal('spline'))}
-                  title="Spline Manual - Create smooth NURBS / Catmull-Rom spline through points"
-                >
-                  <Sliders size={22} color="#0284c7" />
-                  <span className="btn-label" style={{ fontWeight: 600 }}>Spline<br />Manual ▾</span>
-                </button>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    className={`ribbon-btn-large ${isSketchModeActive && ['spline', 'spline_auto', 'spline_curves', 'spline_blend'].includes(sketchTool) ? 'active' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (showSplineDropdown) {
+                        setShowSplineDropdown(false);
+                        setSplineDropdownAnchor(null);
+                      } else {
+                        setSplineDropdownAnchor(e.currentTarget.getBoundingClientRect());
+                        setShowSplineDropdown(true);
+                      }
+                    }}
+                    title="Spline Manual - Mastercam Splines dropdown"
+                  >
+                    <Sliders size={22} color="#0284c7" />
+                    <span className="btn-label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      <span>Spline<br />Manual</span>
+                      <ChevronDown size={10} color="#64748b" />
+                    </span>
+                  </button>
+
+                  <RibbonPortalMenu
+                    isOpen={showSplineDropdown}
+                    anchorRect={splineDropdownAnchor}
+                    onClose={() => {
+                      setShowSplineDropdown(false);
+                      setSplineDropdownAnchor(null);
+                    }}
+                    minWidth="180px"
+                  >
+                    {[
+                      { id: 'spline', label: 'Spline Manual', desc: 'Create smooth NURBS curve through clicked points' },
+                      { id: 'spline_auto', label: 'Spline Automatic', desc: 'Automatically fit spline through point entities' },
+                      { id: 'spline_curves', label: 'Spline from Curves', desc: 'Convert chained lines & arcs into NURBS spline' },
+                      { id: 'spline_blend', label: 'Spline Blended', desc: 'Create smooth tangent blend between two curves' }
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setShowSplineDropdown(false);
+                          setSplineDropdownAnchor(null);
+                          onStartInteractiveSketch?.(item.id);
+                        }}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '6px 12px',
+                          fontSize: '11.5px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#1e293b',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        title={item.desc}
+                      >
+                        <div style={{ fontWeight: 600 }}>{item.label}</div>
+                        <div style={{ fontSize: '10px', color: '#64748b' }}>{item.desc}</div>
+                      </button>
+                    ))}
+                  </RibbonPortalMenu>
+                </div>
               </div>
               <span className="ribbon-group-title">Splines</span>
             </div>
@@ -1444,14 +1574,74 @@ export default function RibbonBar({
             {/* 5. Shapes */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button
-                  className={`ribbon-btn-large ${isSketchModeActive && sketchTool === 'rect' ? 'active' : ''}`}
-                  onClick={() => onStartInteractiveSketch ? onStartInteractiveSketch('rect') : (onOpenWireframeModal && onOpenWireframeModal('rect'))}
-                  title="Rectangle (R) - Create 2D wireframe rectangle or pocket boundary"
-                >
-                  <Square size={22} color="#0284c7" strokeWidth={2} />
-                  <span className="btn-label" style={{ fontWeight: 600 }}>Rectangle</span>
-                </button>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    className={`ribbon-btn-large ${isSketchModeActive && ['rect', 'obround', 'polygon', 'ellipse', 'helix', 'spiral'].includes(sketchTool) ? 'active' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (showRectDropdown) {
+                        setShowRectDropdown(false);
+                        setRectDropdownAnchor(null);
+                      } else {
+                        setRectDropdownAnchor(e.currentTarget.getBoundingClientRect());
+                        setShowRectDropdown(true);
+                      }
+                    }}
+                    title="Rectangle (R) - Shapes dropdown matching Mastercam"
+                  >
+                    <Square size={22} color="#0284c7" strokeWidth={2} />
+                    <span className="btn-label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      <span>Rectangle</span>
+                      <ChevronDown size={10} color="#64748b" />
+                    </span>
+                  </button>
+
+                  <RibbonPortalMenu
+                    isOpen={showRectDropdown}
+                    anchorRect={rectDropdownAnchor}
+                    onClose={() => {
+                      setShowRectDropdown(false);
+                      setRectDropdownAnchor(null);
+                    }}
+                    minWidth="180px"
+                  >
+                    {[
+                      { id: 'rect', label: 'Rectangle', desc: 'Create 2-point or center-based rectangle' },
+                      { id: 'obround', label: 'Rectangular Shapes', desc: 'Create obround / slot with rounded ends' },
+                      { id: 'polygon', label: 'Polygon', desc: 'Create regular N-sided polygon (Hexagon, Octagon)' },
+                      { id: 'ellipse', label: 'Ellipse', desc: 'Create 2D ellipse by major and minor radii' },
+                      { id: 'helix', label: 'Helix', desc: 'Create 3D helical spiral curve with pitch & height' },
+                      { id: 'spiral', label: 'Spiral', desc: 'Create Archimedean spiral from entered values' }
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setShowRectDropdown(false);
+                          setRectDropdownAnchor(null);
+                          onStartInteractiveSketch?.(item.id);
+                        }}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '6px 12px',
+                          fontSize: '11.5px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#1e293b',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        title={item.desc}
+                      >
+                        <div style={{ fontWeight: 600 }}>{item.label}</div>
+                        <div style={{ fontSize: '10px', color: '#64748b' }}>{item.desc}</div>
+                      </button>
+                    ))}
+                  </RibbonPortalMenu>
+                </div>
 
                 {/* Column 1: Create Letters, Bounding Box, Silhouette Boundary */}
                 <div className="ribbon-col-stacked">

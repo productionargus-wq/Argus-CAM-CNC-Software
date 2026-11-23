@@ -533,6 +533,7 @@ export default function App() {
     isAngleLocked: false,
     lineType: 'freeform',
     isTangent: false,
+    isLineContinuous: true,
     lineMethod: 'two_endpoints',
     activeEndpoint: 1,
     axisOffset: 0.0,
@@ -5765,8 +5766,8 @@ export default function App() {
       }));
       setActiveCircle(null);
       showToast('Circle Center Point: Click center & radius on canvas, or type Radius/Diameter and click OK', 'info');
-    } else if (tool === 'rect') {
-      setDrawingToolSync('rect');
+    } else if (tool === 'rect' || tool === 'polygon' || tool === 'ellipse' || tool === 'obround' || tool === 'spiral' || tool === 'helix') {
+      setDrawingToolSync(tool);
       setActiveManagerTab('Rectangle');
       updateRectParams((prev) => ({
         ...prev,
@@ -5778,7 +5779,8 @@ export default function App() {
         secondCorner: null
       }));
       setActiveRect(null);
-      showToast('Rectangle: Click two corners on canvas, or type Width & Height and click canvas / OK', 'info');
+      const label = tool === 'polygon' ? 'Polygon' : tool === 'ellipse' ? 'Ellipse' : tool === 'obround' ? 'Rectangular Shapes (Slot)' : tool === 'spiral' ? 'Archimedean Spiral' : tool === 'helix' ? '3D Helix' : 'Rectangle';
+      showToast(`${label}: Click center or opposite corners on canvas to draw shape`, 'info');
     } else if (tool === 'line') {
       setDrawingToolSync('line');
       setActiveManagerTab('Line Endp...');
@@ -5790,17 +5792,18 @@ export default function App() {
         pt2: null
       }));
       setActiveLine(null);
-      showToast('Line Endpoints: Click two endpoints on canvas, or type Length & Angle and click OK', 'info');
+      showToast('Line Endpoints: Click endpoints continuously on canvas (Press Esc / right-click to end chain)', 'info');
     } else if (tool === 'arc_tangent' || tool === 'arctangent') {
       setDrawingToolSync('arc_tangent');
       setActiveManagerTab('Arc Tangent');
       setArcParams((prev) => ({ ...prev, isLocked: false }));
       setActiveArcId(null);
       showToast('Arc Tangent: Select entity that arc is to be tangent to', 'info');
-    } else if (tool === 'point' || tool === 'drill') {
+    } else if (tool === 'point' || tool === 'drill' || String(tool).startsWith('point_')) {
       setDrawingToolSync('point');
       setActiveManagerTab('Point Pos...');
-      showToast('Point Position: Click canvas to place points or type coordinates in AutoCursor', 'info');
+      const pLabel = tool === 'point_dynamic' ? 'Point Dynamic' : tool === 'point_segment' ? 'Point Segment / Nodes' : tool === 'point_endpoints' ? 'Point Endpoints' : tool === 'point_coord' ? 'Point Coordinates' : 'Point Position';
+      showToast(`${pLabel}: Click canvas to place points or type coordinates in AutoCursor`, 'info');
     } else if (tool === 'bolt_circle' || tool === 'pcd') {
       setDrawingToolSync('bolt_circle');
       setActiveManagerTab('Bolt Circle');
@@ -5816,11 +5819,12 @@ export default function App() {
       setActiveManagerTab('Arc 3 Points');
       setArc3ptParams((prev) => ({ ...prev, mode: tool, p1: null, p2: null, p3: null }));
       showToast(tool === 'circle_edge' ? 'Circle Edge Point: Click points on edge' : 'Arc 3 Points: Click Start -> End -> Radius Point', 'info');
-    } else if (tool === 'spline') {
+    } else if (tool === 'spline' || String(tool).startsWith('spline_')) {
       setDrawingToolSync('spline');
       setActiveManagerTab('Spline');
       setSplineParams((prev) => ({ ...prev, splinePoints: [] }));
-      showToast('Spline Manual: Click successive node points in viewport to interpolate smooth curve', 'info');
+      const sLabel = tool === 'spline_auto' ? 'Spline Automatic' : tool === 'spline_curves' ? 'Spline from Curves' : tool === 'spline_blend' ? 'Spline Blended' : 'Spline Manual';
+      showToast(`${sLabel}: Click successive node points in viewport to interpolate smooth curve (Enter to finish)`, 'info');
     } else if (tool === 'dynamic_trim' || tool === 'trim_1' || tool === 'trim_2' || tool === 'trim_3' || tool === 'divide') {
       setDrawingToolSync(tool);
       setActiveManagerTab('Dynamic Trim');
@@ -6517,6 +6521,13 @@ export default function App() {
 
   const handleToggleLineTangent = () => {
     updateLineParams((prev) => ({ ...prev, isTangent: !prev.isTangent }));
+  };
+
+  const handleToggleLineContinuous = (val) => {
+    updateLineParams((prev) => ({
+      ...prev,
+      isLineContinuous: typeof val === 'boolean' ? val : !prev.isLineContinuous
+    }));
   };
 
   const handleChangeLineMethod = (lineMethod) => {
@@ -8401,6 +8412,7 @@ export default function App() {
           onToggleLineAngleLock={handleToggleLineAngleLock}
           onChangeLineType={handleChangeLineType}
           onToggleLineTangent={handleToggleLineTangent}
+          onToggleLineContinuous={handleToggleLineContinuous}
           onChangeLineMethod={handleChangeLineMethod}
           onSelectLineEndpoint={handleSelectLineEndpoint}
           onChangeLineAxisOffset={handleChangeLineAxisOffset}
@@ -8677,8 +8689,8 @@ export default function App() {
                 activeDrawingAngle={lineParams.angle}
                 isAngleLocked={lineParams.isAngleLocked}
                 lineType={lineParams.lineType}
-              isLineTangent={lineParams.isTangent}
                 isLineTangent={lineParams.isTangent}
+                isLineContinuous={lineParams.isLineContinuous !== false}
                 onDrawingUpdate={handleDrawingUpdate}
                 reselectTrigger={reselectTrigger}
                 undoTrigger={undoTrigger}
@@ -8905,6 +8917,7 @@ export default function App() {
               isAngleLocked={lineParams.isAngleLocked}
               lineType={lineParams.lineType}
               isLineTangent={lineParams.isTangent}
+              isLineContinuous={lineParams.isLineContinuous !== false}
               onDrawingUpdate={handleDrawingUpdate}
               reselectTrigger={reselectTrigger}
               undoTrigger={undoTrigger}

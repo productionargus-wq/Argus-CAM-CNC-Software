@@ -487,26 +487,117 @@ export function createGhostPreview(tool, startPt, currentPt, options = {}) {
     const radLine = new THREE.Line(radGeo, dashedMaterial);
     radLine.computeLineDistances();
     group.add(radLine);
-  } else if (tool === 'drill' || tool === 'point' || tool === 'datum') {
-    const markerGeo = new THREE.RingGeometry(1.5, 3.0, 16);
-    markerGeo.rotateX(-Math.PI / 2);
-    const markerMat = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide });
-    const marker = new THREE.Mesh(markerGeo, markerMat);
-    marker.position.copy(currentPt);
-    group.add(marker);
+  } else if (tool === 'drill' || tool === 'point' || tool === 'datum' || tool === 'point_dynamic' || tool === 'point_segment' || tool === 'point_endpoints') {
+    const ptColor = (tool === 'drill') ? 0xef4444 : 0x0284c7;
+    // Center point node
+    const dotGeo = new THREE.SphereGeometry(1.8, 16, 16);
+    const dotMat = new THREE.MeshBasicMaterial({ color: ptColor });
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.copy(currentPt);
+    group.add(dot);
 
-    // Crosshair lines
-    const chMat = new THREE.LineBasicMaterial({ color: 0xef4444 });
+    // Crosshair ticks in active C-plane
+    const tickLen = 10;
+    const chMat = new THREE.LineBasicMaterial({ color: ptColor, linewidth: 2 });
     const chGeo1 = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(currentPt.x - 4, currentPt.y, currentPt.z),
-      new THREE.Vector3(currentPt.x + 4, currentPt.y, currentPt.z)
+      new THREE.Vector3(currentPt.x - tickLen, currentPt.y, currentPt.z),
+      new THREE.Vector3(currentPt.x + tickLen, currentPt.y, currentPt.z)
     ]);
     const chGeo2 = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(currentPt.x, currentPt.y, currentPt.z - 4),
-      new THREE.Vector3(currentPt.x, currentPt.y, currentPt.z + 4)
+      new THREE.Vector3(currentPt.x, currentPt.y, currentPt.z - tickLen),
+      new THREE.Vector3(currentPt.x, currentPt.y, currentPt.z + tickLen)
     ]);
     group.add(new THREE.Line(chGeo1, chMat));
     group.add(new THREE.Line(chGeo2, chMat));
+  } else if (tool === 'polygon') {
+    const sides = Math.max(3, options.sides || 6);
+    const radius = options.radius || Math.max(2, startPt.distanceTo(currentPt));
+    const pts = [];
+    for (let i = 0; i <= sides; i++) {
+      const theta = (i / sides) * Math.PI * 2;
+      pts.push(new THREE.Vector3(startPt.x + Math.cos(theta) * radius, startPt.y, startPt.z + Math.sin(theta) * radius));
+    }
+    const polyGeo = new THREE.BufferGeometry().setFromPoints(pts);
+    const polyLine = new THREE.Line(polyGeo, dashedMaterial);
+    polyLine.computeLineDistances();
+    group.add(polyLine);
+  } else if (tool === 'ellipse') {
+    const rx = Math.max(2, Math.abs(currentPt.x - startPt.x));
+    const rz = Math.max(2, Math.abs(currentPt.z - startPt.z));
+    const pts = [];
+    for (let i = 0; i <= 48; i++) {
+      const theta = (i / 48) * Math.PI * 2;
+      pts.push(new THREE.Vector3(startPt.x + Math.cos(theta) * rx, startPt.y, startPt.z + Math.sin(theta) * rz));
+    }
+    const elGeo = new THREE.BufferGeometry().setFromPoints(pts);
+    const elLine = new THREE.Line(elGeo, dashedMaterial);
+    elLine.computeLineDistances();
+    group.add(elLine);
+  } else if (tool === 'obround') {
+    const w = Math.max(4, Math.abs(currentPt.x - startPt.x) * 2 || 60);
+    const h = Math.max(4, Math.abs(currentPt.z - startPt.z) * 2 || 30);
+    const pts = [];
+    const segs = 20;
+    if (w >= h) {
+      const r = h / 2;
+      const halfStraight = (w - h) / 2;
+      for (let i = 0; i <= segs; i++) {
+        const theta = -Math.PI / 2 + (i / segs) * Math.PI;
+        pts.push(new THREE.Vector3(startPt.x + halfStraight + Math.cos(theta) * r, startPt.y, startPt.z + Math.sin(theta) * r));
+      }
+      for (let i = 0; i <= segs; i++) {
+        const theta = Math.PI / 2 + (i / segs) * Math.PI;
+        pts.push(new THREE.Vector3(startPt.x - halfStraight + Math.cos(theta) * r, startPt.y, startPt.z + Math.sin(theta) * r));
+      }
+    } else {
+      const r = w / 2;
+      const halfStraight = (h - w) / 2;
+      for (let i = 0; i <= segs; i++) {
+        const theta = (i / segs) * Math.PI;
+        pts.push(new THREE.Vector3(startPt.x + Math.cos(theta) * r, startPt.y, startPt.z + halfStraight + Math.sin(theta) * r));
+      }
+      for (let i = 0; i <= segs; i++) {
+        const theta = Math.PI + (i / segs) * Math.PI;
+        pts.push(new THREE.Vector3(startPt.x + Math.cos(theta) * r, startPt.y, startPt.z - halfStraight + Math.sin(theta) * r));
+      }
+    }
+    if (pts.length > 0) pts.push(pts[0].clone());
+    const obGeo = new THREE.BufferGeometry().setFromPoints(pts);
+    const obLine = new THREE.Line(obGeo, dashedMaterial);
+    obLine.computeLineDistances();
+    group.add(obLine);
+  } else if (tool === 'spiral') {
+    const r0 = 5;
+    const r1 = Math.max(10, startPt.distanceTo(currentPt));
+    const turns = options.turns || 3;
+    const pts = [];
+    const totalSegs = Math.round(turns * 36);
+    for (let i = 0; i <= totalSegs; i++) {
+      const frac = i / totalSegs;
+      const theta = frac * turns * Math.PI * 2;
+      const r = r0 + (r1 - r0) * frac;
+      pts.push(new THREE.Vector3(startPt.x + Math.cos(theta) * r, startPt.y, startPt.z + Math.sin(theta) * r));
+    }
+    const spGeo = new THREE.BufferGeometry().setFromPoints(pts);
+    const spLine = new THREE.Line(spGeo, dashedMaterial);
+    spLine.computeLineDistances();
+    group.add(spLine);
+  } else if (tool === 'helix') {
+    const r = Math.max(5, startPt.distanceTo(currentPt));
+    const h = 40;
+    const pitch = 10;
+    const turns = h / pitch;
+    const pts = [];
+    const totalSegs = 72;
+    for (let i = 0; i <= totalSegs; i++) {
+      const frac = i / totalSegs;
+      const theta = frac * turns * Math.PI * 2;
+      pts.push(new THREE.Vector3(startPt.x + Math.cos(theta) * r, startPt.y + frac * h, startPt.z + Math.sin(theta) * r));
+    }
+    const hxGeo = new THREE.BufferGeometry().setFromPoints(pts);
+    const hxLine = new THREE.Line(hxGeo, dashedMaterial);
+    hxLine.computeLineDistances();
+    group.add(hxLine);
   } else if (tool === 'bolt_circle' || tool === 'pcd') {
     const pcd = options.pcd || 60;
     const radius = (options.lockedRadius && options.lockedRadius > 0)

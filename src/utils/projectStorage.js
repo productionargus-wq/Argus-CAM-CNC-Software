@@ -30,6 +30,12 @@ const PARAMETRIC_CAD_TYPES = new Set([
   'spline',
   'drill',
   'datum_point',
+  'point',
+  'polygon',
+  'ellipse',
+  'obround',
+  'helix',
+  'spiral',
   'surface_extrusion'
 ]);
 

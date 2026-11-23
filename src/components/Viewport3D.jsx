@@ -39,7 +39,12 @@ import {
   createWireframeArc,
   createWireframeSpline,
   createParallelLine,
-  createParametricChainExtrusion
+  createParametricChainExtrusion,
+  createWireframePolygon,
+  createWireframeObround,
+  createWireframeEllipse,
+  createWireframeHelix,
+  createWireframeSpiral
 } from '../utils/cadGeometry';
 import { parseAnyCADFile } from '../utils/universalCadParser';
 import ScaleRulerHUD from './ScaleRulerHUD';
@@ -216,6 +221,7 @@ export default function Viewport3D({
   isAngleLocked = false,
   lineType = 'freeform',
   isLineTangent = false,
+  isLineContinuous = true,
   onDrawingUpdate = null,
   reselectTrigger = 0,
   undoTrigger = 0,
@@ -415,6 +421,8 @@ export default function Viewport3D({
   const isAngleLockedRef = useRef(isAngleLocked);
   const lineTypeRef = useRef(lineType);
   const isLineTangentRef = useRef(isLineTangent);
+  const isLineContinuousRef = useRef(isLineContinuous);
+  isLineContinuousRef.current = isLineContinuous;
   const onDrawingUpdateRef = useRef(onDrawingUpdate);
   const gridSnapRef = useRef(true);
   const gridStepRef = useRef(5.0);
@@ -617,8 +625,13 @@ export default function Viewport3D({
       setSketchPromptText(
         sketchTool === 'circle' ? 'Enter the center point' :
         sketchTool === 'rect' ? 'Select position of first corner' :
+        sketchTool === 'polygon' ? 'Click center, then drag to size polygon' :
+        sketchTool === 'ellipse' ? 'Click center, then drag to size ellipse' :
+        sketchTool === 'obround' ? 'Click first corner, then drag to size obround' :
+        sketchTool === 'spiral' ? 'Click center, then drag to expand 2D spiral' :
+        sketchTool === 'helix' ? 'Click center, then drag to size 3D helix' :
         sketchTool === 'line' ? 'Specify first endpoint' :
-        sketchTool === 'point' || sketchTool === 'drill' ? 'Click canvas or type coordinates to place point' :
+        sketchTool === 'point' || sketchTool === 'drill' || String(sketchTool).startsWith('point_') ? 'Click canvas or type coordinates to place point' :
         sketchTool === 'bolt_circle' || sketchTool === 'pcd' ? 'Click center to place Bolt Hole Circle (PCD)' :
         sketchTool === 'line_parallel' ? 'Click reference curve to create parallel line' :
         sketchTool === 'line_perp' ? 'Click reference curve to create perpendicular line' :
@@ -1070,16 +1083,32 @@ export default function Viewport3D({
 
     const getDefaultPromptForTool = (tool) => {
       switch (tool) {
-        case 'point': return 'Select point position [AutoCursor: End, Mid, Arc Ctr]';
+        case 'point':
+        case 'point_position':
+        case 'point_dynamic':
+        case 'point_segment':
+        case 'point_endpoints':
+        case 'point_coord':
+          return 'Select point position [AutoCursor: End, Mid, Arc Ctr]';
         case 'bolt_circle': return 'Select PCD center point on active CPlane';
-        case 'line': return 'Specify first endpoint';
+        case 'line': return 'Specify first endpoint (Continuous multi-line mode active)';
         case 'line_parallel': return 'Select reference line or drag parallel line';
         case 'line_perp': return 'Select reference line or drag perpendicular line';
         case 'circle': return 'Enter the center point';
         case 'arc_3pt': return 'Select first point on arc';
         case 'arc_tangent': return 'Select the entity that the arc is to be tangent to';
-        case 'spline': return 'Click canvas to add spline node (Enter to finish)';
+        case 'spline':
+        case 'spline_manual':
+        case 'spline_auto':
+        case 'spline_curves':
+        case 'spline_blend':
+          return 'Click canvas to add spline node (Enter to finish)';
         case 'rect': return 'Select position of first corner';
+        case 'polygon': return 'Select center position for regular polygon';
+        case 'ellipse': return 'Select first corner or center of ellipse';
+        case 'obround': return 'Select first corner or center of slot (obround)';
+        case 'spiral': return 'Select center point of Archimedean spiral';
+        case 'helix': return 'Select center base point of 3D helix';
         case 'dynamic_trim': return 'Drag scissor stroke across entities to trim';
         case 'fillet': return 'Select first entity for corner fillet';
         case 'chamfer': return 'Select first entity for chamfer';
@@ -1302,8 +1331,8 @@ export default function Viewport3D({
             completed: true
           });
         }
-      } else if (tool === 'point' || tool === 'drill') {
-        newEntity = createPointMarker([finalPt.x, finalPt.y, finalPt.z], `Wireframe_Point_${Date.now()}`, 0x38bdf8);
+      } else if (tool === 'point' || tool === 'drill' || String(tool).startsWith('point_')) {
+        newEntity = createPointMarker([finalPt.x, finalPt.y, finalPt.z], `Wireframe_Point_${Date.now()}`, 0x0284c7);
         if (onDrawingUpdateRef.current) {
           onDrawingUpdateRef.current({ tool: 'point', point: finalPt, completed: true });
         }
@@ -1312,10 +1341,37 @@ export default function Viewport3D({
         if (onDrawingUpdateRef.current) {
           onDrawingUpdateRef.current({ tool: 'bolt_circle', center: finalPt, pcd: 60, holes: 6, completed: true });
         }
+      } else if (tool === 'polygon') {
+        const r = Math.max(2, anchor.distanceTo(finalPt));
+        newEntity = createWireframePolygon(6, r, anchor.y, 0, [anchor.x, anchor.z], { color: 0x38bdf8 });
+      } else if (tool === 'ellipse') {
+        const rx = Math.max(2, Math.abs(finalPt.x - anchor.x));
+        const rz = Math.max(2, Math.abs(finalPt.z - anchor.z));
+        newEntity = createWireframeEllipse(rx, rz, anchor.y, 0, [anchor.x, anchor.z], { color: 0x38bdf8 });
+      } else if (tool === 'obround') {
+        const w = Math.max(4, Math.abs(finalPt.x - anchor.x) * 2 || 60);
+        const h = Math.max(4, Math.abs(finalPt.z - anchor.z) * 2 || 30);
+        newEntity = createWireframeObround(w, h, anchor.y, [anchor.x, anchor.z], { color: 0x38bdf8 });
+      } else if (tool === 'spiral') {
+        const r1 = Math.max(10, anchor.distanceTo(finalPt));
+        newEntity = createWireframeSpiral(5, r1, 3, anchor.y, [anchor.x, anchor.z], { color: 0x38bdf8 });
+      } else if (tool === 'helix') {
+        const r = Math.max(5, anchor.distanceTo(finalPt));
+        newEntity = createWireframeHelix(r, 10, 40, anchor.y, [anchor.x, anchor.z], { color: 0x38bdf8 });
       }
 
       if (newEntity && onAddCustomEntityRef.current) {
         onAddCustomEntityRef.current(newEntity);
+      }
+
+      // Multi-line continuous line chaining (Mastercam style)
+      if (tool === 'line' && isLineContinuousRef.current && p2Commit) {
+        sketchAnchorRef.current = p2Commit.clone();
+        setSketchAnchor(p2Commit.clone());
+        isDrawingDrag = true;
+        if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+        setSketchPromptText('Specify next endpoint (Press Esc / Enter or Right-Click to finish chain)');
+        return true;
       }
 
       sketchAnchorRef.current = null;
@@ -1335,6 +1391,14 @@ export default function Viewport3D({
       prevMouseY = e.clientY;
 
       if (e.button === 2) {
+        if (isSketchModeRef.current && sketchAnchorRef.current) {
+          sketchAnchorRef.current = null;
+          setSketchAnchor(null);
+          setDimensionFeedback(null);
+          if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+          setSketchPromptText(getDefaultPromptForTool(activeSketchToolRef.current));
+          return;
+        }
         if ((polygonPointsRef.current?.length || 0) >= 3) {
           completePolygonSelection(!!(e.shiftKey || e.ctrlKey || e.metaKey || stickyMultiSelectRef.current));
           return;
@@ -1453,13 +1517,19 @@ export default function Viewport3D({
           const tool = activeSketchToolRef.current;
 
           if (tool === 'drill') {
+            sketchAnchorRef.current = null;
+            setSketchAnchor(null);
+            if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
             const marker = createPointMarker([finalPt.x, finalPt.y, finalPt.z], `Drill_Point_${Date.now()}`, 0xef4444);
             if (onAddCustomEntityRef.current) onAddCustomEntityRef.current(marker);
             return;
           }
 
-          if (tool === 'point') {
-            const marker = createPointMarker([finalPt.x, finalPt.y, finalPt.z], `Wireframe_Point_${Date.now()}`, 0x38bdf8);
+          if (tool === 'point' || String(tool).startsWith('point_')) {
+            sketchAnchorRef.current = null;
+            setSketchAnchor(null);
+            if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+            const marker = createPointMarker([finalPt.x, finalPt.y, finalPt.z], `Point_${Date.now()}`, 0x0284c7);
             if (onAddCustomEntityRef.current) onAddCustomEntityRef.current(marker);
             return;
           }
@@ -1582,7 +1652,7 @@ export default function Viewport3D({
             }
           }
 
-          if (tool === 'line' || tool === 'line_parallel' || tool === 'line_perp' || tool === 'rect' || tool === 'circle') {
+          if (tool === 'line' || tool === 'line_parallel' || tool === 'line_perp' || tool === 'rect' || tool === 'circle' || tool === 'polygon' || tool === 'ellipse' || tool === 'obround' || tool === 'spiral' || tool === 'helix') {
             if (!sketchAnchorRef.current) {
               // 1-Click placement when full dimensions are explicitly locked (Mastercam Auto-place)
               const fullyLockedRect = tool === 'rect'
@@ -1646,6 +1716,10 @@ export default function Viewport3D({
               setSketchPromptText(
                 tool === 'rect' ? 'Select position of second corner' :
                 tool === 'line' ? 'Specify second endpoint' :
+                tool === 'polygon' ? 'Specify outer radius / vertex point' :
+                tool === 'ellipse' ? 'Specify second corner for ellipse bounds' :
+                tool === 'obround' ? 'Specify second corner for slot bounds' :
+                tool === 'spiral' || tool === 'helix' ? 'Specify outer radius point' :
                 'Enter radius point'
               );
             } else {
@@ -1989,6 +2063,39 @@ export default function Viewport3D({
                   isDragging: isDrawingDrag
                 });
               }
+            } else if (tool === 'polygon') {
+              const r = Math.max(1, anchor.distanceTo(finalPt));
+              const sides = activeSidesRef.current || 6;
+              const ghost = createGhostPreview('polygon', anchor, finalPt, { sides, radius: r });
+              sketchGhostGroupRef.current.add(ghost);
+              setDimensionFeedback(`Polygon (${sides} sides): Radius ${r.toFixed(2)} mm`);
+              setSketchPromptText(`Specify outer radius / vertex (R: ${r.toFixed(2)} mm)`);
+            } else if (tool === 'ellipse') {
+              const rx = Math.max(1, Math.abs(finalPt.x - anchor.x));
+              const rz = Math.max(1, Math.abs(finalPt.z - anchor.z));
+              const ghost = createGhostPreview('ellipse', anchor, finalPt, { radiusX: rx, radiusZ: rz });
+              sketchGhostGroupRef.current.add(ghost);
+              setDimensionFeedback(`Ellipse: A=${rx.toFixed(2)} mm, B=${rz.toFixed(2)} mm`);
+              setSketchPromptText(`Specify ellipse bounds (A: ${rx.toFixed(2)} mm, B: ${rz.toFixed(2)} mm)`);
+            } else if (tool === 'obround') {
+              const w = Math.max(1, Math.abs(finalPt.x - anchor.x) * 2);
+              const h = Math.max(1, Math.abs(finalPt.z - anchor.z) * 2);
+              const ghost = createGhostPreview('obround', anchor, finalPt, { width: w, height: h });
+              sketchGhostGroupRef.current.add(ghost);
+              setDimensionFeedback(`Slot / Obround: W=${w.toFixed(2)} mm, H=${h.toFixed(2)} mm`);
+              setSketchPromptText(`Specify slot bounds (W: ${w.toFixed(2)} mm, H: ${h.toFixed(2)} mm)`);
+            } else if (tool === 'spiral') {
+              const r = Math.max(1, anchor.distanceTo(finalPt));
+              const ghost = createGhostPreview('spiral', anchor, finalPt, { endRadius: r, turns: 4 });
+              sketchGhostGroupRef.current.add(ghost);
+              setDimensionFeedback(`Spiral: End Radius ${r.toFixed(2)} mm, 4 turns`);
+              setSketchPromptText(`Specify outer radius (R: ${r.toFixed(2)} mm)`);
+            } else if (tool === 'helix') {
+              const r = Math.max(1, anchor.distanceTo(finalPt));
+              const ghost = createGhostPreview('helix', anchor, finalPt, { radius: r, pitch: 10, height: 50 });
+              sketchGhostGroupRef.current.add(ghost);
+              setDimensionFeedback(`Helix: Radius ${r.toFixed(2)} mm, Pitch 10mm, Height 50mm`);
+              setSketchPromptText(`Specify helix radius (R: ${r.toFixed(2)} mm)`);
             } else if (tool === 'line' || tool === 'line_parallel' || tool === 'line_perp') {
               let p1Preview = anchor.clone();
               let p2Preview = finalPt.clone();
@@ -2105,7 +2212,7 @@ export default function Viewport3D({
             }
           } else {
             const curTool = activeSketchToolRef.current;
-            if (curTool === 'point') {
+            if (curTool === 'point' || String(curTool).startsWith('point_') || curTool === 'drill') {
               if (sketchGhostGroupRef.current) {
                 sketchGhostGroupRef.current.clear();
                 const ghost = createGhostPreview('point', finalPt, finalPt);
@@ -4642,6 +4749,15 @@ export default function Viewport3D({
           if (onAddCustomEntityRef.current) onAddCustomEntityRef.current(splineEnt);
           splineNodesRef.current = [];
           setSketchPromptText(getDefaultPromptForTool('spline'));
+          return;
+        }
+        if (sketchAnchorRef.current) {
+          e.preventDefault();
+          sketchAnchorRef.current = null;
+          setSketchAnchor(null);
+          setDimensionFeedback(null);
+          if (sketchGhostGroupRef.current) sketchGhostGroupRef.current.clear();
+          setSketchPromptText(getDefaultPromptForTool(activeSketchToolRef.current));
           return;
         }
       }
