@@ -1835,18 +1835,31 @@ export default function App() {
   const handleUndoRef = useRef(handleUndo);
   const handleRedoRef = useRef(handleRedo);
   const handleOpenViaNativeDialogRef = useRef(null);
+  const handleToggleSelectedToolpathRef = useRef(null);
+  const handleToggleAllToolpathsRef = useRef(null);
+  const activeOpIdRef = useRef(activeOpId);
   useEffect(() => {
     handleUndoRef.current = handleUndo;
     handleRedoRef.current = handleRedo;
     handleOpenViaNativeDialogRef.current = handleOpenViaNativeDialog;
+    handleToggleSelectedToolpathRef.current = handleToggleSelectedToolpath;
+    handleToggleAllToolpathsRef.current = handleToggleAllToolpaths;
+    activeOpIdRef.current = activeOpId;
   });
 
-  // Keyboard shortcut listener for Ctrl+Z, Ctrl+Y, Ctrl+N, Ctrl+O
+  // Keyboard shortcut listener for Ctrl+Z, Ctrl+Y, Ctrl+N, Ctrl+O, Alt+T
   useEffect(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
       const lowerKey = (e.key || '').toLowerCase();
+
+      // Mastercam Standard Shortcut: Alt+T toggles toolpath display on selected operations
+      if (e.altKey && (lowerKey === 't' || e.code === 'KeyT')) {
+        e.preventDefault();
+        handleToggleSelectedToolpathRef.current?.();
+        return;
+      }
 
       if (isCtrlOrMeta && (lowerKey === 'z' || e.code === 'KeyZ')) {
         if (shouldBypassAppUndoRedo(target)) return;
@@ -1909,18 +1922,58 @@ export default function App() {
   }, []);
 
   // ================= Handlers =================
-  const handleToggleOp = (id) => {
+  const handleToggleAllToolpaths = () => {
     setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
-    if (id === 'all' || id === null) {
-      setOperations((prev) => {
-        const anyVisible = prev.some((op) => op.visible !== false);
-        return prev.map((op) => ({ ...op, visible: !anyVisible }));
-      });
+    setOperations((prev) => {
+      const anyVisible = prev.some((op) => op.visible !== false);
+      const nextVisible = !anyVisible;
+      const updated = prev.map((op) => ({ ...op, visible: nextVisible }));
+      operationsRef.current = updated;
+      showToast(
+        nextVisible ? "All toolpaths: Shown" : "All toolpaths: Hidden",
+        nextVisible ? "success" : "info",
+        1700
+      );
+      return updated;
+    });
+  };
+
+  const handleToggleSelectedToolpath = (targetId = null) => {
+    const idToToggle = targetId !== null && targetId !== undefined ? targetId : activeOpIdRef.current;
+    setLayerVisibility((prev) => ({ ...prev, toolpaths: true, rapids: true }));
+    if (idToToggle === 'all' || idToToggle === null || idToToggle === undefined) {
+      handleToggleAllToolpaths();
       return;
     }
-    setOperations((prev) =>
-      prev.map((op) => (String(op.id) === String(id) ? { ...op, visible: op.visible === false ? true : false } : op))
-    );
+
+    setOperations((prev) => {
+      let toggledOp = null;
+      let nextState = true;
+      const updated = prev.map((op) => {
+        if (String(op.id) === String(idToToggle)) {
+          nextState = op.visible === false;
+          toggledOp = op;
+          return { ...op, visible: nextState };
+        }
+        return op;
+      });
+      operationsRef.current = updated;
+      const opName = toggledOp?.name || `Operation #${idToToggle}`;
+      showToast(
+        `Toolpath ${opName}: ${nextState ? 'Shown' : 'Hidden'} (Alt+T)`,
+        nextState ? 'success' : 'info',
+        1700
+      );
+      return updated;
+    });
+  };
+
+  const handleToggleOp = (id) => {
+    if (id === 'all' || id === null || id === undefined) {
+      handleToggleAllToolpaths();
+    } else {
+      handleToggleSelectedToolpath(id);
+    }
   };
 
   const handleRegenerateAll = () => {
@@ -7988,6 +8041,8 @@ export default function App() {
             <OperationsTree
           operations={operations}
           onToggleOp={handleToggleOp}
+          onToggleAllToolpaths={handleToggleAllToolpaths}
+          onToggleSelectedToolpath={handleToggleSelectedToolpath}
           activeOpId={activeOpId}
           onSelectOp={setActiveOpId}
           onEditOp={handleEditOp}

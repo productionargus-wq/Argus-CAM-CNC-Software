@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import {
   CheckSquare, Square, Eye, RefreshCw, 
   Trash2, Lock, FileCode, PlusCircle, ChevronDown, ChevronRight, Sliders,
@@ -40,6 +40,8 @@ export const isSurfaceFinishOp = (op) => {
 export default function OperationsTree({
   operations = [],
   onToggleOp,
+  onToggleAllToolpaths,
+  onToggleSelectedToolpath,
   activeOpId,
   onSelectOp,
   onEditOp,
@@ -344,6 +346,12 @@ export default function OperationsTree({
     return map;
   });
 
+  // Toolpath Hide/Show Computed States (matching Mastercam 2018 toolbar)
+  const allToolpathsHidden = operations.length > 0 && operations.every((op) => op.visible === false);
+  const anyToolpathVisible = operations.some((op) => op.visible !== false);
+  const currentSelectedOp = operations.find((o) => String(o.id) === String(activeOpId)) || (activeOpId === 'all' ? operations[0] : null);
+  const isSelectedOpVisible = currentSelectedOp ? currentSelectedOp.visible !== false : anyToolpathVisible;
+
   // Red Insertion Arrow Position (index in operations array)
   const [insertIndex, setInsertIndex] = useState(operations.length);
   const [expandedGeoms, setExpandedGeoms] = useState({});
@@ -581,7 +589,7 @@ export default function OperationsTree({
           Toolpaths
         </span>
         <span style={{ fontSize: '12px', color: '#64748b', marginTop: 'auto', marginBottom: '12px' }} title="Restore Panel">
-          ▶
+          â–¶
         </span>
       </aside>
     );
@@ -649,7 +657,7 @@ export default function OperationsTree({
             style={{ cursor: 'pointer', padding: '0 2px' }}
             title="Window Options"
           >
-            ▾
+            â–¾
           </span>
           <span
             onClick={() => setIsPinned((prev) => !prev)}
@@ -661,14 +669,14 @@ export default function OperationsTree({
             }}
             title={isPinned ? "Pinned (Click to Unpin)" : "Unpinned (Click to Pin)"}
           >
-            📌
+            ðŸ“Œ
           </span>
           <span
             onClick={() => setIsCollapsed(true)}
             style={{ cursor: 'pointer', fontSize: '12px', padding: '0 2px' }}
             title="Close / Collapse Panel"
           >
-            ✕
+            âœ•
           </span>
         </div>
 
@@ -695,7 +703,7 @@ export default function OperationsTree({
               style={{ padding: '6px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}
             >
               <span>Dock Left</span>
-              {isPinned && <span style={{ color: '#0284c7' }}>✓</span>}
+              {isPinned && <span style={{ color: '#0284c7' }}>âœ“</span>}
             </div>
             <div
               onClick={() => { setSidebarWidth(320); setIsWindowMenuOpen(false); }}
@@ -1043,23 +1051,51 @@ export default function OperationsTree({
         >
           {/* ROW 1 TOOLBAR */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-            {/* 1. Backplot */}
+            {/* 1. Select All Operations */}
             <button
-              onClick={() => onStartBackplot?.(activeOpId)}
-              style={{ width: '22px', height: '22px', background: 'transparent', border: '1px solid transparent', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              title="Backplot selected operations (Alt+S)"
+              onClick={() => onSelectOp?.('all')}
+              style={{
+                width: '22px',
+                height: '22px',
+                background: activeOpId === 'all' ? '#dbeafe' : 'transparent',
+                border: activeOpId === 'all' ? '1px solid #93c5fd' : '1px solid transparent',
+                borderRadius: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+              title="Select all operations (Toolpath Group-1)"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#0284c7"><polygon points="6 4 20 12 6 20 6 4" /></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#16a34a">
+                <polygon points="4 2 4 18 9 14 14 22 17 20 12 12 19 12 4 2" />
+              </svg>
             </button>
 
-            {/* 2. Verify Solid */}
+            {/* 2. Unselect All Operations */}
             <button
-              onClick={() => onStartVerify?.(activeOpId)}
-              style={{ width: '22px', height: '22px', background: 'transparent', border: '1px solid transparent', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              title="Verify selected operations (Solid Material Removal)"
+              onClick={() => onSelectOp?.(null)}
+              style={{
+                width: '22px',
+                height: '22px',
+                background: 'transparent',
+                border: '1px solid transparent',
+                borderRadius: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+              title="Unselect all operations"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="9 12 11 14 15 10" stroke="#16a34a" /></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24">
+                <line x1="3" y1="3" x2="15" y2="15" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" />
+                <line x1="15" y1="3" x2="3" y2="15" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" />
+                <polygon points="12 10 12 21 15 18 19 22 21 20 17 16 21 16 12 10" fill="#334155" />
+              </svg>
             </button>
+
+            <div style={{ width: '1px', height: '16px', background: '#cbd5e1', margin: '0 1px' }} />
 
             {/* 3. Regenerate Dirty Ops */}
             <button
@@ -1079,45 +1115,31 @@ export default function OperationsTree({
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" /><path d="M16 21h5v-5" /><line x1="9" y1="9" x2="15" y2="15" stroke="#dc2626" /><line x1="15" y1="9" x2="9" y2="15" stroke="#dc2626" /></svg>
             </button>
 
-            {/* 5. Toggle Toolpath Display (Waves) */}
+            <div style={{ width: '1px', height: '16px', background: '#cbd5e1', margin: '0 1px' }} />
+
+            {/* 5. Backplot */}
             <button
-              onClick={() => onToggleOp?.(activeOpId)}
+              onClick={() => onStartBackplot?.(activeOpId)}
               style={{ width: '22px', height: '22px', background: 'transparent', border: '1px solid transparent', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              title="Toggle display on selected operations (Alt+T)"
+              title="Backplot selected operations (Alt+S)"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2"><path d="M2 12c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /><path d="M2 6c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /><path d="M2 18c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#0284c7"><polygon points="6 4 20 12 6 20 6 4" /></svg>
             </button>
 
-            {/* 6. Select All Operations */}
+            {/* 6. Verify Solid */}
             <button
-              onClick={() => {
-                if (activeOpId === 'all') {
-                  onSelectOp?.(operations[0]?.id || null);
-                } else {
-                  onSelectOp?.('all');
-                }
-              }}
-              style={{
-                width: '22px',
-                height: '22px',
-                background: activeOpId === 'all' ? '#dbeafe' : 'transparent',
-                border: activeOpId === 'all' ? '1px solid #93c5fd' : '1px solid transparent',
-                borderRadius: '2px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}
-              title={activeOpId === 'all' ? "Unselect all operations" : "Select all operations (Toolpath Group-1)"}
+              onClick={() => onStartVerify?.(activeOpId)}
+              style={{ width: '22px', height: '22px', background: 'transparent', border: '1px solid transparent', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              title="Verify selected operations (Solid Material Removal)"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#fbbf24" stroke="#b45309" strokeWidth="1"><rect x="3" y="4" width="18" height="16" rx="2" /><polyline points="7 12 10 15 17 8" stroke="#16a34a" strokeWidth="2.5" fill="none" /></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="9 12 11 14 15 10" stroke="#16a34a" /></svg>
             </button>
 
-            {/* 7. Toggle Shaded Display */}
+            {/* 7. Machine Simulation / Shaded */}
             <button
               onClick={onRegenerate}
               style={{ width: '22px', height: '22px', background: 'transparent', border: '1px solid transparent', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              title="Toggle shaded toolpath / part display"
+              title="Machine Simulation & Shaded Toolpath Display"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="#38bdf8" stroke="#0284c7" strokeWidth="1"><circle cx="12" cy="12" r="9" /><path d="M12 3v18" stroke="#ffffff" /></svg>
             </button>
@@ -1130,6 +1152,8 @@ export default function OperationsTree({
             >
               <span style={{ fontSize: '10px', fontWeight: 900, color: '#2563eb', fontFamily: 'monospace' }}>G1</span>
             </button>
+
+            <div style={{ width: '1px', height: '16px', background: '#cbd5e1', margin: '0 1px' }} />
 
             {/* 9. High Speed / Toolpath Editor */}
             <button
@@ -1173,13 +1197,50 @@ export default function OperationsTree({
               <Lock size={12} color="#ca8a04" />
             </button>
 
-            {/* 2. Toggle Ghost on Selected Ops */}
+            {/* 2. TOGGLE DISPLAY ON ALL OPERATIONS (Toolpaths Hide/Show) */}
             <button
-              onClick={() => onToggleGhostOp?.(activeOpId)}
-              style={{ width: '22px', height: '22px', background: 'transparent', border: '1px solid transparent', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              title="Ghost / un-ghost selected operations"
+              onClick={() => {
+                if (onToggleAllToolpaths) {
+                  onToggleAllToolpaths();
+                } else {
+                  onToggleOp?.('all');
+                }
+              }}
+              style={{
+                width: '22px',
+                height: '22px',
+                background: allToolpathsHidden ? '#fef2f2' : (anyToolpathVisible ? '#eff6ff' : 'transparent'),
+                border: allToolpathsHidden ? '1px solid #fecaca' : (anyToolpathVisible ? '1px solid #bfdbfe' : '1px solid transparent'),
+                borderRadius: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+              title={
+                allToolpathsHidden
+                  ? "Toggle display on all operations: All currently hidden (Click to Show All)"
+                  : "Toggle display on all operations: Hide all toolpaths"
+              }
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M2 12c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /><line x1="4" y1="4" x2="20" y2="20" stroke="#dc2626" strokeWidth="2" /></svg>
+              <div style={{ position: 'relative', width: '15px', height: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <path d="M2 12c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" stroke={allToolpathsHidden ? "#94a3b8" : "#0284c7"} strokeWidth="2" strokeLinecap="round" />
+                  <path d="M2 6c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" stroke={allToolpathsHidden ? "#94a3b8" : "#0284c7"} strokeWidth="2" strokeLinecap="round" />
+                  <path d="M2 18c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" stroke={allToolpathsHidden ? "#94a3b8" : "#0284c7"} strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                {allToolpathsHidden && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '7px',
+                    left: '0px',
+                    width: '16px',
+                    height: '2px',
+                    backgroundColor: '#dc2626',
+                    transform: 'rotate(-45deg)'
+                  }} />
+                )}
+              </div>
             </button>
 
             {/* 3. Ghost Operation */}
@@ -1190,6 +1251,8 @@ export default function OperationsTree({
             >
               <Ghost size={12} color="#94a3b8" />
             </button>
+
+            <div style={{ width: '1px', height: '16px', background: '#cbd5e1', margin: '0 1px' }} />
 
             {/* 4. Move Down */}
             <button
@@ -1227,13 +1290,63 @@ export default function OperationsTree({
               <ArrowUpDown size={12} color="#16a34a" />
             </button>
 
-            {/* 8. Quick Toolpath Preview */}
+            <div style={{ width: '1px', height: '16px', background: '#cbd5e1', margin: '0 1px' }} />
+
+            {/* 8. TOGGLE DISPLAY ON SELECTED OPERATIONS (Selected Toolpath Hide/Show, Alt+T) */}
             <button
-              onClick={() => onToggleOp?.(activeOpId)}
-              style={{ width: '22px', height: '22px', background: 'transparent', border: '1px solid transparent', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              title="Quick toolpath wireframe tracking preview"
+              onClick={() => {
+                if (onToggleSelectedToolpath) {
+                  onToggleSelectedToolpath(activeOpId);
+                } else {
+                  onToggleOp?.(activeOpId);
+                }
+              }}
+              style={{
+                width: '22px',
+                height: '22px',
+                background: isSelectedOpVisible ? '#bfdbfe' : 'transparent',
+                border: isSelectedOpVisible ? '1px solid #60a5fa' : '1px solid transparent',
+                borderRadius: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+              title={
+                isSelectedOpVisible
+                  ? "Toggle display on selected operations (Alt+T) - Currently: Shown"
+                  : "Toggle display on selected operations (Alt+T) - Currently: Hidden"
+              }
             >
-              <Compass size={12} color="#06b6d4" />
+              <div style={{ position: 'relative', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  {/* Mastercam wavy curve */}
+                  <path
+                    d="M2 10c2.5-3.5 5.5-3.5 8 0s5.5 3.5 8 0 3-3.5 4.5-1"
+                    stroke={isSelectedOpVisible ? "#0284c7" : "#64748b"}
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                  />
+                  {/* Mouse Cursor pointer hovering over the wave (Matching screenshot) */}
+                  <polygon
+                    points="11 11 11 22 14.5 18.5 18 22 19.5 20.5 16 17 20.5 17 11 11"
+                    fill="#1e293b"
+                    stroke="#ffffff"
+                    strokeWidth="1"
+                  />
+                </svg>
+                {!isSelectedOpVisible && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '7px',
+                    left: '1px',
+                    width: '15px',
+                    height: '2px',
+                    backgroundColor: '#dc2626',
+                    transform: 'rotate(-45deg)'
+                  }} />
+                )}
+              </div>
             </button>
 
             {/* 9. Chaining Geometry */}
@@ -1411,7 +1524,7 @@ export default function OperationsTree({
                       title="Machine configuration files"
                     >
                       <div style={{ position: 'absolute', left: '-14px', top: '9px', width: '12px', borderTop: '1px dotted #94a3b8' }} />
-                      <span style={{ fontSize: '11px' }}>📁</span>
+                      <span style={{ fontSize: '11px' }}>ðŸ“</span>
                       <span>Files - {activeMachine?.controller || 'Mill.mcam-control'}</span>
                     </div>
                     <div
@@ -1420,7 +1533,7 @@ export default function OperationsTree({
                       title="Tool settings & feed rate rules"
                     >
                       <div style={{ position: 'absolute', left: '-14px', top: '9px', width: '12px', borderTop: '1px dotted #94a3b8' }} />
-                      <span style={{ fontSize: '11px' }}>⚙️</span>
+                      <span style={{ fontSize: '11px' }}>âš™ï¸</span>
                       <span>Tool settings - Default feeds &amp; speeds</span>
                     </div>
                     <div
@@ -1429,8 +1542,8 @@ export default function OperationsTree({
                       title="Stock setup bounding box"
                     >
                       <div style={{ position: 'absolute', left: '-14px', top: '9px', width: '12px', borderTop: '1px dotted #94a3b8' }} />
-                      <span style={{ fontSize: '11px' }}>📦</span>
-                      <span>Stock setup - [{stockConfig?.rawDimensions?.x || stockConfig?.dimensions?.x || 120} × {stockConfig?.rawDimensions?.y || stockConfig?.dimensions?.y || 80} × {stockConfig?.rawDimensions?.z || stockConfig?.dimensions?.z || 25} mm]</span>
+                      <span style={{ fontSize: '11px' }}>ðŸ“¦</span>
+                      <span>Stock setup - [{stockConfig?.rawDimensions?.x || stockConfig?.dimensions?.x || 120} Ã— {stockConfig?.rawDimensions?.y || stockConfig?.dimensions?.y || 80} Ã— {stockConfig?.rawDimensions?.z || stockConfig?.dimensions?.z || 25} mm]</span>
                     </div>
                   </div>
                 )}
@@ -1575,7 +1688,7 @@ export default function OperationsTree({
 
                               {/* Checkmark when operation is selected */}
                               {isSelected && (
-                                <span style={{ color: '#16a34a', fontWeight: 900, fontSize: '11px', marginRight: '1px', lineHeight: 1 }} title="Selected for backplot, verification and posting">✓</span>
+                                <span style={{ color: '#16a34a', fontWeight: 900, fontSize: '11px', marginRight: '1px', lineHeight: 1 }} title="Selected for backplot, verification and posting">âœ“</span>
                               )}
 
                               {/* Mastercam Folder Icon with Green/Yellow tab (Image 1) */}
@@ -1585,12 +1698,35 @@ export default function OperationsTree({
                                 <path d="M4 11h16" stroke="#15803d" strokeWidth="2" strokeLinecap="round" />
                               </svg>
 
-                              <span style={{ color: isSelected ? '#0f172a' : '#1e293b', fontWeight: isSelected ? 600 : 500, fontSize: '11px' }}>
+                              <span style={{
+                                color: op.visible === false ? '#64748b' : (isSelected ? '#0f172a' : '#1e293b'),
+                                fontWeight: isSelected ? 600 : 500,
+                                fontSize: '11px',
+                                textDecoration: op.visible === false ? 'line-through' : 'none'
+                              }}>
                                 {idx + 1} - {op.name || 'Surface Rough Pocket'} - [WCS: Top] - [Tplane: Top]
                               </span>
 
-                              {op.locked && <span title="Locked" style={{ fontSize: '10px' }}>🔒</span>}
-                              {op.ghosted && <span title="Ghosted" style={{ fontSize: '10px' }}>👻</span>}
+                              {op.visible === false && (
+                                <span
+                                  title="Toolpath hidden (Alt+T or click Toolpath row to toggle)"
+                                  style={{
+                                    fontSize: '9px',
+                                    fontWeight: 700,
+                                    color: '#dc2626',
+                                    backgroundColor: '#fee2e2',
+                                    border: '1px solid #fca5a5',
+                                    borderRadius: '2px',
+                                    padding: '0 3px',
+                                    lineHeight: 1.2
+                                  }}
+                                >
+                                  HIDDEN
+                                </span>
+                              )}
+
+                              {op.locked && <span title="Locked" style={{ fontSize: '10px' }}>ðŸ”’</span>}
+                              {op.ghosted && <span title="Ghosted" style={{ fontSize: '10px' }}>ðŸ‘»</span>}
                             </div>
 
                             {/* Sub-Branch Items */}
@@ -1735,24 +1871,66 @@ export default function OperationsTree({
 
                                 {/* 4. Toolpath info */}
                                 <div
-                                  onClick={() => onToggleOp(op.id)}
-                                  style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '5px', color: op.visible ? '#0f172a' : '#94a3b8', cursor: 'pointer', padding: '1px 0' }}
-                                  title="Toggle toolpath visibility / G-code NC stats"
+                                  onClick={() => {
+                                    if (onToggleSelectedToolpath) {
+                                      onToggleSelectedToolpath(op.id);
+                                    } else {
+                                      onToggleOp?.(op.id);
+                                    }
+                                  }}
+                                  style={{
+                                    position: 'relative',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    color: op.visible !== false ? '#0f172a' : '#94a3b8',
+                                    cursor: 'pointer',
+                                    padding: '1px 2px',
+                                    borderRadius: '2px',
+                                    backgroundColor: op.visible === false ? '#fef2f2' : 'transparent',
+                                    opacity: op.visible === false ? 0.8 : 1
+                                  }}
+                                  title="Click to toggle toolpath visibility (Alt+T)"
                                 >
                                   <div style={{ position: 'absolute', left: '-16px', top: '9px', width: '14px', borderTop: '1px dotted #94a3b8' }} />
                                   {/* Mastercam 3-wave toolpath icon (Image 1) */}
-                                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-                                    <path d="M1 4 C 3 1, 5 1, 7 4 C 9 7, 11 7, 13 4 C 9 7, 11 7, 13 4 C 14 2.5, 15 2.5, 15.5 3" stroke="#0f172a" strokeWidth="1.8" strokeLinecap="round" />
-                                    <path d="M1 8 C 3 5, 5 5, 7 8 C 9 11, 11 11, 13 8 C 14 6.5, 15 6.5, 15.5 7" stroke="#0f172a" strokeWidth="1.8" strokeLinecap="round" />
-                                    <path d="M1 12 C 3 9, 5 9, 7 12 C 9 15, 11 15, 13 12 C 14 10.5, 15 10.5, 15.5 11" stroke="#0f172a" strokeWidth="1.8" strokeLinecap="round" />
-                                  </svg>
-                                  <span>
+                                  <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                                      <path d="M1 4 C 3 1, 5 1, 7 4 C 9 7, 11 7, 13 4 C 9 7, 11 7, 13 4 C 14 2.5, 15 2.5, 15.5 3" stroke={op.visible !== false ? "#0f172a" : "#94a3b8"} strokeWidth="1.8" strokeLinecap="round" />
+                                      <path d="M1 8 C 3 5, 5 5, 7 8 C 9 11, 11 11, 13 8 C 14 6.5, 15 6.5, 15.5 7" stroke={op.visible !== false ? "#0f172a" : "#94a3b8"} strokeWidth="1.8" strokeLinecap="round" />
+                                      <path d="M1 12 C 3 9, 5 9, 7 12 C 9 15, 11 15, 13 12 C 14 10.5, 15 10.5, 15.5 11" stroke={op.visible !== false ? "#0f172a" : "#94a3b8"} strokeWidth="1.8" strokeLinecap="round" />
+                                    </svg>
+                                    {op.visible === false && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '5px',
+                                        left: '-1px',
+                                        width: '15px',
+                                        height: '2px',
+                                        backgroundColor: '#dc2626',
+                                        transform: 'rotate(-45deg)',
+                                        pointerEvents: 'none'
+                                      }} />
+                                    )}
+                                  </div>
+                                  <span style={{ textDecoration: op.visible === false ? 'line-through' : 'none' }}>
                                     {(() => {
                                       const cuts = op.toolpathData?.cuttingLines?.length || op.cuttingLines?.length || (op.waypoints?.length ? op.waypoints.length * 2 : 0);
                                       const sizeKb = op.ncFileSizeKb || (cuts > 0 ? ((cuts * 0.052) + 8.4).toFixed(1) : '314.2');
                                       const ncBase = currentProjectName ? currentProjectName.replace(/\.[^/.]+$/, '') : 'Base Structure-ALU';
                                       return `Toolpath - ${sizeKb}K - ${ncBase}.NC - Program ${String(idx + 1).padStart(4, '0')}`;
                                     })()}
+                                  </span>
+                                  <span style={{
+                                    marginLeft: 'auto',
+                                    fontSize: '9px',
+                                    fontWeight: 700,
+                                    color: op.visible !== false ? '#15803d' : '#dc2626',
+                                    backgroundColor: op.visible !== false ? '#dcfce7' : '#fee2e2',
+                                    padding: '0 4px',
+                                    borderRadius: '2px'
+                                  }}>
+                                    {op.visible !== false ? 'ON' : 'OFF'}
                                   </span>
                                 </div>
                               </div>
@@ -2035,11 +2213,11 @@ export default function OperationsTree({
           padding: '0 2px'
         }}
       >
-        <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0 }}>◀</button>
+        <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0 }}>â—€</button>
         <div style={{ flex: 1, height: '4px', background: '#cbd5e1', borderRadius: '2px', margin: '0 4px', position: 'relative' }}>
           <div style={{ width: '35%', height: '100%', background: '#94a3b8', borderRadius: '2px' }} />
         </div>
-        <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0 }}>▶</button>
+        <button style={{ width: '12px', height: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '8px', color: '#64748b', padding: 0 }}>â–¶</button>
       </div>
 
       {/* ================= 5. MASTERCAM BOTTOM TABS STRIP (MATCHING IMAGES 1, 2, 3) ================= */}
