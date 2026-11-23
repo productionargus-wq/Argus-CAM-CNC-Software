@@ -364,7 +364,7 @@ export default function MastercamToolpathParametersModal({
       onRegenerateToolpath(updatedOp.id);
     }
     if (onNotify) {
-      onNotify(`Mastercam: Updated parameters for ${updatedOp.name}`, 'success');
+      onNotify(`Argus CAM: Updated parameters for ${updatedOp.name}`, 'success');
     }
     if (closeAfterSave) {
       onClose();
@@ -427,8 +427,9 @@ export default function MastercamToolpathParametersModal({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img src="/brand/argus_cam_icon.jpg" alt="Argus CAM" style={{ height: '16px', width: '16px', borderRadius: '2px', objectFit: 'contain' }} />
             <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.3px' }}>
-              Mastercam 2D Toolpaths - [{formData.name || 'Parameters'}]
+              Argus CAM Intelligence &bull; 2D Toolpaths - [{formData.name || 'Parameters'}]
             </span>
             <span
               style={{
@@ -1570,7 +1571,7 @@ export default function MastercamToolpathParametersModal({
                           onChange={(e) => handleFieldChange('compensationType', e.target.value)}
                           style={{ width: '100%', padding: '6px 10px', fontSize: '12.5px', border: '1px solid #cbd5e1', borderRadius: '3px' }}
                         >
-                          <option value="computer">Computer (Calculated by Mastercam)</option>
+                          <option value="computer">Computer (Calculated by Argus CAM)</option>
                           <option value="control">Control (Outputs G41/G42)</option>
                           <option value="wear">Wear (Tool Wear Offsets)</option>
                           <option value="off">Off (Centerline Toolpath)</option>
@@ -1942,7 +1943,7 @@ export default function MastercamToolpathParametersModal({
                   {/* Mastercam Visual Z-Diagram */}
                   <div style={{ background: '#f8fafc', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
-                      Mastercam Z-Plane Scheme
+                      Argus CAM Z-Plane Scheme
                     </span>
                     <svg width="200" height="200" viewBox="0 0 200 200">
                       {/* Clearance Plane */}

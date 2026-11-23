@@ -9,32 +9,32 @@ import { parseSTEPText, parseIGESText } from './stepIgesParser.js';
 export const CAD_FILE_FORMATS = [
   {
     id: 'mcam',
-    label: 'Mastercam Files (*.mcam)',
+    label: 'Argus CAM Part Files (*.mcam)',
     extensions: ['mcam'],
-    category: 'Mastercam',
+    category: 'Argus CAM',
     mime: 'application/octet-stream',
-    description: 'Mastercam 2018-2026 unified CAD/CAM part package with toolpaths and machine setup.'
+    description: 'Argus CAM Intelligence unified CAD/CAM part package with toolpaths and machine setup.'
   },
   {
     id: 'mcx',
-    label: 'Mastercam X Files (*.mcx)',
+    label: 'Legacy CAM Part Files (*.mcx)',
     extensions: ['mcx', 'mcx-5', 'mcx-6', 'mcx-7', 'mcx-8', 'mcx-9'],
-    category: 'Mastercam',
+    category: 'Argus CAM',
     description: 'Legacy Mastercam X through X9 part files.'
   },
   {
     id: 'emcx',
-    label: 'Mastercam Edu X Files (*.emcx*)',
+    label: 'Educational CAM Part Files (*.emcx*)',
     extensions: ['emcx', 'emc'],
-    category: 'Mastercam',
-    description: 'Mastercam Educational Edition part files.'
+    category: 'Argus CAM',
+    description: 'Educational Edition part files.'
   },
   {
     id: 'all_mcam',
-    label: 'All Mastercam Files (*.mc*;*.emc*)',
+    label: 'All Argus CAM Files (*.mcam;*.mc*;*.json)',
     extensions: ['mcam', 'mcx', 'emcx', 'emc'],
-    category: 'Mastercam',
-    description: 'Wildcard filter for all Mastercam native and educational files.'
+    category: 'Argus CAM',
+    description: 'Filter for all Argus CAM and native part files.'
   },
   {
     id: 'iges',
@@ -826,7 +826,7 @@ export async function parseAnyCADFile(file, _options = {}) {
           m.position.set(0, sz / 2, 0);
           modelGroup = new THREE.Group();
           modelGroup.add(m);
-          modelGroup.userData = { format: 'Mastercam Part File (*.mcam)', projectData: json };
+          modelGroup.userData = { format: 'Argus CAM Part File (*.mcam)', projectData: json };
         } else {
           modelGroup = parseDirectCADSolid(filename, 'mcam');
         }

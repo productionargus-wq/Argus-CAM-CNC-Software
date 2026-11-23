@@ -438,7 +438,7 @@ export default function SolidsCADModal({
                 SOLIDS CAD MODELING &amp; PARAMETRIC BILLET SUITE
               </div>
               <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', gap: '12px', marginTop: '2px' }}>
-                <span>Mastercam 2018 Specification</span>
+                <span>Argus CAM Intelligence Specification</span>
                 <span>•</span>
                 <span style={{ color: '#0284c7', fontWeight: 600 }}>Material: {activeMaterial.name} ({activeMaterial.density} g/cm³)</span>
                 <span>•</span>
@@ -756,7 +756,7 @@ export default function SolidsCADModal({
                     2.5D Milling Plate Solid (Fillets, Bore &amp; Bolt Holes)
                   </div>
                   <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                    Generate the standard Mastercam 2.5D milling tutorial part: filleted rectangular plate with central through-bore and 4 corner bolt holes.
+                    Generate standard 2.5D milling benchmark part: filleted rectangular plate with central through-bore and 4 corner bolt holes.
                   </div>
                 </div>
 
@@ -816,7 +816,7 @@ export default function SolidsCADModal({
                     {activeTool === 'sweep' && 'Sweep Profile Along Trajectory'}
                   </div>
                   <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                    Mastercam 2018 Solid Create feature.
+                    Argus CAM Intelligence Solid Create feature.
                   </div>
                 </div>
 

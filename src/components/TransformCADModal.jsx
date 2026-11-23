@@ -522,7 +522,7 @@ export default function TransformCADModal({
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      aria-label="Mastercam 2018 Transform & Positioning Suite"
+      aria-label="Argus CAM Intelligence Transform & Positioning Suite"
       closedby="any"
     >
       <div className="modal-window" style={{ width: '870px', height: '86vh', maxHeight: '760px', display: 'flex', flexDirection: 'column' }}>
@@ -530,7 +530,7 @@ export default function TransformCADModal({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <DynamicIcon size={20} />
-            <span style={{ fontWeight: 600 }}>Mastercam Transform &bull; 3D Positioning, Layout &amp; Scaling Suite</span>
+            <span style={{ fontWeight: 600 }}>Argus CAM Intelligence &bull; 3D Positioning, Layout &amp; Scaling Suite</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />
@@ -1137,7 +1137,7 @@ export default function TransformCADModal({
 
                 <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
                   <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.6 }}>
-                    Mastercam True-Shape Sheet Nesting packs irregular 2D profiles onto standard 4x8 ft or custom aluminum billet stock plates with grain direction control.
+                    Argus CAM True-Shape Sheet Nesting packs irregular 2D profiles onto standard 4x8 ft or custom aluminum billet stock plates with grain direction control.
                   </div>
                 </div>
 

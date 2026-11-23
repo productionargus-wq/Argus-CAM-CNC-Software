@@ -19,7 +19,7 @@ const ALL_MASTERCAM_COMMANDS = [
   { id: 'check_solid', name: 'Check Solid', category: 'Home > Analyze', shortcut: '', desc: 'Verify solid watertight integrity and manifold topology' },
   { id: '2d_area', name: '2D Area Calculation', category: 'Home > Analyze', shortcut: '', desc: 'Compute planar surface area and perimeter of enclosed curves' },
   { id: 'statistics', name: 'Statistics', category: 'Home > Analyze', shortcut: '', desc: 'Display geometry, entity counts, memory and database statistics' },
-  { id: 'run_addin', name: 'Run Add-In', category: 'Home > Add-Ins', shortcut: 'Alt+C', desc: 'Execute Mastercam C-Hook, NET-Hook or external plugin' },
+  { id: 'run_addin', name: 'Run Add-In', category: 'Home > Add-Ins', shortcut: 'Alt+C', desc: 'Execute Argus CAM C-Hook, NET-Hook or external plugin' },
 
   // Wireframe
   { id: 'line_endpoints', name: 'Line Endpoints', category: 'Wireframe', shortcut: '', desc: 'Create 2D/3D lines between two points' },
@@ -150,7 +150,7 @@ export default function CommandFinderModal({
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search all Mastercam Ribbon commands, shortcuts, or functions..."
+            placeholder="Search all Argus CAM commands, shortcuts, or functions..."
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -327,7 +327,7 @@ export default function CommandFinderModal({
             <span>↵ Select</span>
             <span>ESC Close</span>
           </div>
-          <span style={{ fontWeight: 600, color: '#0284c7' }}>Mastercam 2018 Command Finder</span>
+          <span style={{ fontWeight: 600, color: '#0284c7' }}>Argus CAM Intelligence Command Finder</span>
         </div>
       </div>
     </div>

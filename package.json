@@ -2,7 +2,7 @@
   "name": "argus-master-cam",
   "private": true,
   "version": "1.0.0",
-  "description": "Argus Master CAM CNC Software - 5-Axis CAD/CAM Suite",
+  "description": "Argus CAM Intelligence - 5-Axis CAD/CAM Suite",
   "author": "Argus Technologies",
   "main": "electron/main.cjs",
   "type": "module",
@@ -45,8 +45,8 @@
     "vite": "^8.3.4"
   },
   "build": {
-    "appId": "com.argus.mastercam",
-    "productName": "Argus Master CAM CNC Software",
+    "appId": "com.argus.camintelligence",
+    "productName": "Argus CAM Intelligence",
     "directories": {
       "output": "release"
     },

@@ -60,7 +60,7 @@ export default function TitleBar({
   };
 
   const handleClose = async () => {
-    if (window.confirm("Close Argus Master CAM project? Any unsaved toolpath or CAD edits will be lost.")) {
+    if (window.confirm("Close Argus CAM Intelligence project? Any unsaved toolpath or CAD edits will be lost.")) {
       if (window.__TAURI__?.window) {
         try {
           const { getCurrentWindow } = window.__TAURI__.window;
@@ -78,15 +78,27 @@ export default function TitleBar({
     <header className="app-titlebar">
       <div className="titlebar-left">
         <div className="titlebar-logo">
-          <Cpu size={16} className="text-cyan-400" />
-          <span>ARGUS CAM</span>
+          <img 
+            src="/brand/argus_cam_icon.jpg" 
+            alt="Argus CAM Intelligence" 
+            style={{ 
+              height: '22px', 
+              width: '22px', 
+              objectFit: 'contain', 
+              borderRadius: '3px',
+              display: 'block' 
+            }} 
+          />
+          <span style={{ fontWeight: 800, fontSize: '11px', color: '#ea580c', letterSpacing: '0.5px' }}>
+            ARGUS <span style={{ color: theme === 'light' ? '#0f172a' : '#f8fafc', fontWeight: 600 }}>CAM INTELLIGENCE</span>
+          </span>
         </div>
 
         <div className="titlebar-quick-actions">
-          <button className="quick-btn" onClick={onOpenFile} title="Open Mastercam or CAD File (Ctrl+O)">
+          <button className="quick-btn" onClick={onOpenFile} title="Open Argus CAM or CAD File (Ctrl+O)">
             <FolderOpen size={13} />
           </button>
-          <button className="quick-btn" onClick={onSaveProject} title="Save Project (.mcam JSON Package)">
+          <button className="quick-btn" onClick={onSaveProject} title="Save Argus CAM Project (.mcam JSON Package)">
             <Save size={13} />
           </button>
           <button
@@ -151,7 +163,7 @@ export default function TitleBar({
       </div>
 
       <div className="titlebar-center">
-        <span style={{ fontWeight: 600, color: theme === 'light' ? '#0f172a' : '#f8fafc' }}>Mastercam 2026</span>
+        <span style={{ fontWeight: 600, color: theme === 'light' ? '#0f172a' : '#f8fafc' }}>Argus CAM Intelligence</span>
         <span style={{ color: '#94a3b8', margin: '0 5px' }}>&ndash;</span>
         {isEditingName ? (
           <input

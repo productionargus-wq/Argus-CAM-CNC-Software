@@ -67,7 +67,7 @@ export default function ExportCADModal({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Download size={16} color="#a855f7" />
-            <span>Mastercam &bull; Export 3D CAD Geometry</span>
+            <span>Argus CAM Intelligence &bull; Export 3D CAD Geometry</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />
@@ -109,7 +109,7 @@ export default function ExportCADModal({
                 />
                 <div>
                   <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '12px' }}>STEP Solid B-Rep (.step / .stp)</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>ISO 10303-21 standard CAD solid model for SolidWorks, Mastercam, NX, and CATIA.</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>ISO 10303-21 standard CAD solid model for SolidWorks, Argus CAM, NX, and CATIA.</div>
                 </div>
               </label>
 

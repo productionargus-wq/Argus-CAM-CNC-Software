@@ -402,7 +402,7 @@ export default function DraftingCADModal({
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      aria-label="Mastercam 2018 Drafting & 3D Annotations Studio"
+      aria-label="Argus CAM Intelligence Drafting & 3D Annotations Studio"
       closedby="any"
     >
       <div className="modal-window" style={{ width: '870px', height: '86vh', maxHeight: '760px', display: 'flex', flexDirection: 'column' }}>
@@ -410,7 +410,7 @@ export default function DraftingCADModal({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <SmartDimensionIcon size={20} />
-            <span style={{ fontWeight: 600 }}>Mastercam Drafting &bull; 2D/3D Dimensions &amp; Annotations Suite</span>
+            <span style={{ fontWeight: 600 }}>Argus CAM Intelligence &bull; 2D/3D Dimensions &amp; Annotations Suite</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />

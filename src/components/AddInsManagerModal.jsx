@@ -69,7 +69,7 @@ export default function AddInsManagerModal({
   const handleRun = () => {
     onClose();
     if (onNotify) {
-      onNotify(`Executing Mastercam Add-In: ${selectedAddIn.name} (${selectedAddIn.filename})`, 'success');
+      onNotify(`Executing Argus CAM Add-In: ${selectedAddIn.name} (${selectedAddIn.filename})`, 'success');
     }
   };
 
@@ -114,7 +114,7 @@ export default function AddInsManagerModal({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Cpu size={18} />
-            <span style={{ fontWeight: 600, fontSize: '13px' }}>Mastercam Run User Applications (C-Hooks / NET-Hooks)</span>
+            <span style={{ fontWeight: 600, fontSize: '13px' }}>Argus CAM Intelligence &bull; User Applications (C-Hooks / NET-Hooks)</span>
           </div>
           <button
             onClick={onClose}
@@ -202,7 +202,7 @@ export default function AddInsManagerModal({
             <div style={{ marginBottom: '12px' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>FILE PATH &amp; ARCHITECTURE</div>
               <div style={{ backgroundColor: '#f1f5f9', padding: '6px 10px', borderRadius: '4px', fontSize: '12px', fontFamily: 'monospace', color: '#1e293b' }}>
-                C:\Program Files\Mastercam 2018\chooks\{selectedAddIn.filename}
+                C:\Program Files\Argus CAM Intelligence\chooks\{selectedAddIn.filename}
               </div>
             </div>
 

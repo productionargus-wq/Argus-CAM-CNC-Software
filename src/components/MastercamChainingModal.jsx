@@ -81,7 +81,7 @@ export default function MastercamChainingModal({
       onAcceptChains(chains);
     }
     if (onNotify) {
-      onNotify(`Mastercam: Accepted ${chains.length} Chains for Machining Region`, 'success');
+      onNotify(`Argus CAM: Accepted ${chains.length} Chains for Machining Region`, 'success');
     }
     onClose();
   };
@@ -125,7 +125,7 @@ export default function MastercamChainingModal({
           }}
         >
           <span style={{ fontSize: '13px', fontWeight: 700 }}>
-            Chaining - Select Machining Boundaries
+            Argus CAM Intelligence &bull; Chaining - Select Machining Boundaries
           </span>
           <div style={{ display: 'flex', gap: '6px' }}>
             <button

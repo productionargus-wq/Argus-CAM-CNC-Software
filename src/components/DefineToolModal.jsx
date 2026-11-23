@@ -246,9 +246,9 @@ function DefineToolModalInner({
       coolant: initialTool?.coolant || 'Flood',
       name: initialTool?.name || `12 ${initialMeta.suffix}`,
       description: initialTool?.description || '',
-      manufacturerName: initialTool?.manufacturerName || 'Mastercam Imported',
+      manufacturerName: initialTool?.manufacturerName || 'Argus CAM Default',
       manufacturerCode: initialTool?.manufacturerCode || '',
-      toolGrade: initialTool?.toolGrade || 'Mastercam Default',
+      toolGrade: initialTool?.toolGrade || 'Argus Default',
       roughTool: initialTool?.roughTool ?? true,
       finishTool: initialTool?.finishTool ?? true,
       roughXyStepPct: Number(initialTool?.roughXyStepPct) || 0,
@@ -258,8 +258,8 @@ function DefineToolModalInner({
     };
   });
 
-  const [manufacturers, setManufacturers] = useState(['Mastercam Imported', 'Sandvik Coromant', 'Kennametal', 'ISCAR', 'Harvey Tool']);
-  const [toolGrades, setToolGrades] = useState(['Mastercam Default', 'TiAlN Micro-Grain', 'DLC Coated', 'Uncoated Carbide']);
+  const [manufacturers, setManufacturers] = useState(['Argus CAM Default', 'Sandvik Coromant', 'Kennametal', 'ISCAR', 'Harvey Tool']);
+  const [toolGrades, setToolGrades] = useState(['Argus Default', 'TiAlN Micro-Grain', 'DLC Coated', 'Uncoated Carbide']);
   const [collapsedCards, setCollapsedCards] = useState({ operation: false, general: false, category: false });
 
   const activeToolMeta = resolveToolMeta(selectedCategoryType);

@@ -114,7 +114,7 @@ export default function CAMOperationsWizardModal({
       name: '3D Dynamic OptiRough',
       badge: 'OR',
       color: '#06b6d4',
-      desc: 'Mastercam constant tool engagement dynamic roughing with upward stepup passes',
+      desc: 'High-speed constant tool engagement dynamic roughing with upward stepup passes',
       defaultStepover: 15,
       defaultStepdown: 15.0,
       defaultDepth: 25.0,
@@ -202,7 +202,7 @@ export default function CAMOperationsWizardModal({
       name: '3D Surface Finish Leftover',
       badge: 'LO',
       color: '#10b981',
-      desc: 'Mastercam 3D rest milling targeting leftover fillet/corner material with tangential overlap blending',
+      desc: 'Advanced 3D rest milling targeting leftover fillet/corner material with tangential overlap blending',
       defaultStepover: 15,
       defaultStepdown: 0.4,
       defaultDepth: 15.0,
@@ -213,7 +213,7 @@ export default function CAMOperationsWizardModal({
       name: '3D Surface Finish Scallop',
       badge: 'SC',
       color: '#0284c7',
-      desc: 'Mastercam constant scallop finishing maintaining uniform 3D cusp height across steep & shallow surfaces',
+      desc: 'Uniform constant scallop finishing maintaining consistent 3D cusp height across steep & shallow surfaces',
       defaultStepover: 15,
       defaultStepdown: 0.5,
       defaultDepth: 25.0,
@@ -224,7 +224,7 @@ export default function CAMOperationsWizardModal({
       name: '3D Surface Finish Blend',
       badge: 'BL',
       color: '#c026d3',
-      desc: 'Mastercam morphing pass blend finishing between two boundary curves across 3D drive surfaces',
+      desc: 'Morphing pass blend finishing between two boundary curves across 3D drive surfaces',
       defaultStepover: 15,
       defaultStepdown: 0.45,
       defaultDepth: 25.0,
@@ -399,7 +399,7 @@ export default function CAMOperationsWizardModal({
           <Layers size={22} color="#10b981" />
           <div>
             <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a', letterSpacing: '0.3px' }}>
-              Mastercam CAM Operations Manager &bull; Toolpath Suite
+              Argus CAM Intelligence &bull; CAM Operations Suite
             </h2>
             <div style={{ fontSize: '11px', color: '#94a3b8' }}>
               2.5D, 3D &amp; 5-Axis Milling Cycles &bull; Collision &amp; Gouge Verification &bull; Cycle Times

@@ -54,8 +54,8 @@ export default function MastercamOpenDialog({
   const recentDocs = getRecentProjects() || [];
   const sampleParts = [
     { name: 'Base Structure-ALU.NC', type: 'mcam', size: '314.2 KB', date: '11/14/2026 09:40 AM' },
-    { name: 'Mastercam Part 1.mcam', type: 'mcam', size: '186.4 KB', date: '11/14/2026 08:15 AM' },
-    { name: 'Mastercam Multi-Body Assembly.mcam', type: 'mcam', size: '428.0 KB', date: '11/14/2026 10:20 AM' },
+    { name: 'Argus Part 1.mcam', type: 'mcam', size: '186.4 KB', date: '11/14/2026 08:15 AM' },
+    { name: 'Argus Multi-Body Assembly.mcam', type: 'mcam', size: '428.0 KB', date: '11/14/2026 10:20 AM' },
     { name: 'Titan_1M_Workpiece.step', type: 'step', size: '1.24 MB', date: '11/10/2026 02:30 PM' },
     { name: 'AutoCAD_Bracket_Profile.dwg', type: 'autocad', size: '540.8 KB', date: '11/08/2026 11:12 AM' },
     { name: 'ZeroClamp_Fixture_Vise.step', type: 'step', size: '2.80 MB', date: '11/06/2026 04:45 PM' },

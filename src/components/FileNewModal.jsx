@@ -9,7 +9,7 @@ export default function FileNewModal({
   const dialogRef = useRef(null);
 
   const [selectedTemplate, setSelectedTemplate] = useState('blank_wireframe');
-  const [projectName, setProjectName] = useState('Mastercam_Part1.mcam');
+  const [projectName, setProjectName] = useState('Argus_Part1.mcam');
   const [unitSystem, setUnitSystem] = useState('metric');
   const [customDimensions, setCustomDimensions] = useState({ x: 80, y: 35, z: 60 });
 
@@ -47,14 +47,14 @@ export default function FileNewModal({
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      aria-label="Create New Mastercam Project"
+      aria-label="Create New Argus CAM Project"
       closedby="any"
     >
       <div className="modal-window" style={{ width: '680px' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Plus size={16} color="#38bdf8" />
-            <span>Mastercam 2026 &bull; New Project Setup Wizard</span>
+            <img src="/brand/argus_cam_icon.jpg" alt="Argus" style={{ width: '20px', height: '20px', borderRadius: '3px', objectFit: 'contain' }} />
+            <span>Argus CAM Intelligence &bull; New Project Setup Wizard</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />
@@ -115,14 +115,14 @@ export default function FileNewModal({
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ fontWeight: 800, color: '#38bdf8', fontSize: '13px' }}>
-                      Blank CAD Drawing Canvas (Mastercam 2D Workflow)
+                      Blank CAD Drawing Canvas (Argus CAM 2D Workflow)
                     </div>
                     <span style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', fontSize: '9.5px', fontWeight: 700, padding: '1px 6px', borderRadius: '3px' }}>
                       RECOMMENDED
                     </span>
                   </div>
                   <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', lineHeight: 1.35 }}>
-                    Clean graphics viewport with WCS (X0, Y0, Z0) datum origin. Draw Rectangles, Circles, Corner Fillets & Drill Points from scratch, then create CNC Toolpaths & Verify (just like Mastercam 2019 tutorial video)!
+                    Clean graphics viewport with WCS (X0, Y0, Z0) datum origin. Draw Rectangles, Circles, Corner Fillets &amp; Drill Points from scratch, then create CNC Toolpaths &amp; Verify!
                   </div>
                 </div>
               </div>
@@ -176,7 +176,7 @@ export default function FileNewModal({
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontWeight: 700, color: '#f8fafc', fontSize: '12px' }}>Mastercam 2019 Milling Tutorial (CAD CAM PDF)</span>
+                    <span style={{ fontWeight: 700, color: '#f8fafc', fontSize: '12px' }}>CAM Milling Benchmark Tutorial (CAD CAM PDF)</span>
                     <span style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#eab308', fontSize: '9.5px', fontWeight: 700, padding: '1px 6px', borderRadius: '3px' }}>
                       YOUTUBE
                     </span>

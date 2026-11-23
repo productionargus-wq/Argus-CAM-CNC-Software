@@ -428,7 +428,7 @@ export default function WireframeSketcherModal({
                 WIREFRAME CAD SKETCHER &amp; GEOMETRY GENERATOR
               </div>
               <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', gap: '12px', marginTop: '2px' }}>
-                <span>Mastercam 2024 Style Parametric CAD Tools</span>
+                <span>Argus CAM Intelligence Parametric CAD Tools</span>
                 <span>•</span>
                 <span style={{ color: '#0284c7', fontWeight: 600 }}>Target: Level 10 (Wireframe Curves)</span>
                 <span>•</span>
@@ -1160,7 +1160,7 @@ export default function WireframeSketcherModal({
                 <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, color: '#f59e0b' }}>Bolt Hole Circle Pattern (PCD)</div>
                   <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
-                    Mastercam standard pitch circle pattern generator for drill cycles, peck drilling, and tap coordinates.
+                    Argus CAM standard pitch circle pattern generator for drill cycles, peck drilling, and tap coordinates.
                   </div>
                 </div>
 

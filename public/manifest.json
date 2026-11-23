@@ -1,11 +1,11 @@
 {
   "short_name": "Argus CAM",
-  "name": "Argus Master CAM Mobile",
-  "description": "5-Axis CNC CAD/CAM Studio & Industrial Toolpath Generator",
+  "name": "Argus CAM Intelligence",
+  "description": "Argus CAM Intelligence - 5-Axis CNC CAD/CAM Studio & Industrial Toolpath Generator",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "type": "image/svg+xml",
+      "src": "/brand/argus_cam_icon.jpg",
+      "type": "image/jpeg",
       "sizes": "192x192 512x512"
     }
   ],

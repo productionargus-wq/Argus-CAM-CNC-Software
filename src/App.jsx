@@ -287,7 +287,7 @@ export default function App() {
   } = useMobileLayout();
   const [isMobileRibbonOpen, setIsMobileRibbonOpen] = useState(false);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
-  const [projectDescriptor, setProjectDescriptor] = useState('Mastercam 5-Axis Multi-Surface Machining Project for DMU 50 VMC');
+  const [projectDescriptor, setProjectDescriptor] = useState('Argus CAM Intelligence 5-Axis Multi-Surface Machining Project for DMU 50 VMC');
   const [projectCreatedDate, setProjectCreatedDate] = useState(() => new Date(Date.now() - 3600000 * 24 * 2));
   const [projectLastModifiedDate, setProjectLastModifiedDate] = useState(() => new Date());
   const [autoSaveIntervalMinutes, setAutoSaveIntervalMinutes] = useState(5);
@@ -3106,7 +3106,7 @@ export default function App() {
 
     setOperations((prev) => [...prev, newOp]);
     setActiveOpId(nextId);
-    showToast(`Mastercam Productivity+: Touch Probe operation #${nextId} created in Toolpath Group-1`, 'success');
+    showToast(`Argus CAM Productivity+: Touch Probe operation #${nextId} created in Toolpath Group-1`, 'success');
   };
 
   const handleProbeFeaturePicked = (feature) => {
@@ -3898,7 +3898,7 @@ export default function App() {
     if (type === 'mastercam_multibody' || type === 'multibody_assembly' || type === 'multibody' || type === 'extrude_assembly') {
       const mbPart = createMastercamMultiBodyAssembly();
       setCurrentModel(mbPart);
-      setCurrentProjectName('Mastercam Multi-Body Assembly.mcam');
+      setCurrentProjectName('Argus Multi-Body Assembly.mcam');
       setActiveMachineId('haas_vf2');
       setActiveWcs('G54');
       setActiveRibbonTab('Solids');
@@ -3913,7 +3913,7 @@ export default function App() {
         { id: 2, name: 'Solid 2 - Cylinder Boss (Orange)', material: '6061-T6 Aluminum', volumeCm3: 43.0, isPrimary: false, visible: true, active: false, color: '#ea580c' },
         { id: 3, name: 'Solid 3 - Charcoal Saddle Block', material: 'Hardened Tool Steel', volumeCm3: 110.0, isPrimary: false, visible: true, active: false, color: '#334155' }
       ]);
-      showToast('Loaded Mastercam Multi-Body Assembly (Image 3)', 'success');
+      showToast('Loaded Argus Multi-Body Assembly', 'success');
       handleResetTransform();
       return;
     }
@@ -3923,11 +3923,11 @@ export default function App() {
         setCurrentProjectName('Base Structure-ALU.mcam');
         setActiveMachineId('haas_vf2');
         setActiveRibbonTab('Toolpaths');
-        showToast('Loaded Mastercam Base Structure-ALU Part with 3D Contour Toolpaths', 'success');
+        showToast('Loaded Argus Base Structure-ALU Part with 3D Contour Toolpaths', 'success');
       } else if (type === 'titan_1m' || type === 'titan1m' || type === 'titan') {
       const titanPart = createTitan1MPart();
       setCurrentModel(titanPart);
-      setCurrentProjectName('TITAN-1M_Mastercam_Benchmark.mcam');
+      setCurrentProjectName('TITAN-1M_Argus_Benchmark.mcam');
       setActiveMachineId('haas_vf2');
       setActiveWcs('G54');
       setActiveRibbonTab('Toolpaths');
@@ -4161,7 +4161,7 @@ export default function App() {
     } else if (type === 'mastercam2019_tutorial' || type === 'mastercam_tutorial' || type === 'milling_tutorial') {
       const tutorialPart = createMastercam2019TutorialPart();
       setCurrentModel(tutorialPart);
-      setCurrentProjectName('Mastercam2019_Milling_Tutorial.mcam');
+      setCurrentProjectName('Argus_Milling_Tutorial.mcam');
       setActiveMachineId('haas_vf2');
       setActiveWcs('G54');
       setActiveRibbonTab('Toolpaths');
@@ -4332,7 +4332,7 @@ export default function App() {
       customGeometryRef.current = wireframes;
       setCustomGeometry(wireframes);
 
-      showToast('Loaded Mastercam 2019 Milling Tutorial Project with 5 Standard Operations', 'success');
+      showToast('Loaded Argus Milling Tutorial Project with 5 Standard Operations', 'success');
     } else if (type === 'impeller') {
       setCurrentModel(createImpellerGeometry());
       setCurrentProjectName('DMU50_5Axis_Impeller.mcam');
@@ -5201,7 +5201,7 @@ export default function App() {
         solidsList: [],
         customGeometry: []
       });
-      showToast("Mastercam Blank Project Ready", "success");
+      showToast("Argus CAM Intelligence Blank Project Ready", "success");
     } else if (t === 'titan_1m' || t === 'titan1m' || t === 'titan') {
       handleSelectSampleModel('titan_1m');
     } else if (t === 'mastercam2019_tutorial' || t === 'milling_tutorial' || t === 'mastercam_tutorial') {
@@ -5304,7 +5304,7 @@ export default function App() {
       solidsList
     };
     exportProjectMCAM(projectData, currentProjectName);
-    showToast(`Saved Mastercam project: ${currentProjectName}`, 'success');
+    showToast(`Saved Argus CAM project: ${currentProjectName}`, 'success');
   };
 
   // Save Project As Handler (Custom filename and metadata)
@@ -6770,7 +6770,7 @@ export default function App() {
     pushSnapshot({ operations: nextOps });
     if (newOps.length > 0) setActiveOpId(newOps[0].id);
     setActiveRibbonTab('Toolpaths');
-    showToast(`Mastercam Chaining: Created ${newOps.length} Toolpath Operation(s) from Sketch!`, 'success');
+    showToast(`Argus CAM Chaining: Created ${newOps.length} Toolpath Operation(s) from Sketch!`, 'success');
   };
 
   const handleGenerateToolpathsFromBoard = (shapes, boardStock) => {
@@ -7352,7 +7352,7 @@ export default function App() {
 
     if (count > 0) {
       commitCustomGeometry(nextList, true);
-      showToast(`Mastercam Project: Flattened ${count} wireframe entities flat to CPlane Top (Z=${targetZ})`, 'success');
+      showToast(`Argus CAM Project: Flattened ${count} wireframe entities flat to CPlane Top (Z=${targetZ})`, 'success');
     } else {
       showToast('No wireframe entities found to project', 'info');
     }
@@ -7613,7 +7613,7 @@ export default function App() {
       setIsSolidExtrudeActive(true);
       setActiveManagerTab('Solid Extru...');
       setIsChainingPaletteOpen(true);
-      showToast('Mastercam Solid Extrude: Select 2D wireframe chain to extrude', 'info');
+      showToast('Argus CAM Solid Extrude: Select 2D wireframe chain to extrude', 'info');
       return;
     }
     setSolidsModalTool(tool);
@@ -7677,7 +7677,7 @@ export default function App() {
 
     handleAddSolidBody(solidGroup, config.name || 'Extrude Solid');
     setIsChainingPaletteOpen(false);
-    showToast(`Mastercam Solids: Extrusion operation "${config.name || 'Extrude'}" completed (${config.type.toUpperCase()})`, 'success');
+    showToast(`Argus CAM Solids: Extrusion operation "${config.name || 'Extrude'}" completed (${config.type.toUpperCase()})`, 'success');
   };
 
   const handleSetPrimarySolid = (modelGroup, filename) => {
@@ -7765,7 +7765,7 @@ export default function App() {
     setActiveManagerTab('Drafting');
     setLevels((prev) => prev.map((lvl) => lvl.number === 100 ? { ...lvl, visible: true } : lvl));
     setLayerVisibility((prev) => ({ ...prev, dimensions: true }));
-    showToast(`Mastercam Drafting: ${mode.toUpperCase()} dimensioning active on Level 100`, 'info');
+    showToast(`Argus CAM Drafting: ${mode.toUpperCase()} dimensioning active on Level 100`, 'info');
   };
 
   const handleApplyDrafting = (draftingData) => {
@@ -8022,7 +8022,7 @@ export default function App() {
         onOpenToolpathAnalyzer={() => showToast('Toolpath Analyzer: Inspecting G-Code vector feeds & dynamics', 'info')}
         onOpenDynamicAnalyzer={() => {
           setIsAnalyzeDynamicActive((prev) => !prev);
-          showToast('Mastercam Analyze Dynamic: Live cursor coordinates, normal vector & curvature active', 'info');
+          showToast('Argus CAM Analyze Dynamic: Live cursor coordinates, normal vector & curvature active', 'info');
         }}
         onOpenAngleAnalyzer={() => setIsDistanceCaliperOpen(true)}
         onOpenChainAnalyzer={() => showToast('Chain Analyzer: All 2D wireframe boundary loops validated (0 open leaks)', 'success')}

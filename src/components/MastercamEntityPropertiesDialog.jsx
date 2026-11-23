@@ -378,7 +378,7 @@ function ArcPropertiesPalette({ entity, onClose, onUpdateEntity, promptText }) {
           </button>
           <button
             type="button"
-            onClick={() => alert('Arc Properties: Displays Mastercam analytical properties for circle and arc entities.')}
+            onClick={() => alert('Arc Properties: Displays Argus CAM analytical properties for circle and arc entities.')}
             title="Help"
             style={{ padding: '3px 8px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '2px', cursor: 'pointer' }}
           >
@@ -734,7 +734,7 @@ function LinePropertiesPalette({ entity, onClose, onUpdateEntity, promptText }) 
           </button>
           <button
             type="button"
-            onClick={() => alert('Line Properties: Displays Mastercam coordinates and endpoint vector properties for line entities.')}
+            onClick={() => alert('Line Properties: Displays Argus CAM coordinates and endpoint vector properties for line entities.')}
             title="Help"
             style={{ padding: '3px 8px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '2px', cursor: 'pointer' }}
           >

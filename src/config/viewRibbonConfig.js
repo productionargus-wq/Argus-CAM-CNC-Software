@@ -258,7 +258,7 @@ export const VIEW_RIBBON_CONFIG = [
             icon: 'ViewMgrArt',
             action: 'view_mgr_art',
             disabled: true,
-            tooltip: 'Mastercam Art Manager (Feature not installed)'
+            tooltip: 'Argus CAM Art Manager (Feature not installed)'
           }
         ],
         col3: [

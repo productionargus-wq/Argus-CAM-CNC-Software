@@ -490,7 +490,7 @@ export default function SurfacesCADModal({
                 SURFACES CAD SUITE &amp; PARAMETRIC DESIGN STUDIO
               </div>
               <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', gap: '12px', marginTop: '2px' }}>
-                <span>Mastercam 2018 Surfaces Specification</span>
+                <span>Argus CAM Intelligence Surfaces Specification</span>
                 <span>•</span>
                 <span style={{ color: '#06b6d4', fontWeight: 600 }}>Target: Level 15 (Surface Sheets)</span>
                 <span>•</span>
@@ -867,7 +867,7 @@ export default function SurfacesCADModal({
                     {activeTool === 'offset' && 'Offset Surface Mesh'}
                   </div>
                   <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                    Generate parametric surface geometry matching Mastercam 2018 Create suite.
+                    Generate parametric surface geometry matching Argus CAM Intelligence Create suite.
                   </div>
                 </div>
 
@@ -993,7 +993,7 @@ export default function SurfacesCADModal({
                     {activeTool === 'split' && 'Split Surface Along Seam'}
                   </div>
                   <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                    Mastercam 2018 Modify Surface operation.
+                    Argus CAM Intelligence Modify Surface operation.
                   </div>
                 </div>
 

@@ -104,7 +104,7 @@ export default function ViewStudioModal({
 
   // Color options
   const colorPresets = [
-    { label: 'Mastercam Sky', hex: '#60a5fa' },
+    { label: 'Argus Sky', hex: '#60a5fa' },
     { label: 'Titanium Grey', hex: '#94a3b8' },
     { label: 'Brass / Bronze', hex: '#f59e0b' },
     { label: 'Emerald Tool', hex: '#10b981' },
@@ -141,7 +141,7 @@ export default function ViewStudioModal({
           <Eye size={22} color="#38bdf8" />
           <div>
             <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a', letterSpacing: '0.3px' }}>
-              3D View &amp; Display Studio (Mastercam View Manager)
+              3D View &amp; Display Studio (Argus CAM View Manager)
             </h2>
             <div style={{ fontSize: '11px', color: '#94a3b8' }}>
               Perspective/Ortho Cameras &bull; Dynamic 3D Cross-Sections &bull; Studio PBR Shading &bull; Lighting
@@ -691,7 +691,7 @@ export default function ViewStudioModal({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ background: '#10141f', padding: '16px', borderRadius: '8px', border: '1px solid #1f2738' }}>
               <div style={{ fontSize: '13px', fontWeight: 600, color: '#38bdf8', marginBottom: '12px' }}>
-                Mastercam Level &amp; Entity Visibility Switches
+                Argus CAM Level &amp; Entity Visibility Switches
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>

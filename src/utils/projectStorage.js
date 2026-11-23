@@ -322,7 +322,7 @@ export function exportProjectMCAM(projectState, filename = "Project.mcam") {
   const safeFilename = filename.endsWith('.mcam') ? filename : `${filename}.mcam`;
   
   const payload = {
-    schemaVersion: "Argus-Mastercam-2026-v1.0",
+    schemaVersion: "Argus-CAM-Intelligence-v1.0",
     savedAt: new Date().toISOString(),
     filename: safeFilename,
     projectName: projectState.projectName || safeFilename,
@@ -445,8 +445,8 @@ export function getRecentProjects() {
     if (!raw) {
       return [
         {
-          filename: 'Mastercam_MultiBody_Assembly.mcam',
-          projectName: 'Mastercam Multi-Body Extrude Assembly (Base Slab, Boss & Charcoal Saddle Block - Image 3)',
+          filename: 'Argus_MultiBody_Assembly.mcam',
+          projectName: 'Argus Multi-Body Extrude Assembly (Base Slab, Boss & Charcoal Saddle Block)',
           savedAt: new Date().toISOString(),
           machine: 'Haas VF-2 (3X VMC)',
           opsCount: 6,
@@ -454,7 +454,7 @@ export function getRecentProjects() {
           sampleType: 'mastercam_multibody'
         },
         {
-          filename: 'TITAN-1M_Mastercam_Benchmark.mcam',
+          filename: 'TITAN-1M_Argus_Benchmark.mcam',
           projectName: 'TITAN-1M Aerospace Benchmark Milling (Facing, Dynamic Mill, Contour, Pocket, Chamfer, Drill, Tap)',
           savedAt: new Date().toISOString(),
           machine: 'Haas VF-2 (3X VMC)',
@@ -463,8 +463,8 @@ export function getRecentProjects() {
           sampleType: 'titan_1m'
         },
         {
-          filename: 'Mastercam2019_Milling_Tutorial.mcam',
-          projectName: 'Mastercam 2019 Milling Operations Tutorial (Face, Contour, Pocket, Drill)',
+          filename: 'Argus_Milling_Tutorial.mcam',
+          projectName: 'CAM Milling Operations Tutorial (Face, Contour, Pocket, Drill)',
           savedAt: new Date().toISOString(),
           machine: 'Haas VF-2 (3X VMC)',
           opsCount: 5,

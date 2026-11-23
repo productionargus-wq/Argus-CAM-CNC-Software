@@ -348,7 +348,7 @@ export default function EntityAnalyzerModal({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Ruler size={16} color="#38bdf8" />
-            <span>Mastercam CAD Inspector &bull; Analyze Entity</span>
+            <span>Argus CAM Intelligence &bull; Analyze Entity</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />
@@ -371,7 +371,7 @@ export default function EntityAnalyzerModal({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Circle size={16} color="#0284c7" />
                   <span style={{ fontSize: '13px', fontWeight: 700, color: '#0369a1' }}>
-                    Mastercam Analyze Arc / Circle Properties & Live Resizer
+                    Argus CAM Arc / Circle Properties & Live Resizer
                   </span>
                 </div>
                 <span style={{ fontSize: '11px', color: '#0284c7', background: '#e0f2fe', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>
@@ -512,7 +512,7 @@ export default function EntityAnalyzerModal({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Ruler size={16} color="#0284c7" />
                   <span style={{ fontSize: '13px', fontWeight: 700, color: '#0369a1' }}>
-                    Mastercam Analyze Line Properties & Live Resizer
+                    Argus CAM Line Properties & Live Resizer
                   </span>
                 </div>
                 <span style={{ fontSize: '11px', color: '#0284c7', background: '#e0f2fe', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>

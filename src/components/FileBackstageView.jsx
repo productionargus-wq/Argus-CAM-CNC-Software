@@ -74,7 +74,7 @@ export default function FileBackstageView({
   const [projectFolders, setProjectFolders] = useState({
     cadFolder: 'E:\\ARGUS_CAM\\Projects\\CAD_Models',
     ncFolder: 'E:\\ARGUS_CAM\\Projects\\NC_GCode',
-    toolDbPath: 'E:\\ARGUS_CAM\\Libraries\\Mastercam_Tools.tooldb',
+    toolDbPath: 'E:\\ARGUS_CAM\\Libraries\\Argus_Tools.tooldb',
     postFolder: 'E:\\ARGUS_CAM\\Posts\\Heidenhain_TNC640.pst',
     fixturesFolder: 'E:\\ARGUS_CAM\\Fixtures\\ZeroClamp'
   });
@@ -97,12 +97,12 @@ export default function FileBackstageView({
 
   // New Project Form State
   const [newTemplate, setNewTemplate] = useState('blank');
-  const [newProjectNameInput, setNewProjectNameInput] = useState('Mastercam_Part1.mcam');
+  const [newProjectNameInput, setNewProjectNameInput] = useState('Argus_Part1.mcam');
   const [newUnitSystem, setNewUnitSystem] = useState('metric');
   const [newStockDim, setNewStockDim] = useState({ x: 120, y: 80, z: 45 });
 
   // Save As state
-  const [saveAsFilename, setSaveAsFilename] = useState(currentProjectName || 'Mastercam_Part1.mcam');
+  const [saveAsFilename, setSaveAsFilename] = useState(currentProjectName || 'Argus_Part1.mcam');
   const [saveAsFormat, setSaveAsFormat] = useState('mcam');
   const [includeStockInSave, setIncludeStockInSave] = useState(true);
   const [includeToolLibrary, setIncludeToolLibrary] = useState(true);
@@ -213,11 +213,11 @@ export default function FileBackstageView({
             machineName: activeMachine?.name || '',
             model: currentModel,
             customGeometry,
-            programName: currentProjectName ? currentProjectName.replace(/\.[^/.]+$/, "") : 'MASTERCAM_PART'
+            programName: currentProjectName ? currentProjectName.replace(/\.[^/.]+$/, "") : 'ARGUS_CAM_PART'
           });
           code = generated?.gcodeText || (typeof generated === 'string' ? generated : '');
         } else {
-          code = `( PROGRAM: ${currentProjectName || 'MASTERCAM_PART'} )\n` +
+          code = `( PROGRAM: ${currentProjectName || 'ARGUS_CAM_PART'} )\n` +
                  `( MACHINE: ${activeMachine?.name || 'No Machine Selected'} )\n` +
                  `( DATE: ${new Date().toLocaleDateString()} )\n` +
                  `G21 (METRIC)\nG90 G94 G17 G40 G49 G80\nG54\nT01 M06 (12MM ENDMILL)\nS3500 M03\nG00 X0. Y0. Z50.\nM08\nG01 Z-5. F450.\nG01 X50. Y0.\nG01 Y50.\nG01 X0.\nG01 Y0.\nG00 Z50.\nM09\nM05\nG28 G91 Z0.\nM30\n%`;
@@ -470,7 +470,8 @@ export default function FileBackstageView({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontWeight: 600, color: '#0f5a9e' }}>Mastercam Design 2018</span>
+          <img src="/brand/argus_cam_icon.jpg" alt="Argus CAM" style={{ height: '18px', width: '18px', objectFit: 'contain', borderRadius: '2px' }} />
+          <span style={{ fontWeight: 700, color: '#0f5a9e' }}>Argus CAM Intelligence</span>
           <span>-</span>
           <span style={{ color: '#334155' }}>{currentProjectName || 'Untitled.mcam'}</span>
         </div>
@@ -587,9 +588,13 @@ export default function FileBackstageView({
             })}
           </div>
 
-          {/* Bottom Version Indicator */}
-          <div style={{ padding: '12px 18px', fontSize: '11px', color: 'rgba(255,255,255,0.6)', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
-            Argus Mastercam 2018/2026<br />64-bit Workstation Edition
+          {/* Bottom Version Indicator & Full Logo */}
+          <div style={{ padding: '12px 18px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', borderTop: '1px solid rgba(255,255,255,0.15)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <img src="/brand/argus_cam_intelligence_full.jpg" alt="Argus CAM Intelligence" style={{ maxWidth: '160px', height: 'auto', background: '#ffffff', padding: '4px 6px', borderRadius: '4px', objectFit: 'contain' }} />
+            <div>
+              <strong style={{ color: '#ffffff' }}>Argus CAM Intelligence</strong><br />
+              64-bit Workstation Edition
+            </div>
           </div>
         </div>
 
@@ -766,7 +771,7 @@ export default function FileBackstageView({
                         Track Changes
                       </h3>
                       <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b', lineHeight: 1.45 }}>
-                        Manage the files that Mastercam tracks, and customize how Mastercam searches for newer versions of tracked files.
+                        Manage the files that Argus CAM Intelligence tracks, and customize how the software searches for newer versions of tracked files.
                       </p>
                     </div>
                   </div>
@@ -818,7 +823,7 @@ export default function FileBackstageView({
                         AutoSave
                       </h3>
                       <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b', lineHeight: 1.45 }}>
-                        Configure Mastercam to automatically save current geometry and operations at regular and specific time intervals.
+                        Configure Argus CAM Intelligence to automatically save current geometry and operations at regular and specific time intervals.
                       </p>
                     </div>
                   </div>
@@ -890,7 +895,7 @@ export default function FileBackstageView({
                       </div>
 
                       <div style={{ color: '#64748b' }}>Type</div>
-                      <div style={{ color: '#1e293b', fontWeight: 500 }}>Mastercam Part File</div>
+                      <div style={{ color: '#1e293b', fontWeight: 500 }}>Argus CAM Part File</div>
 
                       <div style={{ color: '#64748b' }}>Folder Path</div>
                       <div style={{ color: '#94a3b8' }}>
@@ -975,7 +980,7 @@ export default function FileBackstageView({
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                     {[
                       { id: 'titan_1m', label: 'TITAN-1M (Titans of CNC)', desc: 'Benchmark 4x1.9x0.75" milling part: Facing, Dynamic Mill, Contour, Pocket, Chamfer, Drill & Tap', icon: Zap },
-                      { id: 'mastercam2019_tutorial', label: 'Mastercam 2019 Tutorial', desc: '5x5" plate with Facing, 2D Contour, Circle Mill, Spot & Peck Drill', icon: Zap },
+                      { id: 'mastercam2019_tutorial', label: 'CAM Milling Tutorial', desc: '5x5" plate with Facing, 2D Contour, Circle Mill, Spot & Peck Drill', icon: Zap },
                       { id: 'blank', label: 'Blank Part', desc: 'Empty CAD canvas with default levels and origin', icon: Box },
                       { id: 'vmc3x', label: '3-Axis VMC Billet', desc: 'Raw 6061-T6 stock block with G54 WCS', icon: Layers },
                       { id: 'impeller', label: '5-Axis Impeller', desc: 'Rotary blisk geometry for multiaxis milling', icon: Cpu },
@@ -1188,7 +1193,7 @@ export default function FileBackstageView({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
                   <h1 style={{ fontSize: '28px', fontWeight: 400, color: '#1e293b', margin: 0 }}>
-                    Mastercam Code Expert Editor
+                    Argus CAM Code Expert Editor
                   </h1>
                   <span style={{ fontSize: '12.5px', color: '#64748b' }}>
                     Active CNC NC G-Code program ready for controller dispatch.
@@ -1297,7 +1302,7 @@ export default function FileBackstageView({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                      Target Mastercam Level:
+                      Target Layer / Level:
                     </label>
                     <select
                       value={mergeTargetLevel}
@@ -1431,8 +1436,8 @@ export default function FileBackstageView({
                     onChange={(e) => setSaveAsFormat(e.target.value)}
                     style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '3px', background: '#ffffff' }}
                   >
-                    <option value="mcam">Mastercam Part File (*.mcam)</option>
-                    <option value="json">Mastercam CAD/CAM JSON Schema (*.json)</option>
+                    <option value="mcam">Argus CAM Part File (*.mcam)</option>
+                    <option value="json">Argus CAM JSON Schema (*.json)</option>
                     <option value="step">ISO 10303-21 STEP Solid (*.step)</option>
                     <option value="stl">Stereolithography Mesh (*.stl)</option>
                     <option value="nc">NC G-Code Program (*.nc)</option>
@@ -1888,7 +1893,7 @@ export default function FileBackstageView({
                       fontFamily: "'Segoe UI', Tahoma, sans-serif"
                     }}
                   >
-                    <span><strong>Project:</strong> {currentProjectName || 'Mastercam_Part'}</span>
+                    <span><strong>Project:</strong> {currentProjectName || 'Argus_Part'}</span>
                     <span><strong>Scale:</strong> FIT TO PAGE</span>
                     <span><strong>Date:</strong> {new Date().toLocaleDateString()}</span>
                   </div>
@@ -1934,17 +1939,17 @@ export default function FileBackstageView({
           {activeTab === 'Help' && (
             <div style={{ maxWidth: '850px' }}>
               <h1 style={{ fontSize: '32px', fontWeight: 400, color: '#1e293b', margin: '0 0 16px 0' }}>
-                Mastercam Help & Reference Center
+                Argus CAM Intelligence Help & Reference Center
               </h1>
 
               {/* Keyboard Shortcuts Table */}
               <div style={{ marginBottom: '32px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#334155', margin: '0 0 12px 0' }}>
-                  Standard Mastercam Keyboard Shortcuts
+                  Standard Argus CAM Keyboard Shortcuts
                 </h3>
                 <div style={{ border: '1px solid #cbd5e1', borderRadius: '4px', overflow: 'hidden' }}>
                   {[
-                    { key: 'F9', action: 'Toggle Mastercam Coordinate Axes & World Origin' },
+                    { key: 'F9', action: 'Toggle Argus CAM Coordinate Axes & World Origin' },
                     { key: 'Alt + F9', action: 'Toggle Construction Plane (CPlane) Triad' },
                     { key: 'Alt + 1 / 2 / 3', action: 'Standard Views: Top (G17), Front (G19), Side (G18)' },
                     { key: 'Alt + 7', action: 'Isometric 3D Workpiece View' },
@@ -1962,9 +1967,10 @@ export default function FileBackstageView({
               </div>
 
               {/* About Box */}
-              <div style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '20px', background: '#f8fafc' }}>
+              <div style={{ border: '1px solid #cbd5e1', borderRadius: '4px', padding: '20px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <img src="/brand/argus_cam_intelligence_full.jpg" alt="Argus CAM Intelligence" style={{ maxHeight: '36px', maxWidth: '200px', objectFit: 'contain' }} />
                 <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', color: '#1e293b' }}>
-                  Argus Mastercam Design 2018 / 2026 Edition
+                  Argus CAM Intelligence 64-bit Workstation Edition
                 </h4>
                 <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.5 }}>
                   High-performance CNC Toolpath Simulation, Multiaxis CAD/CAM Engine and Shop Floor Management Suite.
@@ -1984,7 +1990,7 @@ export default function FileBackstageView({
               {/* External Links */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '32px' }}>
                 {[
-                  { title: 'eMastercam Community Forum', url: 'https://forum.emastercam.com', desc: 'Discuss toolpath strategies, custom posts, and tips with Mastercam programmers worldwide' },
+                  { title: 'Argus CAM Community Forum', url: 'https://arguscam.ai/community', desc: 'Discuss toolpath strategies, custom posts, and tips with CAM programmers worldwide' },
                   { title: 'Sandvik Coromant CoroPlus', url: 'https://www.sandvik.coromant.com', desc: 'Access manufacturer cutting tool data, inserts, and speed/feed calculators' },
                   { title: 'Kennametal NOVO Tool Advisor', url: 'https://www.kennametal.com', desc: 'Cutting tool assembly catalog with ISO 13399 standard parameters' },
                   { title: 'CNCzone Machining Forums', url: 'https://www.cnczone.com', desc: 'CNC milling, lathe turning, 5-axis simultaneous post processor discussions' }
@@ -2056,7 +2062,7 @@ export default function FileBackstageView({
           {activeTab === 'Configuration' && (
             <div style={{ maxWidth: '800px' }}>
               <h1 style={{ fontSize: '32px', fontWeight: 400, color: '#1e293b', margin: '0 0 20px 0' }}>
-                Mastercam System Configuration
+                Argus CAM Intelligence System Configuration
               </h1>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -2156,7 +2162,7 @@ export default function FileBackstageView({
                         checked={appOptions.mouseWheelZoom === 'standard'}
                         onChange={() => setAppOptions({ ...appOptions, mouseWheelZoom: 'standard' })}
                       />
-                      Standard Mastercam (Roll Forward = Zoom In)
+                      Standard (Roll Forward = Zoom In)
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
                       <input
@@ -2218,12 +2224,12 @@ export default function FileBackstageView({
         <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ width: '560px', background: '#ffffff', borderRadius: '4px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
             <div style={{ padding: '12px 18px', background: '#0f5a9e', color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600, fontSize: '14px' }}>
-              <span>Mastercam Project Manager</span>
+              <span>Argus CAM Project Manager</span>
               <button onClick={() => setIsProjectManagerOpen(false)} style={{ background: 'transparent', border: 'none', color: '#ffffff', cursor: 'pointer' }}><X size={16} /></button>
             </div>
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12.5px' }}>
               <p style={{ margin: 0, color: '#64748b' }}>
-                Specify folder locations for linked project assets. Mastercam will automatically search these directories.
+                Specify folder locations for linked project assets. Argus CAM Intelligence will automatically search these directories.
               </p>
               {Object.keys(projectFolders).map((key) => (
                 <div key={key}>

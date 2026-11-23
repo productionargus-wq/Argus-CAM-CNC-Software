@@ -137,7 +137,7 @@ export function createMastercam2019TutorialPart(options = {}) {
   const holeOffset = (options.holeOffset ?? 1.75) * scale;
 
   const group = new THREE.Group();
-  group.name = "Mastercam2019_Milling_Tutorial.mcam";
+  group.name = "Argus_Milling_Tutorial.mcam";
 
   // Create 2D Shape with rounded rectangle outer boundary
   const shape = new THREE.Shape();
@@ -608,7 +608,7 @@ export function createMastercamBaseStructureALU() {
 
   group.userData = {
     filename: "Base Structure-ALU.mcam",
-    format: "Mastercam Part File (*.mcam)",
+    format: "Argus CAM Part File (*.mcam)",
     partName: "Base Structure-ALU",
     material: "Alu 6061-T6 (Turned & Milled)",
     dimensions: { x: 175.0, y: 70.0, z: 65.0 }
@@ -627,7 +627,7 @@ export function createMastercamBaseStructureALU() {
  */
 export function createMastercamMultiBodyAssembly() {
   const group = new THREE.Group();
-  group.name = "Mastercam Multi-Body Assembly.mcam";
+  group.name = "Argus Multi-Body Assembly.mcam";
 
   // Orange Material for Base & Cylindrical Boss (Image 3)
   const orangeMat = new THREE.MeshStandardMaterial({
@@ -775,9 +775,9 @@ export function createMastercamMultiBodyAssembly() {
   group.add(addWCSHelper(new THREE.Vector3(saddleX, slabHeight + blockH / 2, 0), 14));
 
   group.userData = {
-    filename: "Mastercam Multi-Body Assembly.mcam",
-    partName: "Mastercam Multi-Body Assembly",
-    format: "Mastercam Part File (*.mcam)",
+    filename: "Argus Multi-Body Assembly.mcam",
+    partName: "Argus Multi-Body Assembly",
+    format: "Argus CAM Part File (*.mcam)",
     material: "Alu 6061 Orange & Hardened Charcoal Steel",
     dimensions: { x: slabWidth, y: slabHeight + blockH, z: slabDepth + 15 },
     isMultiBody: true,
