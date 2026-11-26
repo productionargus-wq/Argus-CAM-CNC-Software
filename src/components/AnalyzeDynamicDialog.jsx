@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   HelpCircle, Check, X, ArrowLeftRight, Minus
 } from 'lucide-react';
@@ -17,6 +17,44 @@ export default function AnalyzeDynamicDialog({
 }) {
   const [scaleFactor, setScaleFactor] = useState(arrowScale || 1.0);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [pos, setPos] = useState(() => ({
+    x: 260,
+    y: 192
+  }));
+  const dragStateRef = useRef(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const drag = dragStateRef.current;
+      if (!drag) return;
+      const maxX = Math.max(8, window.innerWidth - 220 - 8);
+      const maxY = Math.max(64, window.innerHeight - 48);
+      setPos({
+        x: Math.min(Math.max(8, drag.startLeft + (e.clientX - drag.startX)), maxX),
+        y: Math.min(Math.max(64, drag.startTop + (e.clientY - drag.startY)), maxY)
+      });
+    };
+    const handleMouseUp = () => {
+      dragStateRef.current = null;
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
+  const handleTitleMouseDown = useCallback((e) => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    e.preventDefault();
+    dragStateRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startLeft: pos.x,
+      startTop: pos.y
+    };
+  }, [pos.x, pos.y]);
 
   if (!isOpen) return null;
 
@@ -39,10 +77,10 @@ export default function AnalyzeDynamicDialog({
   return (
     <div
       style={{
-        position: 'absolute',
-        top: '60px',
-        left: '260px',
-        zIndex: 120,
+        position: 'fixed',
+        top: `${pos.y}px`,
+        left: `${pos.x}px`,
+        zIndex: 1300,
         width: '220px',
         background: '#ffffff',
         border: '1px solid #94a3b8',
@@ -74,6 +112,7 @@ export default function AnalyzeDynamicDialog({
 
       {/* 1. Title Bar matching Image 1 */}
       <div
+        onMouseDown={handleTitleMouseDown}
         style={{
           display: 'flex',
           alignItems: 'center',

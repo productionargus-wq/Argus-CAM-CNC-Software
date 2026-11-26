@@ -1,6 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Check, X, HelpCircle, ArrowLeftRight, Move, Star } from 'lucide-react';
 import { getCustomEntityColor, getCustomEntityId } from '../utils/cadSelectionEngine';
+
+function useDraggablePalette(initialX, initialY, width) {
+  const [pos, setPos] = useState(() => {
+    const maxX = typeof window !== 'undefined' ? Math.max(8, window.innerWidth - width - 8) : initialX;
+    const maxY = typeof window !== 'undefined' ? Math.max(64, window.innerHeight - 120) : initialY;
+    return {
+      x: Math.min(Math.max(8, initialX), maxX),
+      y: Math.min(Math.max(64, initialY), maxY)
+    };
+  });
+  const dragStateRef = useRef(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const drag = dragStateRef.current;
+      if (!drag) return;
+      const maxX = Math.max(8, window.innerWidth - width - 8);
+      const maxY = Math.max(64, window.innerHeight - 48);
+      const nextX = Math.min(Math.max(8, drag.startLeft + (e.clientX - drag.startX)), maxX);
+      const nextY = Math.min(Math.max(64, drag.startTop + (e.clientY - drag.startY)), maxY);
+      setPos({ x: nextX, y: nextY });
+    };
+
+    const handleMouseUp = () => {
+      dragStateRef.current = null;
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [width]);
+
+  const handleTitleMouseDown = useCallback((e) => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    e.preventDefault();
+    dragStateRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startLeft: pos.x,
+      startTop: pos.y
+    };
+  }, [pos.x, pos.y]);
+
+  return { pos, handleTitleMouseDown };
+}
 
 /**
  * Mastercam Arc & Line Properties Floating Dialog
@@ -13,6 +61,17 @@ export default function MastercamEntityPropertiesDialog({
   onUpdateEntity = null,
   promptText = 'Select entities to analyze'
 }) {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !entity) return null;
 
   const ud = entity.userData || {};
@@ -46,6 +105,7 @@ export default function MastercamEntityPropertiesDialog({
 // Image 4: Arc Properties Dialog
 // -------------------------------------------------------------
 function ArcPropertiesPalette({ entity, onClose, onUpdateEntity, promptText }) {
+  const { pos, handleTitleMouseDown } = useDraggablePalette(260, 192, 210);
   const ud = entity.userData || {};
   const initialRadius = Number(ud.radius ?? (entity.geometry?.parameters?.radius ?? 30.117));
   const initialCenter = ud.center || { x: -88.362, y: -16.633, z: 0.0 };
@@ -113,10 +173,10 @@ function ArcPropertiesPalette({ entity, onClose, onUpdateEntity, promptText }) {
   return (
     <div
       style={{
-        position: 'absolute',
-        top: '60px',
-        left: '260px',
-        zIndex: 130,
+        position: 'fixed',
+        top: `${pos.y}px`,
+        left: `${pos.x}px`,
+        zIndex: 1300,
         width: '210px',
         background: '#f1f5f9',
         border: '1px solid #94a3b8',
@@ -130,6 +190,7 @@ function ArcPropertiesPalette({ entity, onClose, onUpdateEntity, promptText }) {
     >
       {/* Title Bar matching Image 4 */}
       <div
+        onMouseDown={handleTitleMouseDown}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -456,13 +517,15 @@ function LinePropertiesPalette({ entity, onClose, onUpdateEntity, promptText }) 
     onClose();
   };
 
+  const { pos, handleTitleMouseDown } = useDraggablePalette(260, 192, 235);
+
   return (
     <div
       style={{
-        position: 'absolute',
-        top: '60px',
-        left: '260px',
-        zIndex: 130,
+        position: 'fixed',
+        top: `${pos.y}px`,
+        left: `${pos.x}px`,
+        zIndex: 1300,
         width: '235px',
         background: '#f1f5f9',
         border: '1px solid #94a3b8',
@@ -494,6 +557,7 @@ function LinePropertiesPalette({ entity, onClose, onUpdateEntity, promptText }) 
 
       {/* Title Bar matching Image 5 */}
       <div
+        onMouseDown={handleTitleMouseDown}
         style={{
           display: 'flex',
           alignItems: 'center',
