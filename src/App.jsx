@@ -6320,7 +6320,8 @@ export default function App() {
     const prevList = customGeometryRef.current || [];
     const curCircle = circleParamsRef.current;
     const liveId = activeCircleIdRef.current;
-    if (!liveId && curCircle.radius > 0) {
+    const hasExplicitInput = Boolean(curCircle.isLocked || curCircle.center);
+    if (!liveId && curCircle.radius > 0 && hasExplicitInput) {
       const cx = curCircle.center?.x || 0;
       const cz = curCircle.center?.z || 0;
       const cy = curCircle.center?.y ?? (partMetrics?.box?.max?.y ?? 0);
@@ -6456,8 +6457,9 @@ export default function App() {
     const liveId = activeRectIdRef.current;
     const w = Math.abs(Number(curRect.width) || 0);
     const h = Math.abs(Number(curRect.height) || 0);
+    const hasExplicitInput = Boolean(curRect.isWidthLocked || curRect.isHeightLocked || curRect.firstCorner);
 
-    if (!liveId && w >= 0.5 && h >= 0.5) {
+    if (!liveId && w >= 0.5 && h >= 0.5 && hasExplicitInput) {
       const newRect = buildRectFromParams(curRect, null, 0x1d4ed8);
       commitCustomGeometry([...prevList, newRect], true);
       updateRectParams((prev) => ({ ...prev, firstCorner: null, secondCorner: null, isWidthLocked: false, isHeightLocked: false }));

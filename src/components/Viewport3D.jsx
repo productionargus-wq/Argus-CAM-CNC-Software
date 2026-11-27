@@ -1204,6 +1204,7 @@ export default function Viewport3D({
       const tool = activeSketchToolRef.current;
       let newEntity = null;
       let p2Commit = null;
+      let completedUpdate = null;
 
       if (tool === 'circle') {
         const radius = (isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0)
@@ -1211,9 +1212,7 @@ export default function Viewport3D({
           : anchor.distanceTo(finalPt);
         if (radius < 0.5) return false;
         newEntity = createWireframeCircle(radius, anchor.y, [anchor.x, anchor.z], 0, 360, 'G17', { color: 0x38bdf8 });
-        if (onDrawingUpdateRef.current) {
-          onDrawingUpdateRef.current({ tool: 'circle', radius, diameter: radius * 2, center: anchor, completed: true });
-        }
+        completedUpdate = { tool: 'circle', radius, diameter: radius * 2, center: anchor, completed: true };
       } else if (tool === 'rect') {
         const rectOpts = getLockedRectOptions();
         const { width, height, cx, cz, dirX, dirZ } = computeRectPlacement(anchor, finalPt, rectOpts);
@@ -1238,18 +1237,16 @@ export default function Viewport3D({
           surfMesh.userData = { type: 'surface', cadType: 'surface_plane' };
           newEntity.add(surfMesh);
         }
-        if (onDrawingUpdateRef.current) {
-          onDrawingUpdateRef.current({
-            tool: 'rect',
-            width,
-            height,
-            dirX,
-            dirZ,
-            firstCorner: anchor,
-            secondCorner: finalPt,
-            completed: true
-          });
-        }
+        completedUpdate = {
+          tool: 'rect',
+          width,
+          height,
+          dirX,
+          dirZ,
+          firstCorner: anchor,
+          secondCorner: finalPt,
+          completed: true
+        };
       } else if (tool === 'line' || tool === 'line_parallel' || tool === 'line_perp') {
         let p1Final = anchor.clone();
         let p2Final = finalPt.clone();
@@ -1331,26 +1328,20 @@ export default function Viewport3D({
           [p2Commit.x, lineY2, p2Commit.z],
           { color: 0x38bdf8, name: `Wireframe_${tool === 'line_perp' ? 'Perp' : tool === 'line_parallel' ? 'Parallel' : 'Line'}_${Date.now()}` }
         );
-        if (onDrawingUpdateRef.current) {
-          onDrawingUpdateRef.current({
-            tool,
-            length: lengthCommit,
-            angle: angleCommit,
-            pt1: p1Final,
-            pt2: p2Commit,
-            completed: true
-          });
-        }
+        completedUpdate = {
+          tool,
+          length: lengthCommit,
+          angle: angleCommit,
+          pt1: p1Final,
+          pt2: p2Commit,
+          completed: true
+        };
       } else if (tool === 'point' || tool === 'drill' || String(tool).startsWith('point_')) {
         newEntity = createPointMarker([finalPt.x, finalPt.y, finalPt.z], `Wireframe_Point_${Date.now()}`, 0x0284c7);
-        if (onDrawingUpdateRef.current) {
-          onDrawingUpdateRef.current({ tool: 'point', point: finalPt, completed: true });
-        }
+        completedUpdate = { tool: 'point', point: finalPt, completed: true };
       } else if (tool === 'bolt_circle') {
         newEntity = createBoltHoleCircle(60, 6, 0, [finalPt.x, finalPt.z], 0, 3.5, { color: 0x38bdf8 });
-        if (onDrawingUpdateRef.current) {
-          onDrawingUpdateRef.current({ tool: 'bolt_circle', center: finalPt, pcd: 60, holes: 6, completed: true });
-        }
+        completedUpdate = { tool: 'bolt_circle', center: finalPt, pcd: 60, holes: 6, completed: true };
       } else if (tool === 'polygon') {
         const r = Math.max(2, anchor.distanceTo(finalPt));
         newEntity = createWireframePolygon(6, r, anchor.y, 0, [anchor.x, anchor.z], { color: 0x38bdf8 });
@@ -1372,6 +1363,9 @@ export default function Viewport3D({
 
       if (newEntity && onAddCustomEntityRef.current) {
         onAddCustomEntityRef.current(newEntity);
+      }
+      if (completedUpdate && onDrawingUpdateRef.current) {
+        onDrawingUpdateRef.current(completedUpdate);
       }
 
       // Multi-line continuous line chaining (Mastercam style)
