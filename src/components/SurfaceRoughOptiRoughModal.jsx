@@ -463,7 +463,7 @@ export default function SurfaceRoughOptiRoughModal({
 
   // Mini-Toolbar: 5. Help
   const handleHelp = () => {
-    onNotify?.('Mastercam Dynamic OptiRough: 3D High-Speed roughing strategy with constant tool engagement angle, deep axial stepdown, upward waterline stepups, and micro-lifts.', 'info');
+    onNotify?.('Argus CAM Intelligence Dynamic OptiRough: 3D High-Speed roughing strategy with constant tool engagement angle, deep axial stepdown, upward waterline stepups, and micro-lifts.', 'info');
   };
 
   // Model Geometry Handlers
@@ -822,7 +822,7 @@ export default function SurfaceRoughOptiRoughModal({
         backFeedRate: 2500.0
       }
     }));
-    onNotify?.('Loaded Mastercam Recommended OptiRough Values (15mm Stepdown, 1mm Stepup, 15% Stepover, 1.0mm Stock)', 'success');
+    onNotify?.('Loaded Argus CAM Intelligence Recommended OptiRough Values (15mm Stepdown, 1mm Stepup, 15% Stepover, 1.0mm Stock)', 'success');
   };
 
   // Confirm and save operation
@@ -957,7 +957,7 @@ export default function SurfaceRoughOptiRoughModal({
               marginRight: '6px',
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
             }}
-            title="One-Click Mastercam Recommended Values (15mm Stepdown, 1mm Stepup, 15% Stepover, 1.0mm Stock)"
+            title="One-Click Argus CAM Intelligence Recommended Values (15mm Stepdown, 1mm Stepup, 15% Stepover, 1.0mm Stock)"
           >
             ⭐ Recommended Values
           </button>
@@ -1664,7 +1664,7 @@ export default function SurfaceRoughOptiRoughModal({
                       style={{ width: '100%', height: '100px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '2px', padding: '4px', resize: 'none', boxSizing: 'border-box' }}
                       value={formData.comment || ''}
                       onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))}
-                      placeholder="Mastercam OptiRough notes..."
+                      placeholder="Argus CAM Intelligence OptiRough notes..."
                     />
                   </div>
                 </div>
@@ -2410,7 +2410,7 @@ export default function SurfaceRoughOptiRoughModal({
 
             {/* Help */}
             <button
-              onClick={() => onNotify?.('Mastercam 3D Dynamic OptiRough: High-Speed constant engagement roughing with upward stepup passes.', 'info')}
+              onClick={() => onNotify?.('Argus CAM Intelligence 3D Dynamic OptiRough: High-Speed constant engagement roughing with upward stepup passes.', 'info')}
               style={{
                 ...MC_BUTTON,
                 height: '26px',

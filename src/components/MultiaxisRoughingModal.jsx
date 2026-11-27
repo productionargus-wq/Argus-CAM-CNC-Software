@@ -198,7 +198,7 @@ export default function MultiaxisRoughingModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Compass size={17} color="#06b6d4" />
             <strong style={{ fontSize: '12.5px', letterSpacing: '0.2px' }}>
-              Mastercam 5-Axis Multiaxis Roughing &amp; Pocketing Studio
+              Argus CAM Intelligence 5-Axis Multiaxis Roughing &amp; Pocketing Studio
             </strong>
             <span style={{
               fontSize: '10px',

@@ -77,7 +77,7 @@ export default function DistanceCaliperModal({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Scissors size={16} color="#f59e0b" />
-            <span>Mastercam CAD &bull; Precision Distance &amp; Angle Caliper</span>
+            <span>Argus CAM Intelligence CAD &bull; Precision Distance &amp; Angle Caliper</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />

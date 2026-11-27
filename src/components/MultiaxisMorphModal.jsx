@@ -222,7 +222,7 @@ export default function MultiaxisMorphModal({
         tiltAngleDeg: preset.tiltAngleDeg || 15.0
       }
     }));
-    onNotify?.(`Applied Mastercam 5-Axis Preset: ${preset.name}`, 'info');
+    onNotify?.(`Applied Argus CAM Intelligence 5-Axis Preset: ${preset.name}`, 'info');
   };
 
   // 1-Click Recommended Values Auto-Population
@@ -364,7 +364,7 @@ export default function MultiaxisMorphModal({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <MoveUpRight size={16} color="#a855f7" />
-            <span>5-Axis Multiaxis Morph (Between 2 Curves / Surfaces) &mdash; Mastercam Engine</span>
+            <span>5-Axis Multiaxis Morph (Between 2 Curves / Surfaces) &mdash; Argus CAM Intelligence Engine</span>
             <span
               style={{
                 fontSize: '10px',
@@ -1217,7 +1217,7 @@ export default function MultiaxisMorphModal({
                         style={{ marginTop: '2px' }}
                       />
                       <div>
-                        <div style={{ fontWeight: 600, color: '#1e3a8a' }}>Mastercam 3D Blend Loop Arcs (Recommended)</div>
+                        <div style={{ fontWeight: 600, color: '#1e3a8a' }}>Argus CAM Intelligence 3D Blend Loop Arcs (Recommended)</div>
                         <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>
                           Smooth 3D parabolic arch in Z lifting +0.8mm above the surface, eliminating dwell witness marks.
                         </div>

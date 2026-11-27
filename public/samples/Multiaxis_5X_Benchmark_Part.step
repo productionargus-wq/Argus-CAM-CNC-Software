@@ -1,7 +1,7 @@
 ISO-10303-21;
 HEADER;
 FILE_DESCRIPTION(('Argus CAM STEP Export B-Rep Solid'),'2;1');
-FILE_NAME('Multiaxis_5X_Benchmark_Part.step','2026-11-19T05:24:23.631Z',('Argus Engineering Team'),('Argus Technologies'),'Argus STEP Processor v2.4','Argus Master CAM','');
+FILE_NAME('Multiaxis_5X_Benchmark_Part.step','2026-11-19T05:24:23.631Z',('Argus Engineering Team'),('Argus Technologies'),'Argus STEP Processor v2.4','Argus CAM Intelligence','');
 FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));
 ENDSEC;
 DATA;

@@ -275,7 +275,7 @@ export default function DynamicTrimPanel({
         {trimMode === 'dynamic' ? (
           <p style={{ margin: '4px 0 0' }}>Click and drag the cursor across any wireframe lines or arcs. The segment between bounding intersections will be instantly snipped!</p>
         ) : trimMode === 'trim_2' ? (
-          <p style={{ margin: '4px 0 0' }}>Select two curves. Mastercam will find their intersection and trim or extend both to form a clean, closed corner.</p>
+          <p style={{ margin: '4px 0 0' }}>Select two curves. Argus CAM Intelligence will find their intersection and trim or extend both to form a clean, closed corner.</p>
         ) : (
           <p style={{ margin: '4px 0 0' }}>Select target curve, then select boundary entity to trim or extend.</p>
         )}

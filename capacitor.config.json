@@ -1,6 +1,6 @@
 {
-  "appId": "com.argus.mastercam",
-  "appName": "Argus Master CAM",
+  "appId": "com.argus.camintelligence",
+  "appName": "Argus CAM Intelligence",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {

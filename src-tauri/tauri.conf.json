@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Argus Master CAM",
+  "productName": "Argus CAM Intelligence",
   "version": "1.0.0",
-  "identifier": "com.argus.mastercam",
+  "identifier": "com.argus.camintelligence",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Argus Master CAM CNC Studio - 5-Axis CAD/CAM & Kinematics",
+        "title": "Argus CAM Intelligence - 5-Axis CAD/CAM & Kinematics",
         "width": 1440,
         "height": 920,
         "minWidth": 1024,

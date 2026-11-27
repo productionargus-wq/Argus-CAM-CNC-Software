@@ -56,7 +56,7 @@ export default function SaveAsModal({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Save size={16} color="#10b981" />
-            <span>Mastercam &bull; Save Project Package As</span>
+            <span>Argus CAM Intelligence &bull; Save Project Package As</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />

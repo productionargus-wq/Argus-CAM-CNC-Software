@@ -318,7 +318,7 @@ export default function LineParallelPerpPanel({
       </div>
 
       <div style={{ margin: '12px 8px', padding: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px', color: '#64748b' }}>
-        <strong>Mastercam Instruction:</strong> Click a line or curve in the 3D viewport. The parallel or perpendicular rubberband line will track your cursor position.
+        <strong>Argus CAM Intelligence Instruction:</strong> Click a line or curve in the 3D viewport. The parallel or perpendicular rubberband line will track your cursor position.
       </div>
     </div>
   );

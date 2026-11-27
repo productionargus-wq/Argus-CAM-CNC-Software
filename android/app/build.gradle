@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.argus.mastercam"
+    namespace = "com.argus.camintelligence"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.argus.mastercam"
+        applicationId "com.argus.camintelligence"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

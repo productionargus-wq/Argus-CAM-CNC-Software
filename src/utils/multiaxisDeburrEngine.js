@@ -565,7 +565,7 @@ export function generateMultiaxisDeburrGCode(
 
   lines.push('%');
   lines.push(`O0001 (${(op.name || '5AXIS_DEBURR').replace(/[^a-zA-Z0-9_]/g, '_').toUpperCase()})`);
-  lines.push('(--- ARGUS MASTER CAM 5-AXIS MULTIAXIS DEBURRING ---)');
+  lines.push('(--- ARGUS CAM INTELLIGENCE 5-AXIS MULTIAXIS DEBURRING ---)');
   lines.push(`(CONTROLLER: ${c.toUpperCase()} | KINEMATICS: ${kinematics.toUpperCase()})`);
   lines.push(`(TOOL: T${toolNum} [${tool.name || '6mm Ball Nose'}] | DIA: ${tool.diameter || 6}mm)`);
   lines.push(`(CHAMFER WIDTH: ${op.cutParameters?.chamferWidthMm || 0.3}mm | CONTACT ANGLE: ${op.contactPoint?.contactAngleDeg || 30.0} DEG)`);

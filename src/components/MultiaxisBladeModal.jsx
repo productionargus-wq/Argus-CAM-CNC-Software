@@ -86,7 +86,7 @@ export default function MultiaxisBladeModal({
         <div onMouseDown={handleMouseDown} style={{ height: '38px', backgroundColor: '#1e293b', color: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', cursor: 'grab' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Compass size={17} color="#0284c7" />
-            <strong style={{ fontSize: '13px' }}>Mastercam 5-Axis Blade Expert Studio</strong>
+            <strong style={{ fontSize: '13px' }}>Argus CAM Intelligence 5-Axis Blade Expert Studio</strong>
             <span style={{ fontSize: '10px', backgroundColor: '#0284c7', color: '#fff', padding: '1px 6px', borderRadius: '3px', fontWeight: 700 }}>BLADE EXPERT</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer' }}><X size={16} /></button>
@@ -124,7 +124,7 @@ export default function MultiaxisBladeModal({
             </fieldset>
 
             <div style={{ padding: '12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '4px', color: '#0369a1', fontSize: '11.5px', lineHeight: '1.5' }}>
-              <strong>Mastercam Blade Expert Features:</strong>
+              <strong>Argus CAM Intelligence Blade Expert Features:</strong>
               <br />
               Automates complex multiaxis toolpaths for impellers and bladed disks. Handles hub, shroud, main blades, and splitter blades with smooth 5-axis collision-free tool axis tilting.
             </div>

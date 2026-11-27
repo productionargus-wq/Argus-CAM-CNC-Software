@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Argus Master CAM</string>
+        <string>Argus CAM Intelligence</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -52,9 +52,9 @@
 		<string>armv7</string>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Argus Master CAM uses microphone access to enable voice-guided 3D CAM commands.</string>
+	<string>Argus CAM Intelligence uses microphone access to enable voice-guided 3D CAM commands.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Argus Master CAM uses speech recognition to execute voice commands for machining operations.</string>
+	<string>Argus CAM Intelligence uses speech recognition to execute voice commands for machining operations.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationLandscapeLeft</string>

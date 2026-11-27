@@ -150,7 +150,7 @@ export default function FeedOptimizerModal({
                 Feed Rate Optimization &bull; Constant Chip Thickness &amp; Corner Decel
               </span>
               <span style={{ display: 'block', fontSize: '10.5px', color: '#94a3b8' }}>
-                Mastercam High-Speed Machining / OptiPath Grade Feed Rate Smoothing &bull; Flute Shock Prevention
+                Argus CAM Intelligence High-Speed Machining / OptiPath Grade Feed Rate Smoothing &bull; Flute Shock Prevention
               </span>
             </div>
           </div>

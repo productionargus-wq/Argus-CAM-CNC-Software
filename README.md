@@ -1,6 +1,6 @@
-# Argus Master CAM — CNC CAD/CAM Desktop & Web Suite
+# Argus CAM Intelligence — CNC CAD/CAM Desktop & Web Suite
 
-An industrial-grade 5-Axis CNC CAM/CAD programming suite, toolpath generation engine, and machine kinematics simulation platform inspired by Mastercam 2024/2026 and NC2Check.
+An industrial-grade 5-Axis CNC CAM/CAD programming suite, toolpath generation engine, and machine kinematics simulation platform powered by Argus CAM Intelligence and NC2Check.
 
 ![Argus CAM Screenshot](public/screenshot.png) <!-- optional -->
 
@@ -8,9 +8,9 @@ An industrial-grade 5-Axis CNC CAM/CAD programming suite, toolpath generation en
 
 ## ⚡ Key Capabilities
 
-- **Mastercam 12-Discipline Ribbon Architecture**:
+- **Argus CAM Intelligence 12-Discipline Ribbon Architecture**:
   - `File`: Full project packaging (`.mcam`), multi-format 3D CAD import/export (Binary STL, ASCII STL, Wavefront OBJ), auto-save crash recovery, printable CNC setup sheets.
-  - `Home`: Mastercam Levels/Layers dockable manager, 3D Euclidean distance & angle caliper, entity attribute inspector, blank/unblank and invert visibility.
+  - `Home`: Argus CAM Intelligence Levels/Layers dockable manager, 3D Euclidean distance & angle caliper, entity attribute inspector, blank/unblank and invert visibility.
   - `Wireframe`: 2D/3D CAD sketcher with parametric lines, circle/arc radii, pocket boundaries, bounding cages, and drill point coordinates.
   - `Surfaces`: Analytical planar sheets, cylindrical wrappers, and revolved surfaces.
   - `Solids`: Parametric solid billets (blocks, cylinders, spheres) and raw stock bounds.

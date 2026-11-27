@@ -85,7 +85,7 @@ export default function MultiaxisPortModal({
         <div onMouseDown={handleMouseDown} style={{ height: '38px', backgroundColor: '#1e293b', color: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', cursor: 'grab' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Compass size={17} color="#8b5cf6" />
-            <strong style={{ fontSize: '13px' }}>Mastercam 5-Axis Port Expert Studio</strong>
+            <strong style={{ fontSize: '13px' }}>Argus CAM Intelligence 5-Axis Port Expert Studio</strong>
             <span style={{ fontSize: '10px', backgroundColor: '#8b5cf6', color: '#fff', padding: '1px 6px', borderRadius: '3px', fontWeight: 700 }}>PORT EXPERT</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer' }}><X size={16} /></button>
@@ -122,7 +122,7 @@ export default function MultiaxisPortModal({
             </fieldset>
 
             <div style={{ padding: '12px', backgroundColor: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '4px', color: '#5b21b6', fontSize: '11.5px', lineHeight: '1.5' }}>
-              <strong>Mastercam Port Expert Features:</strong>
+              <strong>Argus CAM Intelligence Port Expert Features:</strong>
               <br />
               Eliminates manual tool axis vector programming in deep tubular cavities using spherical lollipop cutters. The tool automatically tilts tracking the internal spine curve while preventing shank gouging against cavity walls.
             </div>

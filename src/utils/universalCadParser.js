@@ -20,7 +20,7 @@ export const CAD_FILE_FORMATS = [
     label: 'Legacy CAM Part Files (*.mcx)',
     extensions: ['mcx', 'mcx-5', 'mcx-6', 'mcx-7', 'mcx-8', 'mcx-9'],
     category: 'Argus CAM',
-    description: 'Legacy Mastercam X through X9 part files.'
+    description: 'Legacy CAM X through X9 part files (*.mcx).'
   },
   {
     id: 'emcx',

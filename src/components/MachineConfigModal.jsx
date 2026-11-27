@@ -178,7 +178,7 @@ function MachineConfigForm({
           </div>
           <div>
             <h2 id={titleId} className="mcm-title">
-              Mastercam Machine &bull; CNC Machine Definition, Kinematics &amp; Controller Setup
+              Argus CAM Intelligence Machine &bull; CNC Machine Definition, Kinematics &amp; Controller Setup
             </h2>
             <p className="mcm-subtitle">
               Active Profile: <strong>{machineName}</strong> &bull; {machineType} &bull; {controller}

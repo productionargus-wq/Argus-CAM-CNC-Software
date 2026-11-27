@@ -339,7 +339,7 @@ export default function Rotary4AxisModal({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Disc size={16} color="#38bdf8" />
-            <span>Rotary 4-Axis Machining (Cylinder Wrapping &amp; Axis Substitution) &mdash; Mastercam Engine</span>
+            <span>Rotary 4-Axis Machining (Cylinder Wrapping &amp; Axis Substitution) &mdash; Argus CAM Intelligence Engine</span>
             <span
               style={{
                 fontSize: '10px',

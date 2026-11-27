@@ -63,7 +63,7 @@ export default function PartStatisticsModal({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileText size={18} />
-            <span style={{ fontWeight: 600, fontSize: '13px' }}>Mastercam File &amp; Geometry Statistics</span>
+            <span style={{ fontWeight: 600, fontSize: '13px' }}>Argus CAM Intelligence File &amp; Geometry Statistics</span>
           </div>
           <button
             onClick={onClose}

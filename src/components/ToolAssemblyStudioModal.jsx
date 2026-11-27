@@ -313,7 +313,7 @@ export default function ToolAssemblyStudioModal({
                 Parametric Custom Tool &amp; Toolholder Assembly Studio
               </span>
               <span style={{ display: 'block', fontSize: '10.5px', color: '#94a3b8' }}>
-                Mastercam / NX Grade 3D Form Cutters &bull; Spindle Tapers &bull; Cavity Clearance Collision Auditor
+                Argus CAM Intelligence / NX Grade 3D Form Cutters &bull; Spindle Tapers &bull; Cavity Clearance Collision Auditor
               </span>
             </div>
           </div>

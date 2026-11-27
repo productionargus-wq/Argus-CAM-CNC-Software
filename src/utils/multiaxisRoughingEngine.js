@@ -528,7 +528,7 @@ export function generateMultiaxisRoughingGCode(
 
   lines.push('%');
   lines.push(`O0001 (${(op.name || '5AXIS_ROUGHING').replace(/[^a-zA-Z0-9_]/g, '_').toUpperCase()})`);
-  lines.push('(--- ARGUS MASTER CAM 5-AXIS MULTIAXIS ROUGHING ---)');
+  lines.push('(--- ARGUS CAM INTELLIGENCE 5-AXIS MULTIAXIS ROUGHING ---)');
   lines.push(`(CONTROLLER: ${c.toUpperCase()} | KINEMATICS: ${kinematics.toUpperCase()})`);
   lines.push(`(TOOL: T${toolNum} [${tool.name || '12mm Bullnose'}] | DIA: ${tool.diameter || 12}mm)`);
   lines.push(`(MODE: ${tiltingMode.toUpperCase()} | STEPOVER: ${op.cutParameters?.stepoverPct || 20}% | STEPDOWN: ${op.cutParameters?.axialStepdownMm || 15}mm)`);

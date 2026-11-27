@@ -4,12 +4,12 @@
  * kinematics resolution, and post-processor controller dialect mapping.
  */
 
-export const DEFAULT_MACHINE_DIRECTORY = 'C:\\Users\\Public\\Documents\\Shared Mcam2018\\CNC_Machines\\';
+export const DEFAULT_MACHINE_DIRECTORY = 'C:\\Users\\Public\\Documents\\Argus CAM Intelligence\\CNC_Machines\\';
 
 export const PRESET_MACHINE_DIRECTORIES = [
-  'C:\\Users\\Public\\Documents\\Shared Mcam2018\\CNC_Machines\\',
-  'C:\\Users\\Public\\Documents\\Shared Mastercam\\CNC_Machines\\',
-  'C:\\Mastercam\\CNC_Machines\\'
+  'C:\\Users\\Public\\Documents\\Argus CAM Intelligence\\CNC_Machines\\',
+  'C:\\Users\\Public\\Documents\\Shared Argus CAM Intelligence\\CNC_Machines\\',
+  'C:\\ArgusCAMIntelligence\\CNC_Machines\\'
 ];
 
 export const MACHINE_CATEGORY_META = {

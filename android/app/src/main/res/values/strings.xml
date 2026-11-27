@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Argus Master CAM</string>
-    <string name="title_activity_main">Argus Master CAM</string>
-    <string name="package_name">com.argus.mastercam</string>
-    <string name="custom_url_scheme">com.argus.mastercam</string>
+    <string name="app_name">Argus CAM Intelligence</string>
+    <string name="title_activity_main">Argus CAM Intelligence</string>
+    <string name="package_name">com.argus.camintelligence</string>
+    <string name="custom_url_scheme">com.argus.camintelligence</string>
 </resources>

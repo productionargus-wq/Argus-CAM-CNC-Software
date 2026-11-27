@@ -27,14 +27,14 @@ export default function HelpGuideModal({ isOpen, onClose }) {
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      aria-label="Mastercam User Guide and Shortcuts"
+      aria-label="Argus CAM Intelligence User Guide and Shortcuts"
       closedby="any"
     >
       <div className="modal-window" style={{ width: '740px', maxHeight: '88vh' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <HelpCircle size={16} color="#38bdf8" />
-            <span>Mastercam CAM User Guide &amp; Keyboard Shortcuts</span>
+            <span>Argus CAM Intelligence User Guide &amp; Keyboard Shortcuts</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />
@@ -46,10 +46,10 @@ export default function HelpGuideModal({ isOpen, onClose }) {
           <div style={{ background: '#ffffff', border: '1px solid #2d3545', borderRadius: '6px', padding: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <BookOpen size={15} color="#38bdf8" />
-              <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '13px' }}>Welcome to Argus Mastercam CAD/CAM</span>
+              <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '13px' }}>Welcome to Argus CAM Intelligence</span>
             </div>
             <p style={{ color: '#94a3b8', fontSize: '11.5px', lineHeight: 1.5 }}>
-              This desktop software brings the full power of Mastercam 5-Axis CNC programming, toolpath slicing, and NC2Check machine simulation to your workspace. Every ribbon button connects directly to the underlying CAD and CAM calculation engines.
+              This desktop software brings the full power of Argus CAM Intelligence 5-Axis CNC programming, toolpath slicing, and NC2Check machine simulation to your workspace. Every ribbon button connects directly to the underlying CAD and CAM calculation engines.
             </p>
           </div>
 

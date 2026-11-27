@@ -197,7 +197,7 @@ export default function MultiaxisDeburrModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Compass size={17} color="#f59e0b" />
             <strong style={{ fontSize: '12.5px', letterSpacing: '0.2px' }}>
-              Mastercam 5-Axis Multiaxis Deburring Studio
+              Argus CAM Intelligence 5-Axis Multiaxis Deburring Studio
             </strong>
             <span style={{
               fontSize: '10px',
@@ -400,7 +400,7 @@ export default function MultiaxisDeburrModal({
                     <br />
                     A standard ball end mill oriented perpendicular to a surface cuts with its dead center tip where surface speed is <strong>0 m/min</strong>. This causes material rubbing, tool chatter, and burrs.
                     <br /><br />
-                    Mastercam 5-Axis Deburring enforces an angular offset (<span style={{ color: '#059669', fontWeight: 700 }}>θ = {formState.contactPoint.contactAngleDeg}°</span>), shifting contact to the flute periphery where cutting speed is <span style={{ color: '#059669', fontWeight: 800 }}>{livePhysics.cuttingSpeedVc} m/min</span> ({livePhysics.velocityGainFactor}x gain).
+                    Argus CAM Intelligence 5-Axis Deburring enforces an angular offset (<span style={{ color: '#059669', fontWeight: 700 }}>θ = {formState.contactPoint.contactAngleDeg}°</span>), shifting contact to the flute periphery where cutting speed is <span style={{ color: '#059669', fontWeight: 800 }}>{livePhysics.cuttingSpeedVc} m/min</span> ({livePhysics.velocityGainFactor}x gain).
                   </div>
                 </div>
               </div>

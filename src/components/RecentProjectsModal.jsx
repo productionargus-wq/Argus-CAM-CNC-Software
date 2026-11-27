@@ -71,7 +71,7 @@ export default function RecentProjectsModal({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Clock size={16} color="#38bdf8" />
-            <span>Mastercam &bull; Recent Projects &amp; Auto-Save Recovery</span>
+            <span>Argus CAM Intelligence &bull; Recent Projects &amp; Auto-Save Recovery</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />

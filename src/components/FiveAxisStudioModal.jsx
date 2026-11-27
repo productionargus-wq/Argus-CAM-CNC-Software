@@ -187,7 +187,7 @@ export default function FiveAxisStudioModal({
                 Simultaneous 5-Axis Multiaxis Studio &bull; TCPM Kinematics Engine
               </span>
               <span style={{ display: 'block', fontSize: '10.5px', color: '#94a3b8' }}>
-                Continuous RTCP / TCPM Flank Swarf &amp; Flowline UV Surface Contouring (Mastercam / NX Grade)
+                Continuous RTCP / TCPM Flank Swarf &amp; Flowline UV Surface Contouring (Argus CAM Intelligence / NX Grade)
               </span>
             </div>
           </div>

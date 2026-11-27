@@ -325,7 +325,7 @@ export default function FilletChamferPanel({
       </div>
 
       <div style={{ margin: '12px 8px', padding: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px', color: '#64748b' }}>
-        <strong>Instruction:</strong> Select Entity 1 in viewport, then select Entity 2. Mastercam automatically calculates the intersection corner and inserts the tangent blend.
+        <strong>Instruction:</strong> Select Entity 1 in viewport, then select Entity 2. Argus CAM Intelligence automatically calculates the intersection corner and inserts the tangent blend.
         {filletCount > 0 && (
           <div style={{ marginTop: '6px', fontWeight: 600, color: '#16a34a' }}>
             ✓ {filletCount} corners created

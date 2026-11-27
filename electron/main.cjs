@@ -14,7 +14,7 @@ function createWindow() {
     height: 920,
     minWidth: 1100,
     minHeight: 700,
-    title: 'Argus Master CAM CNC Software - Mastercam 2025 Interface Engine',
+    title: 'Argus CAM Intelligence - 5-Axis CNC CAD/CAM Suite',
     backgroundColor: '#ffffff',
     show: false,
     webPreferences: {

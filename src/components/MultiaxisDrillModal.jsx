@@ -376,7 +376,7 @@ export default function MultiaxisDrillModal({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Crosshair size={16} color="#38bdf8" />
-            <span>5-Axis Multiaxis Drilling &amp; Hole Making &mdash; Mastercam Engine</span>
+            <span>5-Axis Multiaxis Drilling &amp; Hole Making &mdash; Argus CAM Intelligence Engine</span>
             <span
               style={{
                 fontSize: '10px',

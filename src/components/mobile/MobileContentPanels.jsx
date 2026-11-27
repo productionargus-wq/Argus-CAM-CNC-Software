@@ -16,7 +16,7 @@ export function MobileCADPanel({
     { id: 'circle', label: 'Center Circle', icon: Circle, desc: 'Ø Diameter & Radius circular curves' },
     { id: 'bolt_circle', label: 'Bolt Circle (PCD)', icon: Circle, desc: 'PCD hole pattern circle' },
     { id: 'rectangle', label: 'Rectangle', icon: Square, desc: 'Boundary rectangles' },
-    { id: 'trim', label: 'Dynamic Trim', icon: Scissors, desc: 'Mastercam Scissor Drag Snip' },
+    { id: 'trim', label: 'Dynamic Trim', icon: Scissors, desc: 'Argus CAM Intelligence Scissor Drag Snip' },
     { id: 'fillet', label: 'Fillet Entities', icon: Sliders, desc: 'Tangent blend corner fillets' },
     { id: 'extrude', label: 'Extrude Surface', icon: Box, desc: 'Extrude 2D chains into 3D solid' },
   ];

@@ -46,7 +46,7 @@ export const HSM_FILTER_PRESETS = {
     surfaceTargetRa: 0.4,
     badge: 'Mold & Die 5µm Standard',
     badgeColor: '#10b981',
-    description: 'Standard Mastercam filter setting for high-precision injection mold cavities and hardened steel dies.'
+    description: 'Standard Argus CAM Intelligence filter setting for high-precision injection mold cavities and hardened steel dies.'
   },
   GENERAL_MACHINING: {
     id: 'GENERAL_MACHINING',

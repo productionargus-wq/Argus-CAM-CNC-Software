@@ -1,4 +1,4 @@
-package com.argus.mastercam;
+package com.argus.camintelligence;
 
 import android.Manifest;
 import android.content.pm.PackageManager;

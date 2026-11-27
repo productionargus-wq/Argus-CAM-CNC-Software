@@ -432,7 +432,7 @@ export default function SolidExtrudePanel({
                         gap: '4px',
                         fontSize: '10.5px'
                       }}
-                      title="Open Mastercam Chaining Palette"
+                      title="Open Argus CAM Intelligence Chaining Palette"
                     >
                       <Link2 size={12} color="#0284c7" />
                       <span>Chaining...</span>

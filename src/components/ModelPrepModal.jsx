@@ -511,7 +511,7 @@ export default function ModelPrepModal({
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      aria-label="Mastercam Model Prep & Direct Modeling Suite"
+      aria-label="Argus CAM Intelligence Model Prep & Direct Modeling Suite"
       closedby="any"
     >
       <div className="modal-window" style={{ width: '860px', height: '85vh', maxHeight: '740px', display: 'flex', flexDirection: 'column' }}>
@@ -519,7 +519,7 @@ export default function ModelPrepModal({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Wrench size={16} color="#38bdf8" />
-            <span style={{ fontWeight: 600 }}>Mastercam Model Prep &bull; Direct Modeling &amp; Assembly Layout Suite</span>
+            <span style={{ fontWeight: 600 }}>Argus CAM Intelligence Model Prep &bull; Direct Modeling &amp; Assembly Layout Suite</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />
@@ -1234,7 +1234,7 @@ export default function ModelPrepModal({
 
                 <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
                   <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.6 }}>
-                    Converting to a Direct Solid removes all parent-child dependencies and feature tree regenerate overhead. This is standard Mastercam practice when preparing complex imported STEP/IGES models for high-speed machining.
+                    Converting to a Direct Solid removes all parent-child dependencies and feature tree regenerate overhead. This is standard Argus CAM Intelligence practice when preparing complex imported STEP/IGES models for high-speed machining.
                   </div>
                 </div>
 

@@ -658,7 +658,7 @@ export default function SurfaceRoughPocketModal({
       }
     }));
 
-    onNotify?.('Loaded Mastercam Recommended Surface Rough Pocket Values (2.0mm Stepdown, 60% Stepover, Constant Overlap Spiral, 0.5mm Stock)', 'success');
+    onNotify?.('Loaded Argus CAM Intelligence Recommended Surface Rough Pocket Values (2.0mm Stepdown, 60% Stepover, Constant Overlap Spiral, 0.5mm Stock)', 'success');
   };
 
   const handleApply = (closeAfter = true) => {
@@ -779,7 +779,7 @@ export default function SurfaceRoughPocketModal({
                 boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                 cursor: 'pointer'
               }}
-              title="One-Click Mastercam Recommended Values (2.0mm Stepdown, 60% Stepover, Constant Overlap Spiral, 0.5mm Stock)"
+              title="One-Click Argus CAM Intelligence Recommended Values (2.0mm Stepdown, 60% Stepover, Constant Overlap Spiral, 0.5mm Stock)"
             >
               ⭐ Recommended Values
             </button>
@@ -1682,7 +1682,7 @@ export default function SurfaceRoughPocketModal({
                           }
                           style={CLASSIC_YELLOW}
                         >
-                          <option value="constant_overlap_spiral">Constant Overlap Spiral (Mastercam)</option>
+                          <option value="constant_overlap_spiral">Constant Overlap Spiral (Argus CAM Intelligence)</option>
                           <option value="parallel_spiral">Parallel Spiral</option>
                           <option value="morph_spiral">Morph Spiral</option>
                           <option value="true_spiral">TrueSpiral (Archimedean Smooth)</option>
@@ -1805,7 +1805,7 @@ export default function SurfaceRoughPocketModal({
                           }
                           style={CLASSIC_YELLOW}
                         >
-                          <option value="helical_ramp">Helical Ramp (Standard Mastercam)</option>
+                          <option value="helical_ramp">Helical Ramp (Standard Argus CAM Intelligence)</option>
                           <option value="linear_ramp">Linear Ramp (Back & Forth)</option>
                           <option value="plunge">Plunge (Pre-drilled hole only)</option>
                         </select>

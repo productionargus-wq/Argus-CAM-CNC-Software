@@ -296,7 +296,7 @@ export default function SurfaceRoughWaterlineModal({
         cornerSmoothing: true
       }
     }));
-    onNotify('Loaded Mastercam recommended parameters for Surface Rough Waterline', 'success');
+    onNotify('Loaded Argus CAM Intelligence recommended parameters for Surface Rough Waterline', 'success');
   };
 
   const handleSaveAndRegenerate = () => {
@@ -409,7 +409,7 @@ export default function SurfaceRoughWaterlineModal({
                 color: '#065f46',
                 fontWeight: 600
               }}
-              title="Apply Mastercam verified recommended roughing stepover & stepdown"
+              title="Apply Argus CAM Intelligence verified recommended roughing stepover & stepdown"
             >
               ⭐ Recommended Values
             </button>
@@ -418,7 +418,7 @@ export default function SurfaceRoughWaterlineModal({
               value={formData.selectedPresetId || 'alu_hsm_waterline'}
               onChange={(e) => handleApplyPreset(e.target.value)}
               style={{ ...CLASSIC_YELLOW, width: '190px', height: '22px', fontSize: '10.5px' }}
-              title="Select Mastercam Waterline Rough Preset"
+              title="Select Argus CAM Intelligence Waterline Rough Preset"
             >
               {WATERLINE_ROUGH_PRESETS.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
@@ -1014,7 +1014,7 @@ export default function SurfaceRoughWaterlineModal({
                   {activePage.replace(/_/g, ' ').toUpperCase()} Configuration
                 </div>
                 <div style={{ padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '2px' }}>
-                  Standard Mastercam Mill 3D Waterline Rough parameters configured and active for {activeMachine?.name || 'Fanuc Robodrill D21'}.
+                  Standard Argus CAM Intelligence Mill 3D Waterline Rough parameters configured and active for {activeMachine?.name || 'Fanuc Robodrill D21'}.
                 </div>
               </div>
             )}

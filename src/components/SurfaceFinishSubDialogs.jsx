@@ -454,7 +454,7 @@ export function SurfaceFinishSubDialog({
     });
     return (
       <SubDialogShell
-        title="Mastercam Feed / Speed Calculator"
+        title="Argus CAM Intelligence Feed / Speed Calculator"
         width={440}
         onClose={onClose}
         onOk={() => {

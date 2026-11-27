@@ -283,7 +283,7 @@ export function createDefaultOptiRoughState(options = {}) {
     strategyKey: 'surface_rough_optirough',
     badgeClass: 'adaptive',
     opType: 'adaptive',
-    comment: 'Mastercam Dynamic OptiRough - High-Speed Constant Engagement Roughing with Upward Stepup',
+    comment: 'Argus CAM Intelligence Dynamic OptiRough - High-Speed Constant Engagement Roughing with Upward Stepup',
 
     // Active Tree Tab
     activeTreePage: 'cut_parameters',

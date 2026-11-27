@@ -45,12 +45,12 @@ jobs:
           mkdir -p ios/App/build/Payload
           cp -r ios/App/build/DerivedData/Build/Products/Debug-iphoneos/App.app ios/App/build/Payload/
           cd ios/App/build
-          zip -r ArgusMasterCAM-debug.ipa Payload
+          zip -r ArgusCAMIntelligence-debug.ipa Payload
           cd ../../..
 
       - name: Upload iOS IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ArgusMasterCAM-debug.ipa
-          path: ios/App/build/ArgusMasterCAM-debug.ipa
+          name: ArgusCAMIntelligence-debug.ipa
+          path: ios/App/build/ArgusCAMIntelligence-debug.ipa
           retention-days: 30

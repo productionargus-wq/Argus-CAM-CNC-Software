@@ -205,7 +205,7 @@ export function createDefaultMultiaxisDeburrParams(existingOp = {}, toolOverride
   return {
     strategyKey: '5axis_deburr',
     name: existingOp.name || '5-Axis Multiaxis Deburring',
-    comment: existingOp.comment || 'Mastercam 5-Axis Automated Edge Break & Deburr',
+    comment: existingOp.comment || 'Argus CAM Intelligence 5-Axis Automated Edge Break & Deburr',
     activePage: 'toolpath_type',
     
     // 1. Toolpath Type

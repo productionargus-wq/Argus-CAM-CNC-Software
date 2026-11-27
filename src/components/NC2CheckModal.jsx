@@ -269,7 +269,7 @@ export default function NC2CheckModal({
                   type="text"
                   readOnly
                   className="text-input"
-                  value={`C:\\Mastercam\\Posts\\${(activeMachine?.name || 'DMU_50').replace(/\s+/g, '_')}_Post.pst`}
+                  value={`C:\\ArgusCAMIntelligence\\Posts\\${(activeMachine?.name || 'DMU_50').replace(/\s+/g, '_')}_Post.pst`}
                   style={{ color: '#94a3b8' }}
                 />
               </div>

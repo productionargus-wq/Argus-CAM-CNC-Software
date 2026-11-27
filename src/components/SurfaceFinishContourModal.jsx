@@ -606,7 +606,7 @@ function SurfaceFinishContourModalInner({
       pocketParams,
       flowlineParams
     });
-    onNotify?.(ok ? 'Saved parameters to Mastercam defaults file.' : 'Unable to persist defaults.', ok ? 'success' : 'error');
+    onNotify?.(ok ? 'Saved parameters to Argus CAM Intelligence defaults file.' : 'Unable to persist defaults.', ok ? 'success' : 'error');
   };
 
   const handleReloadDefaults = () => {
@@ -1472,7 +1472,7 @@ function SurfaceFinishContourModalInner({
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Sparkles size={13} color="#c026d3" />
               <span>
-                <b>Mastercam Surface Finish Blend:</b> Dual-boundary morphing finishing across 3D drive surfaces with cusp control.
+                <b>Argus CAM Intelligence Surface Finish Blend:</b> Dual-boundary morphing finishing across 3D drive surfaces with cusp control.
               </span>
             </div>
             <button
@@ -2684,7 +2684,7 @@ function SurfaceFinishContourModalInner({
 
                   {/* Steep Slope Angle Limits */}
                   <fieldset style={{ border: '1px solid #cbd5e1', padding: '6px 8px', marginTop: '2px', borderRadius: '2px' }}>
-                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Steep Slope Limits (Mastercam)</legend>
+                    <legend style={{ padding: '0 4px', color: '#1e293b', fontWeight: 600 }}>Steep Slope Limits (Argus CAM Intelligence)</legend>
                     <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                       <span>From slope (deg)</span>
                       <input

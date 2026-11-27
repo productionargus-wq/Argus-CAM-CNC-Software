@@ -81,7 +81,7 @@ export default function ATPModal({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <ATPIcon size={20} />
-            <span style={{ fontWeight: 600 }}>Mastercam Automatic Toolpathing (ATP) &bull; Intelligent CAM Automation</span>
+            <span style={{ fontWeight: 600 }}>Argus CAM Intelligence Automatic Toolpathing (ATP) &bull; Intelligent CAM Automation</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />
@@ -157,7 +157,7 @@ export default function ATPModal({
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
                 <div style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>Automatic Feature-Based Toolpath Generator</div>
                 <div style={{ fontSize: '10px', color: '#64748b' }}>
-                  ATP scans the 3D solid geometry, identifies analytical CAD features, selects optimal tools from the tooling library, and generates standard Mastercam 2.5D &amp; 3D toolpath operations automatically.
+                  ATP scans the 3D solid geometry, identifies analytical CAD features, selects optimal tools from the tooling library, and generates standard Argus CAM Intelligence 2.5D &amp; 3D toolpath operations automatically.
                 </div>
               </div>
 

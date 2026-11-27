@@ -898,7 +898,7 @@ export function generateSampleSTEPString(modelType = 'aerospace_bracket') {
   return `ISO-10303-21;
 HEADER;
 FILE_DESCRIPTION(('Argus CAM STEP B-Rep Solid Model','AP214 Automative Design'),'2;1');
-FILE_NAME('aerospace_bracket_5x.step','${dateStr}',('Argus Engineering Team'),('Argus Technologies'),'Argus STEP Processor v2.4','Argus Master CAM','');
+FILE_NAME('aerospace_bracket_5x.step','${dateStr}',('Argus Engineering Team'),('Argus Technologies'),'Argus STEP Processor v2.4','Argus CAM Intelligence','');
 FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));
 ENDSEC;
 DATA;
@@ -1015,7 +1015,7 @@ export function generateSTEPFromObject3D(object3D, modelName = "Argus_CAD_Model"
   });
 
   const dateStr = new Date().toISOString();
-  let step = `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('Argus CAM STEP Export B-Rep Solid'),'2;1');\nFILE_NAME('${modelName}.step','${dateStr}',('Argus Engineering Team'),('Argus Technologies'),'Argus STEP Processor v2.4','Argus Master CAM','');\nFILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));\nENDSEC;\nDATA;\n#1=APPLICATION_CONTEXT('automotive mechanical design processes');\n#2=APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2000,#1);\n#3=PRODUCT_CONTEXT('part definition',#1,'mechanical');\n#4=PRODUCT('${modelName}','${modelName}','',(#3));\n#5=PRODUCT_DEFINITION_FORMATION('1.0',$,#4);\n#6=PRODUCT_DEFINITION('design',$,#5,#3);\n#7=PRODUCT_DEFINITION_SHAPE('','',#6);\n`;
+  let step = `ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('Argus CAM STEP Export B-Rep Solid'),'2;1');\nFILE_NAME('${modelName}.step','${dateStr}',('Argus Engineering Team'),('Argus Technologies'),'Argus STEP Processor v2.4','Argus CAM Intelligence','');\nFILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));\nENDSEC;\nDATA;\n#1=APPLICATION_CONTEXT('automotive mechanical design processes');\n#2=APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2000,#1);\n#3=PRODUCT_CONTEXT('part definition',#1,'mechanical');\n#4=PRODUCT('${modelName}','${modelName}','',(#3));\n#5=PRODUCT_DEFINITION_FORMATION('1.0',$,#4);\n#6=PRODUCT_DEFINITION('design',$,#5,#3);\n#7=PRODUCT_DEFINITION_SHAPE('','',#6);\n`;
 
   // Write Cartesian points
   vertices.forEach(v => {

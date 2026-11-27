@@ -243,7 +243,7 @@ export default function MultiaxisCurveModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Compass size={17} color="#ec4899" />
             <span style={{ fontWeight: 600, fontSize: '13px', letterSpacing: '0.3px' }}>
-              Mastercam 5-Axis Curve Machining Studio
+              Argus CAM Intelligence 5-Axis Curve Machining Studio
             </span>
             <span
               style={{
@@ -637,7 +637,7 @@ export default function MultiaxisCurveModal({
                     {MULTIAXIS_CURVE_PAGE_TITLES[activePage] || 'Parameters'}
                   </legend>
                   <p style={{ color: '#64748b', fontSize: '11.5px' }}>
-                    Standard Mastercam 5-axis parameters configured for <strong>{MULTIAXIS_CURVE_PAGE_TITLES[activePage]}</strong>.
+                    Standard Argus CAM Intelligence 5-axis parameters configured for <strong>{MULTIAXIS_CURVE_PAGE_TITLES[activePage]}</strong>.
                   </p>
                 </fieldset>
               </div>

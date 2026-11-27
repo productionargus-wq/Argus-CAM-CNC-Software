@@ -352,7 +352,7 @@ export default function FixtureStudioModal({
                     border: '1px solid rgba(56, 189, 248, 0.4)'
                   }}
                 >
-                  Mastercam Grade Fixture Manager
+                  Argus CAM Intelligence Fixture Manager
                 </span>
                 {collisionReport.status === 'danger' && (
                   <span

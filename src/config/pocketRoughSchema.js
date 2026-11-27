@@ -323,7 +323,7 @@ export function createDefaultPocketRoughState(context = {}) {
     strategyKey: 'surface_rough_pocket',
     badgeClass: 'rough_pocket',
     opType: 'pocket',
-    comment: 'Mastercam Surface Rough Pocket - 3D Cavity Constant-Z Spiral Roughing',
+    comment: 'Argus CAM Intelligence Surface Rough Pocket - 3D Cavity Constant-Z Spiral Roughing',
 
     // Active Tree Navigation Tab
     activeTreePage: 'cut_parameters',

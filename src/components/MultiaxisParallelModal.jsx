@@ -129,7 +129,7 @@ export default function MultiaxisParallelModal({
       name: `${preset.name} - 5X Parallel`
     }));
     if (onNotify) {
-      onNotify(`Applied Mastercam 5-Axis Preset: ${preset.name}`, 'info');
+      onNotify(`Applied Argus CAM Intelligence 5-Axis Preset: ${preset.name}`, 'info');
     }
   };
 

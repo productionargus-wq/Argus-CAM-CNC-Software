@@ -324,7 +324,7 @@ export default function PointPositionPanel({
 
       {/* Info Tip */}
       <div style={{ margin: '12px 8px', padding: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px', color: '#64748b' }}>
-        <strong>Mastercam Tip:</strong> Click directly in the 3D viewport or type coordinates in the AutoCursor bar. Press <strong>Enter</strong> to commit or <strong>+</strong> to place consecutive points.
+        <strong>Argus CAM Intelligence Tip:</strong> Click directly in the 3D viewport or type coordinates in the AutoCursor bar. Press <strong>Enter</strong> to commit or <strong>+</strong> to place consecutive points.
       </div>
     </div>
   );

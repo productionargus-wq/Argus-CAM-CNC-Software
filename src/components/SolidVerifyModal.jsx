@@ -296,7 +296,7 @@ export default function SolidVerifyModal({
                 Solid Stock Material Removal Verification &bull; Real-Time Voxel Simulator
               </span>
               <span style={{ display: 'block', fontSize: '10.5px', color: '#94a3b8' }}>
-                Mastercam / Vericut Grade Dynamic Boolean Cutter Carving &bull; Gouge &amp; Tolerance Inspection
+                Argus CAM Intelligence / Vericut Grade Dynamic Boolean Cutter Carving &bull; Gouge &amp; Tolerance Inspection
               </span>
             </div>
           </div>

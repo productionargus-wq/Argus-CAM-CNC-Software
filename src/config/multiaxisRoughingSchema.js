@@ -222,7 +222,7 @@ export function createDefaultMultiaxisRoughingParams(existingOp = {}, toolOverri
   return {
     strategyKey: '5axis_rough',
     name: existingOp.name || '5-Axis Multiaxis Roughing (Adaptive Cavity)',
-    comment: existingOp.comment || 'Mastercam 5-Axis Dynamic Motion Cavity Clearing',
+    comment: existingOp.comment || 'Argus CAM Intelligence 5-Axis Dynamic Motion Cavity Clearing',
     activePage: 'toolpath_type',
 
     // 1. Toolpath Type

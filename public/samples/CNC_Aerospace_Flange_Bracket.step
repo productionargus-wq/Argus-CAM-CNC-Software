@@ -1,7 +1,7 @@
 ISO-10303-21;
 HEADER;
-FILE_DESCRIPTION(('Argus Master CAM Precision CNC Part','AP214 AUTOMOTIVE_DESIGN','B-Rep Solid Model'),'2;1');
-FILE_NAME('CNC_Aerospace_Flange_Bracket.step','2026-11-06T04:32:20.469Z',('Argus CAM Engineering Team'),('Argus Technologies CNC'),'Argus STEP Processor v2.4','Argus Master CAM','Approved');
+FILE_DESCRIPTION(('Argus CAM Intelligence Precision CNC Part','AP214 AUTOMOTIVE_DESIGN','B-Rep Solid Model'),'2;1');
+FILE_NAME('CNC_Aerospace_Flange_Bracket.step','2026-11-06T04:32:20.469Z',('Argus CAM Engineering Team'),('Argus Technologies CNC'),'Argus STEP Processor v2.4','Argus CAM Intelligence','Approved');
 FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));
 ENDSEC;
 DATA;

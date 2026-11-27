@@ -1,7 +1,7 @@
 [package]
 name = "argus-cam"
 version = "0.1.0"
-description = "Argus Master CAM CNC Studio Desktop Application"
+description = "Argus CAM Intelligence - 5-Axis CNC CAD/CAM Desktop Application"
 edition = "2021"
 
 [lib]

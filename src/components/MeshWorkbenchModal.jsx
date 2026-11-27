@@ -161,7 +161,7 @@ export default function MeshWorkbenchModal({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Layers size={16} color="#38bdf8" />
-            <span>Mastercam Mesh &bull; Polygonal Mesh Workbench &amp; Reverse Engineering</span>
+            <span>Argus CAM Intelligence Mesh &bull; Polygonal Mesh Workbench &amp; Reverse Engineering</span>
           </div>
           <button className="modal-close-btn" onClick={onClose} title="Close (Esc)">
             <X size={15} />

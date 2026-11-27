@@ -778,7 +778,7 @@ export default function RibbonBar({
                 <button
                   className="ribbon-btn-large"
                   onClick={onOpenHelpGuide}
-                  title="Mastercam User Manual & Shortcuts"
+                  title="Argus CAM Intelligence User Manual & Shortcuts"
                 >
                   <HelpCircle size={22} color="#f59e0b" />
                   <span className="btn-label">User<br />Manual</span>
@@ -1273,11 +1273,11 @@ export default function RibbonBar({
             {/* 7. Add-Ins */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
-                <button className="ribbon-btn-large" onClick={onOpenAddInsManager} title="Run Mastercam C-Hook / NET-Hook User Application (Alt+C)">
+                <button className="ribbon-btn-large" onClick={onOpenAddInsManager} title="Run Argus CAM Intelligence C-Hook / NET-Hook User Application (Alt+C)">
                   <Cpu size={22} color="#0284c7" />
                   <span className="btn-label" style={{ fontWeight: 600 }}>Run<br />Add-In</span>
                 </button>
-                <button className="ribbon-btn-large" onClick={onOpenCommandFinder} title="Search and launch any Mastercam Ribbon command">
+                <button className="ribbon-btn-large" onClick={onOpenCommandFinder} title="Search and launch any Argus CAM Intelligence Ribbon command">
                   <Search size={22} color="#0284c7" />
                   <span className="btn-label" style={{ fontWeight: 600 }}>Command<br />Finder</span>
                 </button>
@@ -1321,7 +1321,7 @@ export default function RibbonBar({
                         setShowPointDropdown(true);
                       }
                     }}
-                    title="Point Position (P) - Mastercam Points suite & dropdown"
+                    title="Point Position (P) - Argus CAM Intelligence Points suite & dropdown"
                   >
                     <div style={{ position: 'relative', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Plus size={22} color="#0284c7" strokeWidth={2.5} />
@@ -1514,7 +1514,7 @@ export default function RibbonBar({
                         setShowSplineDropdown(true);
                       }
                     }}
-                    title="Spline Manual - Mastercam Splines dropdown"
+                    title="Spline Manual - Argus CAM Intelligence Splines dropdown"
                   >
                     <Sliders size={22} color="#0284c7" />
                     <span className="btn-label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
@@ -1587,7 +1587,7 @@ export default function RibbonBar({
                         setShowRectDropdown(true);
                       }
                     }}
-                    title="Rectangle (R) - Shapes dropdown matching Mastercam"
+                    title="Rectangle (R) - Argus CAM Intelligence Shapes dropdown"
                   >
                     <Square size={22} color="#0284c7" strokeWidth={2} />
                     <span className="btn-label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>

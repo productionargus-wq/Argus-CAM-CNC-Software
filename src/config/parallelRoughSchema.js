@@ -337,7 +337,7 @@ export function createDefaultParallelRoughState(context = {}) {
     strategyKey: 'surface_rough_parallel',
     badgeClass: 'rough_parallel',
     opType: 'parallel',
-    comment: 'Mastercam Surface Rough Parallel - 3D Multi-Level Raster Roughing',
+    comment: 'Argus CAM Intelligence Surface Rough Parallel - 3D Multi-Level Raster Roughing',
 
     // Active Tree Navigation Tab
     activeTreePage: 'parallel_parameters',

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   CheckSquare, Square, Eye, RefreshCw, 
   Trash2, Lock, FileCode, PlusCircle, ChevronDown, ChevronRight, Sliders,
@@ -620,7 +620,7 @@ export default function OperationsTree({
         '--tree-header-font-size': `${treeHeaderFontSize}px`,
         '--tree-icon-size': `${treeIconSize}px`
       }}
-      aria-label="Mastercam Toolpaths Manager"
+      aria-label="Argus CAM Intelligence Toolpaths Manager"
     >
       {/* ================= 1. MASTERCAM PANEL HEADER ================= */}
       {!isWireframeTool && (
@@ -2420,3 +2420,4 @@ export default function OperationsTree({
     </aside>
   );
 }
+   
