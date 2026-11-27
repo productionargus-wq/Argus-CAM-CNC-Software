@@ -330,6 +330,7 @@ export default function HSMFilterStudioModal({
 
   return (
     <div
+      className="modal-overlay"
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
@@ -342,14 +343,15 @@ export default function HSMFilterStudioModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: isFullscreen ? '0px' : '20px'
+        padding: isFullscreen ? '0px' : '6px'
       }}
     >
       <div
+        className="modal-window"
         style={{
-          width: isFullscreen ? '100vw' : '96vw',
+          width: isFullscreen ? '100vw' : 'min(96vw, calc(100vw - 12px))',
           maxWidth: isFullscreen ? '100vw' : '1680px',
-          height: isFullscreen ? '100vh' : '92vh',
+          height: isFullscreen ? '100dvh' : 'min(92vh, calc(100dvh - 12px))',
           background: '#ffffff',
           borderRadius: isFullscreen ? '0px' : '14px',
           border: '1px solid #cbd5e1',

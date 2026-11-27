@@ -123,6 +123,7 @@ export default function SelectProbeModal({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         top: 0,
@@ -134,12 +135,16 @@ export default function SelectProbeModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        padding: '6px',
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
       }}
     >
       <div
+        className="modal-window"
         style={{
-          width: '740px',
+          width: 'min(740px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          maxHeight: 'calc(100dvh - 12px)',
           background: '#ffffff',
           border: '1px solid #64748b',
           borderRadius: '4px',

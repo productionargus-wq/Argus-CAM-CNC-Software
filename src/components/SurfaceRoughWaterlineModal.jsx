@@ -311,6 +311,7 @@ export default function SurfaceRoughWaterlineModal({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -320,13 +321,18 @@ export default function SurfaceRoughWaterlineModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        padding: '6px',
+        boxSizing: 'border-box',
         fontFamily: "'Segoe UI', Tahoma, Helvetica, sans-serif"
       }}
     >
       <div
+        className="modal-window"
         style={{
-          width: '920px',
-          height: '680px',
+          width: 'min(920px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          height: 'min(680px, calc(100dvh - 12px))',
+          maxHeight: 'calc(100dvh - 12px)',
           backgroundColor: '#f1f5f9',
           border: '1px solid #64748b',
           borderRadius: '4px',
@@ -338,8 +344,10 @@ export default function SurfaceRoughWaterlineModal({
       >
         {/* Title Bar */}
         <div
+          className="modal-header"
           style={{
             height: '28px',
+            flexShrink: 0,
             backgroundColor: '#0284c7',
             color: '#ffffff',
             display: 'flex',

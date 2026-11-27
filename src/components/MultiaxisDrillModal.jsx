@@ -318,6 +318,7 @@ export default function MultiaxisDrillModal({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -327,20 +328,20 @@ export default function MultiaxisDrillModal({
         justifyContent: 'center',
         backgroundColor: 'rgba(15, 23, 42, 0.65)',
         backdropFilter: 'blur(3px)',
-        padding: '16px',
-        paddingTop: '50px',
+        padding: '6px',
         boxSizing: 'border-box',
         overflow: 'hidden',
         fontFamily: "'Segoe UI', Tahoma, Helvetica, sans-serif"
       }}
     >
       <div
+        className="modal-window"
         style={{
           transform: `translate(${position.x}px, ${position.y}px)`,
-          width: '960px',
-          maxWidth: '98vw',
-          height: 'min(650px, calc(100vh - 120px))',
-          maxHeight: 'calc(100vh - 100px)',
+          width: 'min(960px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          height: 'min(650px, calc(100dvh - 12px))',
+          maxHeight: 'calc(100dvh - 12px)',
           backgroundColor: '#f0f2f5',
           border: '1px solid #717b87',
           borderRadius: '4px',

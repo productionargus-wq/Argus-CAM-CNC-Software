@@ -80,10 +80,10 @@ export default function MultiaxisBladeModal({
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(2px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: '880px', maxWidth: '95vw', height: '600px', maxHeight: 'calc(100vh - 120px)', backgroundColor: '#f1f5f9', border: '1px solid #94a3b8', borderRadius: '6px', boxShadow: '0 20px 40px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: `translate(${position.x}px, ${position.y}px)` }}>
+    <div className="modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(2px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px' }}>
+      <div className="modal-window" style={{ width: 'min(880px, calc(100vw - 12px))', maxWidth: 'calc(100vw - 12px)', height: 'min(600px, calc(100dvh - 12px))', maxHeight: 'calc(100dvh - 12px)', backgroundColor: '#f1f5f9', border: '1px solid #94a3b8', borderRadius: '6px', boxShadow: '0 20px 40px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: `translate(${position.x}px, ${position.y}px)` }}>
         {/* Header */}
-        <div onMouseDown={handleMouseDown} style={{ height: '38px', backgroundColor: '#1e293b', color: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', cursor: 'grab' }}>
+        <div className="modal-header" onMouseDown={handleMouseDown} style={{ height: '36px', flexShrink: 0, backgroundColor: '#1e293b', color: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', cursor: 'grab' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Compass size={17} color="#0284c7" />
             <strong style={{ fontSize: '13px' }}>Argus CAM Intelligence 5-Axis Blade Expert Studio</strong>

@@ -2246,14 +2246,16 @@ dialog::backdrop {
   }
 
   .modal-window,
-  .modal-overlay > div,
+  .modal-content,
   dialog > div {
     max-width: calc(100vw - 12px) !important;
     max-height: calc(100dvh - 12px) !important;
-    height: auto !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden !important;
+  }
+
+  dialog {
+    max-width: calc(100vw - 12px) !important;
+    max-height: calc(100dvh - 12px) !important;
   }
 
   .modal-header {
@@ -2268,8 +2270,77 @@ dialog::backdrop {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto !important;
+    overflow-x: auto;
     padding: 10px;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-footer {
+    flex-shrink: 0;
+    padding: 6px 10px !important;
+  }
+
+  /* Compact Mobile Mastercam File Backstage (keeps exact desktop visual hierarchy) */
+  .backstage-topbar {
+    height: 28px !important;
+    padding: 0 8px !important;
+  }
+
+  .backstage-window-controls-desktop {
+    display: none !important;
+  }
+
+  .backstage-sidebar {
+    width: clamp(118px, 21vw, 175px) !important;
+    padding-top: 4px !important;
+  }
+
+  .backstage-back-wrap {
+    padding: 4px 0 6px 12px !important;
+  }
+
+  .backstage-back-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .backstage-nav-item {
+    padding: 5px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .backstage-brand-card {
+    padding: 6px 12px !important;
+    gap: 2px !important;
+    font-size: 10px !important;
+  }
+
+  .backstage-brand-logo-img {
+    display: none !important;
+  }
+
+  .backstage-content {
+    padding: 12px 16px !important;
+  }
+
+  .backstage-page-title {
+    font-size: 20px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .backstage-info-grid {
+    gap: 16px !important;
+  }
+
+  .backstage-tile-btn {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .backstage-prop-grid {
+    grid-template-columns: 92px 1fr !important;
+    row-gap: 8px !important;
+    font-size: 11.5px !important;
   }
 
   .modal-close-btn {

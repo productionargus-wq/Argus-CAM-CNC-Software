@@ -191,6 +191,7 @@ export default function MultiaxisCurveModal({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -200,15 +201,18 @@ export default function MultiaxisCurveModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        padding: '6px',
+        boxSizing: 'border-box',
         userSelect: isDragging ? 'none' : 'auto'
       }}
     >
       <div
+        className="modal-window"
         style={{
-          width: '940px',
-          maxWidth: '96vw',
-          height: '650px',
-          maxHeight: 'calc(100vh - 100px)',
+          width: 'min(940px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          height: 'min(650px, calc(100dvh - 12px))',
+          maxHeight: 'calc(100dvh - 12px)',
           backgroundColor: '#f1f5f9',
           border: '1px solid #94a3b8',
           borderRadius: '6px',

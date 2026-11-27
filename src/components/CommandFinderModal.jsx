@@ -108,6 +108,7 @@ export default function CommandFinderModal({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -117,15 +118,18 @@ export default function CommandFinderModal({
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
-        paddingTop: '80px',
+        padding: '12px',
+        paddingTop: 'clamp(10px, 8vh, 80px)',
         fontFamily: 'Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif'
       }}
       onClick={onClose}
     >
       <div
+        className="modal-window"
         style={{
-          width: '640px',
-          maxWidth: '92vw',
+          width: 'min(640px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          maxHeight: 'calc(100dvh - 20px)',
           backgroundColor: '#ffffff',
           borderRadius: '8px',
           boxShadow: '0 20px 45px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.1)',

@@ -772,6 +772,7 @@ function SurfaceFinishContourModalInner({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -780,7 +781,7 @@ function SurfaceFinishContourModalInner({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: '6px',
         boxSizing: 'border-box',
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
         userSelect: 'none'
@@ -793,10 +794,11 @@ function SurfaceFinishContourModalInner({
       }}
     >
       <div
+        className="modal-window"
         style={{
-          width: '820px',
-          maxWidth: '96vw',
-          maxHeight: 'min(94vh, 880px)',
+          width: 'min(820px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          maxHeight: 'calc(100dvh - 12px)',
           background: '#f0f0f0',
           border: '1px solid #64748b',
           boxShadow: '0 22px 48px rgba(0, 0, 0, 0.42)',

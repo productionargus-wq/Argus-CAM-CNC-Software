@@ -460,8 +460,10 @@ export default function FileBackstageView({
 
       {/* 1. TOP WINDOW BAR (Mastercam Design 2018 style) */}
       <div
+        className="backstage-topbar"
         style={{
           height: '32px',
+          flexShrink: 0,
           background: '#ffffff',
           borderBottom: '1px solid #e2e8f0',
           display: 'flex',
@@ -472,15 +474,16 @@ export default function FileBackstageView({
           color: '#64748b'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img src="/brand/argus_cam_icon.jpg" alt="Argus CAM" style={{ height: '18px', width: '18px', objectFit: 'contain', borderRadius: '2px' }} />
-          <span style={{ fontWeight: 700, color: '#0f5a9e' }}>Argus CAM Intelligence</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
+          <img src="/brand/argus_cam_icon.jpg" alt="Argus CAM" style={{ height: '18px', width: '18px', objectFit: 'contain', borderRadius: '2px', flexShrink: 0 }} />
+          <span style={{ fontWeight: 700, color: '#0f5a9e', whiteSpace: 'nowrap' }}>Argus CAM Intelligence</span>
           <span>-</span>
-          <span style={{ color: '#334155' }}>{currentProjectName || 'Untitled.mcam'}</span>
+          <span style={{ color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentProjectName || 'Untitled.mcam'}</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
           <button
+            className="backstage-window-controls-desktop"
             onClick={() => {}}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
             title="Minimize"
@@ -488,6 +491,7 @@ export default function FileBackstageView({
             <Minus size={13} />
           </button>
           <button
+            className="backstage-window-controls-desktop"
             onClick={() => {}}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
             title="Maximize"
@@ -496,33 +500,36 @@ export default function FileBackstageView({
           </button>
           <button
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444' }}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             title="Close Backstage (Esc)"
           >
-            <X size={14} />
+            <X size={15} />
           </button>
         </div>
       </div>
 
       {/* 2. MAIN BACKSTAGE BODY: Left Blue Navigation + Right Content Canvas */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
         
         {/* ================= LEFT SIDEBAR (Mastercam Blue) ================= */}
         <div
+          className="backstage-sidebar"
           style={{
             width: 'clamp(136px, 24vw, 210px)',
             flexShrink: 0,
             background: '#0f5a9e',
             display: 'flex',
             flexDirection: 'column',
+            minHeight: 0,
             paddingTop: '8px',
             boxShadow: 'inset -2px 0 6px rgba(0,0,0,0.1)',
             zIndex: 10
           }}
         >
           {/* Top Circular Return/Back Button (<-) */}
-          <div style={{ padding: '8px 0 16px 18px' }}>
+          <div className="backstage-back-wrap" style={{ padding: '8px 0 16px 18px', flexShrink: 0 }}>
             <button
+              className="backstage-back-btn"
               onClick={onClose}
               style={{
                 width: '42px',
@@ -547,17 +554,18 @@ export default function FileBackstageView({
               }}
               title="Return to CAD/CAM Workspace (Esc)"
             >
-              <ArrowLeft size={22} strokeWidth={2.5} />
+              <ArrowLeft size={20} strokeWidth={2.5} />
             </button>
           </div>
 
           {/* Vertical Menu Buttons */}
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column' }}>
             {sidebarTabs.map((item) => {
               const isActive = activeTab === item.id;
               return (
                 <button
                   key={item.id}
+                  className="backstage-nav-item"
                   onClick={() => {
                     setActiveTab(item.id);
                     if (item.id === 'Save') {
@@ -567,6 +575,7 @@ export default function FileBackstageView({
                   style={{
                     display: 'flex',
                     alignItems: 'center',
+                    flexShrink: 0,
                     padding: '8px 22px',
                     fontSize: '13.5px',
                     fontWeight: isActive ? 600 : 400,
@@ -593,21 +602,25 @@ export default function FileBackstageView({
           </div>
 
           {/* Bottom Version Indicator & Full Logo */}
-          <div style={{ padding: '12px 18px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', borderTop: '1px solid rgba(255,255,255,0.15)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <img src="/brand/argus_cam_intelligence_full.jpg" alt="Argus CAM Intelligence" style={{ maxWidth: '160px', height: 'auto', background: '#ffffff', padding: '4px 6px', borderRadius: '4px', objectFit: 'contain' }} />
+          <div className="backstage-brand-card" style={{ flexShrink: 0, padding: '12px 18px', fontSize: '11px', color: 'rgba(255,255,255,0.75)', borderTop: '1px solid rgba(255,255,255,0.15)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <img className="backstage-brand-logo-img" src="/brand/argus_cam_intelligence_full.jpg" alt="Argus CAM Intelligence" style={{ maxWidth: '160px', height: 'auto', background: '#ffffff', padding: '4px 6px', borderRadius: '4px', objectFit: 'contain' }} />
             <div>
               <strong style={{ color: '#ffffff' }}>Argus CAM Intelligence</strong><br />
-              64-bit Workstation Edition
+              <span>64-bit Workstation</span>
             </div>
           </div>
         </div>
 
         {/* ================= RIGHT WORKSPACE CONTENT ================= */}
         <div
+          className="backstage-content"
           style={{
             flex: 1,
+            minWidth: 0,
+            minHeight: 0,
             background: activeTab === 'Print' ? '#cbd5e1' : '#ffffff',
             overflowY: activeTab === 'Print' ? 'hidden' : 'auto',
+            WebkitOverflowScrolling: 'touch',
             padding: activeTab === 'Print' ? '0' : 'clamp(14px, 3vw, 36px) clamp(14px, 4vw, 48px)',
             position: 'relative',
             display: activeTab === 'Print' ? 'flex' : 'block'
@@ -616,18 +629,19 @@ export default function FileBackstageView({
           {/* ==================== 1. INFO TAB (MATCHING SCREENSHOT) ==================== */}
           {activeTab === 'Info' && (
             <div style={{ maxWidth: '1100px' }}>
-              <h1 style={{ fontSize: 'clamp(22px, 4vw, 38px)', fontWeight: 400, color: '#1e293b', margin: '0 0 24px 0' }}>
+              <h1 className="backstage-page-title" style={{ fontSize: 'clamp(22px, 4vw, 38px)', fontWeight: 400, color: '#1e293b', margin: '0 0 24px 0' }}>
                 Info
               </h1>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '32px', alignItems: 'start' }}>
+              <div className="backstage-info-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '32px', alignItems: 'start' }}>
                 
                 {/* LEFT COLUMN: ACTION TILES */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   
                   {/* Card 1: Project Manager */}
-                  <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
                     <button
+                      className="backstage-tile-btn"
                       onClick={() => setIsProjectManagerOpen(true)}
                       style={{
                         width: '74px',
@@ -892,9 +906,9 @@ export default function FileBackstageView({
                       Properties
                     </h2>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', rowGap: '12px', fontSize: '12.5px' }}>
+                    <div className="backstage-prop-grid" style={{ display: 'grid', gridTemplateColumns: '110px 1fr', rowGap: '12px', fontSize: '12.5px' }}>
                       <div style={{ color: '#64748b' }}>Name</div>
-                      <div style={{ color: '#1e293b', fontWeight: 500 }}>
+                      <div style={{ color: '#1e293b', fontWeight: 500, wordBreak: 'break-word' }}>
                         {currentProjectName || 'Not saved yet'}
                       </div>
 
@@ -902,8 +916,8 @@ export default function FileBackstageView({
                       <div style={{ color: '#1e293b', fontWeight: 500 }}>Argus CAM Part File</div>
 
                       <div style={{ color: '#64748b' }}>Folder Path</div>
-                      <div style={{ color: '#94a3b8' }}>
-                        {currentProjectName ? 'E:\\CAM_Workspace\\Projects\\' : 'Not saved yet'}
+                      <div style={{ color: '#94a3b8', wordBreak: 'break-all' }}>
+                        {currentProjectName ? 'Device Storage / Projects' : 'Not saved yet'}
                       </div>
 
                       <div style={{ color: '#64748b' }}>Size</div>

@@ -674,6 +674,7 @@ export default function SurfaceRoughPocketModal({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -682,16 +683,18 @@ export default function SurfaceRoughPocketModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: '6px',
+        boxSizing: 'border-box',
         fontFamily: "'Segoe UI', Tahoma, sans-serif"
       }}
     >
       <div
+        className="modal-window"
         style={{
-          width: '920px',
-          maxWidth: '96vw',
-          height: '670px',
-          maxHeight: '92vh',
+          width: 'min(920px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          height: 'min(670px, calc(100dvh - 12px))',
+          maxHeight: 'calc(100dvh - 12px)',
           backgroundColor: '#f1f5f9',
           border: '1px solid #64748b',
           borderRadius: '4px',
@@ -703,8 +706,10 @@ export default function SurfaceRoughPocketModal({
       >
         {/* Mastercam Classic Window Title Bar */}
         <div
+          className="modal-header"
           style={{
             height: '28px',
+            flexShrink: 0,
             background: 'linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%)',
             borderBottom: '1px solid #cbd5e1',
             display: 'flex',

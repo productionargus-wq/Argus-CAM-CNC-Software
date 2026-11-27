@@ -845,6 +845,7 @@ export default function SurfaceRoughOptiRoughModal({
 
   return (
     <div
+      className="modal-overlay"
       data-testid="surface-rough-optirough-modal"
       style={{
         position: 'fixed',
@@ -857,14 +858,16 @@ export default function SurfaceRoughOptiRoughModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px'
+        padding: '6px',
+        boxSizing: 'border-box'
       }}
     >
       <div
+        className="modal-window"
         style={{
-          width: '920px',
-          maxWidth: '96vw',
-          maxHeight: '94vh',
+          width: 'min(920px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          maxHeight: 'calc(100dvh - 12px)',
           backgroundColor: '#f0f0f0',
           border: '1px solid #707070',
           boxShadow: '0 10px 30px rgba(0,0,0,0.4)',

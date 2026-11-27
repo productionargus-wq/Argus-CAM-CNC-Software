@@ -198,6 +198,7 @@ export default function SwarfMillingModal({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -207,17 +208,18 @@ export default function SwarfMillingModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: '6px',
         boxSizing: 'border-box',
         fontFamily: "'Segoe UI', Tahoma, Helvetica, sans-serif"
       }}
     >
       <div
+        className="modal-window"
         style={{
-          width: '950px',
-          maxWidth: '98vw',
-          height: '710px',
-          maxHeight: '94vh',
+          width: 'min(950px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          height: 'min(710px, calc(100dvh - 12px))',
+          maxHeight: 'calc(100dvh - 12px)',
           backgroundColor: '#f0f2f5',
           border: '1px solid #717b87',
           borderRadius: '4px',
@@ -232,8 +234,10 @@ export default function SwarfMillingModal({
       >
         {/* Title Bar (Mastercam Classic Slate/Navy Header) */}
         <div
+          className="modal-header"
           style={{
             height: '32px',
+            flexShrink: 0,
             background: 'linear-gradient(90deg, #1e293b 0%, #334155 100%)',
             color: '#ffffff',
             display: 'flex',

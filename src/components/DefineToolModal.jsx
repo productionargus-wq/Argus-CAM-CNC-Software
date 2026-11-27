@@ -503,6 +503,7 @@ function DefineToolModalInner({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -511,14 +512,19 @@ function DefineToolModalInner({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        padding: '6px',
+        boxSizing: 'border-box',
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
         userSelect: 'none'
       }}
     >
       <div
+        className="modal-window"
         style={{
-          width: '860px',
-          height: '585px',
+          width: 'min(860px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          height: 'min(585px, calc(100dvh - 12px))',
+          maxHeight: 'calc(100dvh - 12px)',
           background: '#ffffff',
           borderRadius: '2px',
           boxShadow: '0 20px 50px rgba(0, 0, 0, 0.42)',
@@ -530,8 +536,10 @@ function DefineToolModalInner({
       >
         {/* Title Bar */}
         <div
+          className="modal-header"
           style={{
             height: '30px',
+            flexShrink: 0,
             background: '#ffffff',
             borderBottom: '1px solid #cbd5e1',
             display: 'flex',

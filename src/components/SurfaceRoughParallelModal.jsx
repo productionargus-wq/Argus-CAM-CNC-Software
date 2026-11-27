@@ -433,6 +433,7 @@ export default function SurfaceRoughParallelModal({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -442,15 +443,18 @@ export default function SurfaceRoughParallelModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        padding: '6px',
+        boxSizing: 'border-box',
         fontFamily: "'Segoe UI', Tahoma, Helvetica, sans-serif"
       }}
     >
       <div
+        className="modal-window"
         style={{
-          width: '920px',
-          maxWidth: '96vw',
-          height: '670px',
-          maxHeight: '94vh',
+          width: 'min(920px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          height: 'min(670px, calc(100dvh - 12px))',
+          maxHeight: 'calc(100dvh - 12px)',
           backgroundColor: '#f0f4f9',
           border: '1px solid #005a9e',
           borderRadius: '4px',
@@ -462,8 +466,10 @@ export default function SurfaceRoughParallelModal({
       >
         {/* Title Bar */}
         <div
+          className="modal-header"
           style={{
             height: '28px',
+            flexShrink: 0,
             background: 'linear-gradient(180deg, #0078d7 0%, #005a9e 100%)',
             color: '#ffffff',
             display: 'flex',

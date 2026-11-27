@@ -388,6 +388,7 @@ export default function MastercamToolpathParametersModal({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -397,13 +398,18 @@ export default function MastercamToolpathParametersModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        padding: '6px',
+        boxSizing: 'border-box',
         fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
       }}
     >
       <div
+        className="modal-window"
         style={{
-          width: '940px',
-          height: '670px',
+          width: 'min(940px, calc(100vw - 12px))',
+          height: 'min(670px, calc(100dvh - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          maxHeight: 'calc(100dvh - 12px)',
           background: '#ffffff',
           borderRadius: '6px',
           boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.55), 0 0 0 1px #64748b',
@@ -414,30 +420,33 @@ export default function MastercamToolpathParametersModal({
       >
         {/* ================= Mastercam Iconic Window Title Bar ================= */}
         <div
+          className="modal-header"
           style={{
-            height: '38px',
+            height: '36px',
+            flexShrink: 0,
             background: 'linear-gradient(to bottom, #0f5a9e, #0a4073)',
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0 12px',
+            padding: '0 10px',
             userSelect: 'none',
             borderBottom: '1px solid #082f55'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <img src="/brand/argus_cam_icon.jpg" alt="Argus CAM" style={{ height: '16px', width: '16px', borderRadius: '2px', objectFit: 'contain' }} />
-            <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.3px' }}>
-              Argus CAM Intelligence &bull; 2D Toolpaths - [{formData.name || 'Parameters'}]
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
+            <img src="/brand/argus_cam_icon.jpg" alt="Argus CAM" style={{ height: '16px', width: '16px', borderRadius: '2px', objectFit: 'contain', flexShrink: 0 }} />
+            <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              2D Toolpaths - [{formData.name || 'Parameters'}]
             </span>
             <span
               style={{
                 background: '#0284c7',
                 fontSize: '10px',
-                padding: '1px 6px',
+                padding: '1px 5px',
                 borderRadius: '3px',
-                fontWeight: 700
+                fontWeight: 700,
+                flexShrink: 0
               }}
             >
               OP #{operation.id}
@@ -511,14 +520,16 @@ export default function MastercamToolpathParametersModal({
         {/* ================= Mastercam Subheader Toolbar ================= */}
         <div
           style={{
-            height: '34px',
+            minHeight: '28px',
+            flexShrink: 0,
             background: '#f1f5f9',
             borderBottom: '1px solid #cbd5e1',
             display: 'flex',
             alignItems: 'center',
-            padding: '0 14px',
-            gap: '12px',
-            fontSize: '12px'
+            flexWrap: 'wrap',
+            padding: '3px 12px',
+            gap: '8px',
+            fontSize: '11.5px'
           }}
         >
           <span style={{ color: '#475569', fontWeight: 600 }}>Toolpath:</span>
@@ -526,21 +537,23 @@ export default function MastercamToolpathParametersModal({
             {TOOLPATH_TYPES.find((t) => t.id === formData.badgeClass)?.title || formData.name}
           </span>
           <div style={{ flex: 1 }} />
-          <span style={{ fontSize: '11px', color: '#64748b' }}>
-            Machine: Haas VF-2 (3-Axis) &bull; WCS: {formData.wcsPlane || 'G54'} &bull; Plane: Top (G17)
+          <span style={{ fontSize: '10.5px', color: '#64748b' }}>
+            WCS: {formData.wcsPlane || 'G54'} &bull; Top (G17)
           </span>
         </div>
 
         {/* ================= Main Modal Body (Left Navigation Tree + Right Content) ================= */}
-        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
           {/* Left Tree Page Selector */}
           <div
             style={{
-              width: '210px',
+              width: 'clamp(124px, 23vw, 210px)',
+              flexShrink: 0,
               background: '#f8fafc',
               borderRight: '1px solid #cbd5e1',
               overflowY: 'auto',
-              padding: '6px 0'
+              WebkitOverflowScrolling: 'touch',
+              padding: '4px 0'
             }}
           >
             {navItems.map((item) => {
@@ -591,9 +604,12 @@ export default function MastercamToolpathParametersModal({
           <div
             style={{
               flex: 1,
+              minWidth: 0,
               background: '#ffffff',
-              padding: '18px 22px',
-              overflowY: 'auto'
+              padding: 'clamp(10px, 2vw, 18px) clamp(10px, 2.5vw, 22px)',
+              overflowY: 'auto',
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch'
             }}
           >
             {/* ---------------- 1. TOOLPATH TYPE GALLERY ---------------- */}

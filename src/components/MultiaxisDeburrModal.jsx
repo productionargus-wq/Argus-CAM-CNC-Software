@@ -153,7 +153,7 @@ export default function MultiaxisDeburrModal({
   };
 
   return (
-    <div style={{
+    <div className="modal-overlay" style={{
       position: 'fixed',
       inset: 0,
       backgroundColor: 'rgba(15, 23, 42, 0.55)',
@@ -161,13 +161,15 @@ export default function MultiaxisDeburrModal({
       zIndex: 9999,
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center'
+      justifyContent: 'center',
+      padding: '6px',
+      boxSizing: 'border-box'
     }}>
-      <div style={{
-        width: '940px',
-        maxWidth: '96vw',
-        height: '670px',
-        maxHeight: 'calc(100vh - 80px)',
+      <div className="modal-window" style={{
+        width: 'min(940px, calc(100vw - 12px))',
+        maxWidth: 'calc(100vw - 12px)',
+        height: 'min(670px, calc(100dvh - 12px))',
+        maxHeight: 'calc(100dvh - 12px)',
         backgroundColor: '#f1f5f9',
         border: '1px solid #94a3b8',
         borderRadius: '6px',
@@ -180,9 +182,11 @@ export default function MultiaxisDeburrModal({
       }}>
         {/* Title Bar */}
         <div
+          className="modal-header"
           onMouseDown={handleMouseDown}
           style={{
-            height: '38px',
+            height: '36px',
+            flexShrink: 0,
             backgroundColor: '#1e293b',
             color: '#f8fafc',
             display: 'flex',

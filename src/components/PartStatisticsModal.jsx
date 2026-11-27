@@ -24,6 +24,7 @@ export default function PartStatisticsModal({
 
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -33,14 +34,17 @@ export default function PartStatisticsModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        padding: '6px',
         fontFamily: 'Segoe UI, -apple-system, BlinkMacSystemFont, sans-serif'
       }}
       onClick={onClose}
     >
       <div
+        className="modal-window"
         style={{
-          width: '560px',
-          maxWidth: '92vw',
+          width: 'min(560px, calc(100vw - 12px))',
+          maxWidth: 'calc(100vw - 12px)',
+          maxHeight: 'calc(100dvh - 12px)',
           backgroundColor: '#ffffff',
           borderRadius: '8px',
           boxShadow: '0 20px 45px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.1)',
