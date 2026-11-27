@@ -2185,6 +2185,63 @@ dialog::backdrop {
   }
 }
 
+/* Mobile & Landscape Phone Touch Responsiveness (Light-Mode Mastercam Shell) */
+@media (max-width: 900px), (max-height: 560px) and (pointer: coarse) {
+  .autocursor-pill-wrapper {
+    top: 6px;
+    max-width: calc(100% - 76px);
+  }
+
+  .autocursor-hud-bar {
+    opacity: 0.96;
+    max-width: calc(100vw - 84px);
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 3px 8px;
+  }
+
+  .autocursor-hud-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-statusbar {
+    overflow-x: auto;
+    scrollbar-width: none;
+    white-space: nowrap;
+  }
+
+  .app-statusbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .modal-window,
+  dialog > div {
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+  }
+
+  .modal-body {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-close-btn {
+    min-width: 32px;
+    min-height: 32px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nc2check-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  dialog .modal-body input:not([type="checkbox"]):not([type="radio"]),
+  dialog .modal-body select {
+    min-height: 30px;
+    font-size: 12px;
+  }
+}
+
 
 
 

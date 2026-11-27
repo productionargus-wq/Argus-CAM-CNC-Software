@@ -359,6 +359,18 @@ export default function Viewport3D({
   const [selectedSolidFaceIds, setSelectedSolidFaceIds] = useState([]);
   const [faceSelectionModeNote, setFaceSelectionModeNote] = useState('');
   const [analyzeDynamicCursorScreen, setAnalyzeDynamicCursorScreen] = useState(null);
+  const [mobileTouchMode, setMobileTouchMode] = useState('orbit'); // 'orbit' | 'draw'
+  const mobileTouchModeRef = useRef('orbit');
+
+  useEffect(() => {
+    mobileTouchModeRef.current = mobileTouchMode;
+  }, [mobileTouchMode]);
+
+  useEffect(() => {
+    if (isMobile) {
+      setMobileTouchMode(isSketchModeActive ? 'draw' : 'orbit');
+    }
+  }, [isMobile, isSketchModeActive]);
 
   const sketchGhostGroupRef = useRef(null);
   const snapIndicatorGroupRef = useRef(null);
@@ -2841,10 +2853,37 @@ export default function Viewport3D({
     const onTouchMove = (e) => {
       if (e.touches.length === 1 && isTouchDragging) {
         if (e.cancelable) e.preventDefault();
-        const deltaX = e.touches[0].clientX - prevTouchX;
-        const deltaY = e.touches[0].clientY - prevTouchY;
-        prevTouchX = e.touches[0].clientX;
-        prevTouchY = e.touches[0].clientY;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - prevTouchX;
+        const deltaY = touch.clientY - prevTouchY;
+        prevTouchX = touch.clientX;
+        prevTouchY = touch.clientY;
+
+        const isDrawMode = isSketchModeRef.current && mobileTouchModeRef.current === 'draw' && activeSketchToolRef.current !== 'select' && activeSketchToolRef.current !== 'pan';
+        if (isDrawMode) {
+          const fakeEvt = { clientX: touch.clientX, clientY: touch.clientY };
+          const resolved = resolveSnappedPoint(fakeEvt);
+          if (resolved?.finalPt) {
+            if (activeSketchToolRef.current === 'dynamic_trim') {
+              const entities = customGeometryRef.current || [];
+              const trimRes = performDynamicTrim(entities, resolved.finalPt);
+              if (trimRes?.snipped) {
+                const newCurves = (trimRes.replacementCurves || []).map((pts, idx) =>
+                  createWireframeSpline(pts, {
+                    name: `${trimRes.targetEntity.name || 'Trimmed'}_Seg${idx + 1}`,
+                    color: 0x38bdf8
+                  })
+                );
+                const nextList = entities.filter((ent) => ent !== trimRes.targetEntity).concat(newCurves);
+                customGeometryRef.current = nextList;
+                onReplaceCustomGeometryRef.current?.(nextList);
+              }
+            } else if (sketchAnchorRef.current) {
+              renderLockedPreviewAtRef.current?.(resolved.finalPt, { isCursorHover: true });
+            }
+          }
+          return;
+        }
 
         spherical.theta -= deltaX * 0.008;
         spherical.phi = Math.max(0.01, Math.min(Math.PI - 0.01, spherical.phi - deltaY * 0.008));
@@ -2889,9 +2928,40 @@ export default function Viewport3D({
     const onTouchEnd = (e) => {
       const touchDuration = performance.now() - touchDownTime;
       if (e.touches.length === 0) {
-        if (isTouchDragging && touchDuration < 300) {
+        if (isTouchDragging && touchDuration < 450) {
           const movedDist = Math.hypot(prevTouchX - touchDownX, prevTouchY - touchDownY);
-          if (movedDist < 8) {
+          const isDrawMode = isSketchModeRef.current && mobileTouchModeRef.current === 'draw' && activeSketchToolRef.current !== 'select' && activeSketchToolRef.current !== 'pan';
+          if (isDrawMode && movedDist < 16) {
+            const fakeEvt = { clientX: touchDownX, clientY: touchDownY };
+            const resolved = resolveSnappedPoint(fakeEvt);
+            const finalPt = resolved?.finalPt;
+            const tool = activeSketchToolRef.current;
+            if (finalPt) {
+              if (tool === 'point' || tool === 'drill' || String(tool).startsWith('point_') || tool === 'bolt_circle') {
+                commitInteractiveEntity(finalPt, finalPt);
+              } else if (['line', 'line_parallel', 'line_perp', 'rect', 'circle', 'polygon', 'ellipse', 'obround', 'spiral', 'helix'].includes(tool)) {
+                if (!sketchAnchorRef.current) {
+                  const fullyLockedRect = tool === 'rect' && isWidthLockedRef.current && activeDrawingWidthRef.current > 0 && isHeightLockedRef.current && activeDrawingHeightRef.current > 0;
+                  const fullyLockedCircle = tool === 'circle' && isRadiusLockedRef.current && activeDrawingRadiusRef.current > 0;
+                  const fullyLockedLine = tool === 'line' && isLengthLockedRef.current && activeDrawingLengthRef.current > 0 && isAngleLockedRef.current;
+                  if (fullyLockedRect || fullyLockedCircle || fullyLockedLine) {
+                    commitInteractiveEntity(finalPt, finalPt);
+                  } else {
+                    sketchAnchorRef.current = finalPt.clone();
+                    setSketchAnchor(finalPt.clone());
+                    onDrawingUpdateRef.current?.({
+                      tool,
+                      ...(tool === 'circle' ? { center: finalPt.clone() } : tool === 'rect' ? { firstCorner: finalPt.clone() } : { pt1: finalPt.clone() }),
+                      isDragging: true
+                    });
+                    setSketchPromptText(tool === 'rect' ? 'Tap position of second corner' : tool === 'line' ? 'Tap second endpoint' : 'Tap radius / second point');
+                  }
+                } else {
+                  commitInteractiveEntity(sketchAnchorRef.current, finalPt);
+                }
+              }
+            }
+          } else if (movedDist < 8) {
             // Quick tap: raycast entity or solid face
             const rect = dom.getBoundingClientRect();
             const tapX = touchDownX - rect.left;
@@ -5315,7 +5385,7 @@ export default function Viewport3D({
       )}
 
       {/* Unified Mastercam Floating AutoCursor & Selection Methods Pill */}
-      {!isBackplotActive && !isMobile && (
+      {!isBackplotActive && (
         <AutoCursorBar
           snapMode={propSnapMode}
           onSelectSnapMode={(mode) => {
@@ -5366,7 +5436,58 @@ export default function Viewport3D({
           onBlankSelection={onBlankSelectedEntities ? () => onBlankSelectedEntities(selectedEntityIds) : null}
           onDeleteSelection={onDeleteSelectedEntities ? () => onDeleteSelectedEntities(selectedEntityIds) : null}
           theme={theme}
+          isMobile={isMobile}
+          mobileTouchMode={mobileTouchMode}
+          onToggleMobileTouchMode={() => setMobileTouchMode((prev) => (prev === 'draw' ? 'orbit' : 'draw'))}
         />
+      )}
+
+      {isMobile && isSketchModeActive && !isBackplotActive && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '44px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 92,
+            background: 'rgba(255, 255, 255, 0.96)',
+            border: '1px solid #94a3b8',
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.14)',
+            borderRadius: '4px',
+            padding: '3px 9px',
+            fontSize: '10.5px',
+            fontWeight: 600,
+            color: '#0f172a',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            maxWidth: '88vw',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}
+        >
+          <span>{sketchPromptText}</span>
+          <button
+            type="button"
+            onClick={() => {
+              onToggleSketchMode?.(false);
+              setMobileTouchMode('orbit');
+            }}
+            style={{
+              padding: '1px 7px',
+              borderRadius: '3px',
+              background: '#16a34a',
+              color: '#ffffff',
+              border: 'none',
+              fontSize: '10px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            Done
+          </button>
+        </div>
       )}
 
       {/* Mastercam Top-Left "Select Solid Face or Surface:" Shortcut Legend (Image 1) */}
@@ -5600,7 +5721,7 @@ export default function Viewport3D({
       )}
 
       {/* Docked Vertical QuickMask Bar (Right Edge of Viewport matching Image 2) */}
-      {!isBackplotActive && !isMobile && (
+      {!isBackplotActive && (
         <QuickMaskBar
           activeMask={selectionMask}
           onSelectMask={handleQuickMaskSelect}

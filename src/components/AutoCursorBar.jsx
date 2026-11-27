@@ -186,7 +186,10 @@ export default function AutoCursorBar({
   onBlankSelection,
   onDeleteSelection,
   onAnalyzeSelection,
-  theme = 'light'
+  theme = 'light',
+  isMobile = false,
+  mobileTouchMode = 'orbit',
+  onToggleMobileTouchMode = null
 }) {
   const [openMenu, setOpenMenu] = useState(null); // 'autocursor' | 'xyz' | 'settings' | 'method' | 'containment' | null
   const [xyzInput, setXyzInput] = useState({ x: '0', y: '0', z: '0' });
@@ -242,6 +245,29 @@ export default function AutoCursorBar({
     >
       {/* Main Floating Mastercam AutoCursor + Selection Methods Pill */}
       <div className={`autocursor-hud-bar ${isLight ? 'is-light' : 'is-dark'} ${isActive ? 'is-active' : ''}`}>
+        {isMobile && onToggleMobileTouchMode && (
+          <>
+            <button
+              type="button"
+              onClick={onToggleMobileTouchMode}
+              title="Toggle 1-Finger Touch Mode: Orbit Camera vs Draw/Sketch"
+              style={{
+                padding: '2px 8px',
+                borderRadius: '3px',
+                border: mobileTouchMode === 'draw' ? '1px solid #0284c7' : '1px solid #cbd5e1',
+                background: mobileTouchMode === 'draw' ? '#0284c7' : '#f1f5f9',
+                color: mobileTouchMode === 'draw' ? '#ffffff' : '#0f172a',
+                fontSize: '10.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {mobileTouchMode === 'draw' ? '✏ Draw' : '🖐 Orbit'}
+            </button>
+            <div className="pill-divider" />
+          </>
+        )}
         {/* 1. Snap Lock */}
         <button
           type="button"

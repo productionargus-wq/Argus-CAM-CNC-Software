@@ -13,13 +13,14 @@ export default function AnalyzeDynamicDialog({
   data = null,
   onReverseVector,
   arrowScale = 1.0,
-  onChangeArrowScale
+  onChangeArrowScale,
+  isMobile = false
 }) {
   const [scaleFactor, setScaleFactor] = useState(arrowScale || 1.0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [pos, setPos] = useState(() => ({
-    x: 260,
-    y: 192
+    x: isMobile ? 36 : 260,
+    y: isMobile ? 84 : 192
   }));
   const dragStateRef = useRef(null);
 

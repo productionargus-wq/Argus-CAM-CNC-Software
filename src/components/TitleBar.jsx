@@ -17,7 +17,10 @@ export default function TitleBar({
   onNotify,
   onRenameProject,
   isAIActive = false,
-  onToggleAI = null
+  onToggleAI = null,
+  isMobile = false,
+  isMobileRibbonOpen = false,
+  onToggleMobileRibbon = null
 }) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(currentProject);
@@ -89,8 +92,8 @@ export default function TitleBar({
               display: 'block' 
             }} 
           />
-          <span style={{ fontWeight: 800, fontSize: '11px', color: '#ea580c', letterSpacing: '0.5px' }}>
-            ARGUS <span style={{ color: theme === 'light' ? '#0f172a' : '#f8fafc', fontWeight: 600 }}>CAM INTELLIGENCE</span>
+          <span style={{ fontWeight: 800, fontSize: '11px', color: '#ea580c', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+            ARGUS <span style={{ color: theme === 'light' ? '#0f172a' : '#f8fafc', fontWeight: 600 }}>{isMobile ? 'CAM' : 'CAM INTELLIGENCE'}</span>
           </span>
         </div>
 
@@ -119,20 +122,24 @@ export default function TitleBar({
           >
             <RotateCw size={13} />
           </button>
-          <button className="quick-btn" onClick={onOpenSetupSheet} title="Print CNC Setup Sheet">
-            <Printer size={13} />
-          </button>
+          {!isMobile && (
+            <button className="quick-btn" onClick={onOpenSetupSheet} title="Print CNC Setup Sheet">
+              <Printer size={13} />
+            </button>
+          )}
           <button className="quick-btn" onClick={onOpenHelpGuide} title="Help &amp; Keyboard Navigation Guide">
             <HelpCircle size={13} />
           </button>
-          <button
-            className="quick-btn"
-            onClick={onToggleTheme}
-            title={theme === 'light' ? 'Switch to Dark Mode (CAD Night)' : 'Switch to Light Mode (CAD Day)'}
-            style={{ color: theme === 'light' ? '#d97706' : '#38bdf8', marginLeft: '4px' }}
-          >
-            {theme === 'light' ? <Moon size={13} /> : <Sun size={13} />}
-          </button>
+          {!isMobile && (
+            <button
+              className="quick-btn"
+              onClick={onToggleTheme}
+              title={theme === 'light' ? 'Switch to Dark Mode (CAD Night)' : 'Switch to Light Mode (CAD Day)'}
+              style={{ color: theme === 'light' ? '#d97706' : '#38bdf8', marginLeft: '4px' }}
+            >
+              {theme === 'light' ? <Moon size={13} /> : <Sun size={13} />}
+            </button>
+          )}
           {onToggleAI && (
             <button
               className="quick-btn"
@@ -162,58 +169,92 @@ export default function TitleBar({
         </div>
       </div>
 
-      <div className="titlebar-center">
-        <span style={{ fontWeight: 600, color: theme === 'light' ? '#0f172a' : '#f8fafc' }}>Argus CAM Intelligence</span>
-        <span style={{ color: '#94a3b8', margin: '0 5px' }}>&ndash;</span>
-        {isEditingName ? (
-          <input
-            type="text"
-            value={tempName}
-            onChange={(e) => setTempName(e.target.value)}
-            onBlur={handleCommitName}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleCommitName();
-              if (e.key === 'Escape') {
-                setTempName(currentProject);
-                setIsEditingName(false);
-              }
-            }}
-            autoFocus
-            style={{
-              background: theme === 'light' ? '#ffffff' : '#1e293b',
-              color: theme === 'light' ? '#0f172a' : '#f8fafc',
-              border: '1px solid #0284c7',
-              borderRadius: '2px',
-              padding: '1px 6px',
-              fontSize: '11.5px',
-              fontWeight: 600,
-              outline: 'none',
-              height: '20px'
-            }}
-          />
-        ) : (
+      {!isMobile && (
+        <div className="titlebar-center">
+          <span style={{ fontWeight: 600, color: theme === 'light' ? '#0f172a' : '#f8fafc' }}>Argus CAM Intelligence</span>
+          <span style={{ color: '#94a3b8', margin: '0 5px' }}>&ndash;</span>
+          {isEditingName ? (
+            <input
+              type="text"
+              value={tempName}
+              onChange={(e) => setTempName(e.target.value)}
+              onBlur={handleCommitName}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCommitName();
+                if (e.key === 'Escape') {
+                  setTempName(currentProject);
+                  setIsEditingName(false);
+                }
+              }}
+              autoFocus
+              style={{
+                background: theme === 'light' ? '#ffffff' : '#1e293b',
+                color: theme === 'light' ? '#0f172a' : '#f8fafc',
+                border: '1px solid #0284c7',
+                borderRadius: '2px',
+                padding: '1px 6px',
+                fontSize: '11.5px',
+                fontWeight: 600,
+                outline: 'none',
+                height: '20px'
+              }}
+            />
+          ) : (
+            <span
+              className="titlebar-filename"
+              onClick={() => setIsEditingName(true)}
+              title="Click to rename project (.mcam)"
+              style={{ cursor: 'pointer', padding: '1px 4px', borderRadius: '2px' }}
+            >
+              [{currentProject}]
+            </span>
+          )}
+        </div>
+      )}
+
+      {isMobile ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', zIndex: 2 }}>
           <span
             className="titlebar-filename"
             onClick={() => setIsEditingName(true)}
-            title="Click to rename project (.mcam)"
-            style={{ cursor: 'pointer', padding: '1px 4px', borderRadius: '2px' }}
+            style={{ fontSize: '10.5px', fontWeight: 600, color: '#334155', maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             [{currentProject}]
           </span>
-        )}
-      </div>
-
-      <div className="titlebar-right">
-        <button className="win-control-btn" onClick={handleMinimize} title="Minimize Window">
-          <Minus size={12} />
-        </button>
-        <button className="win-control-btn" onClick={toggleFullscreen} title="Toggle Fullscreen Maximize">
-          <Square size={11} />
-        </button>
-        <button className="win-control-btn close" onClick={handleClose} title="Close Application">
-          <X size={13} />
-        </button>
-      </div>
+          {onToggleMobileRibbon && (
+            <button
+              type="button"
+              onClick={onToggleMobileRibbon}
+              style={{
+                padding: '2px 8px',
+                height: '22px',
+                borderRadius: '3px',
+                background: isMobileRibbonOpen ? '#0f5a9e' : '#ffffff',
+                color: isMobileRibbonOpen ? '#ffffff' : '#0f172a',
+                border: '1px solid #94a3b8',
+                fontSize: '10px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {isMobileRibbonOpen ? '▲ Ribbon' : '▼ Ribbon'}
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="titlebar-right">
+          <button className="win-control-btn" onClick={handleMinimize} title="Minimize Window">
+            <Minus size={12} />
+          </button>
+          <button className="win-control-btn" onClick={toggleFullscreen} title="Toggle Fullscreen Maximize">
+            <Square size={11} />
+          </button>
+          <button className="win-control-btn close" onClick={handleClose} title="Close Application">
+            <X size={13} />
+          </button>
+        </div>
+      )}
     </header>
   );
 }

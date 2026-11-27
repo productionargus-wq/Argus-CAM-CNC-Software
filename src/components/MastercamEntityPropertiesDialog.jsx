@@ -59,7 +59,8 @@ export default function MastercamEntityPropertiesDialog({
   onClose,
   entity = null,
   onUpdateEntity = null,
-  promptText = 'Select entities to analyze'
+  promptText = 'Select entities to analyze',
+  isMobile = false
 }) {
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -90,6 +91,7 @@ export default function MastercamEntityPropertiesDialog({
       onClose={onClose}
       onUpdateEntity={onUpdateEntity}
       promptText={promptText}
+      isMobile={isMobile}
     />
   ) : (
     <LinePropertiesPalette
@@ -97,6 +99,7 @@ export default function MastercamEntityPropertiesDialog({
       onClose={onClose}
       onUpdateEntity={onUpdateEntity}
       promptText={promptText}
+      isMobile={isMobile}
     />
   );
 }
@@ -104,8 +107,8 @@ export default function MastercamEntityPropertiesDialog({
 // -------------------------------------------------------------
 // Image 4: Arc Properties Dialog
 // -------------------------------------------------------------
-function ArcPropertiesPalette({ entity, onClose, onUpdateEntity, promptText }) {
-  const { pos, handleTitleMouseDown } = useDraggablePalette(260, 192, 210);
+function ArcPropertiesPalette({ entity, onClose, onUpdateEntity, promptText, isMobile }) {
+  const { pos, handleTitleMouseDown } = useDraggablePalette(isMobile ? 36 : 260, isMobile ? 84 : 192, 210);
   const ud = entity.userData || {};
   const initialRadius = Number(ud.radius ?? (entity.geometry?.parameters?.radius ?? 30.117));
   const initialCenter = ud.center || { x: -88.362, y: -16.633, z: 0.0 };
@@ -454,7 +457,7 @@ function ArcPropertiesPalette({ entity, onClose, onUpdateEntity, promptText }) {
 // -------------------------------------------------------------
 // Image 5: Line Properties Dialog
 // -------------------------------------------------------------
-function LinePropertiesPalette({ entity, onClose, onUpdateEntity, promptText }) {
+function LinePropertiesPalette({ entity, onClose, onUpdateEntity, promptText = 'Select entities to analyze', isMobile = false }) {
   const ud = entity.userData || {};
 
   const getPoints = () => {
@@ -517,7 +520,7 @@ function LinePropertiesPalette({ entity, onClose, onUpdateEntity, promptText }) 
     onClose();
   };
 
-  const { pos, handleTitleMouseDown } = useDraggablePalette(260, 192, 235);
+  const { pos, handleTitleMouseDown } = useDraggablePalette(isMobile ? 36 : 260, isMobile ? 84 : 192, 235);
 
   return (
     <div

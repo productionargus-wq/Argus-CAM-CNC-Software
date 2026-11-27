@@ -6,14 +6,6 @@ import RibbonBar from './components/RibbonBar';
 import OperationsTree from './components/OperationsTree';
 import Viewport3D from './components/Viewport3D';
 import { useMobileLayout } from './hooks/useMobileLayout';
-import MobileNavBar from './components/mobile/MobileNavBar';
-import MobileBottomSheet from './components/mobile/MobileBottomSheet';
-import { 
-  MobileCADPanel, 
-  MobileToolpathsPanel, 
-  MobileSimulatePanel, 
-  MobileGCodePanel 
-} from './components/mobile/MobileContentPanels';
 import NC2CheckModal from './components/NC2CheckModal';
 import MachineSimModal from './components/MachineSimModal';
 import StockSetupModal from './components/StockSetupModal';
@@ -1592,11 +1584,21 @@ export default function App() {
     historyState
   ]);
 
+  const effectiveTheme = isMobile ? 'light' : theme;
+
   // Synchronize dynamic Theme attribute to root DOM element
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('argus_theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-theme', effectiveTheme);
+    if (!isMobile) {
+      localStorage.setItem('argus_theme', effectiveTheme);
+    }
+  }, [effectiveTheme, isMobile]);
+
+  useEffect(() => {
+    if (isMobile) {
+      setIsLeftPanelCollapsed(true);
+    }
+  }, [isMobile]);
 
   const handleToggleTheme = () => {
     setTheme((prev) => {
@@ -7994,8 +7996,11 @@ export default function App() {
       <TitleBar
         currentProject={currentProjectName}
         activeMachine={activeMachine}
-        theme={theme}
+        theme={effectiveTheme}
         onToggleTheme={handleToggleTheme}
+        isMobile={isMobile}
+        isMobileRibbonOpen={isMobileRibbonOpen}
+        onToggleMobileRibbon={() => setIsMobileRibbonOpen((prev) => !prev)}
         onSaveProject={handleSaveProject}
         onOpenFile={handleOpenViaNativeDialog}
         onOpenSetupSheet={() => setIsSetupSheetOpen(true)}
@@ -8028,6 +8033,9 @@ export default function App() {
         activeTab={activeRibbonTab}
         isAIActive={isAIActive}
         onToggleAI={setIsAIActive}
+        isMobile={isMobile}
+        isMobileRibbonOpen={isMobileRibbonOpen}
+        onToggleMobileRibbon={() => setIsMobileRibbonOpen((prev) => !prev)}
         onSelectTab={(tab) => {
           setActiveRibbonTab(tab);
           if (tab === 'Toolpaths') {
@@ -8081,7 +8089,7 @@ export default function App() {
         onOpenAddInsManager={() => setIsAddInsModalOpen(true)}
         onOpenCommandFinder={() => setIsCommandFinderOpen(true)}
         onOpenAttributesModal={() => setIsSelectAllOpen(true)}
-        theme={theme}
+        theme={effectiveTheme}
         onToggleTheme={handleToggleTheme}
         onOpenPostModal={() => setIsPostModalOpen(true)}
         onOpenSimModal={() => setIsSimModalOpen(true)}
@@ -8295,9 +8303,32 @@ export default function App() {
 
       {/* 3. Main CAD/CAM Workspace */}
       <div className="workspace-body" style={{ position: 'relative' }}>
+        {isMobile && !isLeftPanelCollapsed && (
+          <div
+            onClick={() => setIsLeftPanelCollapsed(true)}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.25)',
+              zIndex: 1150
+            }}
+          />
+        )}
         {/* Left Operations / Levels / Solids / Planes Manager Tree with Hide/Show Arrow Button */}
         {!isLeftPanelCollapsed ? (
-          <div style={{ position: 'relative', display: 'flex', height: '100%', flexShrink: 0 }}>
+          <div
+            style={isMobile ? {
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              zIndex: 1200,
+              display: 'flex',
+              height: '100%',
+              maxWidth: '82vw',
+              boxShadow: '6px 0 24px rgba(15, 23, 42, 0.22)'
+            } : { position: 'relative', display: 'flex', height: '100%', flexShrink: 0 }}
+          >
             <OperationsTree
           operations={operations}
           onToggleOp={handleToggleOp}
@@ -8624,6 +8655,43 @@ export default function App() {
       </div>
     ) : (
       /* Floating Expand Arrow Button when Left Panel is Collapsed */
+      isMobile ? (
+        <div
+          style={{
+            width: '26px',
+            height: '100%',
+            background: '#f1f5f9',
+            borderRight: '1px solid #cbd5e1',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            paddingTop: '8px',
+            gap: '10px',
+            flexShrink: 0,
+            zIndex: 30
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setIsLeftPanelCollapsed(false)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#0f5a9e',
+              fontSize: '10px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              writingMode: 'vertical-rl',
+              transform: 'rotate(180deg)',
+              padding: '6px 2px',
+              letterSpacing: '0.4px'
+            }}
+            title="Show Toolpaths / Parameters Drawer"
+          >
+            ▸ Toolpaths / Params
+          </button>
+        </div>
+      ) : (
       <button
         onClick={() => setIsLeftPanelCollapsed(false)}
         style={{
@@ -8650,6 +8718,7 @@ export default function App() {
       >
         <ChevronRight size={14} />
       </button>
+      )
     )}
 
         {/* Main Workspace Area: 2D Design Board, Split Screen, or 3D Viewport */}
@@ -8660,7 +8729,7 @@ export default function App() {
             onGenerateToolpaths={handleGenerateToolpathsFromBoard}
             onSwitchTo3D={() => setWorkspaceViewMode('3d')}
             stockConfig={stockConfig}
-            theme={theme}
+            theme={effectiveTheme}
           />
         )}
 
@@ -8673,12 +8742,12 @@ export default function App() {
                 onGenerateToolpaths={handleGenerateToolpathsFromBoard}
                 onSwitchTo3D={() => setWorkspaceViewMode('3d')}
                 stockConfig={stockConfig}
-                theme={theme}
+                theme={effectiveTheme}
               />
             </div>
             <div style={{ flex: 1, height: '100%' }}>
               <Viewport3D
-                isMobile={false}
+                isMobile={isMobile}
                 currentModel={currentModel}
                 partMetrics={partMetrics}
                 stockConfig={stockConfig}
@@ -8688,7 +8757,7 @@ export default function App() {
                 activeOpId={activeOpId}
                 activePlane={activePlane}
                 planes={planesList}
-                theme={theme}
+                theme={effectiveTheme}
                 isBackplotActive={isBackplotActive}
                 backplotMode={backplotMode}
                 onCloseBackplot={() => setIsBackplotActive(false)}
@@ -8904,7 +8973,7 @@ export default function App() {
               onCancel={handleCancelSurfaceExtrude}
             />
             <Viewport3D
-              isMobile={false}
+              isMobile={isMobile}
               currentModel={currentModel}
               partMetrics={partMetrics}
               stockConfig={stockConfig}
@@ -8915,7 +8984,7 @@ export default function App() {
               activeOpId={activeOpId}
               activePlane={activePlane}
               planes={planesList}
-              theme={theme}
+              theme={effectiveTheme}
               isBackplotActive={isBackplotActive}
               backplotMode={backplotMode}
               onCloseBackplot={() => setIsBackplotActive(false)}
@@ -9114,7 +9183,7 @@ export default function App() {
               return next;
             });
           }}
-          theme={theme}
+          theme={effectiveTheme}
         />
 
       {/* Mastercam Backstage File Menu UI */}
@@ -9827,7 +9896,7 @@ export default function App() {
         machineDirectory={machineDirectory}
         onSaveMenu={handleSaveMachineMenu}
         onImportCustomMachine={handleImportCustomMachine}
-        theme={theme}
+        theme={effectiveTheme}
       />
 
       {/* CNC Machine Definition & Kinematic Envelope Modal (Tab 10) */}
@@ -10034,6 +10103,7 @@ export default function App() {
         data={analyzeDynamicData}
         arrowScale={analyzeDynamicScale}
         onChangeArrowScale={setAnalyzeDynamicScale}
+        isMobile={isMobile}
         onReverseVector={() => {
           setAnalyzeDynamicData((prev) => prev ? {
             ...prev,
@@ -10050,6 +10120,7 @@ export default function App() {
         onClose={() => setIsEntityPropertiesOpen(false)}
         entity={inspectedEntity}
         onUpdateEntity={handleUpdateCustomEntityProps}
+        isMobile={isMobile}
       />
 
       {/* 12. Entity Analyzer CAD Inspector Modal */}

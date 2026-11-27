@@ -221,7 +221,10 @@ export default function RibbonBar({
   onExtractOneEdge,
   onBreakManyPieces,
   onJoinEntities,
-  onProjectWireframe
+  onProjectWireframe,
+  isMobile = false,
+  isMobileRibbonOpen = false,
+  onToggleMobileRibbon = null
 }) {
   const fileInputRef = useRef(null);
   const mcamFileInputRef = useRef(null);
@@ -239,6 +242,7 @@ export default function RibbonBar({
   }, []);
 
   const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(false);
+  const effectiveCollapsed = isMobile ? !isMobileRibbonOpen : isRibbonCollapsed;
   const [ribbonContentHeight, setRibbonContentHeight] = useState(() => {
     try {
       const saved = localStorage.getItem('mastercam_ribbon_height');
@@ -441,7 +445,7 @@ export default function RibbonBar({
             flex: 1,
             minWidth: 0,
             scrollbarWidth: 'none',
-            paddingRight: onChangeViewMode ? '145px' : '45px'
+            paddingRight: isMobile ? '36px' : (onChangeViewMode ? '145px' : '45px')
           }}
         >
           {tabs.map((tab) => (
@@ -452,10 +456,15 @@ export default function RibbonBar({
                   onOpenFileBackstage();
                 } else {
                   onSelectTab(tab);
-                  setIsRibbonCollapsed(false);
+                  if (isMobile) {
+                    if (!isMobileRibbonOpen) onToggleMobileRibbon?.();
+                  } else {
+                    setIsRibbonCollapsed(false);
+                  }
                 }
               }}
               className={`ribbon-tab ${tab === 'File' ? 'file-tab' : ''} ${activeTab === tab ? 'active' : ''}`}
+              style={isMobile ? { whiteSpace: 'nowrap', flexShrink: 0, padding: '4px 10px' } : undefined}
             >
               {tab}
             </button>
@@ -481,7 +490,7 @@ export default function RibbonBar({
           }}
         >
           {/* Workspace Mode Switcher (2D Design Board | Split View | 3D Machine) */}
-          {onChangeViewMode && (
+          {onChangeViewMode && !isMobile && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
               <button
                 onClick={() => onChangeViewMode('2d')}
@@ -546,7 +555,7 @@ export default function RibbonBar({
           )}
 
           {/* AI Assistant Quick Toggle Button */}
-          {onToggleAI && (
+          {!isMobile && onToggleAI && (
             <button
               type="button"
               onClick={() => onToggleAI(!isAIActive)}
@@ -577,12 +586,12 @@ export default function RibbonBar({
           {/* Mastercam Style Collapse / Expand Toggle Arrow Button (Pinned at top right) */}
           <button
             type="button"
-            onClick={() => setIsRibbonCollapsed((prev) => !prev)}
+            onClick={() => (isMobile ? onToggleMobileRibbon?.() : setIsRibbonCollapsed((prev) => !prev))}
             style={{
               width: '22px',
               height: '22px',
-              background: isRibbonCollapsed ? '#e2e8f0' : 'transparent',
-              color: isRibbonCollapsed ? '#0284c7' : '#475569',
+              background: effectiveCollapsed ? '#e2e8f0' : 'transparent',
+              color: effectiveCollapsed ? '#0284c7' : '#475569',
               border: '1px solid #cbd5e1',
               borderRadius: '3px',
               display: 'flex',
@@ -592,16 +601,16 @@ export default function RibbonBar({
               boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
               transition: 'all 0.15s ease'
             }}
-            title={isRibbonCollapsed ? "Show Ribbon Bar (Ctrl+F1)" : "Hide Ribbon Bar (Ctrl+F1)"}
-            aria-label={isRibbonCollapsed ? "Show Ribbon Bar" : "Hide Ribbon Bar"}
+            title={effectiveCollapsed ? "Show Ribbon Bar (Ctrl+F1)" : "Hide Ribbon Bar (Ctrl+F1)"}
+            aria-label={effectiveCollapsed ? "Show Ribbon Bar" : "Hide Ribbon Bar"}
           >
-            {isRibbonCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+            {effectiveCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
           </button>
         </div>
       </div>
 
       {/* Ribbon Action Groups - Dynamically swaps based on activeTab */}
-      {!isRibbonCollapsed && (
+      {!effectiveCollapsed && (
       <div className="ribbon-content-wrapper">
         {canScrollLeft && (
           <button
@@ -618,7 +627,7 @@ export default function RibbonBar({
         <div
           ref={ribbonContentRef}
           className="ribbon-content"
-          style={{ height: `${ribbonContentHeight}px` }}
+          style={{ height: isMobile ? '68px' : `${ribbonContentHeight}px` }}
           onScroll={checkRibbonScroll}
           onWheel={(e) => {
             if (e.deltaY !== 0) {
@@ -2537,6 +2546,7 @@ export default function RibbonBar({
       )}
 
       {/* Draggable Bottom Resizer Bar with Centered Arrow Toggle Pill */}
+      {!isMobile && (
       <div
         className="ribbon-bottom-resizer"
         onPointerDown={handleRibbonResizeStart}
@@ -2605,6 +2615,7 @@ export default function RibbonBar({
           {isRibbonCollapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
         </button>
       </div>
+      )}
     </nav>
   );
 }
