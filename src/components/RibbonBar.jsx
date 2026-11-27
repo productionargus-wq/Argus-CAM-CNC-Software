@@ -304,7 +304,8 @@ export default function RibbonBar({
     };
   }, [isResizingRibbon, handleRibbonResizeMove, handleRibbonResizeEnd]);
 
-  const ribbonScale = Math.min(Math.max((ribbonContentHeight - 20) / 74, 0.65), 1.35);
+  const effectiveRibbonHeight = isMobile ? 80 : ribbonContentHeight;
+  const ribbonScale = Math.min(Math.max((effectiveRibbonHeight - 20) / 74, 0.65), 1.35);
   const btnLargeHeight = Math.round(64 * ribbonScale);
   const btnIconSize = Math.max(16, Math.round(26 * ribbonScale));
   const fontSize = Math.max(8.5, (10.5 * ribbonScale).toFixed(1));
@@ -627,7 +628,10 @@ export default function RibbonBar({
         <div
           ref={ribbonContentRef}
           className="ribbon-content"
-          style={{ height: isMobile ? '68px' : `${ribbonContentHeight}px` }}
+          style={{
+            height: isMobile ? 'auto' : `${ribbonContentHeight}px`,
+            minHeight: isMobile ? `${effectiveRibbonHeight}px` : undefined
+          }}
           onScroll={checkRibbonScroll}
           onWheel={(e) => {
             if (e.deltaY !== 0) {

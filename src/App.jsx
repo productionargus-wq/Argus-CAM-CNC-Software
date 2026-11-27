@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { Square, CircleDot, Circle, Wrench, Layers, Scissors, Play, FileCode, Box, CheckCircle2, AlertTriangle, AlertCircle, Info, FolderOpen, Undo2, Redo2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import TitleBar from './components/TitleBar';
+import BootSplashScreen from './components/BootSplashScreen';
 import RibbonBar from './components/RibbonBar';
 import OperationsTree from './components/OperationsTree';
 import Viewport3D from './components/Viewport3D';
@@ -278,6 +279,7 @@ export default function App() {
     closeMobileDrawer
   } = useMobileLayout();
   const [isMobileRibbonOpen, setIsMobileRibbonOpen] = useState(false);
+  const [showBootSplash, setShowBootSplash] = useState(true);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
   const [projectDescriptor, setProjectDescriptor] = useState('Argus CAM Intelligence 5-Axis Multi-Surface Machining Project for DMU 50 VMC');
   const [projectCreatedDate, setProjectCreatedDate] = useState(() => new Date(Date.now() - 3600000 * 24 * 2));
@@ -7992,6 +7994,7 @@ export default function App() {
 
   return (
     <div id="root" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {showBootSplash && <BootSplashScreen onDone={() => setShowBootSplash(false)} />}
       {/* 1. Mastercam TitleBar (Exact 1:1 Web Application) */}
       <TitleBar
         currentProject={currentProjectName}
@@ -10349,15 +10352,26 @@ export default function App() {
       {/* Floating Modern Toast Notification Stack */}
       <div style={{
         position: 'fixed',
-        bottom: '104px',
-        right: '16px',
+        ...(isMobile
+          ? {
+              bottom: '34px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              alignItems: 'center',
+              gap: '4px',
+              maxWidth: 'calc(100vw - 140px)'
+            }
+          : {
+              bottom: '104px',
+              right: '16px',
+              gap: '8px'
+            }),
         zIndex: 99999,
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
         pointerEvents: 'none'
       }}>
-        {toasts.map((toast) => {
+        {(isMobile ? toasts.slice(-2) : toasts).map((toast) => {
           const type = toast.type || 'info';
           const isDanger = type === 'danger' || type === 'error';
           const isWarning = type === 'warning';
@@ -10383,47 +10397,57 @@ export default function App() {
           return (
             <div
               key={toast.id}
+              onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+              title="Tap to dismiss"
               style={{
                 pointerEvents: 'auto',
                 background: bg,
                 color: textColor,
-                padding: '9px 14px',
+                padding: isMobile ? '4px 10px' : '9px 14px',
                 borderRadius: '6px',
-                fontSize: '12px',
+                fontSize: isMobile ? '10.5px' : '12px',
                 fontWeight: '600',
                 fontFamily: 'Inter, system-ui, sans-serif',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.14)',
+                boxShadow: isMobile ? '0 4px 12px rgba(0, 0, 0, 0.14)' : '0 8px 24px rgba(0, 0, 0, 0.14)',
                 border: border,
+                maxWidth: isMobile ? 'min(340px, calc(100vw - 140px))' : undefined,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: isMobile ? '6px' : '8px',
+                cursor: 'pointer',
                 transition: 'all 0.25s ease'
               }}
             >
-              {isSuccess && <CheckCircle2 size={16} color={iconColor} style={{ flexShrink: 0 }} />}
-              {isWarning && <AlertTriangle size={16} color={iconColor} style={{ flexShrink: 0 }} />}
-              {isDanger && <AlertCircle size={16} color={iconColor} style={{ flexShrink: 0 }} />}
-              {!isSuccess && !isWarning && !isDanger && <Info size={16} color={iconColor} style={{ flexShrink: 0 }} />}
+              {isSuccess && <CheckCircle2 size={isMobile ? 13 : 16} color={iconColor} style={{ flexShrink: 0 }} />}
+              {isWarning && <AlertTriangle size={isMobile ? 13 : 16} color={iconColor} style={{ flexShrink: 0 }} />}
+              {isDanger && <AlertCircle size={isMobile ? 13 : 16} color={iconColor} style={{ flexShrink: 0 }} />}
+              {!isSuccess && !isWarning && !isDanger && <Info size={isMobile ? 13 : 16} color={iconColor} style={{ flexShrink: 0 }} />}
 
-              <span style={{ flex: 1, wordBreak: 'break-word', color: textColor }}>
+              <span style={{
+                flex: 1,
+                wordBreak: 'break-word',
+                color: textColor,
+                ...(isMobile ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } : {})
+              }}>
                 {typeof toast.message === 'object' ? (toast.message?.message || JSON.stringify(toast.message)) : String(toast.message ?? '')}
               </span>
 
               {toast.action && (
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     toast.action.onClick();
                     setToasts((prev) => prev.filter((t) => t.id !== toast.id));
                   }}
                   style={{
-                    marginLeft: '8px',
+                    marginLeft: '6px',
                     background: '#0284c7',
                     color: '#ffffff',
                     border: 'none',
-                    padding: '4px 10px',
+                    padding: isMobile ? '3px 8px' : '4px 10px',
                     borderRadius: '4px',
                     fontWeight: '700',
-                    fontSize: '11px',
+                    fontSize: isMobile ? '10px' : '11px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',

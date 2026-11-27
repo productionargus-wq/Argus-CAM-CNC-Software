@@ -2212,6 +2212,23 @@ dialog::backdrop {
     display: none;
   }
 
+  .ribbon-content {
+    height: auto !important;
+    min-height: 78px;
+    padding: 3px 18px 4px 6px;
+  }
+
+  .ribbon-group-title {
+    font-size: 8px;
+    padding-top: 1px;
+    line-height: 1.1;
+  }
+
+  .ribbon-scroll-btn {
+    height: 44px;
+    width: 18px;
+  }
+
   .app-statusbar {
     overflow-x: auto;
     scrollbar-width: none;
@@ -2222,13 +2239,36 @@ dialog::backdrop {
     display: none;
   }
 
+  .modal-overlay {
+    padding: 6px !important;
+    align-items: center;
+    justify-content: center;
+  }
+
   .modal-window,
+  .modal-overlay > div,
   dialog > div {
-    max-width: calc(100vw - 16px) !important;
-    max-height: calc(100dvh - 16px) !important;
+    max-width: calc(100vw - 12px) !important;
+    max-height: calc(100dvh - 12px) !important;
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    flex-shrink: 0;
+    padding: 6px 10px;
   }
 
   .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto !important;
+    padding: 10px;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -2248,6 +2288,44 @@ dialog::backdrop {
     min-height: 30px;
     font-size: 12px;
   }
+}
+
+/* Boot Splash Screen Opening Animation */
+@keyframes argusLogoReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes argusSweepBar {
+  0% {
+    width: 0%;
+    transform: translateX(-20%);
+  }
+  55% {
+    width: 68%;
+    transform: translateX(25%);
+  }
+  100% {
+    width: 100%;
+    transform: translateX(0%);
+  }
+}
+
+.argus-splash-logo-wrap {
+  animation: argusLogoReveal 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.argus-splash-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #ea580c 0%, #f97316 100%);
+  border-radius: 999px;
+  animation: argusSweepBar 1.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 

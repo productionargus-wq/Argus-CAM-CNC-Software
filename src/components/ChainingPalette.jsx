@@ -124,10 +124,14 @@ export default function ChainingPalette({
       data-testid="chaining-palette"
       style={{
         position: 'absolute',
-        top: '12px',
-        left: '12px',
+        top: '6px',
+        left: '6px',
         zIndex: 60,
-        width: '188px',
+        width: 'min(188px, calc(100% - 12px))',
+        maxHeight: 'calc(100% - 12px)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
         backgroundColor: '#f3f4f6',
         border: '1px solid #9ca3af',
         borderRadius: '2px',
@@ -142,6 +146,7 @@ export default function ChainingPalette({
       <div
         style={{
           height: '26px',
+          flexShrink: 0,
           background: '#ffffff',
           borderBottom: '1px solid #d1d5db',
           display: 'flex',
@@ -177,31 +182,39 @@ export default function ChainingPalette({
         </button>
       </div>
 
-      {/* Live Mastercam Guidance Tooltip Banner (positioned just to the right edge) */}
+      {/* Inline Guidance Prompt Strip (cleanly stays inside palette without colliding with top HUD) */}
       <div
         style={{
-          position: 'absolute',
-          top: '34px',
-          left: '182px',
+          flexShrink: 0,
           background: '#ffffff',
-          border: '1px solid #94a3b8',
-          padding: '3px 8px',
-          fontSize: '11px',
-          color: '#0f172a',
-          whiteSpace: 'nowrap',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
-          pointerEvents: 'none'
+          borderBottom: '1px solid #d1d5db',
+          padding: '3px 7px',
+          fontSize: '10px',
+          lineHeight: 1.25,
+          color: '#0369a1',
+          fontWeight: 600
         }}
       >
         {selectedChains.length > 0
-          ? `${selectedChains.length} Chain(s) Selected — Click Green Check to Extrude`
+          ? `${selectedChains.length} Chain(s) Selected — Tap ✓ to Confirm`
           : selectionMethod === 'window'
-            ? 'Drag L→R (Window) or R→L (Crossing) on canvas to select chains'
+            ? 'Drag Window / Crossing to select chains'
             : `${promptText} 1`}
       </div>
 
-      {/* Body Controls */}
-      <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+      {/* Scrollable Body Controls */}
+      <div
+        style={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          padding: '7px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px'
+        }}
+      >
         {/* 1. Wireframe vs Solids Mode */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
           <button
@@ -473,46 +486,56 @@ export default function ChainingPalette({
             </span>
           )}
         </div>
+      </div>
 
-        {/* Bottom OK (Green Check) & Help (?) */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', paddingTop: '2px' }}>
-          <button
-            type="button"
-            data-testid="chaining-confirm-btn"
-            onClick={onConfirm}
-            title="OK: Accept selected chain(s)"
-            style={{
-              height: '26px',
-              background: '#e5e7eb',
-              border: '1.5px solid #0284c7',
-              borderRadius: '2px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer'
-            }}
-          >
-            <Check size={17} strokeWidth={3} color="#16a34a" />
-          </button>
+      {/* Sticky Footer: Bottom OK (Green Check) & Help (?) always reachable */}
+      <div
+        style={{
+          flexShrink: 0,
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '6px',
+          padding: '5px 7px',
+          borderTop: '1px solid #d1d5db',
+          background: '#f3f4f6'
+        }}
+      >
+        <button
+          type="button"
+          data-testid="chaining-confirm-btn"
+          onClick={onConfirm}
+          title="OK: Accept selected chain(s)"
+          style={{
+            height: '26px',
+            background: '#e5e7eb',
+            border: '1.5px solid #0284c7',
+            borderRadius: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <Check size={17} strokeWidth={3} color="#16a34a" />
+        </button>
 
-          <button
-            type="button"
-            title="Help on Chaining"
-            onClick={() => {}}
-            style={{
-              height: '26px',
-              background: '#e5e7eb',
-              border: '1px solid #cbd5e1',
-              borderRadius: '2px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer'
-            }}
-          >
-            <HelpCircle size={15} strokeWidth={2.3} color="#475569" />
-          </button>
-        </div>
+        <button
+          type="button"
+          title="Help on Chaining"
+          onClick={() => {}}
+          style={{
+            height: '26px',
+            background: '#e5e7eb',
+            border: '1px solid #cbd5e1',
+            borderRadius: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <HelpCircle size={15} strokeWidth={2.3} color="#475569" />
+        </button>
       </div>
     </div>
   );
