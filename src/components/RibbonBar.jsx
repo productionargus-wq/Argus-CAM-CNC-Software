@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { parseSTLFile, parseOBJFile, parseSTEPFile, parseIGESFile } from '../utils/cadGeometry';
 import { parseProjectMCAM } from '../utils/projectStorage';
-import { parseAnyCADFile, ALL_SUPPORTED_EXTENSIONS_STRING } from '../utils/universalCadParser';
+import { parseAnyCADFile, ALL_SUPPORTED_EXTENSIONS_STRING, isAndroidOrMobilePicker } from '../utils/universalCadParser';
 import SurfacesRibbonGroup from './ribbon/SurfacesRibbonGroup';
 import SolidsRibbonGroup from './ribbon/SolidsRibbonGroup';
 import ModelPrepRibbonGroup from './ribbon/ModelPrepRibbonGroup';
@@ -410,7 +410,7 @@ export default function RibbonBar({
       <input
         ref={fileInputRef}
         type="file"
-        accept={ALL_SUPPORTED_EXTENSIONS_STRING}
+        accept={isAndroidOrMobilePicker() ? '*/*' : ALL_SUPPORTED_EXTENSIONS_STRING}
         style={{ display: 'none' }}
         onChange={handleCADFileChange}
       />
@@ -419,7 +419,7 @@ export default function RibbonBar({
       <input
         ref={mcamFileInputRef}
         type="file"
-        accept=".mcam,.json"
+        accept={isAndroidOrMobilePicker() ? '*/*' : '.mcam,.json'}
         style={{ display: 'none' }}
         onChange={handleMCAMFileChange}
       />
@@ -428,7 +428,7 @@ export default function RibbonBar({
       <input
         ref={ncFileInputRef}
         type="file"
-        accept=".nc,.gcode,.h,.mpf,.tap,.txt"
+        accept={isAndroidOrMobilePicker() ? '*/*' : '.nc,.gcode,.h,.mpf,.tap,.txt'}
         style={{ display: 'none' }}
         onChange={handleNCFileChange}
       />

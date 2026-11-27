@@ -8,11 +8,11 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.webkit.PermissionRequest;
-import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebChromeClient;
 
 public class MainActivity extends BridgeActivity {
     private static final int PERMISSION_REQUEST_RECORD_AUDIO = 200;
@@ -27,11 +27,11 @@ public class MainActivity extends BridgeActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, PERMISSION_REQUEST_RECORD_AUDIO);
         }
 
-        // Grant WebChromeClient audio capture permission to WebView
+        // Preserve Capacitor's BridgeWebChromeClient (including onShowFileChooser for <input type="file">)
         try {
             if (getBridge() != null && getBridge().getWebView() != null) {
                 WebView webView = getBridge().getWebView();
-                webView.setWebChromeClient(new WebChromeClient() {
+                webView.setWebChromeClient(new BridgeWebChromeClient(getBridge()) {
                     @Override
                     public void onPermissionRequest(final PermissionRequest request) {
                         request.grant(request.getResources());

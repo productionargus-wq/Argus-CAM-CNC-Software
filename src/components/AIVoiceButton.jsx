@@ -15,7 +15,8 @@ export default function AIVoiceButton({
   setRenderMode,
   onToggleTheme,
   operations = [],
-  showToast
+  showToast,
+  hideFloatingOrb = false
 }) {
   const [engineState, setEngineState] = useState({
     isListening: false,
@@ -316,12 +317,16 @@ export default function AIVoiceButton({
     handleExecuteVoiceCommand(cmd);
   };
 
+  if (hideFloatingOrb && !isAIActive) {
+    return null;
+  }
+
   return (
     <div
       style={{
         position: 'fixed',
-        bottom: `${buttonPos.bottom}px`,
-        right: `${buttonPos.right}px`,
+        bottom: hideFloatingOrb ? '38px' : `${buttonPos.bottom}px`,
+        right: hideFloatingOrb ? '12px' : `${buttonPos.right}px`,
         zIndex: 10000,
         display: 'flex',
         flexDirection: 'column',
@@ -606,6 +611,7 @@ export default function AIVoiceButton({
       )}
 
       {/* Floating Circular AI Orb Button (Touch- & Mouse-Draggable) */}
+      {!hideFloatingOrb && (
       <button
         type="button"
         onPointerDown={handleOrbPointerDown}
@@ -677,6 +683,7 @@ export default function AIVoiceButton({
           AI
         </span>
       </button>
+      )}
 
       {/* Embedded CSS Animations */}
       <style>{`

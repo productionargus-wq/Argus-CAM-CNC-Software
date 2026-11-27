@@ -3,7 +3,7 @@ import {
   Folder, FolderOpen, ArrowUp, Plus, List, Grid, Search, X,
   FileText, HardDrive, FileCode, Check
 } from 'lucide-react';
-import { CAD_FILE_FORMATS, parseAnyCADFile } from '../utils/universalCadParser';
+import { CAD_FILE_FORMATS, parseAnyCADFile, isAndroidOrMobilePicker } from '../utils/universalCadParser';
 import { getRecentProjects } from '../utils/projectStorage';
 
 export default function MastercamOpenDialog({
@@ -18,7 +18,9 @@ export default function MastercamOpenDialog({
   const [fileNameInput, setFileNameInput] = useState('');
   const [selectedFileItem, setSelectedFileItem] = useState(null);
   const [searchFilter, setSearchFilter] = useState('');
-  const [currentFolder, setCurrentFolder] = useState('C:\\Users\\HP\\Documents\\my mcam2018\\Parts');
+  const [currentFolder, setCurrentFolder] = useState(() =>
+    isAndroidOrMobilePicker() ? 'Device Storage / Parts' : 'Parts'
+  );
   const [openAsReadOnly, setOpenAsReadOnly] = useState(false);
 
   const hiddenFileInputRef = useRef(null);
@@ -36,8 +38,8 @@ export default function MastercamOpenDialog({
       }
     }
     if (isFormatDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener('pointerdown', handleClickOutside);
+      return () => document.removeEventListener('pointerdown', handleClickOutside);
     }
   }, [isFormatDropdownOpen]);
 
@@ -45,8 +47,8 @@ export default function MastercamOpenDialog({
 
   const activeFormat = CAD_FILE_FORMATS.find((f) => f.id === selectedFormatId) || CAD_FILE_FORMATS[3];
 
-  // Build accept string for the hidden input
-  const acceptString = activeFormat.id === 'all_files'
+  // Build accept string for the hidden input (on Android/Capacitor use */* so CAD extensions stay selectable)
+  const acceptString = (activeFormat.id === 'all_files' || isAndroidOrMobilePicker())
     ? '*/*'
     : (activeFormat.extensions || []).map((ext) => `.${ext}`).join(',');
 
@@ -165,8 +167,8 @@ export default function MastercamOpenDialog({
       {/* Main Mastercam Windows Open Dialog Box */}
       <div
         style={{
-          width: '620px',
-          height: '460px',
+          width: 'min(620px, 95vw)',
+          height: 'min(460px, 90dvh)',
           backgroundColor: '#f0f0f0',
           border: '1px solid #707070',
           boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
@@ -235,11 +237,11 @@ export default function MastercamOpenDialog({
             }}
           >
             <Folder size={14} color="#f59e0b" />
-            <span style={{ fontSize: '11.5px', color: '#1e293b' }}>Parts</span>
+            <span style={{ fontSize: '11.5px', color: '#1e293b' }}>{currentFolder}</span>
           </div>
 
           <button
-            onClick={() => setCurrentFolder('C:\\Users\\HP\\Documents\\my mcam2018')}
+            onClick={() => setCurrentFolder(isAndroidOrMobilePicker() ? 'Device Storage' : 'Projects')}
             style={{ width: '24px', height: '24px', background: '#f8fafc', border: '1px solid #cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             title="Up One Level"
           >

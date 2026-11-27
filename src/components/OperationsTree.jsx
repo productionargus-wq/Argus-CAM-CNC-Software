@@ -268,7 +268,9 @@ export default function OperationsTree({
   onChangeModifyLengthEnd,
   onApplyModifyLength,
   onOkModifyLength,
-  onCancelModifyLength
+  onCancelModifyLength,
+  isMobile = false,
+  onRequestClose = null
 }) {
   const [localTab, setLocalTab] = useState(activeManagerTab);
   const currentTab = activeManagerTab || localTab;
@@ -567,7 +569,15 @@ export default function OperationsTree({
     rf.category.toLowerCase().includes(recentSearch.toLowerCase())
   );
 
-  if (isCollapsed) {
+  const handleCloseOrCollapse = () => {
+    if (isMobile && onRequestClose) {
+      onRequestClose();
+    } else {
+      setIsCollapsed(true);
+    }
+  };
+
+  if (isCollapsed && !isMobile) {
     return (
       <aside
         style={{
@@ -603,9 +613,9 @@ export default function OperationsTree({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        width: `${sidebarWidth}px`,
-        minWidth: '180px',
-        maxWidth: '850px',
+        width: isMobile ? 'min(280px, 78vw)' : `${sidebarWidth}px`,
+        minWidth: isMobile ? '210px' : '180px',
+        maxWidth: isMobile ? '82vw' : '850px',
         flexShrink: 0,
         backgroundColor: '#ffffff',
         borderRight: isResizing ? '2px solid #0284c7' : '1px solid #cbd5e1',
@@ -675,7 +685,7 @@ export default function OperationsTree({
             <Pin size={12} />
           </span>
           <span
-            onClick={() => setIsCollapsed(true)}
+            onClick={handleCloseOrCollapse}
             style={{ cursor: 'pointer', fontSize: '12px', padding: '0 2px', display: 'flex', alignItems: 'center' }}
             title="Close / Collapse Panel"
           >
@@ -715,7 +725,7 @@ export default function OperationsTree({
               Reset Width (320px)
             </div>
             <div
-              onClick={() => { setIsCollapsed(true); setIsWindowMenuOpen(false); }}
+              onClick={() => { handleCloseOrCollapse(); setIsWindowMenuOpen(false); }}
               style={{ padding: '6px 12px', cursor: 'pointer', color: '#dc2626' }}
             >
               Collapse Panel

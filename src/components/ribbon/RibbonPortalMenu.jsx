@@ -34,11 +34,11 @@ export default function RibbonPortalMenu({
     };
 
     // Use capturing phase so inside clicks don't close before triggering item action
-    document.addEventListener('mousedown', handleOutsideClick, true);
+    document.addEventListener('pointerdown', handleOutsideClick, true);
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.removeEventListener('mousedown', handleOutsideClick, true);
+      document.removeEventListener('pointerdown', handleOutsideClick, true);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
@@ -46,17 +46,19 @@ export default function RibbonPortalMenu({
   if (!isOpen || !anchorRect) return null;
 
   // Calculate safe fixed coordinates relative to viewport
-  const top = (anchorRect.bottom || 0) + 2;
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  const top = Math.min(Math.max(8, (anchorRect.bottom || 0) + 2), Math.max(8, viewportHeight - 120));
   let left = align === 'right' 
     ? (anchorRect.right || 0) 
     : (anchorRect.left || 0);
 
   // Guard against overflowing the right edge of viewport
-  const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
   const approxWidth = parseInt(minWidth, 10) || 200;
   if (left + approxWidth > viewportWidth - 8) {
     left = Math.max(8, viewportWidth - approxWidth - 12);
   }
+  const maxHeight = Math.max(120, viewportHeight - top - 10);
 
   return createPortal(
     <div
@@ -66,6 +68,9 @@ export default function RibbonPortalMenu({
         position: 'fixed',
         top: `${top}px`,
         left: `${left}px`,
+        maxHeight: `${maxHeight}px`,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
         zIndex: 99999,
         background: '#ffffff',
         border: '1px solid #94a3b8',

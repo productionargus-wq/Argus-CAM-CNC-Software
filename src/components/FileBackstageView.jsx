@@ -19,7 +19,8 @@ import { deriveControllerDialect } from '../config/machineDefinitionsCatalog';
 import {
   CAD_FILE_FORMATS,
   parseAnyCADFile,
-  ALL_SUPPORTED_EXTENSIONS_STRING
+  ALL_SUPPORTED_EXTENSIONS_STRING,
+  isAndroidOrMobilePicker
 } from '../utils/universalCadParser';
 import PrintSheetViewport from './PrintSheetViewport';
 
@@ -329,8 +330,9 @@ export default function FileBackstageView({
           return;
         }
 
-        const modelGroup = await parseAnyCADFile(file);
-        if (onModelImported) {
+        const parsedResult = await parseAnyCADFile(file);
+        const modelGroup = parsedResult?.group || (parsedResult?.isObject3D ? parsedResult : null);
+        if (modelGroup && onModelImported) {
           onModelImported(modelGroup, file.name, file);
         }
         if (onNotify) onNotify(`Successfully opened ${file.name}`, 'success');
@@ -346,7 +348,8 @@ export default function FileBackstageView({
       const file = e.target.files[0];
       e.target.value = '';
       try {
-        const modelGroup = await parseAnyCADFile(file);
+        const parsedResult = await parseAnyCADFile(file);
+        const modelGroup = parsedResult?.group || (parsedResult?.isObject3D ? parsedResult : null);
         // Offset merged model
         if (modelGroup) {
           modelGroup.position.set(
@@ -355,7 +358,7 @@ export default function FileBackstageView({
             Number(mergeOffset.z) || 0
           );
         }
-        if (onModelImported) {
+        if (modelGroup && onModelImported) {
           onModelImported(modelGroup, `Merged_${file.name}`);
         }
         if (onNotify) onNotify(`Geometry merged into Level ${mergeTargetLevel}: ${file.name}`, 'success');
@@ -443,14 +446,14 @@ export default function FileBackstageView({
       <input
         ref={openCadInputRef}
         type="file"
-        accept={ALL_SUPPORTED_EXTENSIONS_STRING}
+        accept={isAndroidOrMobilePicker() ? '*/*' : ALL_SUPPORTED_EXTENSIONS_STRING}
         style={{ display: 'none' }}
         onChange={handleOpenCADFile}
       />
       <input
         ref={mergeCadInputRef}
         type="file"
-        accept={ALL_SUPPORTED_EXTENSIONS_STRING}
+        accept={isAndroidOrMobilePicker() ? '*/*' : ALL_SUPPORTED_EXTENSIONS_STRING}
         style={{ display: 'none' }}
         onChange={handleMergeCADFile}
       />
@@ -507,7 +510,8 @@ export default function FileBackstageView({
         {/* ================= LEFT SIDEBAR (Mastercam Blue) ================= */}
         <div
           style={{
-            width: '210px',
+            width: 'clamp(136px, 24vw, 210px)',
+            flexShrink: 0,
             background: '#0f5a9e',
             display: 'flex',
             flexDirection: 'column',
@@ -604,7 +608,7 @@ export default function FileBackstageView({
             flex: 1,
             background: activeTab === 'Print' ? '#cbd5e1' : '#ffffff',
             overflowY: activeTab === 'Print' ? 'hidden' : 'auto',
-            padding: activeTab === 'Print' ? '0' : '36px 48px',
+            padding: activeTab === 'Print' ? '0' : 'clamp(14px, 3vw, 36px) clamp(14px, 4vw, 48px)',
             position: 'relative',
             display: activeTab === 'Print' ? 'flex' : 'block'
           }}
@@ -612,11 +616,11 @@ export default function FileBackstageView({
           {/* ==================== 1. INFO TAB (MATCHING SCREENSHOT) ==================== */}
           {activeTab === 'Info' && (
             <div style={{ maxWidth: '1100px' }}>
-              <h1 style={{ fontSize: '38px', fontWeight: 400, color: '#1e293b', margin: '0 0 32px 0' }}>
+              <h1 style={{ fontSize: 'clamp(22px, 4vw, 38px)', fontWeight: 400, color: '#1e293b', margin: '0 0 24px 0' }}>
                 Info
               </h1>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '64px', alignItems: 'start' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '32px', alignItems: 'start' }}>
                 
                 {/* LEFT COLUMN: ACTION TILES */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>

@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Check, HelpCircle, X } from 'lucide-react';
+import { isAndroidOrMobilePicker } from '../utils/universalCadParser';
 
 function SelectCursorIcon({ disabled = false }) {
   return (
@@ -205,7 +206,7 @@ export default function ToolpathSurfaceSelectionModal({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".step,.stp,.iges,.igs,.stl,.obj"
+                accept={isAndroidOrMobilePicker() ? '*/*' : '.step,.stp,.iges,.igs,.stl,.obj'}
                 onChange={handleFileChange}
                 style={{ display: 'none' }}
               />

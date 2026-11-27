@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 /**
  * Mastercam Quick Mask (QM) Right-Side Viewport Toolbar
@@ -23,8 +23,10 @@ function QMButton({
   return (
     <div
       style={{ position: 'relative' }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onPointerEnter={(e) => {
+        if (e.pointerType !== 'touch') setIsHovered(true);
+      }}
+      onPointerLeave={() => setIsHovered(false)}
     >
       <button
         type="button"
@@ -363,9 +365,31 @@ export default function QuickMaskBar({
   activeMask = 'all',
   onSelectMask,
   scaleValue = '24.94',
-  scaleUnit = 'mm'
+  scaleUnit = 'mm',
+  isMobile = false
 }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [isInteracting, setIsInteracting] = useState(false);
+  const idleTimerRef = useRef(null);
+
+  const bumpActivity = () => {
+    setIsInteracting(true);
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => {
+      setIsInteracting(false);
+    }, 2800);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, []);
+
+  const isActive = isHovered || isInteracting || (activeMask && activeMask !== 'all');
+
   const handleMaskClick = (id) => {
+    bumpActivity();
     if (onSelectMask) {
       onSelectMask(id);
     }
@@ -373,20 +397,39 @@ export default function QuickMaskBar({
 
   return (
     <div
-      className="quick-mask-bar"
+      className={`quick-mask-bar ${isActive ? 'is-active' : ''}`}
       data-testid="quick-mask-bar"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onPointerDown={bumpActivity}
+      onScroll={bumpActivity}
       style={{
         position: 'absolute',
-        top: '50%',
-        right: '12px',
-        transform: 'translateY(-50%)',
+        ...(isMobile
+          ? {
+              top: '44px',
+              bottom: '6px',
+              right: '6px',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none',
+              paddingRight: '2px'
+            }
+          : {
+              top: '50%',
+              right: '12px',
+              transform: 'translateY(-50%)'
+            }),
         zIndex: 35,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: '4px',
         userSelect: 'none',
-        pointerEvents: 'auto'
+        pointerEvents: 'auto',
+        opacity: isActive ? 0.98 : 0.36,
+        transition: 'opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1)'
       }}
     >
       {/* Top 2x2 Header: Points & Settings, Lines & Clear */}

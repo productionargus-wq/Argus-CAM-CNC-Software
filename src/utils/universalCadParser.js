@@ -232,8 +232,21 @@ export function getNativePickerFileTypes() {
     });
 }
 
+let activeNativePickerInput = null;
+
+export function isAndroidOrMobilePicker() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  const isCapacitor = Boolean(
+    window.Capacitor?.isNativePlatform?.() ||
+    window.Capacitor?.getPlatform?.() === 'android' ||
+    window.Capacitor?.getPlatform?.() === 'ios'
+  );
+  const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  return isCapacitor || isMobileUA;
+}
+
 /**
- * Invokes the native Windows / macOS file picker with all 25 Mastercam format categories
+ * Invokes the native Windows / macOS / Android file picker with all 25 Mastercam format categories
  */
 export async function openNativeMastercamFileDialog() {
   if (typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function') {
@@ -254,31 +267,44 @@ export async function openNativeMastercamFileDialog() {
     }
   }
 
-  // Fallback for environments where showOpenFilePicker is unavailable
+  // Fallback for environments where showOpenFilePicker is unavailable (e.g. Android WebView)
   return new Promise((resolve) => {
+    if (activeNativePickerInput && document.body.contains(activeNativePickerInput)) {
+      document.body.removeChild(activeNativePickerInput);
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = ALL_SUPPORTED_EXTENSIONS_STRING;
-    input.style.display = 'none';
+    // Android ACTION_GET_CONTENT disables custom CAD extensions (.step, .mcam, .igs, etc.)
+    // when listed explicitly in `accept`; use '*/*' on mobile/Capacitor and validate in JS.
+    input.accept = isAndroidOrMobilePicker() ? '*/*' : ALL_SUPPORTED_EXTENSIONS_STRING;
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    input.style.top = '0';
+    input.style.opacity = '0';
     document.body.appendChild(input);
+    activeNativePickerInput = input;
 
-    input.onchange = (e) => {
-      const file = e.target.files?.[0] || null;
+    let settled = false;
+    const cleanup = () => {
+      if (activeNativePickerInput === input) activeNativePickerInput = null;
       if (document.body.contains(input)) document.body.removeChild(input);
+    };
+    const settle = (file) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
       resolve(file);
     };
 
-    const onFocus = () => {
-      setTimeout(() => {
-        if (!input.files || input.files.length === 0) {
-          if (document.body.contains(input)) {
-            document.body.removeChild(input);
-          }
-          resolve(null);
-        }
-      }, 500);
+    input.onchange = (e) => {
+      const file = e.target.files?.[0] || null;
+      settle(file);
     };
-    window.addEventListener('focus', onFocus, { once: true });
+
+    input.oncancel = () => {
+      settle(null);
+    };
 
     input.click();
   });

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Maximize2, ZoomIn, RefreshCw, Hand, Rotate3D,
   Grid, Compass, Layers, CheckSquare, Crosshair, ChevronDown
@@ -25,27 +26,38 @@ export default function StatusBar({
   constructionZ = 0.0,
   onChangeConstructionZ = null,
   constructionMode = '3d',
-  onToggleConstructionMode = null
+  onToggleConstructionMode = null,
+  isMobile = false,
+  onOpenSnapSettings = null,
+  onFitWindow = null,
+  onZoomWindow = null,
+  onRepaintScreen = null,
+  onPanMode = null,
+  onRotateMode = null
 }) {
   const [cplaneMenuOpen, setCplaneMenuOpen] = useState(false);
   const [wcsMenuOpen, setWcsMenuOpen] = useState(false);
+  const [menuAnchorRect, setMenuAnchorRect] = useState(null);
   const [isEditingZ, setIsEditingZ] = useState(false);
   const [tempZInput, setTempZInput] = useState(String(constructionZ ?? 0));
   const containerRef = useRef(null);
+  const portalMenuRef = useRef(null);
 
   useEffect(() => {
     setTempZInput(String(constructionZ ?? 0));
   }, [constructionZ]);
 
   useEffect(() => {
-    const handleDocClick = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
+    const handleDocPointer = (e) => {
+      const inBar = containerRef.current && containerRef.current.contains(e.target);
+      const inPortal = portalMenuRef.current && portalMenuRef.current.contains(e.target);
+      if (!inBar && !inPortal) {
         setCplaneMenuOpen(false);
         setWcsMenuOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleDocClick);
-    return () => document.removeEventListener('mousedown', handleDocClick);
+    document.addEventListener('pointerdown', handleDocPointer);
+    return () => document.removeEventListener('pointerdown', handleDocPointer);
   }, []);
 
   const cplaneOptions = [
@@ -239,7 +251,9 @@ export default function StatusBar({
         <div style={{ position: 'relative' }}>
           <button
             type="button"
-            onClick={() => {
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setMenuAnchorRect({ top: rect.top, right: rect.right, left: rect.left });
               setCplaneMenuOpen((p) => !p);
               setWcsMenuOpen(false);
             }}
@@ -261,19 +275,23 @@ export default function StatusBar({
             <ChevronDown size={10} color="#94a3b8" />
           </button>
 
-          {cplaneMenuOpen && (
+          {cplaneMenuOpen && menuAnchorRect && createPortal(
             <div
+              ref={portalMenuRef}
+              onPointerDown={(e) => e.stopPropagation()}
               style={{
-                position: 'absolute',
-                bottom: '100%',
-                right: 0,
+                position: 'fixed',
+                bottom: `${Math.max(28, (window.innerHeight || 500) - menuAnchorRect.top + 4)}px`,
+                right: `${Math.max(8, (window.innerWidth || 800) - menuAnchorRect.right)}px`,
+                maxHeight: `${Math.max(100, menuAnchorRect.top - 16)}px`,
+                overflowY: 'auto',
                 background: '#ffffff',
                 border: '1px solid #cbd5e1',
                 borderRadius: '3px',
-                boxShadow: '0 -4px 14px rgba(0,0,0,0.15)',
-                minWidth: '120px',
+                boxShadow: '0 -4px 14px rgba(0,0,0,0.18)',
+                minWidth: '130px',
                 padding: '4px 0',
-                zIndex: 9999
+                zIndex: 99999
               }}
             >
               {cplaneOptions.map((opt) => (
@@ -288,7 +306,7 @@ export default function StatusBar({
                     display: 'block',
                     width: '100%',
                     textAlign: 'left',
-                    padding: '5px 10px',
+                    padding: '6px 10px',
                     fontSize: '11px',
                     background: activeCPlane.includes(opt.id) ? '#e0f2fe' : 'transparent',
                     color: activeCPlane.includes(opt.id) ? '#0369a1' : '#0f172a',
@@ -299,7 +317,8 @@ export default function StatusBar({
                   {opt.label}
                 </button>
               ))}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
 
@@ -313,7 +332,9 @@ export default function StatusBar({
         <div style={{ position: 'relative' }}>
           <button
             type="button"
-            onClick={() => {
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setMenuAnchorRect({ top: rect.top, right: rect.right, left: rect.left });
               setWcsMenuOpen((p) => !p);
               setCplaneMenuOpen(false);
             }}
@@ -335,19 +356,23 @@ export default function StatusBar({
             <ChevronDown size={10} color="#94a3b8" />
           </button>
 
-          {wcsMenuOpen && (
+          {wcsMenuOpen && menuAnchorRect && createPortal(
             <div
+              ref={portalMenuRef}
+              onPointerDown={(e) => e.stopPropagation()}
               style={{
-                position: 'absolute',
-                bottom: '100%',
-                right: 0,
+                position: 'fixed',
+                bottom: `${Math.max(28, (window.innerHeight || 500) - menuAnchorRect.top + 4)}px`,
+                right: `${Math.max(8, (window.innerWidth || 800) - menuAnchorRect.right)}px`,
+                maxHeight: `${Math.max(100, menuAnchorRect.top - 16)}px`,
+                overflowY: 'auto',
                 background: '#ffffff',
                 border: '1px solid #cbd5e1',
                 borderRadius: '3px',
-                boxShadow: '0 -4px 14px rgba(0,0,0,0.15)',
-                minWidth: '80px',
+                boxShadow: '0 -4px 14px rgba(0,0,0,0.18)',
+                minWidth: '88px',
                 padding: '4px 0',
-                zIndex: 9999
+                zIndex: 99999
               }}
             >
               {wcsOptions.map((wcs) => (
@@ -362,7 +387,7 @@ export default function StatusBar({
                     display: 'block',
                     width: '100%',
                     textAlign: 'left',
-                    padding: '4px 10px',
+                    padding: '5px 10px',
                     fontSize: '11px',
                     background: activeWcs === wcs ? '#f0fdf4' : 'transparent',
                     color: activeWcs === wcs ? '#16a34a' : '#0f172a',
@@ -374,7 +399,8 @@ export default function StatusBar({
                   {wcs}
                 </button>
               ))}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
 
@@ -398,53 +424,63 @@ export default function StatusBar({
           {unitSystem === 'metric' ? 'METRIC (mm)' : 'INCH (in)'}
         </button>
 
-        <div style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.2)' }} />
+        {!isMobile && (
+          <>
+            <div style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.2)' }} />
 
-        {/* Viewport Action Mini Icons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <button
-            type="button"
-            style={miniIconBtnStyle}
-            title="AutoCursor Snapping Settings"
-          >
-            <Compass size={11} color="#cbd5e1" />
-          </button>
-          <button
-            type="button"
-            style={miniIconBtnStyle}
-            title="Fit to Window"
-          >
-            <Maximize2 size={11} color="#cbd5e1" />
-          </button>
-          <button
-            type="button"
-            style={miniIconBtnStyle}
-            title="Window Zoom"
-          >
-            <ZoomIn size={11} color="#cbd5e1" />
-          </button>
-          <button
-            type="button"
-            style={miniIconBtnStyle}
-            title="Repaint Screen"
-          >
-            <RefreshCw size={11} color="#cbd5e1" />
-          </button>
-          <button
-            type="button"
-            style={miniIconBtnStyle}
-            title="Pan View"
-          >
-            <Hand size={11} color="#cbd5e1" />
-          </button>
-          <button
-            type="button"
-            style={miniIconBtnStyle}
-            title="Rotate View"
-          >
-            <Rotate3D size={11} color="#cbd5e1" />
-          </button>
-        </div>
+            {/* Viewport Action Mini Icons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <button
+                type="button"
+                onClick={() => onOpenSnapSettings?.()}
+                style={miniIconBtnStyle}
+                title="View & Snapping Settings"
+              >
+                <Compass size={11} color="#cbd5e1" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onFitWindow?.()}
+                style={miniIconBtnStyle}
+                title="Fit to Window"
+              >
+                <Maximize2 size={11} color="#cbd5e1" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onZoomWindow?.()}
+                style={miniIconBtnStyle}
+                title="Zoom In"
+              >
+                <ZoomIn size={11} color="#cbd5e1" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onRepaintScreen?.()}
+                style={miniIconBtnStyle}
+                title="Reset / Isometric View"
+              >
+                <RefreshCw size={11} color="#cbd5e1" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onPanMode?.()}
+                style={miniIconBtnStyle}
+                title="Pan View"
+              >
+                <Hand size={11} color="#cbd5e1" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onRotateMode?.()}
+                style={miniIconBtnStyle}
+                title="Rotate View"
+              >
+                <Rotate3D size={11} color="#cbd5e1" />
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </footer>
   );

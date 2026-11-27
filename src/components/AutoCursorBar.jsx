@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Lock,
   Unlock,
@@ -192,24 +193,42 @@ export default function AutoCursorBar({
   onToggleMobileTouchMode = null
 }) {
   const [openMenu, setOpenMenu] = useState(null); // 'autocursor' | 'xyz' | 'settings' | 'method' | 'containment' | null
+  const [menuAnchorRect, setMenuAnchorRect] = useState(null);
   const [xyzInput, setXyzInput] = useState({ x: '0', y: '0', z: '0' });
   const [isHovered, setIsHovered] = useState(false);
+  const [isTouchActive, setIsTouchActive] = useState(false);
   const barRef = useRef(null);
+  const portalMenuRef = useRef(null);
+  const idleTimerRef = useRef(null);
   const isLight = theme !== 'dark';
 
-  const isActive = isHovered || openMenu !== null || selectedCount > 0 || polygonPointCount > 0;
+  const isActive = isHovered || isTouchActive || openMenu !== null || selectedCount > 0 || polygonPointCount > 0;
+
+  const bumpActivity = () => {
+    setIsTouchActive(true);
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => {
+      setIsTouchActive(false);
+    }, 2800);
+  };
 
   useEffect(() => {
-    const handleOutsideClick = (e) => {
-      if (barRef.current && !barRef.current.contains(e.target)) {
+    const handleOutsidePointer = (e) => {
+      const inBar = barRef.current && barRef.current.contains(e.target);
+      const inMenu = portalMenuRef.current && portalMenuRef.current.contains(e.target);
+      if (!inBar && !inMenu) {
         setOpenMenu(null);
       }
     };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('pointerdown', handleOutsidePointer);
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointer);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
   }, []);
 
-  const toggleMenu = (name) => {
+  const toggleMenu = (name, event) => {
+    bumpActivity();
     if (name === 'xyz' && openMenu !== 'xyz') {
       setXyzInput({
         x: Number(cursorCoords?.x || 0).toFixed(2),
@@ -217,7 +236,47 @@ export default function AutoCursorBar({
         z: Number(cursorCoords?.z || 0).toFixed(2)
       });
     }
+    if (event?.currentTarget) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      setMenuAnchorRect({
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right
+      });
+    }
     setOpenMenu((prev) => (prev === name ? null : name));
+  };
+
+  const renderPortaledPopover = (menuName, { minWidth = 175, extraClass = '', extraStyle = {}, children }) => {
+    if (openMenu !== menuName || !menuAnchorRect) return null;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 800;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 500;
+    const top = Math.min((menuAnchorRect.bottom || 36) + 6, Math.max(8, vh - 120));
+    const left = Math.max(8, Math.min(menuAnchorRect.left || 8, Math.max(8, vw - minWidth - 10)));
+    const maxHeight = Math.max(120, vh - top - 12);
+
+    return createPortal(
+      <div
+        ref={portalMenuRef}
+        className={`pill-dropdown-menu ${extraClass}`}
+        data-testid={menuName === 'method' ? 'selection-method-menu' : undefined}
+        style={{
+          position: 'fixed',
+          top: `${top}px`,
+          left: `${left}px`,
+          minWidth: `${minWidth}px`,
+          maxHeight: `${maxHeight}px`,
+          overflowY: 'auto',
+          zIndex: 99998,
+          ...extraStyle
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>,
+      document.body
+    );
   };
 
   const activeSnap = SNAP_OPTIONS.find((s) => s.id === snapMode) || SNAP_OPTIONS[0];
@@ -242,9 +301,14 @@ export default function AutoCursorBar({
       data-testid="canvas-selection-hud"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onPointerDown={bumpActivity}
+      onScroll={bumpActivity}
     >
       {/* Main Floating Mastercam AutoCursor + Selection Methods Pill */}
-      <div className={`autocursor-hud-bar ${isLight ? 'is-light' : 'is-dark'} ${isActive ? 'is-active' : ''}`}>
+      <div
+        className={`autocursor-hud-bar ${isLight ? 'is-light' : 'is-dark'} ${isActive ? 'is-active' : ''}`}
+        onScroll={bumpActivity}
+      >
         {isMobile && onToggleMobileTouchMode && (
           <>
             <button
@@ -282,7 +346,7 @@ export default function AutoCursorBar({
         <div className="pill-popover-anchor">
           <button
             type="button"
-            onClick={() => toggleMenu('autocursor')}
+            onClick={(e) => toggleMenu('autocursor', e)}
             title={`AutoCursor Mode: ${activeSnap.label}`}
             className={`pill-text-btn ${openMenu === 'autocursor' ? 'is-open' : ''}`}
           >
@@ -294,32 +358,31 @@ export default function AutoCursorBar({
             <ChevronDown size={11} />
           </button>
 
-          {openMenu === 'autocursor' && (
-            <div className="pill-dropdown-menu" style={{ minWidth: '175px' }}>
-              {SNAP_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => {
-                    onSelectSnapMode?.(opt.id);
-                    setOpenMenu(null);
-                  }}
-                  title={opt.title}
-                  className={`pill-dropdown-item ${snapMode === opt.id ? 'is-selected' : ''}`}
-                >
-                  <span>{opt.label}</span>
-                  {snapMode === opt.id && <Check size={12} />}
-                </button>
-              ))}
-            </div>
-          )}
+          {renderPortaledPopover('autocursor', {
+            minWidth: 175,
+            children: SNAP_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => {
+                  onSelectSnapMode?.(opt.id);
+                  setOpenMenu(null);
+                }}
+                title={opt.title}
+                className={`pill-dropdown-item ${snapMode === opt.id ? 'is-selected' : ''}`}
+              >
+                <span>{opt.label}</span>
+                {snapMode === opt.id && <Check size={12} />}
+              </button>
+            ))
+          })}
         </div>
 
         {/* 3. Fast Point X,Y,Z */}
         <div className="pill-popover-anchor">
           <button
             type="button"
-            onClick={() => toggleMenu('xyz')}
+            onClick={(e) => toggleMenu('xyz', e)}
             title="Fast Point (Enter exact X, Y, Z coordinates)"
             className={`pill-xyz-btn ${openMenu === 'xyz' ? 'is-open' : ''}`}
           >
@@ -327,75 +390,83 @@ export default function AutoCursorBar({
             <span className="xyz-label">X,Y,Z</span>
           </button>
 
-          {openMenu === 'xyz' && (
-            <div className="pill-dropdown-menu pill-xyz-popover">
-              <div className="pill-popover-title">Fast Point Coordinate</div>
-              <div className="xyz-grid">
-                {['x', 'y', 'z'].map((axis) => (
-                  <label key={axis} className="xyz-field">
-                    <span>{axis.toUpperCase()}</span>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={xyzInput[axis]}
-                      onChange={(e) => setXyzInput((prev) => ({ ...prev, [axis]: e.target.value }))}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          onFastPointSubmit?.(xyzInput);
-                          setOpenMenu(null);
-                        }
-                      }}
-                    />
-                  </label>
-                ))}
-              </div>
-              <div className="xyz-actions">
-                <button
-                  type="button"
-                  className="pill-apply-btn"
-                  onClick={() => {
-                    onFastPointSubmit?.(xyzInput);
-                    setOpenMenu(null);
-                  }}
-                >
-                  Apply Point
-                </button>
-              </div>
-            </div>
-          )}
+          {renderPortaledPopover('xyz', {
+            minWidth: 188,
+            extraClass: 'pill-xyz-popover',
+            children: (
+              <>
+                <div className="pill-popover-title">Fast Point Coordinate</div>
+                <div className="xyz-grid">
+                  {['x', 'y', 'z'].map((axis) => (
+                    <label key={axis} className="xyz-field">
+                      <span>{axis.toUpperCase()}</span>
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={xyzInput[axis]}
+                        onChange={(e) => setXyzInput((prev) => ({ ...prev, [axis]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            onFastPointSubmit?.(xyzInput);
+                            setOpenMenu(null);
+                          }
+                        }}
+                      />
+                    </label>
+                  ))}
+                </div>
+                <div className="xyz-actions">
+                  <button
+                    type="button"
+                    className="pill-apply-btn"
+                    onClick={() => {
+                      onFastPointSubmit?.(xyzInput);
+                      setOpenMenu(null);
+                    }}
+                  >
+                    Apply Point
+                  </button>
+                </div>
+              </>
+            )
+          })}
         </div>
 
         {/* 4. AutoCursor Config */}
         <div className="pill-popover-anchor">
           <button
             type="button"
-            onClick={() => toggleMenu('settings')}
+            onClick={(e) => toggleMenu('settings', e)}
             title="AutoCursor & Selection Options"
             className={`pill-icon-btn ${openMenu === 'settings' ? 'is-open' : ''}`}
           >
             <Settings size={13} color="#d97706" />
           </button>
-          {openMenu === 'settings' && (
-            <div className="pill-dropdown-menu" style={{ minWidth: '190px', padding: '8px' }}>
-              <div className="pill-popover-title">Selection Settings</div>
-              <label className="pill-check-row">
-                <input
-                  type="checkbox"
-                  checked={stickyMultiSelect}
-                  onChange={() => onToggleStickyMultiSelect?.()}
-                />
-                <span>Sticky Multi-Select Mode</span>
-              </label>
-              <label className="pill-check-row">
-                <input
-                  type="checkbox"
-                  checked={isLocked}
-                  onChange={() => onToggleLock?.()}
-                />
-                <span>Lock Active Snap ({activeSnap.label})</span>
-              </label>
-            </div>
-          )}
+          {renderPortaledPopover('settings', {
+            minWidth: 190,
+            extraStyle: { padding: '8px' },
+            children: (
+              <>
+                <div className="pill-popover-title">Selection Settings</div>
+                <label className="pill-check-row">
+                  <input
+                    type="checkbox"
+                    checked={stickyMultiSelect}
+                    onChange={() => onToggleStickyMultiSelect?.()}
+                  />
+                  <span>Sticky Multi-Select Mode</span>
+                </label>
+                <label className="pill-check-row">
+                  <input
+                    type="checkbox"
+                    checked={isLocked}
+                    onChange={() => onToggleLock?.()}
+                  />
+                  <span>Lock Active Snap ({activeSnap.label})</span>
+                </label>
+              </>
+            )
+          })}
         </div>
 
         <div className="pill-divider" />
@@ -434,7 +505,7 @@ export default function AutoCursorBar({
           <button
             type="button"
             data-testid="selection-method-trigger"
-            onClick={() => toggleMenu('method')}
+            onClick={(e) => toggleMenu('method', e)}
             title={`Selection Method: ${activeMethod.label} (Click to choose Automatic, Chain, Window, Polygon, Single, Area, Vector)`}
             className={`pill-split-btn ${openMenu === 'method' || selectionMethod !== 'automatic' ? 'is-highlight-blue' : ''}`}
           >
@@ -442,32 +513,32 @@ export default function AutoCursorBar({
             <ChevronDown size={11} />
           </button>
 
-          {openMenu === 'method' && (
-            <div className="pill-dropdown-menu selection-method-menu" data-testid="selection-method-menu">
-              {SELECTION_METHOD_LIST.map((m) => {
-                const isSelected = selectionMethod === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    data-testid={`selection-method-option-${m.id}`}
-                    onClick={() => {
-                      onChangeSelectionMethod?.(m.id);
-                      if (!isSelectModeActive) onToggleSelectMode?.(true);
-                      setOpenMenu(null);
-                    }}
-                    title={m.title}
-                    className={`pill-method-item ${isSelected ? 'is-selected' : ''}`}
-                  >
-                    <span className="pill-method-icon">
-                      <MethodIcon method={m.id} size={16} />
-                    </span>
-                    <span className="pill-method-label">{m.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {renderPortaledPopover('method', {
+            minWidth: 150,
+            extraClass: 'selection-method-menu',
+            children: SELECTION_METHOD_LIST.map((m) => {
+              const isSelected = selectionMethod === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  data-testid={`selection-method-option-${m.id}`}
+                  onClick={() => {
+                    onChangeSelectionMethod?.(m.id);
+                    if (!isSelectModeActive) onToggleSelectMode?.(true);
+                    setOpenMenu(null);
+                  }}
+                  title={m.title}
+                  className={`pill-method-item ${isSelected ? 'is-selected' : ''}`}
+                >
+                  <span className="pill-method-icon">
+                    <MethodIcon method={m.id} size={16} />
+                  </span>
+                  <span className="pill-method-label">{m.label}</span>
+                </button>
+              );
+            })
+          })}
         </div>
 
         {/* 8. Containment Mode Split Dropdown (Inside, In+Crossing, Crossing, Outside) */}
@@ -475,7 +546,7 @@ export default function AutoCursorBar({
           <button
             type="button"
             data-testid="containment-mode-trigger"
-            onClick={() => toggleMenu('containment')}
+            onClick={(e) => toggleMenu('containment', e)}
             title={`Window/Polygon Containment: ${activeContainment.label}`}
             className={`pill-split-btn ${openMenu === 'containment' ? 'is-highlight-amber' : ''}`}
           >
@@ -483,26 +554,25 @@ export default function AutoCursorBar({
             <ChevronDown size={11} />
           </button>
 
-          {openMenu === 'containment' && (
-            <div className="pill-dropdown-menu" style={{ minWidth: '155px' }}>
-              {CONTAINMENT_MODES.map((cm) => (
-                <button
-                  key={cm.id}
-                  type="button"
-                  data-testid={`containment-option-${cm.id}`}
-                  onClick={() => {
-                    onChangeContainmentMode?.(cm.id);
-                    setOpenMenu(null);
-                  }}
-                  title={cm.title}
-                  className={`pill-method-item ${containmentMode === cm.id ? 'is-selected' : ''}`}
-                >
-                  <span className={`containment-badge mode-${cm.id}`} />
-                  <span className="pill-method-label">{cm.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
+          {renderPortaledPopover('containment', {
+            minWidth: 155,
+            children: CONTAINMENT_MODES.map((cm) => (
+              <button
+                key={cm.id}
+                type="button"
+                data-testid={`containment-option-${cm.id}`}
+                onClick={() => {
+                  onChangeContainmentMode?.(cm.id);
+                  setOpenMenu(null);
+                }}
+                title={cm.title}
+                className={`pill-method-item ${containmentMode === cm.id ? 'is-selected' : ''}`}
+              >
+                <span className={`containment-badge mode-${cm.id}`} />
+                <span className="pill-method-label">{cm.label}</span>
+              </button>
+            ))
+          })}
         </div>
 
         {/* 9. Sticky Multi-Select Lock Toggle */}

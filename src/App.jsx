@@ -291,7 +291,7 @@ export default function App() {
     part: true,
     wireframe: true,
     surfaces: true,
-    fixture: true,
+    fixture: false,
     bed: true,
     stock: true,
     toolpaths: true,
@@ -324,7 +324,7 @@ export default function App() {
   const [showGnomons, setShowGnomons] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [snapToGrid, setSnapToGrid] = useState(false);
-  const [isViewsheetsVisible, setIsViewsheetsVisible] = useState(true);
+  const [isViewsheetsVisible, setIsViewsheetsVisible] = useState(() => !isMobile);
   const [viewsheets, setViewsheets] = useState([
     { id: 'vs_1', name: 'Viewsheet #1', bookmark: null, active: true }
   ]);
@@ -373,7 +373,7 @@ export default function App() {
     { id: 10, number: 10, name: 'Wireframe Curves', entities: 0, visible: true, active: false, color: '#38bdf8' },
     { id: 15, number: 15, name: 'Surface Sheets', entities: 0, visible: true, active: false, color: '#06b6d4' },
     { id: 20, number: 20, name: 'Stock Bounding Box', entities: 1, visible: true, active: false, color: '#f59e0b' },
-    { id: 30, number: 30, name: 'Fixture & Vise', entities: 3, visible: true, active: false, color: '#94a3b8' },
+    { id: 30, number: 30, name: 'Fixture & Vise', entities: 3, visible: false, active: false, color: '#94a3b8' },
     { id: 50, number: 50, name: 'Toolpath Cuts', entities: 5, visible: true, active: false, color: '#10b981' },
     { id: 60, number: 60, name: 'Rapid Moves', entities: 5, visible: true, active: false, color: '#06b6d4' },
     { id: 100, number: 100, name: 'Drafting Dimensions', entities: 3, visible: false, active: false, color: '#e2e8f0' }
@@ -8330,6 +8330,8 @@ export default function App() {
             } : { position: 'relative', display: 'flex', height: '100%', flexShrink: 0 }}
           >
             <OperationsTree
+          isMobile={isMobile}
+          onRequestClose={() => setIsLeftPanelCollapsed(true)}
           operations={operations}
           onToggleOp={handleToggleOp}
           onToggleAllToolpaths={handleToggleAllToolpaths}
@@ -9184,6 +9186,19 @@ export default function App() {
             });
           }}
           theme={effectiveTheme}
+          isMobile={isMobile}
+          onOpenSnapSettings={() => setIsViewStudioModalOpen(true)}
+          onFitWindow={() => handleSnapCamera('fit')}
+          onZoomWindow={() => handleSnapCamera('zoom_in')}
+          onRepaintScreen={() => handleSnapCamera('iso')}
+          onPanMode={() => {
+            setSketchTool('pan');
+            showToast('Pan View active', 'info', 1400);
+          }}
+          onRotateMode={() => {
+            setSketchTool('orbit');
+            showToast('Rotate View active', 'info', 1400);
+          }}
         />
 
       {/* Mastercam Backstage File Menu UI */}
@@ -9360,7 +9375,11 @@ export default function App() {
         isOpen={isFixtureModalOpen}
         onClose={() => setIsFixtureModalOpen(false)}
         fixtureConfig={fixtureConfig}
-        onSaveFixture={(newCfg) => setFixtureConfig(newCfg)}
+        onSaveFixture={(newCfg) => {
+          setFixtureConfig(newCfg);
+          setLayerVisibility((prev) => ({ ...prev, fixture: true }));
+          setLevels((prev) => prev.map((l) => (l.id === 30 ? { ...l, visible: true } : l)));
+        }}
         stockConfig={stockConfig}
         partMetrics={partMetrics}
         operations={operations}
@@ -10310,8 +10329,9 @@ export default function App() {
         activeWcs={activeWcs}
       />
 
-      {/* Floating Circular AI Voice Assistant Orb */}
+      {/* Floating Circular AI Voice Assistant Orb (hidden on mobile; TitleBar AI button controls panel) */}
       <AIVoiceButton
+        hideFloatingOrb={isMobile}
         isAIActive={isAIActive}
         onToggleAI={setIsAIActive}
         onSnapCamera={handleSnapCamera}

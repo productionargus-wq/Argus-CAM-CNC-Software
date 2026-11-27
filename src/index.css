@@ -2193,14 +2193,22 @@ dialog::backdrop {
   }
 
   .autocursor-hud-bar {
-    opacity: 0.96;
+    opacity: 0.36;
     max-width: calc(100vw - 84px);
     overflow-x: auto;
     scrollbar-width: none;
     padding: 3px 8px;
   }
 
+  .autocursor-hud-bar.is-active {
+    opacity: 0.98;
+  }
+
   .autocursor-hud-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .quick-mask-bar::-webkit-scrollbar {
     display: none;
   }
 

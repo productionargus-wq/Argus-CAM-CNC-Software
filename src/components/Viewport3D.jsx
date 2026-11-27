@@ -175,7 +175,7 @@ export default function Viewport3D({
   clippingPlane = { enabled: false, axis: 'Z', offset: 0, invert: false },
   lightingMode = 'studio',
   layerVisibility = {
-    fixture: true,
+    fixture: false,
     bed: true,
     stock: true,
     toolpaths: true,
@@ -776,6 +776,7 @@ export default function Viewport3D({
     );
     const fixtureGroup = createParametricFixture3D(fixtureConfig || DEFAULT_FIXTURE_CONFIG, initialBounds, theme);
     fixtureGroup.name = "fixture_group";
+    fixtureGroup.visible = layerVisibility.fixture === true;
     scene.add(fixtureGroup);
     fixtureGroupRef.current = fixtureGroup;
 
@@ -3659,7 +3660,7 @@ export default function Viewport3D({
       customGeoGroupRef.current.visible = true;
     }
     if (fixtureGroupRef.current) {
-      fixtureGroupRef.current.visible = layerVisibility.fixture !== false;
+      fixtureGroupRef.current.visible = layerVisibility.fixture === true;
     }
     if (gridHelperRef.current) {
       gridHelperRef.current.visible = layerVisibility.bed !== false;
@@ -3708,7 +3709,7 @@ export default function Viewport3D({
     );
 
     const fixtureMesh = createParametricFixture3D(fixtureConfig || DEFAULT_FIXTURE_CONFIG, bounds, theme);
-    fixtureMesh.visible = layerVisibility.fixture !== false;
+    fixtureMesh.visible = layerVisibility.fixture === true;
     scene.add(fixtureMesh);
     fixtureGroupRef.current = fixtureMesh;
   }, [fixtureConfig, partMetrics, stockConfig, layerVisibility.fixture, theme]);
@@ -5723,6 +5724,7 @@ export default function Viewport3D({
       {/* Docked Vertical QuickMask Bar (Right Edge of Viewport matching Image 2) */}
       {!isBackplotActive && (
         <QuickMaskBar
+          isMobile={isMobile}
           activeMask={selectionMask}
           onSelectMask={handleQuickMaskSelect}
           theme={theme}
