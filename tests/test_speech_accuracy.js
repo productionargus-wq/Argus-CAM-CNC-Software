@@ -1,6 +1,6 @@
-import { processVoiceCommand } from './src/utils/aiCamDispatcher.js';
-import { normalizeTranscript, selectBestAlternative } from './src/utils/cadSpeechNormalizer.js';
-import aiVoiceEngine from './src/utils/aiVoiceEngine.js';
+import { processVoiceCommand } from '../src/utils/aiCamDispatcher.js';
+import { normalizeTranscript, selectBestAlternative } from '../src/utils/cadSpeechNormalizer.js';
+import aiVoiceEngine from '../src/utils/aiVoiceEngine.js';
 
 console.log("Running Speech Accuracy & Homophone Normalization Tests...\n");
 

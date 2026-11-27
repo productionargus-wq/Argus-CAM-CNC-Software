@@ -6,11 +6,11 @@ import {
   calculatePocketRoughPhysics,
   createDefaultPocketRoughState,
   resolveDefaultRoughingTool
-} from './src/config/pocketRoughSchema.js';
+} from '../src/config/pocketRoughSchema.js';
 import {
   generatePocketRoughToolpath,
   generatePocketRoughGCode
-} from './src/utils/pocketRoughToolpathEngine.js';
+} from '../src/utils/pocketRoughToolpathEngine.js';
 
 console.log('=== STARTING 3D SURFACE ROUGH POCKET TEST SUITE ===');
 

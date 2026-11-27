@@ -1,4 +1,4 @@
-import { processVoiceCommand } from './src/utils/aiCamDispatcher.js';
+import { processVoiceCommand } from '../src/utils/aiCamDispatcher.js';
 
 const testCases = [
   {

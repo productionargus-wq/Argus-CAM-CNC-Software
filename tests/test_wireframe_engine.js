@@ -20,8 +20,8 @@ import {
   computeArcTangentBetweenEntities,
   snapToGrid,
   snapToEntityPoints
-} from './src/utils/cadDrawingEngine.js';
-import { createWireframeCircle } from './src/utils/cadGeometry.js';
+} from '../src/utils/cadDrawingEngine.js';
+import { createWireframeCircle } from '../src/utils/cadGeometry.js';
 
 console.log('--- Testing Mastercam Wireframe CAD & Dynamic Trimming Engine ---');
 

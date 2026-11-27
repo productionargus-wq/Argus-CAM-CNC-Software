@@ -10,7 +10,7 @@ import {
   calculateMultiaxisDeburrPhysics,
   createDefaultMultiaxisDeburrParams,
   resolveDefaultDeburrTool
-} from './src/config/multiaxisDeburrSchema.js';
+} from '../src/config/multiaxisDeburrSchema.js';
 
 import {
   extractModelSharpEdges,
@@ -20,7 +20,7 @@ import {
   computeDeburrKinematicsAngles,
   generateMultiaxisDeburrToolpath,
   generateMultiaxisDeburrGCode
-} from './src/utils/multiaxisDeburrEngine.js';
+} from '../src/utils/multiaxisDeburrEngine.js';
 
 let passedTests = 0;
 let totalTests = 0;

@@ -7,7 +7,7 @@ async function testAllImports() {
   const { parseAnyCADFile } = await import('../src/utils/universalCadParser.js');
 
   // 1. Test STEP file
-  const stepPath = path.resolve(__dirname, '../Mold_Steep_Finishing_Sample.step');
+  const stepPath = path.resolve(__dirname, '../samples/cad/Mold_Steep_Finishing_Sample.step');
   const stepText = fs.readFileSync(stepPath, 'utf-8');
   const mockStepFile = {
     name: 'Mold_Steep_Finishing_Sample.step',
@@ -21,7 +21,7 @@ async function testAllImports() {
   console.log("STEP Import Passed: Bounds =", stepGroup.userData?.bounds ? "OK" : "Missing");
 
   // 2. Test STL file
-  const stlPath = path.resolve(__dirname, '../Mold_Steep_Finishing_Sample.stl');
+  const stlPath = path.resolve(__dirname, '../samples/cad/Mold_Steep_Finishing_Sample.stl');
   const stlBuffer = fs.readFileSync(stlPath);
   const mockStlFile = {
     name: 'Mold_Steep_Finishing_Sample.stl',

@@ -12,12 +12,12 @@ import {
   calculateParallelRoughPhysics,
   createDefaultParallelRoughState,
   resolveDefaultRoughingTool
-} from './src/config/parallelRoughSchema.js';
+} from '../src/config/parallelRoughSchema.js';
 
 import {
   generateParallelRoughToolpath,
   generateParallelRoughGCode
-} from './src/utils/parallelRoughToolpathEngine.js';
+} from '../src/utils/parallelRoughToolpathEngine.js';
 
 console.log('=== STARTING 3D SURFACE ROUGH PARALLEL TEST SUITE ===\n');
 

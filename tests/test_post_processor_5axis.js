@@ -1,5 +1,5 @@
-import { generateNCProgram, CONTROLLER_DIALECTS } from './src/utils/postProcessor.js';
-import { generateMultiaxisMorphToolpath } from './src/utils/multiaxisMorphEngine.js';
+import { generateNCProgram, CONTROLLER_DIALECTS } from '../src/utils/postProcessor.js';
+import { generateMultiaxisMorphToolpath } from '../src/utils/multiaxisMorphEngine.js';
 
 const bounds = { min: { x: -40, y: -20, z: -40 }, max: { x: 40, y: 0, z: 40 } };
 const tool = { id: 5, number: 5, name: '6mm Ball Nose', diameter: 6, fluteLength: 20, overallLength: 60 };

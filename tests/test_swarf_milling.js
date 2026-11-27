@@ -9,7 +9,7 @@ import {
   calculateSwarfPhysics,
   calculateRecommendedSwarfSettings,
   DEFAULT_SWARF_CONFIG
-} from './src/config/swarfMillingSchema.js';
+} from '../src/config/swarfMillingSchema.js';
 
 import {
   generateSampleSwarfRails,
@@ -20,7 +20,7 @@ import {
   solveSwarfMachineAngles,
   generateMastercamSwarfToolpath,
   generateSwarfMillingGCode
-} from './src/utils/swarfMillingEngine.js';
+} from '../src/utils/swarfMillingEngine.js';
 
 console.log('====================================================');
 console.log('   MASTERCAM 5-AXIS SWARF MILLING TEST SUITE        ');

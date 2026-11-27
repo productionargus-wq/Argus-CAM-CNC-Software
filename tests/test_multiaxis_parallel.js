@@ -13,7 +13,7 @@ import {
   calculateParallelPhysics,
   calculateRecommendedParallelSettings,
   DEFAULT_PARALLEL_CONFIG
-} from './src/config/multiaxisParallelSchema.js';
+} from '../src/config/multiaxisParallelSchema.js';
 
 import {
   extractDriveSurfacesFromModel,
@@ -22,7 +22,7 @@ import {
   buildParallelBlendLoop,
   generateMultiaxisParallelToolpath,
   generateMultiaxisParallelGCode
-} from './src/utils/multiaxisParallelEngine.js';
+} from '../src/utils/multiaxisParallelEngine.js';
 
 console.log('====================================================');
 console.log('   MASTERCAM 5-AXIS PARALLEL TEST SUITE             ');

@@ -7,12 +7,12 @@ import {
   calculateWaterlineRoughPhysics,
   resolveWaterlineRoughMachineCaps,
   createDefaultWaterlineRoughState
-} from './src/config/waterlineRoughSchema.js';
+} from '../src/config/waterlineRoughSchema.js';
 
 import {
   generateWaterlineRoughToolpath,
   generateWaterlineRoughGCode
-} from './src/utils/waterlineRoughToolpathEngine.js';
+} from '../src/utils/waterlineRoughToolpathEngine.js';
 
 let passedTests = 0;
 let totalTests = 0;

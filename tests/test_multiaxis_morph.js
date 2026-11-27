@@ -14,7 +14,7 @@ import {
   calculateRecommendedMorphSettings,
   createDefaultMultiaxisMorphState,
   resolveDefaultMultiaxisTool
-} from './src/config/multiaxisMorphSchema.js';
+} from '../src/config/multiaxisMorphSchema.js';
 
 import {
   extractMorphGeometryFromModel,
@@ -24,7 +24,7 @@ import {
   audit5AxisMorphTrajectory,
   generateMultiaxisMorphToolpath,
   generateMultiaxisMorphGCode
-} from './src/utils/multiaxisMorphEngine.js';
+} from '../src/utils/multiaxisMorphEngine.js';
 
 console.log('=== RUNNING 5-AXIS MULTIAXIS MORPH ENGINE TESTS ===\n');
 

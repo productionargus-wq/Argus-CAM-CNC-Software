@@ -1,15 +1,15 @@
 import fs from 'fs';
 import * as THREE from 'three';
-import { parseSTEPText } from './src/utils/stepIgesParser.js';
-import { segmentObjectIntoSolidFaces } from './src/utils/solidFaceSelectionEngine.js';
-import { generateSurfaceFlowlineToolpath, simplifyCutterPolyline3D } from './src/utils/flowlineToolpathEngine.js';
-import { buildToolpathMeshes, buildLinkedOperationSegments } from './src/utils/toolpathEngine.js';
+import { parseSTEPText } from '../src/utils/stepIgesParser.js';
+import { segmentObjectIntoSolidFaces } from '../src/utils/solidFaceSelectionEngine.js';
+import { generateSurfaceFlowlineToolpath, simplifyCutterPolyline3D } from '../src/utils/flowlineToolpathEngine.js';
+import { buildToolpathMeshes, buildLinkedOperationSegments } from '../src/utils/toolpathEngine.js';
 
 console.log('--- Testing Industry-Grade CAM Toolpath & B-Rep Performance ---');
 
 async function run() {
   console.log('\n[1] Testing industrial STEP parser on bush.stp...');
-  const stepText = fs.readFileSync('bush.stp', 'utf8');
+  const stepText = fs.readFileSync(new URL('../samples/cad/bush.stp', import.meta.url), 'utf8');
   const t0 = Date.now();
   const stepModel = await parseSTEPText(stepText);
   const parseTime = Date.now() - t0;

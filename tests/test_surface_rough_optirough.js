@@ -5,11 +5,11 @@ import {
   resolveOptiRoughMachineCapabilities,
   calculateOptiRoughPhysics,
   createDefaultOptiRoughState
-} from './src/config/optiRoughSchema.js';
+} from '../src/config/optiRoughSchema.js';
 import {
   generateOptiRoughToolpath,
   generateOptiRoughGCode
-} from './src/utils/optiRoughToolpathEngine.js';
+} from '../src/utils/optiRoughToolpathEngine.js';
 
 console.log('--- STARTING 3D DYNAMIC OPTIROUGH TEST SUITE ---');
 

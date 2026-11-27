@@ -45,7 +45,7 @@ console.log(`  ✓ With previous roughing op: adopted ${recommendedWithPrev.refT
 
 // 2. Load Mold_Steep_Finishing_Sample.stl and build Three.js Mesh
 console.log('\n[Test 2] Loading Mold_Steep_Finishing_Sample.stl for raycast toolpath generation...');
-const stlBuffer = fs.readFileSync('Mold_Steep_Finishing_Sample.stl');
+const stlBuffer = fs.readFileSync(new URL('../samples/cad/Mold_Steep_Finishing_Sample.stl', import.meta.url));
 
 function parseBinarySTL(buffer) {
   const geom = new THREE.BufferGeometry();

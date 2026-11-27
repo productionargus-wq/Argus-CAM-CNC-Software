@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import fs from 'fs';
 import path from 'path';
-import { generateSTEPFromObject3D, parseSTEPText } from './src/utils/stepIgesParser.js';
+import { generateSTEPFromObject3D, parseSTEPText } from '../src/utils/stepIgesParser.js';
 
 console.log('Building Mastercam 5-Axis Multiaxis Benchmark CAD Model...');
 

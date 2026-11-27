@@ -6,7 +6,7 @@ import {
   ROTARY_4AXIS_MATERIALS,
   ROTARY_4AXIS_PRESETS,
   resolveDefaultRotaryTool
-} from './src/config/rotary4AxisSchema.js';
+} from '../src/config/rotary4AxisSchema.js';
 
 import {
   extractRotaryStockFromModel,
@@ -14,7 +14,7 @@ import {
   buildRotaryBlendLoop,
   generateRotary4AxisToolpath,
   generateRotary4AxisGCode
-} from './src/utils/rotary4AxisEngine.js';
+} from '../src/utils/rotary4AxisEngine.js';
 
 console.log('🧪 Starting Mastercam Rotary 4-Axis Automated Test Suite...\n');
 

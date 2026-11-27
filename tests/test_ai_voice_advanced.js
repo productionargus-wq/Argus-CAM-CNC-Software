@@ -1,5 +1,5 @@
-import { processVoiceCommand, isRecognizableIntent } from './src/utils/aiCamDispatcher.js';
-import aiVoiceEngine from './src/utils/aiVoiceEngine.js';
+import { processVoiceCommand, isRecognizableIntent } from '../src/utils/aiCamDispatcher.js';
+import aiVoiceEngine from '../src/utils/aiVoiceEngine.js';
 
 const testCases = [
   // Interruption

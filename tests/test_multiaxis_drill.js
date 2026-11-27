@@ -12,14 +12,14 @@ import {
   calculateMultiaxisDrillPhysics,
   createDefaultMultiaxisDrillParams,
   resolveDefaultDrillTool
-} from './src/config/multiaxisDrillSchema.js';
+} from '../src/config/multiaxisDrillSchema.js';
 
 import {
   extract3DCompoundHoles,
   computeDrillKinematicsAngles,
   generateMultiaxisDrillToolpath,
   generateMultiaxisDrillGCode
-} from './src/utils/multiaxisDrillEngine.js';
+} from '../src/utils/multiaxisDrillEngine.js';
 
 console.log('🧪 Starting Mastercam 5-Axis Multiaxis Drilling & Auto-Hole Automated Test Suite...\n');
 

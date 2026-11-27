@@ -10,7 +10,7 @@ import {
   calculateMultiaxisCurvePhysics,
   createDefaultMultiaxisCurveParams,
   resolveDefaultCurveTool
-} from './src/config/multiaxisCurveSchema.js';
+} from '../src/config/multiaxisCurveSchema.js';
 
 import {
   extract3DDriveCurve,
@@ -18,7 +18,7 @@ import {
   computeCurveKinematicsAngles,
   generateMultiaxisCurveToolpath,
   generateMultiaxisCurveGCode
-} from './src/utils/multiaxisCurveEngine.js';
+} from '../src/utils/multiaxisCurveEngine.js';
 
 console.log('🧪 Starting Mastercam 5-Axis Multiaxis Curve Automated Test Suite...\n');
 

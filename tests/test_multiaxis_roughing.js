@@ -11,7 +11,7 @@ import {
   calculateMultiaxisRoughingPhysics,
   createDefaultMultiaxisRoughingParams,
   resolveDefaultRoughingTool
-} from './src/config/multiaxisRoughingSchema.js';
+} from '../src/config/multiaxisRoughingSchema.js';
 
 import {
   extractCavityBoundsAndFloor,
@@ -21,7 +21,7 @@ import {
   generateHelicalRampEntry,
   generateMultiaxisRoughingToolpath,
   generateMultiaxisRoughingGCode
-} from './src/utils/multiaxisRoughingEngine.js';
+} from '../src/utils/multiaxisRoughingEngine.js';
 
 let passedTests = 0;
 let totalTests = 0;
